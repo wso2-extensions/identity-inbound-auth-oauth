@@ -208,8 +208,23 @@ public class TestUtils {
      *
      * @param jwtClaimsSet contains JWT body
      * @param privateKey
-     * @param jwsAlgorithm JWS algorithm
      * @return signed JWT token
+     * @throws RequestObjectException
+     */
+    public static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey)
+            throws RequestObjectException {
+
+        SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, (RSAPrivateKey) privateKey);
+        return signedJWT.serialize();
+    }
+
+    /**
+     * Sign JWT token from RSA algorithm.
+     *
+     * @param jwtClaimsSet Contains the JWT body.
+     * @param privateKey   Private key.
+     * @param jwsAlgorithm JWS algorithm.
+     * @return signed JWT token.
      * @throws RequestObjectException
      */
     public static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey, JWSAlgorithm jwsAlgorithm)
@@ -217,6 +232,19 @@ public class TestUtils {
 
         SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, (RSAPrivateKey) privateKey, jwsAlgorithm);
         return signedJWT.serialize();
+    }
+
+    private static SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet, RSAPrivateKey privateKey)
+            throws RequestObjectException {
+
+        try {
+            JWSSigner signer = new RSASSASigner(privateKey);
+            SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet);
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new RequestObjectException("error_signing_jwt", "Error occurred while signing JWT.");
+        }
     }
 
     private static SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet, RSAPrivateKey privateKey,

@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
@@ -57,6 +58,7 @@ import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -162,7 +164,7 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         Certificate certificate =
                 RequestObjectValidatorUtil.getX509CertOfOAuthApp(oAuth2Parameters.getClientId(),
                         oAuth2Parameters.getTenantDomain());
-        JWSVerifier verifier = RequestObjectValidatorUtil.getVerifier(certificate.getPublicKey());
+        JWSVerifier verifier = new RSASSAVerifier((RSAPublicKey) certificate.getPublicKey());
         verifier.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
         PowerMockito.spy(RequestObjectValidatorUtil.class);
         doReturn(verifier).when(RequestObjectValidatorUtil.class, "getVerifier", any(PublicKey.class));

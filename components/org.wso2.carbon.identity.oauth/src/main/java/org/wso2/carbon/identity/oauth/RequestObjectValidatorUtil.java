@@ -266,7 +266,7 @@ public class RequestObjectValidatorUtil {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
             if (publicKey instanceof RSAPublicKey) {
-                verifier = getVerifier(publicKey);
+                verifier = new RSASSAVerifier((RSAPublicKey) publicKey);;
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Public key is not an RSA public key.");
@@ -290,19 +290,11 @@ public class RequestObjectValidatorUtil {
         }
     }
 
-    public static JWSVerifier getVerifier(PublicKey publicKey) {
-
-        return new RSASSAVerifier((RSAPublicKey) publicKey);
-
-    }
-
-    public static boolean isFapiConformant(String clientId) throws RequestObjectException {
+    private static boolean isFapiConformant(String clientId) throws RequestObjectException {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
         } catch (IdentityOAuth2Exception e) {
-            log.debug("Error while retrieving service provider. Unable to verify whether the service provider is " +
-                    "FAPI conformant.");
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while retrieving service provider " +
                     "to check FAPI compliance.", e);
         }

@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -59,6 +60,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String OIDC_ID_TOKEN_ISSUER_ID = "OAuth.OpenIDConnect.IDTokenIssuerID";
+    private static final int MILLISECONDS_PER_SECOND = 1000;
+    private static final int MILLISECONDS_PER_HOUR = 3600000;
     private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
 
     @Override
@@ -127,8 +130,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             }
         }
 
-        if (RequestObjectValidatorUtil.isFapiConformant(oAuth2Parameters.getClientId())) {
-            checkMandatoryParams(requestObject);
+        if (isFapiConformant(oAuth2Parameters.getClientId())) {
+            checkFapiMandatedParams(requestObject);
             if (!isValidNbfExp(requestObject)) {
                 return false;
             }
@@ -145,7 +148,7 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         return true;
     }
 
-    private void checkMandatoryParams(RequestObject requestObject) throws RequestObjectException {
+    private void checkFapiMandatedParams(RequestObject requestObject) throws RequestObjectException {
 
         String[] mandatoryParams = {Constants.SCOPE, Constants.NONCE, Constants.REDIRECT_URI};
         for (String param : mandatoryParams) {
@@ -213,31 +216,29 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         } else if (expirationTime == null) {
             errorMsg = "Request Object does not contain Expiration Time.";
         } else {
-            long timeStampSkewMillis = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+            long timeStampSkewMillis = OAuthServerConfiguration.getInstance()
+                    .getTimeStampSkewInSeconds() * MILLISECONDS_PER_SECOND;
             long nbfTimeInMillis = nbfTime.getTime();
             long expirationTimeInMillis = expirationTime.getTime();
             long currentTimeInMillis = System.currentTimeMillis();
             // nbf should be older than current time.
             if ((currentTimeInMillis + timeStampSkewMillis) < nbfTimeInMillis) {
                 errorMsg = "Request Object is not valid yet.";
-                errorLog = "Request Object is not valid yet." +
-                        ", Not Before Time(ms) : " + nbfTimeInMillis +
-                        ", TimeStamp Skew : " + timeStampSkewMillis +
-                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
-            } else if ((currentTimeInMillis + timeStampSkewMillis) - 3600000 > nbfTimeInMillis) {
-                // nbf should not be older than 1 hour from current time.
+                errorLog = String.format("Request Object is not valid yet." +
+                        ", Not Before Time(ms) : %d, TimeStamp Skew : %d, Current Time : %d" + ". Token Rejected.",
+                        nbfTimeInMillis, timeStampSkewMillis, currentTimeInMillis);
+            } else if ((currentTimeInMillis + timeStampSkewMillis) - MILLISECONDS_PER_HOUR > nbfTimeInMillis) {
+                // nbf should not be older than 1 hour from current time
                 errorMsg = "Request Object nbf claim is too old.";
-                errorLog = "Request Object nbf claim is too old." +
-                        ", Not Before Time(ms) : " + nbfTimeInMillis +
-                        ", TimeStamp Skew : " + timeStampSkewMillis +
-                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
-            } else if (expirationTimeInMillis > nbfTimeInMillis + 3600000) {
-                // exp time should not be older than 1 hour from nbf time.
+                errorLog = String.format("Request Object nbf claim is too old." +
+                        ", Not Before Time(ms) : %d, TimeStamp Skew : %d, Current Time : %d" + ". Token Rejected.",
+                        nbfTimeInMillis, timeStampSkewMillis, currentTimeInMillis);
+            } else if (expirationTimeInMillis > nbfTimeInMillis + MILLISECONDS_PER_HOUR) {
+                // exp time should not be older than 1 hour from nbf time
                 errorMsg = "Request Object expiry time is too far in the future than not before time.";
-                errorLog = "Request Object expiry time is too far in the future than not before time." +
-                        ", Expiration Time(ms) : " + expirationTimeInMillis +
-                        ", Not Before Time(ms) : " + nbfTimeInMillis +
-                        ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
+                errorLog = String.format("Request Object expiry time is too far in the future than not before time." +
+                        ", Expiration Time(ms) : %d, Not Before Time(ms) : %d, Current Time : %d" + ". Token Rejected.",
+                        expirationTimeInMillis, nbfTimeInMillis, currentTimeInMillis);
             }
         }
 
@@ -482,5 +483,17 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             log.debug(errorMessage);
         }
         return false;
+    }
+
+    private boolean isFapiConformant(String clientId) throws RequestObjectException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            log.debug("Error while retrieving service provider. Unable to verify whether the service provider is " +
+                    "FAPI conformant.");
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while retrieving service provider " +
+                    "to check FAPI compliance.", e);
+        }
     }
 }
