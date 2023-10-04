@@ -4147,7 +4147,9 @@ public class OAuth2AuthzEndpoint {
         } catch (OAuthSystemException exception) {
             log.error("Error occurred while setting service provider in the request to oauth_response.jsp page.",
                     exception);
-            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                       .entity("Internal Server Error: " + exception.getMessage())
+                       .build();
         }
     }
 
