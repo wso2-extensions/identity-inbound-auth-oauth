@@ -490,8 +490,6 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
         } catch (IdentityOAuth2Exception e) {
-            log.debug("Error while retrieving service provider. Unable to verify whether the service provider is " +
-                    "FAPI conformant.");
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while retrieving service provider " +
                     "to check FAPI compliance.", e);
         }
