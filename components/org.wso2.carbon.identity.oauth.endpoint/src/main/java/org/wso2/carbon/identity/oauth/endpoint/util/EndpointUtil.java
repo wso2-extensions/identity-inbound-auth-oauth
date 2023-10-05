@@ -134,6 +134,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
@@ -1914,7 +1915,7 @@ public class EndpointUtil {
     public static void validateFAPIAllowedResponseMode(String responseType, String responseMode)
             throws OAuthProblemException {
 
-        if (CODE.equals(responseType) && !JWT.equals(responseMode)) {
+        if (!(CODE_IDTOKEN.equals(responseType) || (CODE.equals(responseType) && JWT.equals(responseMode)))) {
             throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST)
                     .description("Invalid response mode provided.");
         }
