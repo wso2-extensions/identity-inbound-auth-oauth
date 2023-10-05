@@ -232,10 +232,10 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with inactive client id. Will return unauthorized error
                 {requestParams3, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT, false, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request from invalid client. Will return unauthorized error
                 {requestParams4, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT, false, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request without client id. Will return bad request error
                 {requestParams5, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
@@ -293,6 +293,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         mockOAuthServerConfiguration();
         mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(getConnection());
 
