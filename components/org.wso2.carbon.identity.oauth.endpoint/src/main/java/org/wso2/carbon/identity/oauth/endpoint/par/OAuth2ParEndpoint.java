@@ -316,4 +316,31 @@ public class OAuth2ParEndpoint {
         }
     }
 
+    private Map<String, String> overrideRequestObjectParams(HttpServletRequest request, RequestObject requestObject) {
+
+        Map<String, String> oauthParams = new HashMap<>();
+        String codeChallenge = null;
+        String codeChallengeMethod = null;
+
+        if (request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE) != null) {
+            codeChallenge = request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
+        }
+        if (request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD) != null) {
+            codeChallengeMethod = request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+        }
+
+        if (requestObject != null && requestObject.getClaimsSet() != null) {
+            if (requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE) != null) {
+                codeChallenge = requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE).toString();
+            }
+            if (requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD) != null) {
+                codeChallengeMethod = requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD)
+                        .toString();
+            }
+        }
+
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, codeChallenge);
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD, codeChallengeMethod);
+        return oauthParams;
+    }
 }
