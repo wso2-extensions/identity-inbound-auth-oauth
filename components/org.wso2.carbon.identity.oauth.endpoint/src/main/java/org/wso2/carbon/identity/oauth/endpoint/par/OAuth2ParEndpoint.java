@@ -60,6 +60,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
@@ -319,31 +321,41 @@ public class OAuth2ParEndpoint {
         }
     }
 
+    /**
+     * Return a map of parameters needed for validations overriding the values from the request object if present.
+     *
+     * @param request       Http servlet request
+     * @param requestObject request object
+     * @return map of parameters
+     */
     private Map<String, String> overrideRequestObjectParams(HttpServletRequest request, RequestObject requestObject) {
 
         Map<String, String> oauthParams = new HashMap<>();
-        String codeChallenge = null;
-        String codeChallengeMethod = null;
-
-        if (request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE) != null) {
-            codeChallenge = request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
-        }
-        if (request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD) != null) {
-            codeChallengeMethod = request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
-        }
-
-        if (requestObject != null && requestObject.getClaimsSet() != null) {
-            if (requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE) != null) {
-                codeChallenge = requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE).toString();
-            }
-            if (requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD) != null) {
-                codeChallengeMethod = requestObject.getClaim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD)
-                        .toString();
-            }
-        }
-
-        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, codeChallenge);
-        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD, codeChallengeMethod);
+        oauthParams.put(RESPONSE_MODE, getParameterValue(request, requestObject, RESPONSE_MODE));
+        oauthParams.put(RESPONSE_TYPE, getParameterValue(request, requestObject, RESPONSE_TYPE));
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE,
+                getParameterValue(request, requestObject, OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE));
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                getParameterValue(request, requestObject, OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD));
         return oauthParams;
+    }
+
+    /**
+     * Get the parameter value from the PAR request or from the request object if present. Request object parameter
+     * will be prioritized.
+     *
+     * @param request       Http servlet request
+     * @param requestObject request object
+     * @param parameter     parameter name
+     * @return parameter value
+     */
+    private String getParameterValue(HttpServletRequest request, RequestObject requestObject, String parameter) {
+
+        String parameterValue = request.getParameter(parameter);
+        if (requestObject != null && requestObject.getClaimsSet() != null &&
+                StringUtils.isNotBlank(requestObject.getClaimValue(parameter))) {
+            parameterValue = requestObject.getClaimValue(parameter);
+        }
+        return parameterValue;
     }
 }
