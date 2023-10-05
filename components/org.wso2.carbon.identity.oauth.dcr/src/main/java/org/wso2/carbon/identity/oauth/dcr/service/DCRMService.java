@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -61,6 +62,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
@@ -369,7 +371,7 @@ public class DCRMService {
         //validate SSA
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
-                if(validateSSASignature(registrationRequest.getSoftwareStatement())) {
+                if (validateSSASignature(registrationRequest.getSoftwareStatement())) {
                     throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                             DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
                 }
@@ -505,6 +507,8 @@ public class DCRMService {
         OAuthConsumerAppDTO createdApp;
         try {
             createdApp = oAuthAdminService.registerAndRetrieveOAuthApplicationData(oAuthConsumerApp);
+        } catch (IdentityOAuthClientException e) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA, e.getMessage(), e);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_REGISTER_APPLICATION, spName, e);

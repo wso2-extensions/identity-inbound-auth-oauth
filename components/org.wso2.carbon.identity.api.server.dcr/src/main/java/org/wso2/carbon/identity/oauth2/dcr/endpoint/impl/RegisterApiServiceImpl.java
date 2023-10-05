@@ -88,7 +88,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Client error while registering application \n" + registrationRequest.toString(), e);
             }
-            DCRMUtils.handleErrorResponse(e, LOG);
+            DCRMUtils.handleErrorResponse(Response.Status.BAD_REQUEST, e, false, LOG);
         } catch (DCRMServerException e) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
 
