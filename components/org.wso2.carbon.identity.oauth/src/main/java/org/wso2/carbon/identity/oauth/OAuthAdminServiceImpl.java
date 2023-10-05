@@ -127,7 +127,7 @@ public class OAuthAdminServiceImpl {
     private static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "SupportedSignatureAlgorithms.SupportedSignatureAlgorithm";
     private static final String VALIDATE_SECOTR_IDENTIFIER = "OAuth.OpenIDConnect.FAPI." +
-            "isSectorIdentifierUriValidationEnabled";
+            "EnableSectorIdentifierURIValidation";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -728,6 +728,86 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthMethod()) &&
+                    isFAPIValidationEnabled()) {
+                validateTokenAuthentication(consumerAppDTO.getTokenEndpointAuthMethod());
+            }
+            oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm()) &&
+                    isFAPIValidationEnabled()) {
+                validateSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+            }
+            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
+                OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
+                        consumerAppDTO.getSubjectType());
+                if (subjectType == null) {
+                    throw handleClientError(INVALID_REQUEST, OAuthConstants.INVALID_SUBJECT_TYPE);
+                }
+                if (OAuthConstants.SubjectType.PAIRWISE.equals(OIDCClaimUtil.getDefaultSubjectType()) ||
+                        OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
+                    List<String> callBackURIList = new ArrayList<>();
+                    if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                        String redirectURI = consumerAppDTO.getCallbackUrl();
+                        redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1, redirectURI.indexOf(")"));
+                        callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+                    } else {
+                        callBackURIList.add(consumerAppDTO.getCallbackUrl());
+                    }
+                    if (StringUtils.isEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                        validateRedirectURIForPPID(callBackURIList);
+                    }
+                    if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                        validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                    }
+                }
+            }
+            oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
+            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getIdTokenSignatureAlgorithm()) &&
+                    isFAPIValidationEnabled()) {
+                validateSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
+            }
+            oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm()) &&
+                    isFAPIValidationEnabled()) {
+                validateSignatureAlgorithm(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
+            }
+            oauthappdo.setAuthorizationResponseSignatureAlgorithm(
+                    consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm())) {
+                if (isFAPIValidationEnabled()) {
+                    validateEncryptionAlgorithm(consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm());
+                }
+                oauthappdo.setAuthorizationResponseEncryptionAlgorithm(filterEncryptionAlgorithms(
+                        consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm()));
+            }
+            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseEncryptionMethod())) {
+                oauthappdo.setAuthorizationResponseEncryptionMethod(filterEncryptionMethod(
+                        consumerAppDTO.getAuthorizationResponseEncryptionMethod()));
+            }
+            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectSignatureAlgorithm()) &&
+                    isFAPIValidationEnabled()) {
+                validateSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+            }
+            oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+            oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
+                    .isRequestObjectSignatureValidationEnabled());
+            oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
+            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectEncryptionAlgorithm())) {
+                if (isFAPIValidationEnabled()) {
+                    validateEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
+                }
+                oauthappdo.setRequestObjectEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
+
+            }
+            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectEncryptionMethod())) {
+                oauthappdo.setRequestObjectEncryptionMethod(filterEncryptionMethod(
+                        consumerAppDTO.getRequestObjectEncryptionMethod()));
+            }
+            oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
+            oauthappdo.setTlsClientCertificateBoundAccessTokens(
+                    consumerAppDTO.getTlsClientCertificateBoundAccessTokens());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
