@@ -621,76 +621,25 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     @Test
     public void testRevokeIssuedTokensByApplication() throws Exception {
 
-        String userId = UUID.randomUUID().toString();
-        String consumerKey = UUID.randomUUID().toString();
-        String accessToken = UUID.randomUUID().toString();
-        String refreshToken = UUID.randomUUID().toString();
+        revokeIssuedTokens(false);
+    }
 
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setOauthConsumerKey(consumerKey);
-        oAuthAppDO.setApplicationName("some-user-name");
+    @Test
+    public void testRevokeIssuedTokensByApplicationForAGivenTenantDomain() throws Exception {
 
-        when(oAuthAppDAO.getAppInformation(consumerKey)).thenReturn(oAuthAppDO);
-        PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-
-        AuthenticatedUser user = buildUser("some-user-name");
-        user.setUserId(userId);
-        user.setFederatedIdPName(TestConstants.LOCAL_IDP);
-
-        OAuthAppRevocationRequestDTO oAuthAppRevocationRequestDTO = new OAuthAppRevocationRequestDTO();
-        oAuthAppRevocationRequestDTO.setConsumerKey(consumerKey);
-
-        AccessTokenDO dummyToken = new AccessTokenDO();
-        dummyToken.setAccessToken(accessToken);
-        dummyToken.setRefreshToken(refreshToken);
-        dummyToken.setAuthzUser(user);
-        dummyToken.setScope(new String[]{"openid"});
-        Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
-        accessTokenDOSet.add(dummyToken);
-
-        OAuthTokenPersistenceFactory tokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
-
-        TokenManagementDAOImpl mockTokenManagementDAOImpl = mock(TokenManagementDAOImpl.class);
-        FieldSetter.setField(tokenPersistenceFactory,
-                tokenPersistenceFactory.getClass().getDeclaredField("managementDAO"), mockTokenManagementDAOImpl);
-
-        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
-        FieldSetter.setField(tokenPersistenceFactory,
-                tokenPersistenceFactory.getClass().getDeclaredField("tokenDAO"), mockAccessTokenDAO);
-
-
-        when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(anyString()))
-                .thenReturn(accessTokenDOSet);
-        OAuthRevocationResponseDTO expectedOAuthRevocationResponseDTO = new OAuthRevocationResponseDTO();
-        expectedOAuthRevocationResponseDTO.setError(false);
-
-        ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
-        when(appMgtService.getServiceProviderNameByClientId(consumerKey, INBOUND_AUTH2_TYPE, user.getTenantDomain())).
-                thenReturn(oAuthAppDO.getApplicationName());
-        OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
-
-        OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
-        doNothing().when(oAuthAdminServiceImpl, "triggerPreApplicationTokenRevokeListeners", anyObject());
-        doNothing().when(oAuthAdminServiceImpl, "triggerPostApplicationTokenRevokeListeners", anyObject(),
-                anyObject(), anyObject());
-
-        OAuthRevocationResponseDTO actualOAuthRevocationResponseDTO = oAuthAdminServiceImpl
-                .revokeIssuedTokensByApplication(oAuthAppRevocationRequestDTO);
-        Assert.assertEquals(actualOAuthRevocationResponseDTO.isError(), expectedOAuthRevocationResponseDTO.isError());
+        revokeIssuedTokens(true);
     }
 
     @Test
     public void testRevokeIssuedTokensByApplicationWithEmptyConsumerKey() throws Exception {
 
-        OAuthAppRevocationRequestDTO oAuthAppRevocationRequestDTO = new OAuthAppRevocationRequestDTO();
-        oAuthAppRevocationRequestDTO.setConsumerKey("");
+        revokeIssuedTokensByApplicationWithEmptyConsumerKey(false);
+    }
 
-        OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
-        doNothing().when(oAuthAdminServiceImpl, "triggerPreApplicationTokenRevokeListeners", anyObject());
+    @Test
+    public void testRevokeIssuedTokensByApplicationForAGivenTenantWithEmptyConsumerKey() throws Exception {
 
-        OAuthRevocationResponseDTO actualOAuthRevocationResponseDTO = oAuthAdminServiceImpl
-                .revokeIssuedTokensByApplication(oAuthAppRevocationRequestDTO);
-        Assert.assertEquals(actualOAuthRevocationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_REQUEST);
+        revokeIssuedTokensByApplicationWithEmptyConsumerKey(true);
     }
 
     @DataProvider(name = "invalidAudienceDataProvider")
@@ -755,12 +704,109 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void mockOAuthComponentServiceHolder() throws Exception {
 
         mockStatic(OAuthComponentServiceHolder.class);
-        Mockito.when(OAuthComponentServiceHolder.getInstance())
-                .thenReturn(mockOAuthComponentServiceHolder);
+        Mockito.when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
         Mockito.when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         Mockito.when(tenantManager.getTenant(anyInt())).thenReturn(mockTenant);
         Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
         Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         Mockito.when(userRealm.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
+    }
+
+    /**
+     * Revoke issued tokens by application for tenant given and not scenarios.
+     *
+     * @param isTenantGiven is tenant given.
+     * @throws Exception Exception.
+     */
+    private void revokeIssuedTokens(boolean isTenantGiven) throws Exception {
+
+        String userId = UUID.randomUUID().toString();
+        String consumerKey = UUID.randomUUID().toString();
+        String accessToken = UUID.randomUUID().toString();
+        String refreshToken = UUID.randomUUID().toString();
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setOauthConsumerKey(consumerKey);
+        oAuthAppDO.setApplicationName("some-user-name");
+
+        when(oAuthAppDAO.getAppInformation(consumerKey)).thenReturn(oAuthAppDO);
+        PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+
+        AuthenticatedUser user = buildUser("some-user-name");
+        user.setUserId(userId);
+        user.setFederatedIdPName(TestConstants.LOCAL_IDP);
+
+        OAuthAppRevocationRequestDTO oAuthAppRevocationRequestDTO = new OAuthAppRevocationRequestDTO();
+        oAuthAppRevocationRequestDTO.setConsumerKey(consumerKey);
+
+        AccessTokenDO dummyToken = new AccessTokenDO();
+        dummyToken.setAccessToken(accessToken);
+        dummyToken.setRefreshToken(refreshToken);
+        dummyToken.setAuthzUser(user);
+        dummyToken.setScope(new String[]{"openid"});
+        Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
+        accessTokenDOSet.add(dummyToken);
+
+        OAuthTokenPersistenceFactory tokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
+
+        TokenManagementDAOImpl mockTokenManagementDAOImpl = mock(TokenManagementDAOImpl.class);
+        FieldSetter.setField(tokenPersistenceFactory,
+                tokenPersistenceFactory.getClass().getDeclaredField("managementDAO"), mockTokenManagementDAOImpl);
+
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        FieldSetter.setField(tokenPersistenceFactory, tokenPersistenceFactory.getClass().getDeclaredField("tokenDAO"),
+                mockAccessTokenDAO);
+
+        when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(anyString())).thenReturn(accessTokenDOSet);
+        OAuthRevocationResponseDTO expectedOAuthRevocationResponseDTO = new OAuthRevocationResponseDTO();
+        expectedOAuthRevocationResponseDTO.setError(false);
+
+        ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
+        when(appMgtService.getServiceProviderNameByClientId(consumerKey, INBOUND_AUTH2_TYPE,
+                user.getTenantDomain())).thenReturn(oAuthAppDO.getApplicationName());
+        OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
+
+        OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
+        doNothing().when(oAuthAdminServiceImpl, "triggerPreApplicationTokenRevokeListeners", anyObject());
+        doNothing().when(oAuthAdminServiceImpl, "triggerPostApplicationTokenRevokeListeners", anyObject(), anyObject(),
+                anyObject());
+
+        OAuthRevocationResponseDTO actualOAuthRevocationResponseDTO;
+        if (!isTenantGiven) {
+            actualOAuthRevocationResponseDTO =
+                    oAuthAdminServiceImpl.revokeIssuedTokensByApplication(oAuthAppRevocationRequestDTO);
+        } else {
+            actualOAuthRevocationResponseDTO =
+                    oAuthAdminServiceImpl.revokeIssuedTokensByApplication(oAuthAppRevocationRequestDTO,
+                            user.getTenantDomain());
+        }
+        Assert.assertEquals(actualOAuthRevocationResponseDTO.isError(), expectedOAuthRevocationResponseDTO.isError());
+    }
+
+    /**
+     * Revoke issued tokens by application with an empty consumer key for tenant given and not scenarios.
+     *
+     * @param isTenantGiven is tenant given.
+     * @throws Exception Exception.
+     */
+    private void revokeIssuedTokensByApplicationWithEmptyConsumerKey(boolean isTenantGiven) throws Exception {
+
+        OAuthAppRevocationRequestDTO oAuthAppRevocationRequestDTO = new OAuthAppRevocationRequestDTO();
+        oAuthAppRevocationRequestDTO.setConsumerKey("");
+
+        OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
+        doNothing().when(oAuthAdminServiceImpl, "triggerPreApplicationTokenRevokeListeners", anyObject());
+
+        OAuthRevocationResponseDTO actualOAuthRevocationResponseDTO;
+        if (!isTenantGiven) {
+            actualOAuthRevocationResponseDTO = oAuthAdminServiceImpl
+                    .revokeIssuedTokensByApplication(oAuthAppRevocationRequestDTO);
+        } else {
+            // A dummy tenant domain is passed as it doesn't matter as the consumer key is empty.
+            actualOAuthRevocationResponseDTO = oAuthAdminServiceImpl
+                    .revokeIssuedTokensByApplication(oAuthAppRevocationRequestDTO, "foo.com");
+        }
+
+        Assert.assertEquals(actualOAuthRevocationResponseDTO.getErrorCode(), OAuth2ErrorCodes.INVALID_REQUEST);
     }
 }

@@ -1429,6 +1429,56 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
+     * Revoke issued tokens for the application for the given tenant.
+     * (This method specifically created for revoking access token for shared apps.
+     * But can be used for a general scenario as well.)
+     *
+     * @param application {@link OAuthAppRevocationRequestDTO}
+     * @param tenantDomain tenant domain of the shared app
+     * @return revokeRespDTO {@link OAuthAppRevocationRequestDTO}
+     * @throws IdentityOAuthAdminException Error while revoking the issued tokens
+     */
+    public OAuthRevocationResponseDTO revokeIssuedTokensByApplication(
+            OAuthAppRevocationRequestDTO application, String tenantDomain) throws IdentityOAuthAdminException {
+
+        triggerPreApplicationTokenRevokeListeners(application);
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+        String consumerKey = application.getConsumerKey();
+
+        if (StringUtils.isBlank(consumerKey)) {
+            revokeRespDTO.setError(true);
+            revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+            revokeRespDTO.setErrorMsg("Consumer key is null or empty.");
+            triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, new ArrayList<>());
+            return revokeRespDTO;
+        }
+
+        String applicationName = getApplicationName(consumerKey, tenantDomain);
+
+        List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
+        if (!accessTokenDOs.isEmpty()) {
+            String[] accessTokens = new String[accessTokenDOs.size()];
+            int count = 0;
+            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                accessTokens[count++] = accessTokenDO.getAccessToken();
+                clearCacheByAccessTokenAndConsumerKey(accessTokenDO, consumerKey);
+            }
+
+            if (LOG.isDebugEnabled()) {
+                String message = String.format("Access tokens and token of users are removed from the cache for " +
+                        "OAuth app in tenant domain: %s with consumer key: %s.", tenantDomain, consumerKey);
+                LOG.debug(message);
+            }
+
+            // Tenant domain of the corresponding app(parent/child) should be passed here.
+            revokeAccessTokens(accessTokens, consumerKey, tenantDomain);
+            revokeOAuthConsentsForApplication(applicationName, tenantDomain);
+        }
+        triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
+        return revokeRespDTO;
+    }
+
+    /**
      * Revoke approve always of the consent for OAuth apps by resource owners
      *
      * @param appName name of the app
