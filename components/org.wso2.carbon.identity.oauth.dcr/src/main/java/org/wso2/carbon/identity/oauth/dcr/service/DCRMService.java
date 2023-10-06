@@ -56,7 +56,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
@@ -657,6 +659,12 @@ public class DCRMService {
         sp.setDescription("Service Provider for application " + spName);
         sp.setManagementApp(isManagementApp);
 
+        //add FAPI conformant application nad isThirdParty property to the service provider
+        Map<String, Object> spProperties = new HashMap<>();
+        spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
+        spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
+        addSPProperties(spProperties, sp);
+
         createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 
         // Get created service provider.
@@ -951,5 +959,28 @@ public class DCRMService {
         Gson gson = new Gson();
         ServiceProvider clonedServiceProvider = gson.fromJson(gson.toJson(serviceProvider), ServiceProvider.class);
         return clonedServiceProvider;
+    }
+
+    /**
+     * Add the properties to the service provider.
+     * @param spProperties Map of property name and values to be added.
+     * @param serviceProvider ServiceProvider object.
+     */
+    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider)
+            throws DCRMException {
+
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+        for (Map.Entry<String, Object> entry : spProperties.entrySet()) {
+            boolean propertyExists = Arrays.stream(serviceProviderProperties)
+                    .anyMatch(property -> property.getName().equals(entry.getKey()));
+            if (!propertyExists) {
+                ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+                serviceProviderProperty.setName(entry.getKey());
+                serviceProviderProperty.setValue(entry.getValue().toString());
+                serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
+                        serviceProviderProperty);
+            }
+        }
+        serviceProvider.setSpProperties(serviceProviderProperties);
     }
 }

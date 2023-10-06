@@ -32,6 +32,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -59,7 +60,9 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -68,6 +71,7 @@ import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.reflect.Whitebox.invokeMethod;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -904,6 +908,20 @@ public class DCRMServiceTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+
+
+            /*ServiceProvider serviceProvider = new ServiceProvider();
+            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+            ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+            serviceProviderProperty.setName("isFAPIConformant");
+            serviceProviderProperty.setValue("true");
+            serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
+                    serviceProviderProperty);
+            serviceProvider.setSpProperties(serviceProviderProperties);
+            whenNew(ServiceProvider.class).withNoArguments().thenReturn(serviceProvider);
+            doNothing().when(mockApplicationManagementService).updateApplication
+                    (serviceProvider , dummyTenantDomain, dummyUserName);*/
+
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "Error while deleting the OAuth application with consumer key: " +
@@ -1151,5 +1169,19 @@ public class DCRMServiceTest extends PowerMockTestCase {
         for (String invalidCallback : invalidCallbackList) {
             assertFalse(invalidCallback.matches(regexp));
         }
+    }
+    @Test(description = "Test to store service provider properties when defined in a map")
+    public void testAddSPProperties() throws Exception {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        Map<String, Object> spProperties = new HashMap<>();
+        spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
+        spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
+        invokeMethod(dcrmService, "addSPProperties", spProperties, serviceProvider);
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+        boolean propertyExists = Arrays.stream(serviceProviderProperties)
+                .anyMatch(property -> property.getName().equals(OAuthConstants.IS_FAPI_CONFORMANT_APP));
+        assertTrue(propertyExists);
+
     }
 }
