@@ -4141,7 +4141,8 @@ public class OAuth2AuthzEndpoint {
             HttpServletRequest request = oAuthMessage.getRequest();
             request.setAttribute(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
             request.setAttribute(TENANT_DOMAIN, authorizationResponseDTO.getSigningTenantDomain());
-            request.setAttribute(SERVICE_PROVIDER, getServiceProvider(authorizationResponseDTO.getClientId()));
+            request.setAttribute(SERVICE_PROVIDER, getServiceProvider(authorizationResponseDTO.getClientId())
+                    .getApplicationName());
             forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
             return Response.ok().build();
         } catch (OAuthSystemException exception) {
