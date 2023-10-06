@@ -466,7 +466,7 @@ public class OIDProviderConfigResponseTest {
     }
 
     @Test
-    public void testGetandTlsClientCertificateBoundAccessTokensEnabled() {
+    public void testGetandTlsClientCertificateBoundAccessTokensSupported() {
 
         boolean isTlsClientCertificateBoundAccessTokensSupported = true;
         oidProviderConfigResponse.setTlsClientCertificateBoundAccessTokensSupported(true);

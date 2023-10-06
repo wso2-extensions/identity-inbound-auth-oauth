@@ -432,9 +432,9 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testIsTlsClientCertificateBoundAccessTokensEnabled() {
+    public void testIsTlsClientCertificateBoundAccessTokensSupported() {
 
-        Assert.assertTrue(OAuthServerConfiguration.getInstance().isTlsClientCertificateBoundAccessTokensEnabled());
+        Assert.assertTrue(OAuthServerConfiguration.getInstance().isTlsClientCertificateBoundAccessTokensSupported());
     }
 
     @Test
