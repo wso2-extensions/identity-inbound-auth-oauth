@@ -468,10 +468,11 @@ public class OIDProviderConfigResponseTest {
     @Test
     public void testGetandTlsClientCertificateBoundAccessTokensEnabled() {
 
-        boolean isTlsClientCertificateBoundAccessTokensEnabled = true;
-        oidProviderConfigResponse.setTlsClientCertificateBoundAccessTokensEnabled(true);
-        boolean tlsClientCertificateBoundAccessTokensEnabledValue = oidProviderConfigResponse
-                .isTlsClientCertificateBoundAccessTokensEnabled();
-        assertEquals(isTlsClientCertificateBoundAccessTokensEnabled, tlsClientCertificateBoundAccessTokensEnabledValue);
+        boolean isTlsClientCertificateBoundAccessTokensSupported = true;
+        oidProviderConfigResponse.setTlsClientCertificateBoundAccessTokensSupported(true);
+        boolean tlsClientCertificateBoundAccessTokensSupportedValue = oidProviderConfigResponse
+                .isTlsClientCertificateBoundAccessTokensSupported();
+        assertEquals(isTlsClientCertificateBoundAccessTokensSupported,
+                tlsClientCertificateBoundAccessTokensSupportedValue);
     }
 }

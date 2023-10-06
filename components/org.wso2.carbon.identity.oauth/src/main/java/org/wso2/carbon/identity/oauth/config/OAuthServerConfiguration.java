@@ -311,7 +311,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
-    private boolean tlsClientCertificateBoundAccessTokensEnabled = false;
+    private boolean tlsClientCertificateBoundAccessTokensSupported = false;
     private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
@@ -3232,7 +3232,7 @@ public class OAuthServerConfiguration {
 
             if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                     ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)) != null) {
-                tlsClientCertificateBoundAccessTokensEnabled = Boolean.parseBoolean(
+                tlsClientCertificateBoundAccessTokensSupported = Boolean.parseBoolean(
                         openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                                 ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)).getText().trim());
             }
@@ -3553,9 +3553,9 @@ public class OAuthServerConfiguration {
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
-    public boolean isTlsClientCertificateBoundAccessTokensEnabled() {
+    public boolean isTlsClientCertificateBoundAccessTokensSupported() {
 
-        return tlsClientCertificateBoundAccessTokensEnabled;
+        return tlsClientCertificateBoundAccessTokensSupported;
     }
 
     public List<String> getSupportedTokenEndpointAuthMethods() {
@@ -3868,7 +3868,7 @@ public class OAuthServerConfiguration {
                 "SkipOIDCClaimsForClientCredentialGrant";
 
         private static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN =
-                "TLSClientCertificateBoundAccessTokensEnabled";
+                "TLSClientCertificateBoundAccessTokensSupported";
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS = "SupportedTokenEndpointAuthMethods";
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
