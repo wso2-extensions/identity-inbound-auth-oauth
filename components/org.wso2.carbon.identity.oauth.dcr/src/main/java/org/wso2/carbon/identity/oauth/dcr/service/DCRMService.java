@@ -371,13 +371,10 @@ public class DCRMService {
         //validate SSA
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
-                if (validateSSASignature(registrationRequest.getSoftwareStatement())) {
-                    throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
-                            DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
-                }
+                validateSSASignature(registrationRequest.getSoftwareStatement());
             } catch (IdentityOAuth2Exception e) {
                 throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
-                        DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+                        DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
             }
         }
 
@@ -838,16 +835,19 @@ public class DCRMService {
      * @throws DCRMClientException
      * @throws IdentityOAuth2Exception
      */
-    private boolean validateSSASignature(String softwareStatement) throws DCRMClientException, IdentityOAuth2Exception {
+    private void validateSSASignature(String softwareStatement) throws DCRMClientException, IdentityOAuth2Exception {
 
         SignedJWT signedJWT = null;
         try {
             signedJWT = SignedJWT.parse(softwareStatement);
         } catch (ParseException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
-                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
         }
         String jwksURL = IdentityUtil.getProperty(SSA_VALIDATION_JWKS);
-        return JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL);
+        if (!JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL)) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
+        }
     }
 }
