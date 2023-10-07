@@ -231,6 +231,8 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                 .thenReturn(true);
         PowerMockito.when(oAuthClientAuthenticator.authenticateClient(Mockito.any(), Mockito.any(), Mockito.any()))
                 .thenReturn(true);
+        PowerMockito.when(oAuthClientAuthenticator.getClientId(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(CLIENT_ID);
         OAuthClientAuthnService oAuthClientAuthnService = Mockito.spy(OAuthClientAuthnService.class);
         PowerMockito.when(oAuthClientAuthnService.getClientAuthenticators()).thenReturn
                 (Arrays.asList(oAuthClientAuthenticator));

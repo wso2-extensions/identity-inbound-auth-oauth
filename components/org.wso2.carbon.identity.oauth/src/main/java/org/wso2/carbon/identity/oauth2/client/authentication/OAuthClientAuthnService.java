@@ -18,11 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
-import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.OAuth;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -33,14 +31,10 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -162,7 +156,20 @@ public class OAuthClientAuthnService {
             log.debug("Executing OAuth client authenticators.");
         }
         try {
-            String clientId = extractClientId(request, bodyContentMap);
+            String clientId = null;
+            for (OAuthClientAuthenticator oAuthClientAuthenticator : this.getClientAuthenticators()) {
+                try {
+                    clientId = extractClientId(oAuthClientAuthenticator, request,
+                            bodyContentMap);
+                    if (StringUtils.isNotBlank(clientId)) {
+                        break;
+                    }
+                } catch (OAuthClientAuthnException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Client ID cannot be extracted using the " + oAuthClientAuthenticator.getName());
+                    }
+                }
+            }
             if (StringUtils.isNotBlank(clientId)) {
                 if (OAuth2Util.isFapiConformantApp(clientId)) {
                     List<OAuthClientAuthenticator> authenticatorsForFAPIApp = getAuthenticatorsForFAPI(clientId);
@@ -330,75 +337,20 @@ public class OAuthClientAuthnService {
     /**
      * Obtain the client ID of the application from the request.
      *
-     * @param request       Http servlet request.
+     * @param oAuthClientAuthenticator  OAuth client authenticator.
+     * @param request                   Http servlet request.
+     * @param bodyContentMap            Content of the body of the request as a parameter map.
      * @return Client ID of the application.
      * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
-    private String extractClientId(HttpServletRequest request, Map<String, List> contentParams)
+    private String extractClientId(OAuthClientAuthenticator oAuthClientAuthenticator, HttpServletRequest request,
+                                   Map<String, List> bodyContentMap)
             throws OAuthClientAuthnException {
 
-        /* This method was required to obtain the Client ID of the application before the authenticators are triggered
-           in order to determine the set of authenticators which should be triggered for FAPI applications.
-           Therefore the different methods in which the Client ID could exist in the request is being tested here. */
-        try {
-            Optional<List> signedObject =
-                    Optional.ofNullable(contentParams.get(OAuthConstants.OAUTH_JWT_ASSERTION));
-            Optional<List> clientIdInRequestBody =
-                    Optional.ofNullable(contentParams.get(OAuth.OAUTH_CLIENT_ID));
-            //   Obtain client ID from the JWT in the request.
-            if (signedObject.isPresent()) {
-                return getClientIdFromJWT((String) signedObject.get().get(0));
-            //   Obtain client ID from the request body.
-            } else if (clientIdInRequestBody.isPresent()) {
-                return (String) clientIdInRequestBody.get().get(0);
-            //   Obtain client ID from the authorization header when basic authentication is used.
-            } else if (request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ) != null) {
-                return getClientIdFromBasicAuth(request);
-            } else {
-                throw new OAuthClientAuthnException("Unable to find client id in the request.",
-                        OAuth2ErrorCodes.INVALID_CLIENT);
-            }
-        } catch (ParseException e) {
-            throw new OAuthClientAuthnException("Error occurred while parsing the signed assertion.",
-                    OAuth2ErrorCodes.INVALID_REQUEST, e);
-        }
-    }
-
-    /**
-     * Obtain the client ID of the application from the JWT in the request.
-     *
-     * @param signedObject       Client assertion sent in the request.
-     * @return Client ID of the application.
-     * @throws ParseException An exception is thrown when the signed JWT cannot be processed.
-     */
-    private String getClientIdFromJWT(String signedObject) throws ParseException {
-
-        SignedJWT signedJWT = SignedJWT.parse(signedObject);
-        return signedJWT.getJWTClaimsSet().getIssuer();
-    }
-
-    /**
-     * Obtain the client ID of the application from the authorization header of the request.
-     *
-     * @param request       Http servlet request.
-     * @return Client ID of the application.
-     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
-     */
-    private String getClientIdFromBasicAuth(HttpServletRequest request) throws OAuthClientAuthnException {
-
-        String basicAuthErrorMessage = "Unable to find client id in the request. Invalid Authorization header found.";
-        String authorizationHeader = request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
-        if (authorizationHeader.split(" ").length == 2) {
-            if (authorizationHeader.split(" ")[0].equals(OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC)) {
-                String authToken = authorizationHeader.split(" ")[1];
-                byte[] decodedBytes = Base64.getUrlDecoder().decode(authToken.getBytes(StandardCharsets.UTF_8));
-                String decodedAuthToken = new String(decodedBytes, StandardCharsets.UTF_8);
-                if (decodedAuthToken.split(":").length == 2) {
-                    return decodedAuthToken.split(":")[0];
-                }
-            }
-        }
-        throw new OAuthClientAuthnException(basicAuthErrorMessage, OAuth2ErrorCodes.INVALID_CLIENT);
+        /* A new OAuthClientAuthnContext is used each time as we just need to extract the Client ID and we do not want
+           to overwrite the original OAuthClientAuthnContext.  */
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        return oAuthClientAuthenticator.getClientId(request, bodyContentMap, oAuthClientAuthnContext);
     }
 
     /**
