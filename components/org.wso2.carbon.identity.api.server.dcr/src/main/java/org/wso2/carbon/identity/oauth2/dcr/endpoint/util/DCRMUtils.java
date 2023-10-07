@@ -226,7 +226,6 @@ public class DCRMUtils {
         applicationDTO.setIdTokenEncryptedResponseAlg(application.getIdTokenEncryptionAlgorithm());
         applicationDTO.setIdTokenEncryptedResponseEnc(application.getIdTokenEncryptionMethod());
         applicationDTO.setAuthorizationSignedResponseAlg(application.getAuthorizationResponseSignatureAlgorithm());
-        applicationDTO.setAuthorizationEncryptedResponseAlg(application.getAuthorizationResponseEncryptionAlgorithm());
         applicationDTO.setAuthorizationEncryptedResponseEnc(application.getRequestObjectEncryptionMethod());
         applicationDTO.setRequireSignedRequestObject(application.isRequestObjectSignatureValidationEnabled());
         applicationDTO.setRequestObjectSigningAlg(application.getRequestObjectSignatureAlgorithm());
