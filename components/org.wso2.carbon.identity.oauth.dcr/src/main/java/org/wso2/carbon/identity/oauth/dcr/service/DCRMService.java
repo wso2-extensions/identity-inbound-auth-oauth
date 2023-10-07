@@ -640,11 +640,13 @@ public class DCRMService {
         sp.setDescription("Service Provider for application " + spName);
         sp.setManagementApp(isManagementApp);
 
-        // Add FAPI conformant application nad isThirdParty property to the service provider.
-        Map<String, Object> spProperties = new HashMap<>();
-        spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
-        spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
-        addSPProperties(spProperties, sp);
+        if (OAuthServerConfiguration.getInstance().isFapiSecurity()) {
+            // Add FAPI conformant application nad isThirdParty property to the service provider.
+            Map<String, Object> spProperties = new HashMap<>();
+            spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
+            spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
+            addSPProperties(spProperties, sp);
+        }
 
         createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 
@@ -947,8 +949,7 @@ public class DCRMService {
      * @param spProperties Map of property name and values to be added.
      * @param serviceProvider ServiceProvider object.
      */
-    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider)
-            throws DCRMException {
+    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider) {
 
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         for (Map.Entry<String, Object> entry : spProperties.entrySet()) {
