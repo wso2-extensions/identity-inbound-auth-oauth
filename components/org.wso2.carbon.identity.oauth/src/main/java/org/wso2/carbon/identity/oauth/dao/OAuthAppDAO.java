@@ -67,8 +67,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.AUTH_RESPONSE_ENCRYPTION_ALGORITHM;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.AUTH_RESPONSE_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.AUTH_RESPONSE_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
@@ -1660,9 +1658,6 @@ public class OAuthAppDAO {
         if (authResponseSignatureAlgorithm != null) {
             oauthApp.setAuthorizationResponseSignatureAlgorithm(authResponseSignatureAlgorithm);
         }
-        String authResponseEncryptionAlgorithm = getFirstPropertyValue(
-                spOIDCProperties, AUTH_RESPONSE_ENCRYPTION_ALGORITHM);
-
         String requestObjectSignatureAlgorithm = getFirstPropertyValue(
                 spOIDCProperties, REQUEST_OBJECT_SIGNATURE_ALGORITHM);
         if (requestObjectSignatureAlgorithm != null) {

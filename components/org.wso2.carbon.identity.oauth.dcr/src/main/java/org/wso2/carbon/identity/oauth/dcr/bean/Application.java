@@ -267,22 +267,6 @@ public class Application implements Serializable {
                 "  clientSecret: " + this.clientSecret + "\n" +
                 "  redirectUris: " + this.redirectUris + "\n" +
                 "  grantTypes: " + this.grantTypes + "\n" +
-                "  jwksURI: " + this.jwksURI + "\n" +
-                "  tokenEndpointAuthMethod: " + this.tokenEndpointAuthMethod + "\n" +
-                "  tokenEndpointAuthSignatureAlgorithm: " + this.tokenEndpointAuthSignatureAlgorithm + "\n" +
-                "  sectorIdentifierURI: " + this.sectorIdentifierURI + "\n" +
-                "  idTokenSignatureAlgorithm: " + this.idTokenSignatureAlgorithm + "\n" +
-                " authorizationResponseSignatureAlgorithm: " + this.authorizationResponseSignatureAlgorithm + "\n" +
-                " requestObjectSignatureAlgorithm: " + this.requestObjectSignatureAlgorithm + "\n" +
-                " tlsClientAuthSubjectDN: " + this.tlsClientAuthSubjectDN + "\n" +
-                " requirePushedAuthorizationRequests: " + this.requirePushedAuthorizationRequests + "\n" +
-                " tlsClientCertificateBoundAccessTokens: " + this.tlsClientCertificateBoundAccessTokens + "\n" +
-                " subjectType: " + this.subjectType + "\n" +
-                " requestObjectEncryptionAlgorithm: " + this.requestObjectEncryptionAlgorithm + "\n" +
-                " requestObjectEncryptionMethod: " + this.requestObjectEncryptionMethod + "\n" +
-                " isRequestObjectSignatureValidationEnabled: " + this.isRequestObjectSignatureValidationEnabled + "\n" +
-                " idTokenEncryptionAlgorithm: " + this.idTokenEncryptionAlgorithm + "\n" +
-                " idTokenEncryptionMethod: " + this.idTokenEncryptionMethod + "\n" +
                 "}\n";
     }
 }

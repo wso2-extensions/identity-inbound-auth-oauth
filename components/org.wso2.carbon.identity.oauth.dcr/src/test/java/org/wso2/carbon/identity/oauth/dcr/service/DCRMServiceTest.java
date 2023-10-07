@@ -98,6 +98,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
+    private final String dummyJwskUri = "http://localhost.com/jwks";
 
     @Mock
     private OAuthConsumerAppDTO dto;

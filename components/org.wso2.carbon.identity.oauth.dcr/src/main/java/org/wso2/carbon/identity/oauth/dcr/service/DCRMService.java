@@ -297,14 +297,6 @@ public class DCRMService {
                 appDTO.setAuthorizationResponseSignatureAlgorithm(
                         updateRequest.getAuthorizationResponseSignatureAlgorithm());
             }
-            if (updateRequest.getAuthorizationResponseEncryptionAlgorithm() != null) {
-                appDTO.setAuthorizationResponseEncryptionAlgorithm
-                        (updateRequest.getAuthorizationResponseEncryptionAlgorithm());
-            }
-            if (updateRequest.getAuthorizationResponseEncryptionMethod() != null) {
-                appDTO.setAuthorizationResponseEncryptionMethod
-                        (updateRequest.getRequestObjectEncryptionMethod());
-            }
             if (updateRequest.getRequestObjectSignatureAlgorithm() != null) {
                 appDTO.setRequestObjectSignatureValidationEnabled
                         (updateRequest.isRequireSignedRequestObject());
@@ -489,9 +481,6 @@ public class DCRMService {
         application.setIdTokenEncryptionAlgorithm(createdApp.getIdTokenEncryptionAlgorithm());
         application.setIdTokenEncryptionMethod(createdApp.getIdTokenEncryptionMethod());
         application.setAuthorizationResponseSignatureAlgorithm(createdApp.getAuthorizationResponseSignatureAlgorithm());
-        application.setAuthorizationResponseEncryptionAlgorithm(
-                createdApp.getAuthorizationResponseEncryptionAlgorithm());
-        application.setAuthorizationResponseEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequestObjectSignatureValidationEnabled(createdApp.isRequestObjectSignatureValidationEnabled());
         application.setRequestObjectSignatureAlgorithm(createdApp.getRequestObjectSignatureAlgorithm());
         application.setTlsClientAuthSubjectDN(createdApp.getTlsClientAuthSubjectDN());
@@ -591,14 +580,6 @@ public class DCRMService {
         if (registrationRequest.getAuthorizationResponseSignatureAlgorithm() != null) {
             oAuthConsumerApp.setAuthorizationResponseSignatureAlgorithm
                     (registrationRequest.getAuthorizationResponseSignatureAlgorithm());
-        }
-        if (registrationRequest.getAuthorizationResponseEncryptionAlgorithm() != null) {
-            oAuthConsumerApp.setAuthorizationResponseEncryptionAlgorithm
-                    (registrationRequest.getAuthorizationResponseEncryptionAlgorithm());
-        }
-        if (registrationRequest.getAuthorizationResponseEncryptionMethod() != null) {
-            oAuthConsumerApp.setAuthorizationResponseEncryptionMethod
-                    (registrationRequest.getRequestObjectEncryptionMethod());
         }
         if (registrationRequest.getRequestObjectSignatureAlgorithm() != null) {
             oAuthConsumerApp.setRequestObjectSignatureAlgorithm(
