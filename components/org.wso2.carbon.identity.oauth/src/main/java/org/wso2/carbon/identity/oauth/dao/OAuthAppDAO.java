@@ -883,14 +883,6 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                AUTH_RESPONSE_ENCRYPTION_ALGORITHM, oauthAppDO.getAuthorizationResponseEncryptionAlgorithm(),
-                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-
-        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                AUTH_RESPONSE_ENCRYPTION_METHOD, oauthAppDO.getAuthorizationResponseEncryptionMethod(),
-                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-
-        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 AUTH_RESPONSE_SIGNATURE_ALGORITHM, oauthAppDO.getAuthorizationResponseSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
@@ -903,7 +895,7 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                REQUEST_OBJECT_ENCRYPTION_METHOD, oauthAppDO.getAuthorizationResponseEncryptionMethod(),
+                REQUEST_OBJECT_ENCRYPTION_METHOD, oauthAppDO.getRequestObjectEncryptionMethod(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
@@ -1519,12 +1511,6 @@ public class OAuthAppDAO {
                     ID_TOKEN_SIGNATURE_ALGORITHM, consumerAppDO.getIdTokenSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    AUTH_RESPONSE_ENCRYPTION_ALGORITHM, consumerAppDO.getAuthorizationResponseEncryptionAlgorithm());
-
-            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    AUTH_RESPONSE_ENCRYPTION_METHOD, consumerAppDO.getAuthorizationResponseEncryptionMethod());
-
-            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     AUTH_RESPONSE_SIGNATURE_ALGORITHM, consumerAppDO.getAuthorizationResponseSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
@@ -1676,14 +1662,7 @@ public class OAuthAppDAO {
         }
         String authResponseEncryptionAlgorithm = getFirstPropertyValue(
                 spOIDCProperties, AUTH_RESPONSE_ENCRYPTION_ALGORITHM);
-        if (authResponseEncryptionAlgorithm != null) {
-            oauthApp.setAuthorizationResponseEncryptionAlgorithm(authResponseEncryptionAlgorithm);
-        }
-        String authResponseEncryptionMethod = getFirstPropertyValue(
-                spOIDCProperties, AUTH_RESPONSE_ENCRYPTION_METHOD);
-        if (authResponseEncryptionMethod != null) {
-            oauthApp.setAuthorizationResponseEncryptionMethod(authResponseEncryptionMethod);
-        }
+
         String requestObjectSignatureAlgorithm = getFirstPropertyValue(
                 spOIDCProperties, REQUEST_OBJECT_SIGNATURE_ALGORITHM);
         if (requestObjectSignatureAlgorithm != null) {

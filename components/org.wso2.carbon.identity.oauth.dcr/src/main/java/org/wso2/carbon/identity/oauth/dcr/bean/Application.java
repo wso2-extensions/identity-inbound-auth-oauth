@@ -38,9 +38,7 @@ public class Application implements Serializable {
     private String tokenEndpointAuthSignatureAlgorithm = null;
     private String sectorIdentifierURI = null;
     private String idTokenSignatureAlgorithm = null;
-    private String authorizationResponseEncryptionAlgorithm = null;
     private String authorizationResponseSignatureAlgorithm = null;
-    private String authorizationResponseEncryptionMethod = null;
     private String requestObjectSignatureAlgorithm = null;
     private String tlsClientAuthSubjectDN = null;
     private boolean requirePushedAuthorizationRequests;
@@ -51,6 +49,7 @@ public class Application implements Serializable {
     private boolean isRequestObjectSignatureValidationEnabled;
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
+
     public String getClientName() {
 
         return clientName;
@@ -101,146 +100,162 @@ public class Application implements Serializable {
         this.grantTypes = grantTypes;
     }
     public String getJwksURI() {
+
         return jwksURI;
     }
 
     public void setJwksURI(String jwksURI) {
+
         this.jwksURI = jwksURI;
     }
 
     public String getTokenEndpointAuthMethod() {
+
         return tokenEndpointAuthMethod;
     }
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     public String getTokenEndpointAuthSignatureAlgorithm() {
+
         return tokenEndpointAuthSignatureAlgorithm;
     }
 
     public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
+
         this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
     }
 
     public String getSectorIdentifierURI() {
+
         return sectorIdentifierURI;
     }
 
     public void setSectorIdentifierURI(String sectorIdentifierURI) {
+
         this.sectorIdentifierURI = sectorIdentifierURI;
     }
 
     public String getIdTokenSignatureAlgorithm() {
+
         return idTokenSignatureAlgorithm;
     }
 
     public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
+
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
     }
 
-    public String getAuthorizationResponseEncryptionAlgorithm() {
-        return authorizationResponseEncryptionAlgorithm;
-    }
-
-    public void setAuthorizationResponseEncryptionAlgorithm(String authorizationResponseEncryptionAlgorithm) {
-        this.authorizationResponseEncryptionAlgorithm = authorizationResponseEncryptionAlgorithm;
-    }
-
     public String getAuthorizationResponseSignatureAlgorithm() {
+
         return authorizationResponseSignatureAlgorithm;
     }
 
     public void setAuthorizationResponseSignatureAlgorithm(String authorizationResponseSignatureAlgorithm) {
+
         this.authorizationResponseSignatureAlgorithm = authorizationResponseSignatureAlgorithm;
     }
 
-    public String getAuthorizationResponseEncryptionMethod() {
-        return authorizationResponseEncryptionMethod;
-    }
-
-    public void setAuthorizationResponseEncryptionMethod(String authorizationResponseEncryptionMethod) {
-        this.authorizationResponseEncryptionMethod = authorizationResponseEncryptionMethod;
-    }
-
     public String getRequestObjectSignatureAlgorithm() {
+
         return requestObjectSignatureAlgorithm;
     }
 
     public void setRequestObjectSignatureAlgorithm(String requestObjectSignatureAlgorithm) {
+
         this.requestObjectSignatureAlgorithm = requestObjectSignatureAlgorithm;
     }
 
     public String getTlsClientAuthSubjectDN() {
+
         return tlsClientAuthSubjectDN;
     }
 
     public void setTlsClientAuthSubjectDN(String tlsClientAuthSubjectDN) {
+
         this.tlsClientAuthSubjectDN = tlsClientAuthSubjectDN;
     }
 
     public boolean isRequirePushedAuthorizationRequests() {
+
         return requirePushedAuthorizationRequests;
     }
 
     public void setRequirePushedAuthorizationRequests(boolean requirePushedAuthorizationRequests) {
+
         this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
     }
 
     public boolean isTlsClientCertificateBoundAccessTokens() {
+
         return tlsClientCertificateBoundAccessTokens;
     }
 
     public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
+
         this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
     }
 
     public String getSubjectType() {
+
         return subjectType;
     }
 
     public void setSubjectType(String subjectType) {
+
         this.subjectType = subjectType;
     }
 
     public String getRequestObjectEncryptionAlgorithm() {
+
         return requestObjectEncryptionAlgorithm;
     }
 
     public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+
         this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
     }
 
     public String getRequestObjectEncryptionMethod() {
+
         return requestObjectEncryptionMethod;
     }
 
     public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+
         this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
     }
 
     public boolean isRequestObjectSignatureValidationEnabled() {
+
         return isRequestObjectSignatureValidationEnabled;
     }
 
     public void setRequestObjectSignatureValidationEnabled(boolean requestObjectSignatureValidationEnabled) {
+
         isRequestObjectSignatureValidationEnabled = requestObjectSignatureValidationEnabled;
     }
 
     public String getIdTokenEncryptionAlgorithm() {
+
         return idTokenEncryptionAlgorithm;
     }
 
     public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
         this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
     }
 
     public String getIdTokenEncryptionMethod() {
+
         return idTokenEncryptionMethod;
     }
 
     public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
         this.idTokenEncryptionMethod = idTokenEncryptionMethod;
     }
     @Override
@@ -252,6 +267,22 @@ public class Application implements Serializable {
                 "  clientSecret: " + this.clientSecret + "\n" +
                 "  redirectUris: " + this.redirectUris + "\n" +
                 "  grantTypes: " + this.grantTypes + "\n" +
+                "  jwksURI: " + this.jwksURI + "\n" +
+                "  tokenEndpointAuthMethod: " + this.tokenEndpointAuthMethod + "\n" +
+                "  tokenEndpointAuthSignatureAlgorithm: " + this.tokenEndpointAuthSignatureAlgorithm + "\n" +
+                "  sectorIdentifierURI: " + this.sectorIdentifierURI + "\n" +
+                "  idTokenSignatureAlgorithm: " + this.idTokenSignatureAlgorithm + "\n" +
+                " authorizationResponseSignatureAlgorithm: " + this.authorizationResponseSignatureAlgorithm + "\n" +
+                " requestObjectSignatureAlgorithm: " + this.requestObjectSignatureAlgorithm + "\n" +
+                " tlsClientAuthSubjectDN: " + this.tlsClientAuthSubjectDN + "\n" +
+                " requirePushedAuthorizationRequests: " + this.requirePushedAuthorizationRequests + "\n" +
+                " tlsClientCertificateBoundAccessTokens: " + this.tlsClientCertificateBoundAccessTokens + "\n" +
+                " subjectType: " + this.subjectType + "\n" +
+                " requestObjectEncryptionAlgorithm: " + this.requestObjectEncryptionAlgorithm + "\n" +
+                " requestObjectEncryptionMethod: " + this.requestObjectEncryptionMethod + "\n" +
+                " isRequestObjectSignatureValidationEnabled: " + this.isRequestObjectSignatureValidationEnabled + "\n" +
+                " idTokenEncryptionAlgorithm: " + this.idTokenEncryptionAlgorithm + "\n" +
+                " idTokenEncryptionMethod: " + this.idTokenEncryptionMethod + "\n" +
                 "}\n";
     }
 }

@@ -3,8 +3,9 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.swagger.annotations.*;
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 
 import javax.validation.constraints.NotNull;
 
@@ -46,9 +47,7 @@ public class RegistrationRequestDTO  {
   private String idTokenSignedResponseAlg = null;
   private String idTokenEncryptedResponseAlg = null;
   private String idTokenEncryptedResponseEnc = null;
-  private String authorizationEncryptedResponseAlg = null;
   private String authorizationSignedResponseAlg = null;
-  private String authorizationEncryptedResponseEnc = null;
   private String requestObjectSigningAlg = null;
   private String tlsClientAuthSubjectDn = null;
   private boolean requirePushAuthorizationRequest;
@@ -362,16 +361,6 @@ public class RegistrationRequestDTO  {
   public void setIdTokenEncryptedResponseEnc(String idTokenEncryptedResponseEnc) {
     this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
   }
-
-  @ApiModelProperty(value = "")
-  @JsonProperty("authorization_encrypted_response_alg")
-  public String getAuthorizationEncryptedResponseAlg() {
-    return authorizationEncryptedResponseAlg;
-  }
-  public void setAuthorizationEncryptedResponseAlg(String authorizationEncryptedResponseAlg) {
-    this.authorizationEncryptedResponseAlg = authorizationEncryptedResponseAlg;
-  }
-
   @ApiModelProperty(value = "")
   @JsonProperty("authorization_signed_response_alg")
   public String getAuthorizationSignedResponseAlg() {
@@ -380,16 +369,6 @@ public class RegistrationRequestDTO  {
   public void setAuthorizationSignedResponseAlg(String authorizationSignedResponseAlg) {
     this.authorizationSignedResponseAlg = authorizationSignedResponseAlg;
   }
-
-  @ApiModelProperty(value = "")
-  @JsonProperty("authorization_encrypted_response_enc")
-  public String getAuthorizationEncryptedResponseEnc() {
-    return authorizationEncryptedResponseEnc;
-  }
-  public void setAuthorizationEncryptedResponseEnc(String authorizationEncryptedResponseEnc) {
-    this.authorizationEncryptedResponseEnc = authorizationEncryptedResponseEnc;
-  }
-
   @ApiModelProperty(value = "")
   @JsonProperty("request_object_signing_alg")
   public String getRequestObjectSigningAlg() {
@@ -509,17 +488,15 @@ public class RegistrationRequestDTO  {
     sb.append("  ext_pkce_mandatory: ").append(extPkceMandatory).append("\n");
     sb.append("  ext_pkce_support_plain: ").append(extPkceSupportPlain).append("\n");
     sb.append("  ext_public_client: ").append(extPublicClient).append("\n");
-    sb.append("  tokenEndpointAuthMethod: ").append(tokenEndpointAuthMethod).append("\n");
-    sb.append("  tokenEndpointAuthSigningAlg: ").append(tokenEndpointAuthSigningAlg).append("\n");
-    sb.append("  sectorIdentifierUri: ").append(sectorIdentifierUri).append("\n");
-    sb.append("  idTokenSignedResponseAlg: ").append(idTokenSignedResponseAlg).append("\n");
-    sb.append("  idTokenEncryptedResponseAlg: ").append(idTokenEncryptedResponseAlg).append("\n");
-    sb.append("  idTokenEncryptedResponseEnc: ").append(idTokenEncryptedResponseEnc).append("\n");
-    sb.append("  authorizationEncryptedResponseAlg: ").append(authorizationEncryptedResponseAlg).append("\n");
-    sb.append("  authorizationSignedResponseAlg: ").append(authorizationSignedResponseAlg).append("\n");
-    sb.append("  authorizationEncryptedResponseEnc: ").append(authorizationEncryptedResponseEnc).append("\n");
-    sb.append("  requestObjectSigningAlg: ").append(requestObjectSigningAlg).append("\n");
-    sb.append("  tlsClientAuthSubjectDn: ").append(tlsClientAuthSubjectDn).append("\n");
+    sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
+    sb.append("  token_endpoint_auth_signing_alg: ").append(tokenEndpointAuthSigningAlg).append("\n");
+    sb.append("  sector_identifier_uri: ").append(sectorIdentifierUri).append("\n");
+    sb.append("  id_token_signed_response_alg: ").append(idTokenSignedResponseAlg).append("\n");
+    sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptedResponseAlg).append("\n");
+    sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptedResponseEnc).append("\n");
+    sb.append("  authorization_signed_response_alg: ").append(authorizationSignedResponseAlg).append("\n");
+    sb.append("  request_object_signing_alg: ").append(requestObjectSigningAlg).append("\n");
+    sb.append("  tls_client_auth_subject_dn: ").append(tlsClientAuthSubjectDn).append("\n");
     sb.append(" require_signed_request_object: ").append(requireSignedRequestObject).append("\n");
     sb.append(" require_pushed_authorization_requests: ").append(requirePushAuthorizationRequest).append("\n");
     sb.append(" tls_client_certificate_bound_access_tokens: ")

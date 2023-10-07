@@ -55,9 +55,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String idTokenSignatureAlgorithm;
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
-    private String authorizationResponseEncryptionAlgorithm;
     private String authorizationResponseSignatureAlgorithm;
-    private String authorizationResponseEncryptionMethod;
     private String requestObjectSignatureAlgorithm;
     private String tlsClientAuthSubjectDN;
     private boolean requirePushedAuthorizationRequests;
@@ -349,146 +347,161 @@ public class ApplicationRegistrationRequest implements Serializable {
     }
 
     public String getTokenEndpointAuthMethod() {
+
         return tokenEndpointAuthMethod;
     }
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
     public String getTokenEndpointAuthSignatureAlgorithm() {
+
         return tokenEndpointAuthSignatureAlgorithm;
     }
 
     public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
+
         this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
     }
 
     public String getSectorIdentifierURI() {
+
         return sectorIdentifierURI;
     }
 
     public void setSectorIdentifierURI(String sectorIdentifierURI) {
+
         this.sectorIdentifierURI = sectorIdentifierURI;
     }
 
-
-    public String getAuthorizationResponseEncryptionAlgorithm() {
-        return authorizationResponseEncryptionAlgorithm;
-    }
-
-    public void setAuthorizationResponseEncryptionAlgorithm(String authorizationResponseEncryptionAlgorithm) {
-        this.authorizationResponseEncryptionAlgorithm = authorizationResponseEncryptionAlgorithm;
-    }
-
     public String getAuthorizationResponseSignatureAlgorithm() {
+
         return authorizationResponseSignatureAlgorithm;
     }
 
     public void setAuthorizationResponseSignatureAlgorithm(String authorizationResponseSignatureAlgorithm) {
+
         this.authorizationResponseSignatureAlgorithm = authorizationResponseSignatureAlgorithm;
     }
 
-    public String getAuthorizationResponseEncryptionMethod() {
-        return authorizationResponseEncryptionMethod;
-    }
-
-    public void setAuthorizationResponseEncryptionMethod(String authorizationResponseEncryptionMethod) {
-        this.authorizationResponseEncryptionMethod = authorizationResponseEncryptionMethod;
-    }
-
     public String getRequestObjectSignatureAlgorithm() {
+
         return requestObjectSignatureAlgorithm;
     }
 
     public void setRequestObjectSignatureAlgorithm(String requestObjectSignatureAlgorithm) {
+
         this.requestObjectSignatureAlgorithm = requestObjectSignatureAlgorithm;
     }
 
     public String getTlsClientAuthSubjectDN() {
+
         return tlsClientAuthSubjectDN;
     }
 
     public void setTlsClientAuthSubjectDN(String tlsClientAuthSubjectDN) {
+
         this.tlsClientAuthSubjectDN = tlsClientAuthSubjectDN;
     }
     public String getSubjectType() {
+
         return subjectType;
     }
 
     public void setSubjectType(String subjectType) {
+
         this.subjectType = subjectType;
     }
 
     public String getRequestObjectEncryptionAlgorithm() {
+
         return requestObjectEncryptionAlgorithm;
     }
 
     public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+
         this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
     }
 
     public String getRequestObjectEncryptionMethod() {
+
         return requestObjectEncryptionMethod;
     }
 
     public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+
         this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
     }
 
     public String getIdTokenSignatureAlgorithm() {
+
         return idTokenSignatureAlgorithm;
     }
 
     public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
+
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
     }
 
     public String getIdTokenEncryptionAlgorithm() {
+
         return idTokenEncryptionAlgorithm;
     }
 
     public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
         this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
     }
 
     public String getIdTokenEncryptionMethod() {
+
         return idTokenEncryptionMethod;
     }
 
     public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
         this.idTokenEncryptionMethod = idTokenEncryptionMethod;
     }
 
     public boolean isRequirePushedAuthorizationRequests() {
+
         return requirePushedAuthorizationRequests;
     }
 
     public void setRequirePushedAuthorizationRequests(boolean requirePushedAuthorizationRequests) {
+
         this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
     }
 
     public boolean isTlsClientCertificateBoundAccessTokens() {
+
         return tlsClientCertificateBoundAccessTokens;
     }
 
     public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
+
         this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
     }
 
     public boolean isRequireSignedRequestObject() {
+
         return requireSignedRequestObject;
     }
 
     public void setRequireSignedRequestObject(boolean requireSignedRequestObject) {
+
         this.requireSignedRequestObject = requireSignedRequestObject;
     }
 
     public String getSoftwareStatement() {
+
         return softwareStatement;
     }
 
     public void setSoftwareStatement(String softwareStatement) {
+
         this.softwareStatement = softwareStatement;
     }
 

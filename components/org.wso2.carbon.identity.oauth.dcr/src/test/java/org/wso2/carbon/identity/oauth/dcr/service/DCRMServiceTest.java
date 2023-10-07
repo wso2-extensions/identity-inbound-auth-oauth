@@ -908,20 +908,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
-
-
-            /*ServiceProvider serviceProvider = new ServiceProvider();
-            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-            ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
-            serviceProviderProperty.setName("isFAPIConformant");
-            serviceProviderProperty.setValue("true");
-            serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
-                    serviceProviderProperty);
-            serviceProvider.setSpProperties(serviceProviderProperties);
-            whenNew(ServiceProvider.class).withNoArguments().thenReturn(serviceProvider);
-            doNothing().when(mockApplicationManagementService).updateApplication
-                    (serviceProvider , dummyTenantDomain, dummyUserName);*/
-
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getMessage(), "Error while deleting the OAuth application with consumer key: " +
@@ -1170,6 +1156,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertFalse(invalidCallback.matches(regexp));
         }
     }
+
     @Test(description = "Test to store service provider properties when defined in a map")
     public void testAddSPProperties() throws Exception {
 

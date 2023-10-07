@@ -352,10 +352,6 @@ public class OAuthAdminServiceImpl {
                         app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
                         app.setAuthorizationResponseSignatureAlgorithm(
                                 application.getAuthorizationResponseSignatureAlgorithm());
-                        app.setAuthorizationResponseEncryptionAlgorithm(
-                                application.getAuthorizationResponseEncryptionAlgorithm());
-                        app.setAuthorizationResponseEncryptionMethod(
-                                application.getAuthorizationResponseEncryptionMethod());
                         app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
                         app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
                         app.setSubjectType(application.getSubjectType());
@@ -649,10 +645,6 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
             oauthappdo.setAuthorizationResponseSignatureAlgorithm(
                     consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
-            oauthappdo.setAuthorizationResponseEncryptionAlgorithm(
-                    consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm());
-            oauthappdo.setAuthorizationResponseEncryptionMethod(
-                    consumerAppDTO.getAuthorizationResponseEncryptionMethod());
             oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
             oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
@@ -972,8 +964,8 @@ public class OAuthAdminServiceImpl {
                 if (initiatorId.isPresent()) {
                     AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                             initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
-                            OAuthConstants.LogConstants.UPDATE_APP_STATE)
-                            .data(Map.of("state", newState));
+                            OAuthConstants.LogConstants.UPDATE_APP_STATE);
+
                     triggerAuditLogEvent(auditLogBuilder, true);
                 } else {
                     LOG.error("Error getting the logged in userId");

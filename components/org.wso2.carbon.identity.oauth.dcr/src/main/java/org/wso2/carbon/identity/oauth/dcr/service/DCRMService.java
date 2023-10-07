@@ -89,7 +89,7 @@ public class DCRMService {
         validateRequestTenantDomain(clientId);
         OAuthConsumerAppDTO consumerAppDTO = getApplicationById(
                 clientId, DCRMUtils.isApplicationRolePermissionRequired());
-        //get the jwksURI from the service provider
+        // Get the jwksURI from the service provider.
         String applicationName = consumerAppDTO.getApplicationName();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         ServiceProvider serviceProvider = getServiceProvider(applicationName, tenantDomain);
@@ -225,7 +225,7 @@ public class DCRMService {
             }
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
-            //update jwksURI
+            // Update jwksURI.
             if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
                 sp.setJwksUri(updateRequest.getJwksURI());
             }
@@ -334,7 +334,7 @@ public class DCRMService {
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION, clientId, e);
         }
         OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
-        //setting the jwksURI to be sent in the response
+        // Setting the jwksURI to be sent in the response.
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
         return buildResponse(oAuthConsumerAppDTO);
     }
@@ -448,14 +448,14 @@ public class DCRMService {
 
         // Update the service provider properties list with the display name property.
         updateServiceProviderPropertyList(serviceProvider, registrationRequest.getExtApplicationDisplayName());
-        //store jwksURI
+        // Store jwksURI.
         if (StringUtils.isNotEmpty(registrationRequest.getJwksURI())) {
             serviceProvider.setJwksUri(registrationRequest.getJwksURI());
         }
 
         try {
             updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain);
-            //setting the jwksURI to be sent in the response
+            // Setting the jwksURI to be sent in the response.
             createdApp.setJwksURI(registrationRequest.getJwksURI());
         } catch (DCRMException ex) {
             // Delete the OAuth app created. This will also remove the registered SP for the OAuth app.
@@ -659,7 +659,7 @@ public class DCRMService {
         sp.setDescription("Service Provider for application " + spName);
         sp.setManagementApp(isManagementApp);
 
-        //add FAPI conformant application nad isThirdParty property to the service provider
+        // Add FAPI conformant application nad isThirdParty property to the service provider.
         Map<String, Object> spProperties = new HashMap<>();
         spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);

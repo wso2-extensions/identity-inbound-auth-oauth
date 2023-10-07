@@ -86,10 +86,6 @@ public class DCRMUtils {
         appRegistrationRequest.setIdTokenSignatureAlgorithm(registrationRequestDTO.getIdTokenSignedResponseAlg());
         appRegistrationRequest.setIdTokenEncryptionAlgorithm(registrationRequestDTO.getIdTokenEncryptedResponseAlg());
         appRegistrationRequest.setIdTokenEncryptionMethod(registrationRequestDTO.getIdTokenEncryptedResponseEnc());
-        appRegistrationRequest.setAuthorizationResponseEncryptionAlgorithm
-                (registrationRequestDTO.getAuthorizationEncryptedResponseAlg());
-        appRegistrationRequest.setAuthorizationResponseEncryptionMethod
-                (registrationRequestDTO.getAuthorizationEncryptedResponseEnc());
         appRegistrationRequest.setAuthorizationResponseSignatureAlgorithm
                 (registrationRequestDTO.getAuthorizationSignedResponseAlg());
         appRegistrationRequest.setRequestObjectSignatureAlgorithm(registrationRequestDTO.getRequestObjectSigningAlg());
@@ -134,10 +130,6 @@ public class DCRMUtils {
         applicationUpdateRequest.setIdTokenSignatureAlgorithm(updateRequestDTO.getIdTokenSignedResponseAlg());
         applicationUpdateRequest.setIdTokenEncryptionAlgorithm(updateRequestDTO.getIdTokenEncryptedResponseAlg());
         applicationUpdateRequest.setIdTokenEncryptionMethod(updateRequestDTO.getIdTokenEncryptedResponseEnc());
-        applicationUpdateRequest.setAuthorizationResponseEncryptionAlgorithm(
-                updateRequestDTO.getAuthorizationEncryptedResponseAlg());
-        applicationUpdateRequest.setAuthorizationResponseEncryptionMethod(
-                updateRequestDTO.getAuthorizationEncryptedResponseEnc());
         applicationUpdateRequest.setAuthorizationResponseSignatureAlgorithm(
                 updateRequestDTO.getAuthorizationSignedResponseAlg());
         applicationUpdateRequest.setRequestObjectSignatureAlgorithm(
