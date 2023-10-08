@@ -35,12 +35,12 @@ public class SQLQueries {
         public static final String STORE_DEVICE_CODE_WITH_QUANTIFIER = "INSERT INTO IDN_OAUTH2_DEVICE_FLOW (CODE_ID, "
                 + "DEVICE_CODE, USER_CODE, CONSUMER_KEY_ID, TIME_CREATED, LAST_POLL_TIME, EXPIRY_TIME, POLL_TIME, " +
                 "STATUS, QUANTIFIER) SELECT ?, ?, ?, ID, ?, ?, ?, ?, ?, ? FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
-                "CONSUMER_KEY = ?";
+                "CONSUMER_KEY = ? AND TENANT_ID = ?";
 
         public static final String STORE_DEVICE_CODE_WITHOUT_QUANTIFIER = "INSERT INTO IDN_OAUTH2_DEVICE_FLOW " +
                 "(CODE_ID, DEVICE_CODE, USER_CODE, CONSUMER_KEY_ID, TIME_CREATED, LAST_POLL_TIME, EXPIRY_TIME, " +
                 "POLL_TIME, STATUS) SELECT ?, ?, ?, ID, ?, ?, ?, ?, ? FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
-                "CONSUMER_KEY = ?";
+                "CONSUMER_KEY = ? AND TENANT_ID = ?";
 
         public static final String GET_CONSUMER_KEY_FOR_USER_CODE = "SELECT CONSUMER_KEY FROM IDN_OAUTH2_DEVICE_FLOW " +
                 "INNER JOIN IDN_OAUTH_CONSUMER_APPS ON CONSUMER_KEY_ID = ID WHERE USER_CODE = ?";
@@ -59,7 +59,7 @@ public class SQLQueries {
                 "WHERE DEVICE_CODE = ? AND IDN_OAUTH_CONSUMER_APPS.CONSUMER_KEY = ?";
 
         public static final String CHECK_CLIENT_ID_EXISTS = "SELECT CONSUMER_KEY FROM IDN_OAUTH_CONSUMER_APPS WHERE " +
-                "CONSUMER_KEY = ?";
+                "CONSUMER_KEY = ? AND TENANT_ID = ?";
 
         public static final String GET_USER_CODE_STATUS = "SELECT STATUS FROM IDN_OAUTH2_DEVICE_FLOW WHERE " +
                 "USER_CODE = ?";
@@ -80,7 +80,7 @@ public class SQLQueries {
                 "DEVICE_CODE = ?";
 
         public static final String SET_CALLBACK_URL = "UPDATE IDN_OAUTH_CONSUMER_APPS SET CALLBACK_URL = ? WHERE " +
-                "CONSUMER_KEY = ?";
+                "CONSUMER_KEY = ? AND TENANT_ID = ?";
 
         public static final String STORE_DEVICE_FLOW_SCOPES = "INSERT INTO IDN_OAUTH2_DEVICE_FLOW_SCOPES (SCOPE_ID, " +
                 "SCOPE) VALUES (?, ?)";

@@ -26,6 +26,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -116,7 +117,8 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.RESPONSE_TY
         OAuthCache.class,
         AppInfoCache.class,
         MultitenantUtils.class,
-        LoggerUtils.class
+        LoggerUtils.class,
+        FrameworkUtils.class
 })
 public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
@@ -169,10 +171,11 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public Object[][] validateClientDataProvider() {
 
         return new Object[][]{
-                {UUID.randomUUID().toString(), "dummyGrantType", "dummyCallBackUrl", "carbon.super", null},
-                {UUID.randomUUID().toString(), "dummyGrantType", "regexp=dummyCallBackUrl", "carbon.super",
+                {UUID.randomUUID().toString(), "dummyGrantType", "dummyCallBackUrl", "carbon.super", -1234, null},
+                {UUID.randomUUID().toString(), "dummyGrantType", "regexp=dummyCallBackUrl", "carbon.super", -1234,
                         "dummyCallBackUrl"},
-                {UUID.randomUUID().toString(), "dummyGrantType", "dummyCallBackUrl", "carbon.super", "dummyCallBackUrl"}
+                {UUID.randomUUID().toString(), "dummyGrantType", "dummyCallBackUrl", "carbon.super", -1234,
+                        "dummyCallBackUrl"}
         };
     }
 
@@ -193,6 +196,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
         String callbackUrl = "dummyCallBackUrl";
         mockStatic(AuthorizationHandlerManager.class);
         when(oAuth2AuthorizeReqDTO.getCallbackUrl()).thenReturn(callbackUrl);
@@ -204,9 +208,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
     @Test(dataProvider = "ValidateClientInfoDataProvider")
     public void testValidateClientInfo(String clientId, String grantType, String callbackUrl, String tenantDomain,
-                                       String callbackURI) throws Exception {
+                                       int tenantId, String callbackURI) throws Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain);
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain, tenantId);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
         when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
@@ -220,7 +224,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testValidateClientInfoWithInvalidCallbackURL() throws Exception {
 
         String clientId = UUID.randomUUID().toString();
-        getOAuthAppDO(clientId, "dummyGrantType", "dummyCallBackUrl", "carbon.super");
+        getOAuthAppDO(clientId, "dummyGrantType", "dummyCallBackUrl", "carbon.super", -1234);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallBackURI");
         when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
@@ -275,7 +279,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
             throws Exception {
 
         String clientId = UUID.randomUUID().toString();
-        getOAuthAppDO(clientId, "dummyGrantType", registeredCallbackURI, "carbon.super");
+        getOAuthAppDO(clientId, "dummyGrantType", registeredCallbackURI, "carbon.super", -1234);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
         when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
@@ -292,7 +296,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     public void testValidateClientInfoWithDeviceResponseType() throws Exception {
 
         String clientId = UUID.randomUUID().toString();
-        getOAuthAppDO(clientId, "dummyGrantType", null, "carbon.super");
+        getOAuthAppDO(clientId, "dummyGrantType", null, "carbon.super", -1234);
         OAuth2ServiceComponentHolder.getInstance().addResponseTypeRequestValidator(
                 new DeviceFlowResponseTypeRequestValidator());
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
@@ -307,7 +311,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test
     public void testValidateClientInfoWithEmptyGrantTypes() throws Exception {
 
-        getOAuthAppDO(clientId, null, "dummyCallbackUrl", "dummyTenantDomain");
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getLoginTenantDomainFromContext()).thenReturn("dummyTenantDomain");
+        getOAuthAppDO(clientId, null, "dummyCallbackUrl", "dummyTenantDomain", 1);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallBackUrl");
         when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
@@ -316,8 +322,8 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), OAuth2ErrorCodes.UNAUTHORIZED_CLIENT);
     }
 
-    private OAuthAppDO getOAuthAppDO(String clientId, String grantType, String callbackUrl, String tenantDomain)
-            throws Exception {
+    private OAuthAppDO getOAuthAppDO(String clientId, String grantType, String callbackUrl, String tenantDomain,
+                                     int tenantId) throws Exception {
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
@@ -327,8 +333,10 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         oAuthAppDO.setCallbackUrl(callbackUrl);
         oAuthAppDO.setAppOwner(new AuthenticatedUser());
         mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenReturn(oAuthAppDO);
+        when(IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(tenantId);
+        when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenantDomain);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(tenantId);
+        when(oAuthAppDAO.getAppInformation(clientId, tenantId)).thenReturn(oAuthAppDO);
         when(authenticatedUser.getTenantDomain()).thenReturn(tenantDomain);
         return oAuthAppDO;
     }
@@ -339,7 +347,9 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        when(oAuthAppDAO.getAppInformation(null)).thenReturn(null);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
+        when(oAuthAppDAO.getAppInformation(null, -1234)).thenReturn(null);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(null);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallbackUrI");
         when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");
@@ -362,8 +372,10 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "InvalidAppStatDataProvider")
     public void testValidateClientInfoWithInvalidAppState(String appState) throws Exception {
 
+        mockStatic(FrameworkUtils.class);
+        when(FrameworkUtils.getLoginTenantDomainFromContext()).thenReturn("dummyTenantDomain");
         OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, "dummyGrantType", "dummyCallbackUrl",
-                "dummyTenantDomain");
+                "dummyTenantDomain", 1);
         oAuthAppDO.setState(appState);
         AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
@@ -381,10 +393,12 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         String callbackUrI = "dummyCallBackURI";
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenThrow
+        when(oAuthAppDAO.getAppInformation(clientId, 1)).thenThrow
                 (new InvalidOAuthClientException("Cannot find an application associated with the given consumer key"));
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+        when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(1);
 
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackUrI);
@@ -401,10 +415,12 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         String callbackUrI = "dummyCallBackURI";
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        when(oAuthAppDAO.getAppInformation(clientId)).thenThrow
+        when(oAuthAppDAO.getAppInformation(clientId, 1)).thenThrow
                 (new IdentityOAuth2Exception("Error while retrieving the app information"));
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+        when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(1);
 
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackUrI);
@@ -444,6 +460,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
         AccessTokenIssuer accessTokenIssuer = mock(AccessTokenIssuer.class);
         mockStatic(AccessTokenIssuer.class);
         when(AccessTokenIssuer.getInstance()).thenReturn(accessTokenIssuer);
@@ -481,6 +498,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         setUpRevokeToken();
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
         RefreshTokenValidationDataDO refreshTokenValidationDataDO = new RefreshTokenValidationDataDO();
         refreshTokenValidationDataDO.setGrantType(GrantType.REFRESH_TOKEN.toString());
         refreshTokenValidationDataDO.setAccessToken("testAccessToken");
@@ -608,6 +626,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         setUpRevokeToken();
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey("testConsumerKey");
         accessTokenDO.setAuthzUser(authenticatedUser);
@@ -652,6 +671,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         setUpRevokeToken();
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
         AccessTokenDO accessTokenDO = getAccessToken();
         TokenBinding tokenBinding = new TokenBinding();
         tokenBinding.setBindingReference("dummyReference");
@@ -764,10 +784,11 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setState("ACTIVE");
         whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        when(oAuthAppDAO.getAppInformation(id)).thenReturn(oAuthAppDO);
+        when(oAuthAppDAO.getAppInformation(id, 1)).thenReturn(oAuthAppDO);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
-
+        when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(1);
         assertEquals(oAuth2Service.getOauthApplicationState(id), "ACTIVE");
     }
 
@@ -776,6 +797,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+        when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
         whenNew(OAuthAppDAO.class).withNoArguments().thenThrow(IdentityOAuth2Exception.class);
         assertNull(oAuth2Service.getOauthApplicationState(clientId));
     }
@@ -785,6 +807,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+        when(IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
 
         whenNew(OAuthAppDAO.class).withNoArguments().thenThrow(InvalidOAuthClientException.class);
         assertNull(oAuth2Service.getOauthApplicationState(clientId));

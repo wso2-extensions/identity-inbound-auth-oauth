@@ -292,9 +292,16 @@ public class ResponseTypeHandlerUtil {
                 authorizationReqDTO.getConsumerKey(), authorizationCode, codeId,
                 authorizationReqDTO.getPkceCodeChallenge(), authorizationReqDTO.getPkceCodeChallengeMethod());
 
-        OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
-                .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(),
-                        authorizationReqDTO.getCallbackUrl(), authzCodeDO);
+        String appTenant = authorizationReqDTO.getTenantDomain();
+        if (StringUtils.isNotEmpty(appTenant)) {
+            OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                    .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(), appTenant,
+                            authorizationReqDTO.getCallbackUrl(), authzCodeDO);
+        } else {
+            OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                    .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(),
+                            authorizationReqDTO.getCallbackUrl(), authzCodeDO);
+        }
 
         if (cacheEnabled) {
             // Cache the authz Code, here we prepend the client_key to avoid collisions with

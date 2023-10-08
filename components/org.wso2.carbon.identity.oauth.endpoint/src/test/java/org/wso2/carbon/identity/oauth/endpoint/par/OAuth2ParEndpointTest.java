@@ -251,6 +251,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         mockOAuthServerConfiguration();
         mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
         mockStatic(IdentityDatabaseUtil.class);
         when(IdentityDatabaseUtil.getDBConnection()).thenReturn(getConnection());
 
