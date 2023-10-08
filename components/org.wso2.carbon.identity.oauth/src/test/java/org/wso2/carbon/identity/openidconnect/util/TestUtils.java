@@ -213,6 +213,7 @@ public class TestUtils {
      */
     public static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey)
             throws RequestObjectException {
+
         SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, (RSAPrivateKey) privateKey);
         return signedJWT.serialize();
     }
