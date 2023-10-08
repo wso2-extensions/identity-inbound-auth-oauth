@@ -338,7 +338,7 @@ public class OAuthAdminServiceImpl {
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
-                            if (isFAPIValidationEnabled()) {
+                            if (isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                                 validateEncryptionAlgorithm(application.getIdTokenEncryptionAlgorithm());
                             }
                             app.setIdTokenEncryptionAlgorithm(
@@ -361,12 +361,12 @@ public class OAuthAdminServiceImpl {
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
                         if (StringUtils.isNotEmpty(application.getTokenEndpointAuthMethod()) &&
-                                isFAPIValidationEnabled()) {
+                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                             validateTokenAuthentication(application.getTokenEndpointAuthMethod());
                         }
                         app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
                         if (StringUtils.isNotEmpty(application.getTokenEndpointAuthSignatureAlgorithm()) &&
-                                isFAPIValidationEnabled()) {
+                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                             validateSignatureAlgorithm(application.getTokenEndpointAuthSignatureAlgorithm());
                         }
                         app.setTokenEndpointAuthSignatureAlgorithm(
@@ -375,7 +375,7 @@ public class OAuthAdminServiceImpl {
                             OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                                     application.getSubjectType());
                             if (subjectType == null) {
-                                throw handleClientError(INVALID_REQUEST, OAuthConstants.INVALID_SUBJECT_TYPE);
+                                throw handleClientError(INVALID_REQUEST, "Invalid subject type");
                             }
                             if (OAuthConstants.SubjectType.PAIRWISE.equals(OIDCClaimUtil.getDefaultSubjectType()) ||
                                     OAuthConstants.SubjectType.PAIRWISE.getValue()
@@ -400,29 +400,18 @@ public class OAuthAdminServiceImpl {
                             }
                         }
                         if (StringUtils.isNotEmpty(application.getIdTokenSignatureAlgorithm()) &&
-                                isFAPIValidationEnabled()) {
+                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                             validateSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
                         }
                         app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
                         if (StringUtils.isNotEmpty(application.getAuthorizationResponseSignatureAlgorithm()) &&
-                                isFAPIValidationEnabled()) {
+                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                             validateSignatureAlgorithm(application.getAuthorizationResponseSignatureAlgorithm());
                         }
                         app.setAuthorizationResponseSignatureAlgorithm(
                                 application.getAuthorizationResponseSignatureAlgorithm());
-                        if (StringUtils.isNotEmpty(application.getAuthorizationResponseEncryptionAlgorithm())) {
-                            if (isFAPIValidationEnabled()) {
-                                validateEncryptionAlgorithm(application.getAuthorizationResponseEncryptionAlgorithm());
-                            }
-                            app.setAuthorizationResponseEncryptionAlgorithm(filterEncryptionAlgorithms(
-                                    application.getAuthorizationResponseEncryptionAlgorithm()));
-                        }
-                        if (StringUtils.isNotEmpty(application.getAuthorizationResponseEncryptionMethod())) {
-                            app.setAuthorizationResponseEncryptionMethod(filterEncryptionMethod(
-                                    application.getAuthorizationResponseEncryptionMethod()));
-                        }
                         if (StringUtils.isNotEmpty(application.getRequestObjectSignatureAlgorithm())) {
-                            if (isFAPIValidationEnabled()) {
+                            if (isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                                 validateSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
                             }
                             app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
@@ -430,7 +419,7 @@ public class OAuthAdminServiceImpl {
                         app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
                         app.setSubjectType(application.getSubjectType());
                         if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionAlgorithm())) {
-                            if (isFAPIValidationEnabled()) {
+                            if (isFAPIValidationEnabled(application.getOauthConsumerKey())) {
                                 validateEncryptionAlgorithm(application.getRequestObjectEncryptionAlgorithm());
                             }
                             app.setRequestObjectEncryptionAlgorithm(filterEncryptionAlgorithms(
@@ -711,7 +700,7 @@ public class OAuthAdminServiceImpl {
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                if (isFAPIValidationEnabled()) {
+                if (isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                     validateEncryptionAlgorithm(consumerAppDTO.getIdTokenEncryptionAlgorithm());
                 }
                 oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
@@ -729,12 +718,12 @@ public class OAuthAdminServiceImpl {
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
             if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthMethod()) &&
-                    isFAPIValidationEnabled()) {
+                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                 validateTokenAuthentication(consumerAppDTO.getTokenEndpointAuthMethod());
             }
             oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
             if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled()) {
+                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                 validateSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
             }
             oauthappdo.setTokenEndpointAuthSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
@@ -742,7 +731,7 @@ public class OAuthAdminServiceImpl {
                 OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                         consumerAppDTO.getSubjectType());
                 if (subjectType == null) {
-                    throw handleClientError(INVALID_REQUEST, OAuthConstants.INVALID_SUBJECT_TYPE);
+                    throw handleClientError(INVALID_REQUEST, "Invalid subject type: ");
                 }
                 if (OAuthConstants.SubjectType.PAIRWISE.equals(OIDCClaimUtil.getDefaultSubjectType()) ||
                         OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
@@ -765,29 +754,18 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
             if (StringUtils.isNotEmpty(consumerAppDTO.getIdTokenSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled()) {
+                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                 validateSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
             }
             oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
             if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled()) {
+                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                 validateSignatureAlgorithm(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
             }
             oauthappdo.setAuthorizationResponseSignatureAlgorithm(
                     consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm())) {
-                if (isFAPIValidationEnabled()) {
-                    validateEncryptionAlgorithm(consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm());
-                }
-                oauthappdo.setAuthorizationResponseEncryptionAlgorithm(filterEncryptionAlgorithms(
-                        consumerAppDTO.getAuthorizationResponseEncryptionAlgorithm()));
-            }
-            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseEncryptionMethod())) {
-                oauthappdo.setAuthorizationResponseEncryptionMethod(filterEncryptionMethod(
-                        consumerAppDTO.getAuthorizationResponseEncryptionMethod()));
-            }
             if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled()) {
+                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                 validateSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
             }
             oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
@@ -795,7 +773,7 @@ public class OAuthAdminServiceImpl {
                     .isRequestObjectSignatureValidationEnabled());
             oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
             if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectEncryptionAlgorithm())) {
-                if (isFAPIValidationEnabled()) {
+                if (isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
                     validateEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
                 }
                 oauthappdo.setRequestObjectEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
@@ -2269,13 +2247,14 @@ public class OAuthAdminServiceImpl {
      *
      * @return isFAPIValidationEnabled
      */
-    private boolean isFAPIValidationEnabled() {
+    private boolean isFAPIValidationEnabled(String clientId) throws IdentityOAuthAdminException {
 
-        String isFAPIEnabled = IdentityUtil.getProperty(IS_FAPI_VALIDATION_ENABLED);
-        if (isFAPIEnabled != null) {
-            return Boolean.parseBoolean(isFAPIEnabled);
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new IdentityOAuthAdminException(INVALID_OAUTH_CLIENT.getErrorCode(),
+                    "Error while retrieving FAPI conformance status for client: " + clientId, e);
         }
-        return false;
     }
     private void validateTokenAuthentication(String authenticationMethod) throws IdentityOAuthClientException {
 
