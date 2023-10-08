@@ -2015,7 +2015,7 @@ public class OAuth2AuthzEndpoint {
         }
 
         if (isFapiConformant(params.getClientId())) {
-            EndpointUtil.validateFAPIAllowedResponseMode(params.getResponseType(), params.getResponseMode());
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(params.getResponseType(), params.getResponseMode());
         }
 
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);

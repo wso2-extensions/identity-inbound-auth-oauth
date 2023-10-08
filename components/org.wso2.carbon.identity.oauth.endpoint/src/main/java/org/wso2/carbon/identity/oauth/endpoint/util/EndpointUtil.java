@@ -1905,14 +1905,16 @@ public class EndpointUtil {
 
     /**
      * Validate the response mode against the response type as per FAPI spec.
-     * Response mode required to be jwt if code response type is used.
+     * shall require;
+     * 1. the response_type value code id_token, or
+     * 2. the response_type value code in conjunction with the response_mode value jwt;
      * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">5.2.2-2.2</a>
      *
      * @param responseType response mode
      * @param responseMode response type
      * @throws OAuthProblemException when response mode is not valid
      */
-    public static void validateFAPIAllowedResponseMode(String responseType, String responseMode)
+    public static void validateFAPIAllowedResponseTypeAndMode(String responseType, String responseMode)
             throws OAuthProblemException {
 
         if (!(CODE_IDTOKEN.equals(responseType) || (CODE.equals(responseType) && JWT.equals(responseMode)))) {
