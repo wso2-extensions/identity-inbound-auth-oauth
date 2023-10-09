@@ -320,6 +320,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                     encryptionAlgorithm, encryptionMethod, spTenantDomain,
                     clientId).serialize();
         } else {
+            if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+                signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                        oAuthAppDO.getIdTokenSignatureAlgorithm());
+            }
             return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
         }
     }
