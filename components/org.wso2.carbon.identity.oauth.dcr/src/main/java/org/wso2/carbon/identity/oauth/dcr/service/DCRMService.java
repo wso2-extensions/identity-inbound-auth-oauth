@@ -56,9 +56,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
