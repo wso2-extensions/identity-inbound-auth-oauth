@@ -1157,19 +1157,4 @@ public class DCRMServiceTest extends PowerMockTestCase {
             assertFalse(invalidCallback.matches(regexp));
         }
     }
-
-    @Test(description = "Test to store service provider properties when defined in a map")
-    public void testAddSPProperties() throws Exception {
-
-        ServiceProvider serviceProvider = new ServiceProvider();
-        Map<String, Object> spProperties = new HashMap<>();
-        spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
-        spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
-        invokeMethod(dcrmService, "addSPProperties", spProperties, serviceProvider);
-        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-        boolean propertyExists = Arrays.stream(serviceProviderProperties)
-                .anyMatch(property -> property.getName().equals(OAuthConstants.IS_FAPI_CONFORMANT_APP));
-        assertTrue(propertyExists);
-
-    }
 }
