@@ -67,7 +67,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
-import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.AuthenticationResult;
 import org.wso2.carbon.user.core.config.UserStorePreferenceOrderSupplier;
@@ -77,14 +76,16 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -193,8 +194,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthServiceResponse authServiceResponse = authenticationService.
                     handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
 
-            if (authServiceResponse.getSessionDataKey() != null &&
-                    AuthenticatorFlowStatus.SUCCESS_COMPLETED.toString().equals(authServiceResponse.getFlowStatus().toString())) {
+            if (authServiceResponse.getSessionDataKey() != null && AuthenticatorFlowStatus.SUCCESS_COMPLETED.toString().
+                            equals(authServiceResponse.getFlowStatus().toString())) {
                 String sessionDataKey = authServiceResponse.getSessionDataKey();
                 org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult
                         authResult = null;
@@ -328,9 +329,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                             && "true".equals(property.getValue()))) {
                 authenticatedUser = authenticateUserAtFramework(tokenReq, serviceProvider);
             } else {
-                authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager, tenantAwareUserName);
+                authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
+                        tenantAwareUserName);
             }
-            if (authenticatedUser!= null) {
+            if (authenticatedUser != null) {
                 if (isPublishPasswordGrantLoginEnabled) {
                     publishAuthenticationData(tokenReq, true, serviceProvider, authenticatedUser);
                 }
