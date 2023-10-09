@@ -28,16 +28,24 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.ArrayUtils.isNotEmpty;
@@ -54,6 +62,7 @@ public class OIDCClaimUtil {
     private static final Log log = LogFactory.getLog(OIDCClaimUtil.class);
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String SEND_ONLY_SP_MAPPED_ROLES = "SPRoleManagement.ReturnOnlyMappedLocalRoles";
+    private static final String DEFAULT_SUBJECT_TYPE = "OAuth.OpenIDConnect.DefaultSubjectType";
 
     private OIDCClaimUtil() {
     }
@@ -268,5 +277,99 @@ public class OIDCClaimUtil {
     private static boolean isUserConsentRequiredForClaims(String grantType) {
 
         return OAuthServerConfiguration.getInstance().isUserConsentRequiredForClaims(grantType);
+    }
+
+    /**
+     * Get the application's preferred subject type.
+     *
+     * @param clientId client id
+     * @return subject type
+     */
+    private static OAuthConstants.SubjectType getSubjectType(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        OAuthAppDO oAuthAppDO = null;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for client id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
+        }
+        if (oAuthAppDO != null && StringUtils.isNotEmpty(oAuthAppDO.getSubjectType())) {
+            return OAuthConstants.SubjectType.fromValue(oAuthAppDO.getSubjectType());
+        }
+        // Return default subject type if the property is not configured.
+        return getDefaultSubjectType();
+    }
+
+    private static OAuthConstants.SubjectType getDefaultSubjectType() {
+
+        return StringUtils.isNotBlank(IdentityUtil.getProperty(DEFAULT_SUBJECT_TYPE)) ?
+                OAuthConstants.SubjectType.fromValue(IdentityUtil.getProperty(DEFAULT_SUBJECT_TYPE))
+                : OAuthConstants.SubjectType.PUBLIC;
+    }
+
+    /**
+     * Get the subject claim for the given user. If pairwise subject type is opted, then a PPID will be returned,
+     * otherwise, the authenticated user's username will be returned.
+     *
+     * @param authenticatedSubjectIdentifier authenticated subject identifier
+     * @param callBackURI                    callback uri
+     * @return sub claim
+     * @throws IdentityOAuth2Exception when an error occurred while getting the service provider properties or user id
+     */
+    public static String getSubjectClaim(OAuthAppDO oAuthAppDO, String authenticatedSubjectIdentifier,
+                                         String callBackURI) throws IdentityOAuth2Exception {
+
+
+        if (StringUtils.isNotEmpty(oAuthAppDO.getSubjectType())) {
+            String subjectType = oAuthAppDO.getSubjectType();
+            if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(subjectType)) {
+                return getPairwiseSubjectIdentifier(oAuthAppDO.getSectorIdentifierURI(),
+                        authenticatedSubjectIdentifier, callBackURI);
+            }
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    /**
+     * Calculate pairwise subject identifier.
+     * <a href="https://openid.net/specs/openid-connect-core-1_0.html#PairwiseAlg">...</a>
+     *
+     * @param sectorIdentifierUri sector identifier URI
+     * @param userId              user id
+     * @param callBackURI         callback URI
+     * @return pairwise subject identifier
+     * @throws IdentityOAuth2Exception if required values are not present
+     */
+    private static String getPairwiseSubjectIdentifier(String sectorIdentifierUri, String userId, String callBackURI)
+            throws IdentityOAuth2Exception {
+
+        URI uri = StringUtils.isNotBlank(sectorIdentifierUri) ? URI.create(sectorIdentifierUri) :
+                StringUtils.isNotBlank(callBackURI) && isValidCallBackURI(callBackURI) ? URI.create(callBackURI) : null;
+        String hostname;
+        if (uri != null) {
+            hostname = uri.getHost();
+        } else {
+            throw new IdentityOAuth2Exception("Invalid sector identifier URI or callback URI.");
+        }
+
+        if (StringUtils.isBlank(userId)) {
+            throw new IdentityOAuth2Exception("Invalid user id.");
+        }
+
+        String seed = hostname.concat(userId);
+        return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
+    }
+
+    private static boolean isValidCallBackURI(String callBackURI) {
+
+        return !callBackURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX);
+    }
+
+    public static String getCallbackUrl(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        return oAuthAppDO != null ? oAuthAppDO.getCallbackUrl() : null;
     }
 }

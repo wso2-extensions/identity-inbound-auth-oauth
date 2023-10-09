@@ -127,6 +127,15 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
         String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        // Get subject identifier according to the configured subject type.
+        String callbackUri;
+        try {
+            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while getting the registered callback URI for client_id: " +
+                    clientId, e);
+        }
+        subjectClaim = OIDCClaimUtil.getSubjectClaim(oAuthAppDO, subjectClaim, callbackUri);
 
         String nonceValue = null;
         String idpSessionKey = null;
@@ -238,6 +247,23 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         String subject =
                 getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+
+        String callbackUri;
+        try {
+            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while getting the registered callback URI for client_id: " +
+                    clientId, e);
+        }
+        // Get subject identifier according to the configured subject type.
+        subject = OIDCClaimUtil.getSubjectClaim(oAuthAppDO, subject, callbackUri);
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
