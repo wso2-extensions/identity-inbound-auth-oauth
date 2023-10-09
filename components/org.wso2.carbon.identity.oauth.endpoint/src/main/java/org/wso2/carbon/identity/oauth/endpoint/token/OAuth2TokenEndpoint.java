@@ -67,6 +67,7 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.PROP_CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getHttpServletResponseWrapper;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
@@ -164,7 +165,7 @@ public class OAuth2TokenEndpoint {
 
             validateOAuthApplication(oauthClientAuthnContext);
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest,
-                    httpRequest, (HttpServletResponseWrapper) response);
+                    httpRequest, getHttpServletResponseWrapper(response));
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
                 return handleErrorResponse(oauth2AccessTokenResp);
