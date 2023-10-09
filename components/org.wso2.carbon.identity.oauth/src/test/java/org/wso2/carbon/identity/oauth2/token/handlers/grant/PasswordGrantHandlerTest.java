@@ -181,7 +181,6 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
 
         PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
         boolean isValid = passwordGrantHandler.validateGrant(tokReqMsgCtx);
-        System.out.println("am herere==============="+isValid);
         assertTrue(isValid, "Password grant validation should be successful");
     }
 
