@@ -464,7 +464,9 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("RS256"));
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("PS256"));
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("ES256"));
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.size() == 2);
     }
 
