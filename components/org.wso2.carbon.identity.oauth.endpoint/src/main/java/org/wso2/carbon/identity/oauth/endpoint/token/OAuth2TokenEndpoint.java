@@ -352,7 +352,8 @@ public class OAuth2TokenEndpoint {
                                                       HttpServletRequestWrapper httpServletRequestWrapper,
                                                       HttpServletResponseWrapper httpServletResponseWrapper) {
 
-        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper, httpServletResponseWrapper);
+        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper,
+                httpServletResponseWrapper);
         return EndpointUtil.getOAuth2Service().issueAccessToken(tokenReqDTO);
     }
 
