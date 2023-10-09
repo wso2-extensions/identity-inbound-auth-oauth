@@ -55,6 +55,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -87,7 +88,8 @@ public class OAuth2TokenEndpoint {
     @Path("/")
     @Consumes("application/json")
     @Produces("application/json")
-    public Response issueAccessToken(@Context HttpServletRequest request, String payload) throws
+    public Response issueAccessToken(@Context HttpServletRequest request, @Context HttpServletResponse response,
+                                     String payload) throws
             OAuthSystemException, InvalidRequestParentException {
 
         Map<String, List<String>> paramMap;
@@ -115,14 +117,14 @@ public class OAuth2TokenEndpoint {
                 PrivilegedCarbonContext.endTenantFlow();
             }
         }
-        return issueAccessToken(request, paramMap);
+        return issueAccessToken(request, response, paramMap);
     }
 
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
-    public Response issueAccessToken(@Context HttpServletRequest request,
+    public Response issueAccessToken(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
@@ -138,10 +140,11 @@ public class OAuth2TokenEndpoint {
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-        return issueAccessToken(request, (Map<String, List<String>>) paramMap);
+        return issueAccessToken(request, response, (Map<String, List<String>>) paramMap);
     }
 
-    protected Response issueAccessToken(HttpServletRequest request, Map<String, List<String>> paramMap) throws
+    protected Response issueAccessToken(HttpServletRequest request, HttpServletResponse response,
+                                        Map<String, List<String>> paramMap) throws
             OAuthSystemException, InvalidRequestParentException {
 
         try {
@@ -160,7 +163,8 @@ public class OAuth2TokenEndpoint {
             }
 
             validateOAuthApplication(oauthClientAuthnContext);
-            OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest, httpRequest);
+            OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest,
+                    httpRequest, (HttpServletResponseWrapper) response);
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
                 return handleErrorResponse(oauth2AccessTokenResp);
@@ -344,14 +348,16 @@ public class OAuth2TokenEndpoint {
     }
 
     private OAuth2AccessTokenRespDTO issueAccessToken(CarbonOAuthTokenRequest oauthRequest,
-                                                      HttpServletRequestWrapper httpServletRequestWrapper) {
+                                                      HttpServletRequestWrapper httpServletRequestWrapper,
+                                                      HttpServletResponseWrapper httpServletResponseWrapper) {
 
-        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper);
+        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper, httpServletResponseWrapper);
         return EndpointUtil.getOAuth2Service().issueAccessToken(tokenReqDTO);
     }
 
     private OAuth2AccessTokenReqDTO buildAccessTokenReqDTO(CarbonOAuthTokenRequest oauthRequest,
-                                                           HttpServletRequestWrapper httpServletRequestWrapper) {
+                                                           HttpServletRequestWrapper httpServletRequestWrapper,
+                                                           HttpServletResponseWrapper httpServletResponseWrapper) {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
@@ -370,6 +376,7 @@ public class OAuth2TokenEndpoint {
         tokenReqDTO.setHttpRequestHeaders(oauthRequest.getHttpRequestHeaders());
         // Set the request wrapper so we can get remote information later.
         tokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+        tokenReqDTO.setHttpServletResponseWrapper(httpServletResponseWrapper);
 
         // Check the grant type and set the corresponding parameters
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
