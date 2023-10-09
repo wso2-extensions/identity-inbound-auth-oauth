@@ -129,9 +129,8 @@ public class ParAuthServiceImpl implements ParAuthService {
     private void validateClientID(String clientId, String parClientId) throws ParClientException {
 
         if (!StringUtils.equals(parClientId, clientId)) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT,
-                    String.format(OAuthConstants.OAuthError.AuthorizationResponsei18nKey.CLIENT_IDS_NOT_MATCH,
-                            clientId, parClientId));
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.CLIENT_IDS_NOT_MATCH);
         }
     }
 
