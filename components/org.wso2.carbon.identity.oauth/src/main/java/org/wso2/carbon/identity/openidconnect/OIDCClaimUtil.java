@@ -46,7 +46,6 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
         APPLICATION_DOMAIN;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.
         WORKFLOW_DOMAIN;
-
 /**
  * Utility to handle OIDC Claim related functionality.
  */

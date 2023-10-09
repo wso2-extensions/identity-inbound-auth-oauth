@@ -345,6 +345,21 @@ public class OAuthAdminServiceImpl {
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                        app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+                        app.setTokenEndpointAuthSignatureAlgorithm(
+                                application.getTokenEndpointAuthSignatureAlgorithm());
+                        app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                        app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
+                        app.setAuthorizationResponseSignatureAlgorithm(
+                                application.getAuthorizationResponseSignatureAlgorithm());
+                        app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
+                        app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
+                        app.setSubjectType(application.getSubjectType());
+                        app.setRequestObjectEncryptionAlgorithm(application.getRequestObjectEncryptionAlgorithm());
+                        app.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
+                        app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
+                        app.setTlsClientCertificateBoundAccessTokens(
+                                application.getTlsClientCertificateBoundAccessTokens());
                     }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -623,6 +638,21 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
+            oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
+            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(
+                    consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+            oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
+            oauthappdo.setAuthorizationResponseSignatureAlgorithm(
+                    consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
+            oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+            oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
+            oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
+            oauthappdo.setRequestObjectEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
+            oauthappdo.setRequestObjectEncryptionMethod(consumerAppDTO.getRequestObjectEncryptionMethod());
+            oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
+            oauthappdo.setTlsClientCertificateBoundAccessTokens(
+                    consumerAppDTO.getTlsClientCertificateBoundAccessTokens());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);

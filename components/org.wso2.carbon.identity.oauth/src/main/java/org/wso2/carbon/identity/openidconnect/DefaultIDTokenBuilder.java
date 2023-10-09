@@ -244,15 +244,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         List<String> amrValues = Collections.emptyList(); //TODO:
         String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
 
-        // Initialize OAuthAppDO using the client ID.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-        } catch (InvalidOAuthClientException e) {
-            String error = "Error occurred while getting app information for client_id: " + clientId;
-            throw new IdentityOAuth2Exception(error, e);
-        }
-
         String[] amrValueArray =
                 (String[]) (authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants.AMR));
         if (ArrayUtils.isNotEmpty(amrValueArray)) {
@@ -316,6 +307,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
             checkIfPublicCertConfiguredForEncryption(clientId, spTenantDomain);
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
+            if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+                signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                        oAuthAppDO.getIdTokenSignatureAlgorithm());
+            }
             return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
                     encryptionAlgorithm, encryptionMethod, spTenantDomain,
                     clientId).serialize();

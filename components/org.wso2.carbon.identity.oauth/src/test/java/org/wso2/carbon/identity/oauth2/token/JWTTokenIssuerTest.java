@@ -305,7 +305,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
         mockStatic(OAuth2Util.class);
+        appDO.setSubjectType("pairwise");
+        appDO.setSectorIdentifierURI(DUMMY_SECTOR_IDENTIFIER);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
         when(OAuth2Util.getIDTokenIssuer()).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getOIDCAudience(anyString(), anyObject())).thenReturn(Collections.singletonList
