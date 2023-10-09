@@ -24,7 +24,9 @@ import com.nimbusds.jwt.PlainJWT;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AbstractResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
@@ -147,12 +149,14 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
         String jwtToken;
         try {
             String signingTenantDomain = authorizationResponseDTO.getSigningTenantDomain();
-            JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm();
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(authorizationResponseDTO.getClientId(),
+                    signingTenantDomain);
+            JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm(oAuthAppDO);
             if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
                 signatureAlgorithm = JWSAlgorithm.parse(new PlainJWT(jwtClaimsSet).serialize());
             }
             jwtToken = OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             authorizationResponseDTO.setError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Error in signing JWT.", OAuth2ErrorCodes.SERVER_ERROR);
             throw new OAuthSystemException("Error in signing JWT");
@@ -160,10 +164,16 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
         return jwtToken;
     }
 
-    protected static JWSAlgorithm getJWTSignatureAlgorithm() throws OAuthSystemException {
+    protected static JWSAlgorithm getJWTSignatureAlgorithm(OAuthAppDO oAuthAppDO) throws OAuthSystemException {
 
+        String sigAlg;
         JWSAlgorithm signatureAlgorithm = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
-        String sigAlg = OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm();
+        if (oAuthAppDO != null && StringUtils.isNotEmpty(oAuthAppDO.getAuthorizationResponseSignatureAlgorithm())) {
+            sigAlg = oAuthAppDO.getAuthorizationResponseSignatureAlgorithm();
+        } else {
+            sigAlg = OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm();
+
+        }
         if (isNotBlank(sigAlg)) {
             try {
                 signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
