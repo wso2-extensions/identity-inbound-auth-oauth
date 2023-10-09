@@ -296,14 +296,6 @@
                 <SupportedTokenEndpointSigningAlgorithm>PS256</SupportedTokenEndpointSigningAlgorithm>
                 <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>
             </SupportedTokenEndpointSigningAlgorithms>
-            <UserInfoJWTSignatureAlgorithms>
-                <UserInfoJWTSignatureAlgorithm>SHA256withRSA</UserInfoJWTSignatureAlgorithm>
-                <UserInfoJWTSignatureAlgorithm>PS256</UserInfoJWTSignatureAlgorithm>
-                <UserInfoJWTSignatureAlgorithm>ES256</UserInfoJWTSignatureAlgorithm>
-            </UserInfoJWTSignatureAlgorithms>
-            <IDTokenSigningAlgorithms>
-                <IDTokenSigningAlgorithm>PS256</IDTokenSigningAlgorithm>
-            </IDTokenSigningAlgorithms>
         </OpenIDConnect>
 
         <DeviceCodeGrant>
