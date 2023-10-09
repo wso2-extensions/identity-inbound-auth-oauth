@@ -36,6 +36,11 @@ public class DiscoveryConstants {
      */
     public static final String AUTHORIZATION_ENDPOINT = "Authorization_endpoint";
     /**
+     * pushed_authorization_request_endpoint
+     * REQUIRED. URL of the OP's OAuth 2.0 Pushed Authorization Request Endpoint [OpenID.Core].
+     */
+    public static final String PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "Pushed_authorization_request_endpoint";
+    /**
      * token_endpoint
      * URL of the OP's OAuth 2.0 Token Endpoint [OpenID.Core]. This is REQUIRED unless only the Implicit
      * Flow is used.

@@ -134,6 +134,7 @@ public class OIDCSessionIFrameServletTest extends TestOIDCSessionBase {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(TENANT_ID);
 
         mockStatic(OIDCSessionManagementUtil.class);
         when(OIDCSessionManagementUtil.getOrigin((CALLBACK_URL))).thenReturn("http://localhost:8080/playground2");

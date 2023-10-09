@@ -78,7 +78,7 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
             oauthCache.clearCacheEntry(oauthcacheKey);
         } catch (UserIdNotFoundException e) {
             throw new CacheEntryListenerException("User id not found for user: "
-                    + accessTokenDO.getAuthzUser().getLoggableUserId());
+                    + accessTokenDO.getAuthzUser().getLoggableMaskedUserId());
         }
     }
 }

@@ -55,6 +55,10 @@ import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -486,10 +490,10 @@ public class AccessTokenIssuer {
             }
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-
+        Optional<AuthorizationGrantCacheEntry> authorizationGrantCacheEntry = Optional.empty();
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
-            // Should add user attributes to the cache before building the ID token.
-            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
+
+            authorizationGrantCacheEntry = getAuthzGrantCacheEntryFromAuthzCode(tokenReqDTO);
         }
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
@@ -541,12 +545,53 @@ public class AccessTokenIssuer {
             }
         }
 
+        if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
+            Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
+            if (deviceCodeOptional.isPresent()) {
+                String deviceCode = deviceCodeOptional.get();
+                authorizationGrantCacheEntry = getAuthzGrantCacheEntryFromDeviceCode(deviceCode);
+                // Cache entry against the device code has no value beyond the token request.
+                clearCacheEntryAgainstDeviceCode(deviceCode);
+            }
+        }
+        if (authorizationGrantCacheEntry.isPresent()) {
+            cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO);
+        }
+
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
 
         return tokenRespDTO;
+    }
+
+    private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {
+
+        DeviceAuthorizationGrantCacheKey deviceCodeCacheKey =
+                new DeviceAuthorizationGrantCacheKey(deviceCode);
+        DeviceAuthorizationGrantCacheEntry cacheEntry =
+                DeviceAuthorizationGrantCache.getInstance().getValueFromCache(deviceCodeCacheKey);
+        if (cacheEntry != null) {
+            Map<ClaimMapping, String> userAttributes = cacheEntry.getUserAttributes();
+            return Optional.of(new AuthorizationGrantCacheEntry(userAttributes));
+        }
+        return Optional.empty();
+    }
+
+    private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromAuthzCode(OAuth2AccessTokenReqDTO
+                                                                                                tokenReqDTO) {
+
+        AuthorizationGrantCacheKey oldCacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry = null;
+        //checking getUserAttributesId value of cacheKey before retrieve entry from cache as it causes to NPE
+        if (oldCacheKey.getUserAttributesId() != null) {
+            authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByCode(oldCacheKey);
+        }
+        if (authorizationGrantCacheEntry != null) {
+            return Optional.of(authorizationGrantCacheEntry);
+        }
+        return Optional.empty();
     }
 
     private boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -765,7 +810,7 @@ public class AccessTokenIssuer {
                 subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user: "
-                        + authenticatedUser.getLoggableUserId(), e);
+                        + authenticatedUser.getLoggableMaskedUserId(), e);
             }
             if (log.isDebugEnabled()) {
                 log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName()
@@ -1025,36 +1070,28 @@ public class AccessTokenIssuer {
     }
 
     /**
-     * Copies the cache entry against the authorization code and adds an entry against the access token. This is done to
-     * reuse the calculated user claims for subsequent usages such as user info calls.
+     * Copies the cache entry against the authorization code/device code and adds an entry against the access token.
+     * This is done to reuse the calculated user claims for subsequent usages such as user info calls.
      *
-     * @param tokenReqDTO
+     * @param authorizationGrantCacheEntry
      * @param tokenRespDTO
      */
-    private void addUserAttributesAgainstAccessToken(OAuth2AccessTokenReqDTO tokenReqDTO,
-                                                     OAuth2AccessTokenRespDTO tokenRespDTO) {
+    private void cacheUserAttributesAgainstAccessToken(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+                                                       OAuth2AccessTokenRespDTO tokenRespDTO) {
 
-        AuthorizationGrantCacheKey oldCacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
-        //checking getUserAttributesId value of cacheKey before retrieve entry from cache as it causes to NPE
-        if (oldCacheKey.getUserAttributesId() != null) {
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
-                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(oldCacheKey);
-            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-            if (authorizationGrantCacheEntry != null) {
-                authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-                if (log.isDebugEnabled()) {
-                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
-                                DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
-                    } else {
-                        log.debug("Adding AuthorizationGrantCache entry for the access token");
-                    }
-                }
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
-                AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+        AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
+        authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
+                        DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
+            } else {
+                log.debug("Adding AuthorizationGrantCache entry for the access token");
             }
         }
+        authorizationGrantCacheEntry.setValidityPeriod(
+                TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
 
     private void clearCacheEntryAgainstAuthorizationCode(String authorizationCode) {
@@ -1066,9 +1103,25 @@ public class AccessTokenIssuer {
         }
     }
 
+    private void clearCacheEntryAgainstDeviceCode(String deviceCode) {
+
+        DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
+        DeviceAuthorizationGrantCache.getInstance().clearCacheEntry(cacheKey);
+    }
+
     private String getAuthorizationCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
 
         return tokenReqDTO.getAuthorizationCode();
+    }
+
+    private Optional<String> getDeviceCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        return Arrays.stream(tokenReqDTO.getRequestParameters())
+                .filter(parameter -> Constants.DEVICE_CODE.equals(parameter.getKey())
+                        && parameter.getValue() != null
+                        && parameter.getValue().length > 0)
+                .map(parameter -> parameter.getValue()[0])
+                .findFirst();
     }
 
     /**

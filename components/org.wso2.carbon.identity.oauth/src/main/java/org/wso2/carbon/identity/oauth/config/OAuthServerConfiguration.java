@@ -123,6 +123,7 @@ public class OAuthServerConfiguration {
     private static String oauth1AuthorizeUrl = null;
     private static String oauth1AccessTokenUrl = null;
     private static String oauth2AuthzEPUrl = null;
+    private static String oauth2ParEPUrl = null;
     private static String oauth2TokenEPUrl = null;
     private static String oauth2UserInfoEPUrl = null;
     private static String oauth2RevocationEPUrl = null;
@@ -186,6 +187,7 @@ public class OAuthServerConfiguration {
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private List<String> supportedTokenTypes = new ArrayList<>();
     private List<String> publicClientSupportedGrantTypes = new ArrayList<>();
+    private List<String> publicClientNotSupportedGrantTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
@@ -396,6 +398,9 @@ public class OAuthServerConfiguration {
         // read token renewal per request config.
         // if enabled access token and refresh token will be renewed for each token endpoint call.
         parseTokenRenewalPerRequestConfiguration(oauthElem);
+
+        // Read map federated users to local config.
+        parseMapFederatedUsersToLocalConfiguration(oauthElem);
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
@@ -659,6 +664,11 @@ public class OAuthServerConfiguration {
 
     public String getOAuth2AuthzEPUrl() {
         return oauth2AuthzEPUrl;
+    }
+
+    public String getOAuth2ParEPUrl() {
+
+        return oauth2ParEPUrl;
     }
 
     public String getOAuth2TokenEPUrl() {
@@ -2042,6 +2052,13 @@ public class OAuthServerConfiguration {
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_PAR_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ParEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.OAUTH2_TOKEN_EP_URL));
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
@@ -2386,6 +2403,29 @@ public class OAuthServerConfiguration {
                         refreshTokenAllowedGrantTypes.put(grantTypeName, isRefreshAllowed);
                     }
                 }
+
+                /* Read the public client allowed grant types for all grant types.
+                 * Grant types added with PublicClientAllowed property and value set to true will be added to
+                 * publicClientSupportedGrantTypes list and value set to false will be added to
+                 * publicClientNotSupportedGrantTypes. All default grant types will have the property set to either the
+                 * value.
+                 * If the property is not mentioned in the custom grant type configuration, the grant type will not be
+                 * added to either lists. So, if the custom grant type is added to the array configuration of allowed,
+                 * grant types, it will get added to the publicClientSupportedGrantTypes list.
+                 */
+                OMElement publicClientAllowedElement = supportedGrantTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ALLOWED));
+                String publicClientAllowed = null;
+                if (publicClientAllowedElement != null) {
+                    publicClientAllowed = publicClientAllowedElement.getText();
+                }
+                if (StringUtils.isNotEmpty(publicClientAllowed)) {
+                    if (Boolean.parseBoolean(publicClientAllowed)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    } else {
+                        publicClientNotSupportedGrantTypes.add(grantTypeName);
+                    }
+                }
             }
         } else {
             // if this element is not present, assume the default case.
@@ -2423,7 +2463,10 @@ public class OAuthServerConfiguration {
             while (iterator.hasNext()) {
                 OMElement publicClientSupportedGrantName = (OMElement) iterator.next();
                 if (publicClientSupportedGrantName != null) {
-                    publicClientSupportedGrantTypes.add(publicClientSupportedGrantName.getText());
+                    String grantTypeName = publicClientSupportedGrantName.getText();
+                    if (!publicClientNotSupportedGrantTypes.contains(grantTypeName)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    }
                 }
             }
         }
@@ -3408,6 +3451,23 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the map federated users to local configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseMapFederatedUsersToLocalConfiguration(OMElement oauthConfigElem) {
+
+        OMElement mapFederatedUsersToLocalConfigElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.MAP_FED_USERS_TO_LOCAL));
+        if (mapFederatedUsersToLocalConfigElem != null) {
+            mapFederatedUsersToLocal = Boolean.parseBoolean(mapFederatedUsersToLocalConfigElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("MapFederatedUsersToLocal was set to : " + mapFederatedUsersToLocal);
+        }
+    }
+
+    /**
      * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
      * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
      * calls as well.
@@ -3624,6 +3684,7 @@ public class OAuthServerConfiguration {
         public static final String OAUTH1_AUTHORIZE_URL = "OAuth1AuthorizeUrl";
         public static final String OAUTH1_ACCESS_TOKEN_URL = "OAuth1AccessTokenUrl";
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
+        public static final String OAUTH2_PAR_EP_URL = "OAuth2ParEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";
@@ -3784,6 +3845,7 @@ public class OAuthServerConfiguration {
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
         private static final String TOKEN_TYPE_IMPL_CLASS = "TokenTypeImplClass";
+        private static final String PUBLIC_CLIENT_ALLOWED = "PublicClientAllowed";
         // Supported Client Authentication Methods
         private static final String CLIENT_AUTH_HANDLERS = "ClientAuthHandlers";
         private static final String CLIENT_AUTH_HANDLER_IMPL_CLASS = "ClientAuthHandler";

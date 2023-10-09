@@ -148,7 +148,7 @@ public class OAuth2ParEndpoint {
         parErrorResponse.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, ParConstants.INTERNAL_SERVER_ERROR);
 
         Response.ResponseBuilder respBuilder = Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        log.debug("Exception occurred when handling the request: ", parCoreException);
+        log.error("Exception occurred when handling the request: ", parCoreException);
         return respBuilder.entity(parErrorResponse.toString()).build();
     }
 
@@ -178,7 +178,7 @@ public class OAuth2ParEndpoint {
                         oAuthClientAuthnContext.getErrorMessage());
             } else if (OAuth2ErrorCodes.INVALID_CLIENT.equals(oAuthClientAuthnContext.getErrorCode())) {
                 throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
-                        ParConstants.INVALID_CLIENT_ERROR + oAuthClientAuthnContext.getClientId());
+                        oAuthClientAuthnContext.getErrorMessage());
             }
             throw new ParClientException(oAuthClientAuthnContext.getErrorCode(),
                     oAuthClientAuthnContext.getErrorMessage());
@@ -211,6 +211,9 @@ public class OAuth2ParEndpoint {
         OAuth2ClientValidationResponseDTO validationResponse = getOAuth2Service().validateClientInfo(request);
 
         if (!validationResponse.isValidClient()) {
+            if (OAuth2ErrorCodes.INVALID_CLIENT.equals(validationResponse.getErrorCode())) {
+                throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, validationResponse.getErrorMsg());
+            }
             throw new ParClientException(validationResponse.getErrorCode(), validationResponse.getErrorMsg());
         }
         if (isRequestUriProvided(params)) {

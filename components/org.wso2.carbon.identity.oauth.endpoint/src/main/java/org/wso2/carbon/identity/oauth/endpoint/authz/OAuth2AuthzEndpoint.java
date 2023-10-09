@@ -100,6 +100,11 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -235,6 +240,9 @@ public class OAuth2AuthzEndpoint {
 
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
+    private static final String SERVICE_PROVIDER = "serviceProvider";
+    private static final String TENANT_DOMAIN = "tenantDomain";
+    private static final String USER_TENANT_DOMAIN = "userTenantDomain";
     private static final String AUTHENTICATION_ENDPOINT = "/authenticationendpoint";
     private static final String OAUTH_RESPONSE_JSP_PAGE = "/oauth_response.jsp";
 
@@ -243,6 +251,8 @@ public class OAuth2AuthzEndpoint {
     private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
 
     private static ScopeMetadataService scopeMetadataService;
+
+    private DeviceAuthService deviceAuthService;
 
     public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
 
@@ -645,7 +655,7 @@ public class OAuth2AuthzEndpoint {
             handleUserConsent(oAuthMessage, consent, sessionState, oauth2Params, authorizationResponseDTO);
 
             if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
-                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
+                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO, null);
                 if (authorizationResponseDTO.getIsForwardToOAuthResponseJSP()) {
                     return Response.ok().build();
                 }
@@ -938,7 +948,8 @@ public class OAuth2AuthzEndpoint {
 
     private void handleFormPostResponseMode(OAuthMessage oAuthMessage,
                                             OIDCSessionState sessionState,
-                                            AuthorizationResponseDTO authorizationResponseDTO) {
+                                            AuthorizationResponseDTO authorizationResponseDTO,
+                                            AuthenticatedUser authenticatedUser) {
 
         String authenticatedIdPs = oAuthMessage.getSessionDataCacheEntry().getAuthenticatedIdPs();
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
@@ -957,7 +968,12 @@ public class OAuth2AuthzEndpoint {
             String params = buildParams(authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody(),
                     authenticatedIdPs, sessionStateValue);
             String redirectURI = oauth2Params.getRedirectURI();
-            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            if (authenticatedUser != null) {
+                forwardToOauthResponseJSP(oAuthMessage, params, redirectURI, authorizationResponseDTO,
+                        authenticatedUser);
+            } else {
+                forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            }
             authorizationResponseDTO.setIsForwardToOAuthResponseJSP(true);
         } else {
             authorizationResponseDTO.setAuthenticatedIDPs(authenticatedIdPs);
@@ -1160,7 +1176,7 @@ public class OAuth2AuthzEndpoint {
 
         if (!authorizationResponseDTO.getIsConsentRedirect()) {
             if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
-                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
+                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO, authenticatedUser);
                 if (authorizationResponseDTO.getIsForwardToOAuthResponseJSP()) {
                     return Response.ok().build();
                 }
@@ -1667,6 +1683,9 @@ public class OAuth2AuthzEndpoint {
             }
             setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params,
                     authorizationResponseDTO);
+        }
+        if (Constants.RESPONSE_TYPE_DEVICE.equalsIgnoreCase(responseType)) {
+            cacheUserAttributesByDeviceCode(oAuthMessage.getSessionDataCacheEntry());
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
@@ -4125,8 +4144,71 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    private Response forwardToOauthResponseJSP(OAuthMessage oAuthMessage, String params, String redirectURI,
+                                               AuthorizationResponseDTO authorizationResponseDTO,
+                                               AuthenticatedUser authenticatedUser) {
+        try {
+            HttpServletRequest request = oAuthMessage.getRequest();
+            request.setAttribute(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
+            request.setAttribute(TENANT_DOMAIN, authorizationResponseDTO.getSigningTenantDomain());
+            request.setAttribute(SERVICE_PROVIDER, getServiceProvider(authorizationResponseDTO.getClientId()));
+            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            return Response.ok().build();
+        } catch (OAuthSystemException exception) {
+            log.error("Error occurred while setting service provider in the request to oauth_response.jsp page.",
+                    exception);
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                       .entity("Internal Server Error: " + exception.getMessage())
+                       .build();
+        }
+    }
+
     private boolean isPromptSelectAccount(OAuth2Parameters oauth2Params) {
 
         return OAuthConstants.Prompt.SELECT_ACCOUNT.equals(oauth2Params.getPrompt());
+    }
+
+    /**
+     * Set the device authentication service.
+     *
+     * @param deviceAuthService Device authentication service.
+     */
+    public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
+
+        this.deviceAuthService = deviceAuthService;
+    }
+
+    private void cacheUserAttributesByDeviceCode(SessionDataCacheEntry sessionDataCacheEntry)
+            throws OAuthSystemException {
+
+        String userCode = null;
+        Optional<String> deviceCodeOptional = Optional.empty();
+        String[] userCodeArray = sessionDataCacheEntry.getParamMap().get(Constants.USER_CODE);
+        if (ArrayUtils.isNotEmpty(userCodeArray)) {
+            userCode = userCodeArray[0];
+        }
+        if (StringUtils.isNotBlank(userCode)) {
+            deviceCodeOptional = getDeviceCodeByUserCode(userCode);
+        }
+        if (deviceCodeOptional.isPresent()) {
+            addUserAttributesToCache(sessionDataCacheEntry, deviceCodeOptional.get());
+        }
+    }
+
+    private Optional<String> getDeviceCodeByUserCode(String userCode) throws OAuthSystemException {
+
+        try {
+            return deviceAuthService.getDeviceCode(userCode);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error occurred while retrieving device code for user code: " + userCode, e);
+        }
+    }
+
+    private void addUserAttributesToCache(SessionDataCacheEntry sessionDataCacheEntry, String deviceCode) {
+
+        DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
+        DeviceAuthorizationGrantCacheEntry cacheEntry =
+                new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
+        DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }
 }

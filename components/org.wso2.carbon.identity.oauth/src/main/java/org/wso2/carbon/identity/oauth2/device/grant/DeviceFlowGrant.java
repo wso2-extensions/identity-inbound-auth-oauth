@@ -103,6 +103,7 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
         AuthenticatedUser authzUser = deviceFlowDO.getAuthorizedUser();
         String[] scopeSet = deviceFlowDO.getScopes().toArray(new String[0]);
         tokReqMsgCtx.setAuthorizedUser(authzUser);
+        tokReqMsgCtx.addProperty(Constants.DEVICE_CODE, deviceFlowDO.getDeviceCode());
         tokReqMsgCtx.setScope(scopeSet);
     }
 
