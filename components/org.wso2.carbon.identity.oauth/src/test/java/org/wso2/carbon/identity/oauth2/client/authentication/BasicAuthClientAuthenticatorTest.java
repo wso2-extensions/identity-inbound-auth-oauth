@@ -285,6 +285,12 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
                 OAuthClientAuthnContext());
     }
 
+    @Test
+    public void testGetReferredName() {
+
+        assertEquals(basicAuthClientAuthenticator.getReferredName(), "client_secret_basic,client_secret_post");
+    }
+
     private OAuthClientAuthnContext buildOAuthClientAuthnContext(String clientId, String clientSecret) {
 
         OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();

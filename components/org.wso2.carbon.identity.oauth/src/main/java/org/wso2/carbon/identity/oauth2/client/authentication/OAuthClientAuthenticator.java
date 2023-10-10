@@ -65,4 +65,11 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      */
     String getClientId(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
+
+    /**
+     * Retrieve the referred name of the authenticator.
+     *
+     * @return      Referred name of the authenticator.
+     */
+    String getReferredName();
 }

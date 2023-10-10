@@ -269,4 +269,14 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         context.addParameter(OAuth.OAUTH_CLIENT_SECRET, stringContent.get(OAuth.OAUTH_CLIENT_SECRET));
     }
 
+    /**
+     * Retrieve the referred name of the authenticator.
+     *
+     * @return      Referred name of the authenticator.
+     */
+    @Override
+    public String getReferredName() {
+        return "client_secret_basic,client_secret_post";
+    }
+
 }

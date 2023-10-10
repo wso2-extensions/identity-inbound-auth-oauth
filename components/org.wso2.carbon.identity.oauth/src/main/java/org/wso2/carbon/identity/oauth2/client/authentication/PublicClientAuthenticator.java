@@ -203,4 +203,14 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
         context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));
     }
 
+    /**
+     * Retrieve the referred name of the authenticator.
+     *
+     * @return      Referred name of the authenticator.
+     */
+    @Override
+    public String getReferredName() {
+        return "public_auth";
+    }
+
 }

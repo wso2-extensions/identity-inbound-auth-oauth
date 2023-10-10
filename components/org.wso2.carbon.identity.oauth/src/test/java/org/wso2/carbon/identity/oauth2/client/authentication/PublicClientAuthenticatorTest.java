@@ -198,4 +198,10 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
         };
     }
 
+    @Test
+    public void testGetReferredName() {
+
+        assertEquals(publicClientAuthenticator.getReferredName(), "public_auth");
+    }
+
 }
