@@ -1514,6 +1514,13 @@ public class EndpointUtil {
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
     }
 
+    /**
+     * This method retrieves the service provider tenant domain using the client ID.
+     * However, internally it uses the tenant present in the carbon context.
+     *
+     * @param clientId Client id of the application.
+     * @return Tenant domain of the service provider.
+     */
     public static String getSPTenantDomainFromClientId(String clientId) {
 
         try {

@@ -33,7 +33,32 @@ import java.util.Set;
  */
 public interface AuthorizationCodeDAO {
 
+    /**
+     * Insert an authorization code.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the consumer app.
+     * Use {@link #insertAuthorizationCode(String, String, String, String, AuthzCodeDO)}.
+     *
+     * @param authzCode     Authorization code.
+     * @param consumerKey   Consumer key.
+     * @param callbackUrl   Callback URL.
+     * @param authzCodeDO   Authorization code data object.
+     * @throws IdentityOAuth2Exception Identity OAuth2 Exception.
+     */
+    @Deprecated
     void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
+                                 AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception;
+
+    /**
+     * Insert an authorization code.
+     *
+     * @param authzCode         Authorization code.
+     * @param consumerKey       Consumer key.
+     * @param appTenantDomain   Application tenant domain.
+     * @param callbackUrl       Callback URL.
+     * @param authzCodeDO       Authorization code data object.
+     * @throws IdentityOAuth2Exception Identity OAuth2 Exception.
+     */
+    void insertAuthorizationCode(String authzCode, String consumerKey, String appTenantDomain, String callbackUrl,
                                  AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception;
 
     void deactivateAuthorizationCodes(List<AuthzCodeDO> authzCodeDOs) throws IdentityOAuth2Exception;

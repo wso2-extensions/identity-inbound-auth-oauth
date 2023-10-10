@@ -240,6 +240,9 @@ public class OAuth2AuthzEndpoint {
 
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
+    private static final String SERVICE_PROVIDER = "serviceProvider";
+    private static final String TENANT_DOMAIN = "tenantDomain";
+    private static final String USER_TENANT_DOMAIN = "userTenantDomain";
     private static final String AUTHENTICATION_ENDPOINT = "/authenticationendpoint";
     private static final String OAUTH_RESPONSE_JSP_PAGE = "/oauth_response.jsp";
 
@@ -652,7 +655,7 @@ public class OAuth2AuthzEndpoint {
             handleUserConsent(oAuthMessage, consent, sessionState, oauth2Params, authorizationResponseDTO);
 
             if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
-                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
+                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO, null);
                 if (authorizationResponseDTO.getIsForwardToOAuthResponseJSP()) {
                     return Response.ok().build();
                 }
@@ -945,7 +948,8 @@ public class OAuth2AuthzEndpoint {
 
     private void handleFormPostResponseMode(OAuthMessage oAuthMessage,
                                             OIDCSessionState sessionState,
-                                            AuthorizationResponseDTO authorizationResponseDTO) {
+                                            AuthorizationResponseDTO authorizationResponseDTO,
+                                            AuthenticatedUser authenticatedUser) {
 
         String authenticatedIdPs = oAuthMessage.getSessionDataCacheEntry().getAuthenticatedIdPs();
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
@@ -964,7 +968,12 @@ public class OAuth2AuthzEndpoint {
             String params = buildParams(authorizationResponseDTO.getSuccessResponseDTO().getFormPostBody(),
                     authenticatedIdPs, sessionStateValue);
             String redirectURI = oauth2Params.getRedirectURI();
-            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            if (authenticatedUser != null) {
+                forwardToOauthResponseJSP(oAuthMessage, params, redirectURI, authorizationResponseDTO,
+                        authenticatedUser);
+            } else {
+                forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            }
             authorizationResponseDTO.setIsForwardToOAuthResponseJSP(true);
         } else {
             authorizationResponseDTO.setAuthenticatedIDPs(authenticatedIdPs);
@@ -1167,7 +1176,7 @@ public class OAuth2AuthzEndpoint {
 
         if (!authorizationResponseDTO.getIsConsentRedirect()) {
             if (isFormPostWithoutErrors(oAuthMessage, authorizationResponseDTO)) {
-                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO);
+                handleFormPostResponseMode(oAuthMessage, sessionState, authorizationResponseDTO, authenticatedUser);
                 if (authorizationResponseDTO.getIsForwardToOAuthResponseJSP()) {
                     return Response.ok().build();
                 }
@@ -4136,6 +4145,25 @@ public class OAuth2AuthzEndpoint {
         } catch (ServletException | IOException exception) {
             log.error("Error occurred while forwarding the request to oauth_response.jsp page.", exception);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private Response forwardToOauthResponseJSP(OAuthMessage oAuthMessage, String params, String redirectURI,
+                                               AuthorizationResponseDTO authorizationResponseDTO,
+                                               AuthenticatedUser authenticatedUser) {
+        try {
+            HttpServletRequest request = oAuthMessage.getRequest();
+            request.setAttribute(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
+            request.setAttribute(TENANT_DOMAIN, authorizationResponseDTO.getSigningTenantDomain());
+            request.setAttribute(SERVICE_PROVIDER, getServiceProvider(authorizationResponseDTO.getClientId()));
+            forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
+            return Response.ok().build();
+        } catch (OAuthSystemException exception) {
+            log.error("Error occurred while setting service provider in the request to oauth_response.jsp page.",
+                    exception);
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                       .entity("Internal Server Error: " + exception.getMessage())
+                       .build();
         }
     }
 

@@ -236,75 +236,117 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         return new Object[][]{
                 // opbs cookie is null.
-                {null, true, redirectUrl[0], "cookie", "", null, false, "", false, "", null},
+                {null, true, redirectUrl[0], "cookie", "", null, false, "", false, "", null, ""},
                 // opbs cookie is existing and there is no any existing sessions.
-                {opbsCookie, false, redirectUrl[1], "valid", "", null, false, "", false, "", null},
+                {opbsCookie, false, redirectUrl[1], "valid", "", null, false, "", false, "", null, ""},
                 // opbs cookie and a previous session are existing and userConsent="Approve".
-                {opbsCookie, true, redirectUrl[2], "failed", "approve", null, false, "", false, "", null},
+                {opbsCookie, true, redirectUrl[2], "failed", "approve", null, false, "", false, "", null, ""},
                 // opbs cookie and previous session are existing, but the userConsent!="Approve".
-                {opbsCookie, true, redirectUrl[3], "denied", "no", null, false, "", false, "", null},
+                {opbsCookie, true, redirectUrl[3], "denied", "no", null, false, "", false, "", null, ""},
                 // opbs cookie and previous session are existing, but user consent is empty and sessionDataKey is
                 // empty.
-                {opbsCookie, true, redirectUrl[4], "oauth2client", " ", null, true, "", false, "", null},
+                {opbsCookie, true, redirectUrl[4], "oauth2client", " ", null, true, "", false, "", null, ""},
                 // opbs cookie and previous session are existing, user consent is empty and there is a value for
                 // sessionDataKey and skipUserConsent=false.
                 {opbsCookie, true, redirectUrl[2], "failed", " ", "090907ce-eab0-40d2-a46d", false, "", false, "",
-                        null},
+                        null, ""},
                 // opbs cookie and previous session are existing, user consent is empty, there is a value for
                 // sessionDataKey, skipUserConsent=true and an invalid idTokenHint.
                 {opbsCookie, true, redirectUrl[2], "failed", " ", "090907ce-eab0-40d2-a46d", true,
-                        "7893-090907ce-eab0-40d2", false, "", null},
+                        "7893-090907ce-eab0-40d2", false, "", null, ""},
                 // opbs cookie and previous session are existing, user consent is empty,sessionDataKey = null,
                 // skipUserConsent=true and an invalid idTokenHint.
                 {opbsCookie, true, redirectUrl[2], "failed", " ", null, true,
-                        "7893-090907ce-eab0-40d2", false, "", null},
+                        "7893-090907ce-eab0-40d2", false, "", null, ""},
                 // opbs cookie and previous session are existing, user consent is empty,sessionDataKey = null,
                 // skipUserConsent=false and a valid idTokenHint.
                 {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, false,
-                        idTokenHint, false, "", null},
+                        idTokenHint, false, "", null, ""},
                 // opbs cookie and previous session are existing, user consent is empty,sessionDataKey = null,
                 // skipUserConsent=true and a valid idTokenHint.
                 {opbsCookie, true, redirectUrl[5], "", " ", null, true,
-                        idTokenHint, false, "", null},
+                        idTokenHint, false, "", null, ""},
                 // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
                 // skipUserConsent=true, a valid idTokenHint, and an invalid postLogoutUri.
                 {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
-                        idTokenHint, false, INVALID_CALLBACK_URL, null},
+                        idTokenHint, false, INVALID_CALLBACK_URL, null, ""},
                 // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
                 // skipUserConsent=true, a valid idTokenHint, and valid postLogoutUri.
                 {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
-                        idTokenHint, false, CALLBACK_URL, null},
+                        idTokenHint, false, CALLBACK_URL, null, ""},
                 // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
                 // skipUserConsent=true, a valid idTokenHint, isJWTSignedWithSPKey= true.
                 {opbsCookie, true, redirectUrl[6], "signature", " ", null, true,
-                        idTokenHint, true, "", null},
+                        idTokenHint, true, "", null, ""},
                 // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
                 // skipUserConsent=false,idTokenHint=null, isJWTSignedWithSPKey= true.
                 {opbsCookie, true, redirectUrl[4], "oauth2client", " ", null, false,
-                        null, true, "", null},
+                        null, true, "", null, ""},
                 // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
                 // skipUserConsent=false,a valid idTokenHint, isJWTSignedWithSPKey=false, postLogoutUri is invalid.
                 {opbsCookie, true, redirectUrl[7], "Post", " ", null, false,
-                        idTokenHint, false, INVALID_CALLBACK_URL, null},
+                        idTokenHint, false, INVALID_CALLBACK_URL, null, ""},
                 // Idtoken does not have three parts. So throws parse exception.
                 {opbsCookie, true, redirectUrl[7], "Post", " ", null, false,
-                        invalidIdToken, false, INVALID_CALLBACK_URL, null},
+                        invalidIdToken, false, INVALID_CALLBACK_URL, null, ""},
                 // Thorws IdentityOAuth2Exception since the id token is not added to DB
                 {opbsCookie, true, redirectUrl[8], "application", " ", null, false,
-                        idTokenNotAddedToDB, false, INVALID_CALLBACK_URL, null},
+                        idTokenNotAddedToDB, false, INVALID_CALLBACK_URL, null, ""},
                 // AuthenticatorFlowStatus = SUCCESS_COMPLETED
                 {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
-                        idTokenHint, false, CALLBACK_URL, AuthenticatorFlowStatus.SUCCESS_COMPLETED},
+                        idTokenHint, false, CALLBACK_URL, AuthenticatorFlowStatus.SUCCESS_COMPLETED, ""},
                 // AuthenticatorFlowStatus = INCOMPLETE
                 {opbsCookie, true, redirectUrl[9], "retry", " ", null, true,
-                        idTokenHint, false, CALLBACK_URL, AuthenticatorFlowStatus.INCOMPLETE},
+                        idTokenHint, false, CALLBACK_URL, AuthenticatorFlowStatus.INCOMPLETE, ""},
                 // CallBackUrl is a regex one.
                 {opbsCookie, true, CALLBACK_URL, "oauth2client", "", null, true, idTokenWithRegexCallBack, false,
-                        REGEX_CALLBACK_URL, null},
+                        REGEX_CALLBACK_URL, null, ""},
                 // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
                 // skipUserConsent=true, a valid idTokenHint with tenant domain in realm, and valid postLogoutUri.
                 {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
-                        idTokenHintWithRealm, false, CALLBACK_URL, null},
+                        idTokenHintWithRealm, false, CALLBACK_URL, null, ""},
+                // opbs cookie and previous session are existing, user consent is empty, there is a value for
+                // sessionDataKey, skipUserConsent=true and an invalid clientId.
+                {opbsCookie, true, redirectUrl[2], "failed", " ", "090907ce-eab0-40d2-a46d", true,
+                        "", false, "", null, "invalid_client_id"},
+                // opbs cookie and previous session are existing, user consent is empty,sessionDataKey = null,
+                // skipUserConsent=true and an invalid clientId.
+                {opbsCookie, true, redirectUrl[2], "failed", " ", null, true,
+                        "invalid_client_id", false, "", null, ""},
+                // opbs cookie and previous session are existing, user consent is empty,sessionDataKey = null,
+                // skipUserConsent=false and a valid clientId.
+                {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, false,
+                        "", false, "", null, CLIENT_ID_VALUE},
+                // opbs cookie and previous session are existing, user consent is empty,sessionDataKey = null,
+                // skipUserConsent=true and a valid clientId.
+                {opbsCookie, true, redirectUrl[5], "", " ", null, true,
+                        "", false, "", null, CLIENT_ID_VALUE},
+                // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
+                // skipUserConsent=true, a valid clientId, and an invalid postLogoutUri.
+                {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
+                        "", false, INVALID_CALLBACK_URL, null, CLIENT_ID_VALUE},
+                // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
+                // skipUserConsent=true, a valid clientId, and valid postLogoutUri.
+                {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
+                        "", false, CALLBACK_URL, null, CLIENT_ID_VALUE},
+                // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
+                // skipUserConsent=true, a valid clientId, isJWTSignedWithSPKey= true.
+                {opbsCookie, true, redirectUrl[6], "signature", " ", null, true,
+                        "", true, "", null, CLIENT_ID_VALUE},
+                // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
+                // skipUserConsent=false,clientId=null, isJWTSignedWithSPKey= true.
+                {opbsCookie, true, redirectUrl[4], "oauth2client", " ", null, false,
+                        "", true, "", null, null},
+                // opbs cookie and previous sessions are existing, userConsent is empty, sessionDataKey = null,
+                // skipUserConsent=false,a valid clientId, isJWTSignedWithSPKey=false, postLogoutUri is invalid.
+                {opbsCookie, true, redirectUrl[7], "Post", " ", null, false,
+                        "", false, INVALID_CALLBACK_URL, null, CLIENT_ID_VALUE},
+                // AuthenticatorFlowStatus = SUCCESS_COMPLETED
+                {opbsCookie, true, redirectUrl[5], "oauth2_logout_consent.do", " ", null, true,
+                        "", false, CALLBACK_URL, AuthenticatorFlowStatus.SUCCESS_COMPLETED, CLIENT_ID_VALUE},
+                // AuthenticatorFlowStatus = INCOMPLETE
+                {opbsCookie, true, redirectUrl[9], "retry", " ", null, true,
+                        "", false, CALLBACK_URL, AuthenticatorFlowStatus.INCOMPLETE, CLIENT_ID_VALUE},
 
         };
     }
@@ -312,7 +354,8 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     @Test(dataProvider = "provideDataForTestDoGet")
     public void testDoGet(Object cookie, boolean sessionExists, String redirectUrl, String expected, String consent,
                           String sessionDataKey, boolean skipUserConsent, String idTokenHint,
-                          boolean isJWTSignedWithSPKey, String postLogoutUrl, Object flowStatus) throws Exception {
+                          boolean isJWTSignedWithSPKey, String postLogoutUrl, Object flowStatus,
+                          String clientId) throws Exception {
 
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
@@ -346,6 +389,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         when(oAuthServerConfiguration.getOpenIDConnectSkipLogoutConsentConfig()).thenReturn(skipUserConsent);
 
         when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
+        when(request.getParameter("client_id")).thenReturn(clientId);
 
         when(OIDCSessionManagementUtil
                 .removeOPBrowserStateCookie(any(HttpServletRequest.class), any(HttpServletResponse.class)))
@@ -449,27 +493,32 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         };
 
         return new Object[][]{
-                // No id_token_hint.
-                {null, null, null, false, false, "oauth2_logout.do"},
+                // No id_token_hint or client_id
+                {null, null, null, false, false, "oauth2_logout.do", null},
                 // No post_logout_redirect_uri.
-                {null, idTokenHint, null, false, false, "oauth2_logout.do"},
+                {null, idTokenHint, null, false, false, "oauth2_logout.do", null},
                 // Valid id_token_hint and valid post_logout_redirect_uri.
-                {null, idTokenHint, postLogoutUrl[0], false, false, "playground2/oauth2client"},
+                {null, idTokenHint, postLogoutUrl[0], false, false, "playground2/oauth2client", null},
                 // Invalid id_token_hint.
-                {null, idTokenHint, postLogoutUrl[0], true, false, "?oauthErrorCode=access_denied"},
+                {null, idTokenHint, postLogoutUrl[0], true, false, "?oauthErrorCode=access_denied", null},
                 // Invalid post_logout_redirect_uri.
-                {null, idTokenHint, postLogoutUrl[1], false, false, "?oauthErrorCode=access_denied"},
+                {null, idTokenHint, postLogoutUrl[1], false, false, "?oauthErrorCode=access_denied", null},
                 // Invalid session state.
-                {opbsCookie, null, null, false, false, "oauth2_logout.do"},
+                {opbsCookie, null, null, false, false, "oauth2_logout.do", null},
                 // Valid id_token_hint with tenant domain in realm and a valid post_logout_redirect_uri.
-                {null, idTokenHintWithRealm, postLogoutUrl[0], false, false, "playground2/oauth2client"},
+                {null, idTokenHintWithRealm, postLogoutUrl[0], false, false, "playground2/oauth2client", null},
+                // Valid client_id and valid post_logout_redirect_uri.
+                {null, null, postLogoutUrl[0], false, false, "playground2/oauth2client", CLIENT_ID_VALUE},
+                // Invalid client_id.
+                {null, null, postLogoutUrl[0], true, false, "?oauthErrorCode=access_denied", "invalid_client_id"},
+
         };
     }
 
     @Test(dataProvider = "provideDataForTestHandleMissingSessionStateGracefully")
     public void testHandleMissingSessionStateGracefully(
             Object cookie, String idTokenHint, String postLogoutUrl, boolean isJWTSignedWithSPKey,
-            boolean sessionExists, String expected) throws Exception {
+            boolean sessionExists, String expected, String clientId) throws Exception {
 
         String errorPageURL = "?oauthErrorCode=access_denied&oauthErrorMsg=any.";
         String oidcLogoutURL = "https://localhost:9443/authenticationendpoint/oauth2_logout.do";
@@ -498,6 +547,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(TENANT_ID);
 
         mockStatic(IdentityConfigParser.class);
         when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
@@ -514,6 +564,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
                 .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
 
         when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
+        when(request.getParameter("client_id")).thenReturn(clientId);
         when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
