@@ -315,7 +315,6 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
-    private boolean tlsClientCertificateBoundAccessTokensSupported = false;
     private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
@@ -3275,13 +3274,6 @@ public class OAuthServerConfiguration {
                 }
             }
 
-            if (openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                    ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)) != null) {
-                tlsClientCertificateBoundAccessTokensSupported = Boolean.parseBoolean(
-                        openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                                ConfigElements.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN)).getText().trim());
-            }
-
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)) != null) {
                 parseSupportedTokenEndpointAuthMethods(openIDConnectConfigElem.getFirstChildWithName(
@@ -3619,11 +3611,6 @@ public class OAuthServerConfiguration {
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
-    public boolean isTlsClientCertificateBoundAccessTokensSupported() {
-
-        return tlsClientCertificateBoundAccessTokensSupported;
-    }
-
     public List<String> getSupportedTokenEndpointAuthMethods() {
 
         return supportedTokenEndpointAuthMethods;
@@ -3940,9 +3927,6 @@ public class OAuthServerConfiguration {
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
-
-        private static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN =
-                "TLSClientCertificateBoundAccessTokensSupported";
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS = "SupportedTokenEndpointAuthMethods";
         private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";

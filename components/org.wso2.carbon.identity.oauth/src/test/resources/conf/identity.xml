@@ -291,7 +291,6 @@
                 <SupportedTokenEndpointAuthMethod>private_key_jwt</SupportedTokenEndpointAuthMethod>
                 <SupportedTokenEndpointAuthMethod>tls_client_auth</SupportedTokenEndpointAuthMethod>
             </SupportedTokenEndpointAuthMethods>
-            <TLSClientCertificateBoundAccessTokensSupported>true</TLSClientCertificateBoundAccessTokensSupported>
             <SupportedTokenEndpointSigningAlgorithms>
                 <SupportedTokenEndpointSigningAlgorithm>PS256</SupportedTokenEndpointSigningAlgorithm>
                 <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>

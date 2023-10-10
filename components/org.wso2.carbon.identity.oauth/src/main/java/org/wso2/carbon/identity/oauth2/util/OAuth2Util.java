@@ -118,6 +118,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -377,6 +378,7 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
+    private static final String MTLS_CLIENT_AUTHENTICATOR = "MutualTLSClientAuthenticator";
 
     private OAuth2Util() {
 
@@ -4960,5 +4962,21 @@ public class OAuth2Util {
         }
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
+    }
+
+    /**
+     * Check whether TLS client certificate bound access tokens are supported by the server.
+     *
+     * @return     Whether TLS client certificate bound access tokens are supported.
+     */
+    public static boolean isTlsClientCertificateBoundAccessTokensSupported() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
+            if (MTLS_CLIENT_AUTHENTICATOR.equals(clientAuthenticator.getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -75,7 +75,10 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
+import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -2578,5 +2581,33 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 assertEquals(e.getMessage(), expectedException);
             }
         }
+    }
+
+    @DataProvider(name = "clientAuthenticatorsDataProvider")
+    public Object[][] clientAuthenticatorsDataProvider() {
+
+        List<OAuthClientAuthenticator> clientAuthenticatorsWithoutMTLS = new ArrayList<>();
+        clientAuthenticatorsWithoutMTLS.add(new BasicAuthClientAuthenticator());
+        clientAuthenticatorsWithoutMTLS.add(new PublicClientAuthenticator());
+
+        List<OAuthClientAuthenticator> clientAuthenticatorsWithMTLS = clientAuthenticatorsWithoutMTLS;
+        OAuthClientAuthenticator oAuthClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(oAuthClientAuthenticator.getName()).thenReturn("MutualTLSClientAuthenticator");
+        clientAuthenticatorsWithMTLS.add(oAuthClientAuthenticator);
+
+        return new Object[][]{
+                {true, clientAuthenticatorsWithMTLS},
+                {false, clientAuthenticatorsWithoutMTLS}
+        };
+    }
+    @Test(dataProvider = "clientAuthenticatorsDataProvider")
+    public void testIsTlsClientCertificateBoundAccessTokensSupported(
+            List<OAuthClientAuthenticator> clientAuthenticators, boolean expectedResult) {
+
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getAuthenticationHandlers()).thenReturn(clientAuthenticators);
+        boolean isTlsClientCertificateBoundAccessTokensSupported = OAuth2Util
+                .isTlsClientCertificateBoundAccessTokensSupported();
+        assertEquals(isTlsClientCertificateBoundAccessTokensSupported, expectedResult);
     }
 }
