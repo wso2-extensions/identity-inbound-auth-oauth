@@ -84,6 +84,11 @@ public class RequestObjectValidatorUtil {
         }
         String alg = jwt.getHeader().getAlgorithm().getName();
         String clientId = oAuth2Parameters.getClientId();
+
+        if (!isValidSignatureAlgorithm(clientId, alg)) {
+            throw new RequestObjectException("Request Object signature verification failed. Invalid signature " +
+                    "algorithm.", OAuth2ErrorCodes.INVALID_REQUEST);
+        }
         if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(clientId, alg)) {
             throw new RequestObjectException("Request Object signature verification failed. Invalid signature " +
                     "algorithm.", OAuth2ErrorCodes.INVALID_REQUEST);
@@ -181,25 +186,39 @@ public class RequestObjectValidatorUtil {
      * @param clientId  client id
      * @param algorithm signature algorithm
      * @return is valid signature algorithm
+     */
+    private static boolean isValidFAPISignatureAlgorithm(String clientId, String algorithm) {
+
+        List<String> allowedFAPIAlgorithms = new ArrayList<>();
+        allowedFAPIAlgorithms.add(PS256.getName());
+        allowedFAPIAlgorithms.add(ES256.getName());
+
+        if (!allowedFAPIAlgorithms.contains(algorithm)) {
+            log.debug("Invalid signature algorithm. Signature algorithm should be one of " +
+                    String.join(", ", allowedFAPIAlgorithms));
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Validate the signature algorithm against the registered signature algorithms if exists.
+     *
+     * @param clientId  client id
+     * @param algorithm signature algorithm
+     * @return is valid signature algorithm
      * @throws RequestObjectException if an error occurred while getting the service provider
      */
-    private static boolean isValidFAPISignatureAlgorithm(String clientId, String algorithm)
-            throws RequestObjectException {
+    private static boolean isValidSignatureAlgorithm(String clientId, String algorithm) throws RequestObjectException {
 
         String requestObjSignatureAlgorithms = getSpProperty(clientId, Constants.REQUEST_OBJECT_SIGNING_ALG);
-        List<String> allowedAlgorithms;
         if (StringUtils.isNotEmpty(requestObjSignatureAlgorithms)) {
-            allowedAlgorithms = Arrays.asList(requestObjSignatureAlgorithms.split(" "));
-        } else {
-            allowedAlgorithms = new ArrayList<>();
-            allowedAlgorithms.add(PS256.getName());
-            allowedAlgorithms.add(ES256.getName());
-        }
-
-        if (!allowedAlgorithms.contains(algorithm)) {
-            log.debug("Invalid signature algorithm. Signature algorithm should be one of " +
-                    String.join(", ", allowedAlgorithms));
-            return false;
+            List<String> allowedAlgorithms = Arrays.asList(requestObjSignatureAlgorithms.split(" "));
+            if (!allowedAlgorithms.contains(algorithm)) {
+                log.debug("Invalid signature algorithm. Signature algorithm should be one of registered algorithms " +
+                        String.join(", ", allowedAlgorithms));
+                return false;
+            }
         }
         return true;
     }
