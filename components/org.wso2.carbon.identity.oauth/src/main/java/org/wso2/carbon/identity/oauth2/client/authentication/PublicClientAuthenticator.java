@@ -42,6 +42,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
     private static final String GRANT_TYPE = "grant_type";
+    private static final String REFERRED_NAME = "public_auth";
 
     /**
      * Returns the execution order of this authenticator.
@@ -210,7 +211,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
      */
     @Override
     public String getReferredName() {
-        return "public_auth";
+        return REFERRED_NAME;
     }
 
 }

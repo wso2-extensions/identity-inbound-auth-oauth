@@ -71,5 +71,8 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      *
      * @return      Referred name of the authenticator.
      */
-    String getReferredName();
+    default String getReferredName() {
+
+            return "";
+    }
 }

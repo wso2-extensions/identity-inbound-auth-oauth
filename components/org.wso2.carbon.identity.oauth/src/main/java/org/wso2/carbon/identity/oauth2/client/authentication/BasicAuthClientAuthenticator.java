@@ -49,6 +49,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static final String BASIC_PREFIX = "Basic";
     private static final int CREDENTIAL_LENGTH = 2;
+    private static final String REFERRED_NAME = "client_secret_basic,client_secret_post";
 
     /**
      * Returns the execution order of this authenticator
@@ -276,7 +277,7 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
      */
     @Override
     public String getReferredName() {
-        return "client_secret_basic,client_secret_post";
+        return REFERRED_NAME;
     }
 
 }
