@@ -67,9 +67,11 @@ public class OAuthConsumerAppDTO {
     private String requestObjectEncryptionMethod;
 
     public String getJwksURI() {
+
         return jwksURI;
     }
     public void setJwksURI(String jwksURi) {
+
         this.jwksURI = jwksURi;
     }
     public long getUserAccessTokenExpiryTime() {
