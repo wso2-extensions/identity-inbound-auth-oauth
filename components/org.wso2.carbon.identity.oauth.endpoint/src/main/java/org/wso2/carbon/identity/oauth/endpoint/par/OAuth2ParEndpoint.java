@@ -313,7 +313,8 @@ public class OAuth2ParEndpoint {
 
                     requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
                     if (requestObject == null) {
-                        throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
+                        throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                                ParConstants.INVALID_REQUEST_OBJECT);
                     }
                 } else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
                     /* Mandate request object for FAPI requests
