@@ -101,6 +101,15 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
     private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
     private static final String PASSWORD_GRANT_POST_AUTHENTICATION_EVENT = "PASSWORD_GRANT_POST_AUTHENTICATION";
+    private static final String OIDC = "oidc";
+    private static final String ALLOW_SESSION_CREATION = "allowSessionCreation";
+    private static final String CLIENT_ID = "client_id";
+    private static final String SP = "sp";
+    private static final String RELYING_PARTY = "relyingParty";
+    private static final String TENANT_DOMAIN = "tenantDomain";
+    private static final String COMMON_AUTH_CALLER_PATH = "commonAuthCallerPath";
+    private static final String AUTH_REQUEST = "authRequest";
+    private static final String SESSION_DATA_KEY = "sessionDataKey";
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -162,7 +171,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         HttpServletResponse response = tokenReq.getHttpServletResponseWrapper();
         try {
             CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(request);
-            requestWrapper.setParameter("type", "oidc");
+            requestWrapper.setParameter("type", OIDC);
             String tenantDomain = serviceProvider.getTenantDomain();
             String clientId = null;
             if (serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs() != null) {
@@ -173,21 +182,21 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthenticationRequest authenticationRequest = new AuthenticationRequest();
             authenticationRequest.setRelyingParty(clientId);
             // To ensure the authentication result is added to the cache
-            authenticationRequest.setType("oidc");
+            authenticationRequest.setType(OIDC);
             // To nullify the effect of commonAuthId cookie that will be returned in responses
             authenticationRequest.setForceAuth(true);
             authenticationRequest.setCommonAuthCallerPath(request.getRequestURI());
             authenticationRequest.setTenantDomain(tenantDomain);
             AuthenticationRequestCacheEntry authenticationRequestCacheEntry =
                     new AuthenticationRequestCacheEntry(authenticationRequest);
-            requestWrapper.setParameter("relyingParty", clientId);
-            requestWrapper.setAttribute("sp", serviceProvider.getApplicationName());
-            requestWrapper.setAttribute("authRequest", authenticationRequestCacheEntry);
-            requestWrapper.setParameter("commonAuthCallerPath", request.getRequestURI());
-            requestWrapper.setParameter("client_id", clientId);
-            requestWrapper.setParameter("tenantDomain", tenantDomain);
-            requestWrapper.setParameter("sessionDataKey", UUID.randomUUID().toString());
-            requestWrapper.setAttribute("allowSessionCreation", "false");
+            requestWrapper.setParameter(RELYING_PARTY, clientId);
+            requestWrapper.setAttribute(SP, serviceProvider.getApplicationName());
+            requestWrapper.setAttribute(AUTH_REQUEST, authenticationRequestCacheEntry);
+            requestWrapper.setParameter(COMMON_AUTH_CALLER_PATH, request.getRequestURI());
+            requestWrapper.setParameter(CLIENT_ID, clientId);
+            requestWrapper.setParameter(TENANT_DOMAIN, tenantDomain);
+            requestWrapper.setParameter(SESSION_DATA_KEY, UUID.randomUUID().toString());
+            requestWrapper.setAttribute(ALLOW_SESSION_CREATION, "false");
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(response);
 
             AuthenticationService authenticationService = new AuthenticationService();
@@ -212,9 +221,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                         return authResult.getSubject();
                     }
                 }
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: false");
+                }
             }
         } catch (AuthServiceException e) {
-            throw new IdentityOAuth2Exception("Error occurred while authenticating user", e);
+            log.error("Error occurred while authenticating user: " + tokenReq.getResourceOwnerUsername());
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
         return null;
     }
