@@ -59,10 +59,7 @@ import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
@@ -81,6 +78,7 @@ public class DCRMService {
     private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
     private static final String SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
+    private static final String ENABLE_FAPI_VALIDATION = "OAuth.DCRM.EnableFAPIValidation";
 
 
     /**
@@ -533,6 +531,15 @@ public class DCRMService {
         sp.setDescription("Service Provider for application " + spName);
         sp.setManagementApp(isManagementApp);
 
+        Map<String, Object> spProperties = new HashMap<>();
+        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_FAPI_VALIDATION));
+        if (enableFAPI) {
+            // Add FAPI conformant application nad isThirdParty property to the service provider.
+            spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
+        }
+        spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
+        addSPProperties(spProperties, sp);
+
         createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 
         // Get created service provider.
@@ -847,7 +854,29 @@ public class DCRMService {
         String jwksURL = IdentityUtil.getProperty(SSA_VALIDATION_JWKS);
         if (!JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL)) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
-                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
+                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
         }
+    }
+
+    /**
+     * Add the properties to the service provider.
+     * @param spProperties Map of property name and values to be added.
+     * @param serviceProvider ServiceProvider object.
+     */
+    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider) {
+
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+        for (Map.Entry<String, Object> entry : spProperties.entrySet()) {
+            boolean propertyExists = Arrays.stream(serviceProviderProperties)
+                    .anyMatch(property -> property.getName().equals(entry.getKey()));
+            if (!propertyExists) {
+                ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+                serviceProviderProperty.setName(entry.getKey());
+                serviceProviderProperty.setValue(entry.getValue().toString());
+                serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
+                        serviceProviderProperty);
+            }
+        }
+        serviceProvider.setSpProperties(serviceProviderProperties);
     }
 }
