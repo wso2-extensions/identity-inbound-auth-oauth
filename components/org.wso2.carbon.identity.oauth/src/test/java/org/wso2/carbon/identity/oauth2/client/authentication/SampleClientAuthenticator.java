@@ -33,6 +33,7 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public static final String EXPECTED_SAMPLE_HEADER = "expectedSampleHeader";
     public boolean enabled = true;
     private static final String SAMPLE_CLIENT_AUTHENTICATOR = "SampleClientAuthenticator";
+    private static final String SAMPLE_CLIENT_AUTHENTICATOR_AUTH_METHOD = "client_auth_sample";
 
     @Override
     public boolean authenticateClient(HttpServletRequest request, Map<String, List> content,
@@ -88,6 +89,6 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public List<String> getSupportedClientAuthenticationMethods() {
 
-        return Arrays.asList(SAMPLE_CLIENT_AUTHENTICATOR);
+        return Arrays.asList(SAMPLE_CLIENT_AUTHENTICATOR_AUTH_METHOD);
     }
 }
