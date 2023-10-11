@@ -769,14 +769,17 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         Mockito.when(userRealm.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
     }
+
     @Test(description = "Test validating invalid token auth methods")
     private void testValidateTokenAuthenticationWithValidAuthentication() throws Exception {
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "validateTokenAuthentication", "tls_client_auth");
+        invokeMethod(oAuthAdminService, "filterAllowedFAPITokenAuthMethods",
+                "tls_client_auth");
     }
+
     @Test(description = "Test validating invalid token auth methods")
     private void testValidateTokenAuthenticationWithInvalidAuthentication() throws Exception {
 
@@ -784,7 +787,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "validateTokenAuthentication", "invalid_auth");
+            invokeMethod(oAuthAdminService, "filterAllowedFAPITokenAuthMethods",
+                    "invalid_auth");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
@@ -798,7 +802,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "validateSignatureAlgorithm", "PS256");
+        invokeMethod(oAuthAdminService, "filterAllowedFAPITSignatureAlgorithms", "PS256");
     }
 
     @Test(description = "Test validating signature algorithm with invalid value")
@@ -808,7 +812,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "validateSignatureAlgorithm", "PS256");
+            invokeMethod(oAuthAdminService, "filterAllowedFAPITSignatureAlgorithms", "PS256");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
@@ -821,7 +825,8 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "validateEncryptionAlgorithm", "RSA1_5");
+            invokeMethod(oAuthAdminService, "filterAllowedFAPIEncryptionAlgorithms",
+                    "RSA1_5");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),

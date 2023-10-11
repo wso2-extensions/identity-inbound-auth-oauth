@@ -82,7 +82,7 @@ public class DCRMService {
     private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
     private static final String SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
-    private static final String ENABLE_FAPI_VALIDATION = "OAuth.DCRM.EnableFAPIValidation";
+    private static final String ENABLE_FAPI_VALIDATION = "OAuth.DCRM.EnableFAPIEnforcement";
 
 
     /**
@@ -370,7 +370,7 @@ public class DCRMService {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
         }
-        //validate SSA
+        // Validate software statement assertion signature.
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
                 validateSSASignature(registrationRequest.getSoftwareStatement());
