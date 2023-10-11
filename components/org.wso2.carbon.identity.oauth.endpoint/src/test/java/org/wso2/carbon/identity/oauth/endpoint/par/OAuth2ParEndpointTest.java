@@ -184,6 +184,9 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE_ID_TOKEN});
         requestParams11.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
                 new String[]{OAuthConstants.ResponseModes.QUERY_JWT});
+        requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{OAuthConstants.OAUTH_PKCE_S256_CHALLENGE});
 
         Map<String, String[]> requestParams12 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
