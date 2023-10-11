@@ -120,12 +120,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             //insert the hash value of the authorization code
             prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            int appTenantId = IdentityTenantUtil.getTenantId(appTenantDomain);
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 prepStmt.setString(15, authenticatedIDP);
-                prepStmt.setInt(16, tenantId);
-                prepStmt.setInt(17, IdentityTenantUtil.getTenantId(appTenantDomain));
+                // Set tenant ID of the IDP by considering it is same as appTenantID.
+                prepStmt.setInt(16, appTenantId);
+                prepStmt.setInt(17, appTenantId);
             } else {
-                prepStmt.setInt(15, IdentityTenantUtil.getTenantId(appTenantDomain));
+                prepStmt.setInt(15, appTenantId);
             }
 
             prepStmt.execute();

@@ -58,10 +58,9 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -70,7 +69,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -530,29 +528,23 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             return userClaimsMappedToOIDCDialect;
         }
-        String userTenantDomain;
-        String fullQualifiedUsername;
-        if (StringUtils.isNotBlank(authenticatedUser.getUserId())) {
-            String userId = authenticatedUser.getUserId();
-            userTenantDomain = authenticatedUser.getTenantDomain();
-            int tenantId = IdentityTenantUtil.getTenantId(userTenantDomain);
-            Tenant tenant =
-                    OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
-            if (tenant != null && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
-                Optional<User> user = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
-                        .resolveUserFromResidentOrganization(null, userId, tenant.getAssociatedOrganizationUUID());
-                if (!user.isPresent()) {
-                    return userClaimsMappedToOIDCDialect;
-                }
-                userTenantDomain = user.get().getTenantDomain();
-                fullQualifiedUsername = user.get().getFullQualifiedUsername();
-            } else {
-                userTenantDomain = authenticatedUser.getTenantDomain();
-                fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
-            }
-        } else {
-            userTenantDomain = authenticatedUser.getTenantDomain();
-            fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        String userResidentTenantDomain = userTenantDomain;
+        if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
+            userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+        }
+        /* For Organization Login users, the resident organization won't be the authenticated user's tenant domain
+        which relates the app's tenant domain. Hence, the correct tenant domain need fetch user claims. */
+        if (!StringUtils.equals(userTenantDomain, userResidentTenantDomain)) {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(userResidentTenantDomain))
+                            .getUserStoreManager();
+            userTenantDomain = userResidentTenantDomain;
+            fullQualifiedUsername = userStoreManager.getUser(authenticatedUser.getUserId(), null)
+                    .getFullQualifiedUsername();
         }
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
         if (realm == null) {

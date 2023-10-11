@@ -575,6 +575,14 @@ public final class OAuthConstants {
     }
 
     /**
+     * Define authorized organization default value.
+     */
+    public static class AuthorizedOrganization {
+
+        public static final String NONE = "NONE";
+    }
+
+    /**
      * Define logging constants.
      */
     public static class LogConstants {

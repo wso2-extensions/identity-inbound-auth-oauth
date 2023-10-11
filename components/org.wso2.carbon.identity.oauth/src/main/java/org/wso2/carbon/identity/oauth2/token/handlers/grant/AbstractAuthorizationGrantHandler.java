@@ -129,8 +129,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authorizedUserId;
+        String authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
         try {
             authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            if (tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
+                authorizedOrganization = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
+            }
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception(
                     "User id is not available for user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
@@ -151,7 +155,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
                         getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
-                                tokenBindingReference));
+                                tokenBindingReference, authorizedOrganization));
             }
 
             if (existingTokenBean != null) {
@@ -561,8 +565,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
 
             String userId;
+            String authorizedOrganization;
             try {
                 userId = tokenToCache.getAuthzUser().getUserId();
+                authorizedOrganization = tokenToCache.getAuthzUser().getAccessingOrganization();
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception(
                         "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
@@ -570,7 +576,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
             OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), userId, authenticatedIDP,
-                    getTokenBindingReference(tokenToCache));
+                    getTokenBindingReference(tokenToCache), authorizedOrganization);
             oauthCache.addToCache(cacheKey, tokenToCache);
             if (log.isDebugEnabled()) {
                 log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
@@ -727,10 +733,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private OAuthCacheKey getOAuthCacheKey(String scope, String consumerKey, String authorizedUserId,
-                                           String authenticatedIDP, String tokenBindingType) {
+                                           String authenticatedIDP, String tokenBindingType,
+                                           String authorizedOrganization) {
 
-        String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserId(consumerKey, scope, authorizedUserId,
-                authenticatedIDP, tokenBindingType);
+        String cacheKeyString = OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope,
+                authorizedUserId, authenticatedIDP, tokenBindingType, authorizedOrganization);
         return new OAuthCacheKey(cacheKeyString);
     }
 
