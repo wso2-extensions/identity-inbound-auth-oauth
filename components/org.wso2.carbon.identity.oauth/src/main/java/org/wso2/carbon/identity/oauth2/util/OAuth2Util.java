@@ -4907,15 +4907,15 @@ public class OAuth2Util {
      */
     public static boolean isFapiConformantApp(String clientId) throws IdentityOAuth2Exception {
 
-        boolean enableFAPIValidation = IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI) != null ?
-                Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)) : false;
-        if (enableFAPIValidation) {
-            ServiceProvider serviceProvider = getServiceProvider(clientId);
-            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
-                    return Boolean.parseBoolean(serviceProviderProperty.getValue());
-                }
+        boolean enableFAPIValidation = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
+        if (!enableFAPIValidation) {
+            return false;
+        }
+        ServiceProvider serviceProvider = getServiceProvider(clientId);
+        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+            if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
+                return Boolean.parseBoolean(serviceProviderProperty.getValue());
             }
         }
         return false;
