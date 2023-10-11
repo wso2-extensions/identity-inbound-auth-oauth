@@ -264,6 +264,7 @@ public final class OAuthConstants {
         public static final String REQUEST_URI = "request_uri";
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
+        public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
 
         private OAuth20Params() {

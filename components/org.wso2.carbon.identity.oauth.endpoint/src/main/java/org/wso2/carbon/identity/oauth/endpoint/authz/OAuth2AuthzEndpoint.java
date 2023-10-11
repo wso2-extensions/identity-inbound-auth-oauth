@@ -2023,6 +2023,10 @@ public class OAuth2AuthzEndpoint {
             validateNonceParameter(params.getNonce());
         }
 
+        if (isFapiConformant(params.getClientId())) {
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(params.getResponseType(), params.getResponseMode());
+        }
+
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
