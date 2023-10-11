@@ -22,6 +22,7 @@ import org.apache.axis2.transport.http.HTTPConstants;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -199,9 +200,10 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetReferredName() {
+    public void testGetSupportedClientAuthenticationMethods() {
 
-        assertEquals(publicClientAuthenticator.getReferredName(), "public_auth");
+        List<String> supportedAuthMethods = publicClientAuthenticator.getSupportedClientAuthenticationMethods();
+        Assert.assertTrue(supportedAuthMethods.contains("public_auth"));
     }
 
 }

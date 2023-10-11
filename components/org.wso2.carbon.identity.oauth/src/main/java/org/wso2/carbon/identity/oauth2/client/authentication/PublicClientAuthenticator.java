@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +43,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
     private static final String GRANT_TYPE = "grant_type";
-    private static final String REFERRED_NAME = "public_auth";
+    private static final String PUBLIC_CLIENT_AUTHENTICATOR_REFERRED_NAME = "public_auth";
 
     /**
      * Returns the execution order of this authenticator.
@@ -205,13 +206,14 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     }
 
     /**
-     * Retrieve the referred name of the authenticator.
+     * Retrieve the authentication methods supported by the authenticator.
      *
-     * @return      Referred name of the authenticator.
+     * @return      Authentication methods supported by the authenticator.
      */
     @Override
-    public String getReferredName() {
-        return REFERRED_NAME;
+    public List<String> getSupportedClientAuthenticationMethods() {
+
+        return Arrays.asList(PUBLIC_CLIENT_AUTHENTICATOR_REFERRED_NAME);
     }
 
 }

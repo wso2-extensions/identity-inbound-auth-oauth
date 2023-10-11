@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 import org.wso2.carbon.identity.core.handler.IdentityHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -67,12 +68,12 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
 
     /**
-     * Retrieve the referred name of the authenticator.
+     * Retrieve the authentication methods supported by the authenticator.
      *
-     * @return      Referred name of the authenticator.
+     * @return      Authentication methods supported by the authenticator.
      */
-    default String getReferredName() {
+    default List<String> getSupportedClientAuthenticationMethods() {
 
-            return "";
+            return new ArrayList<>();
     }
 }

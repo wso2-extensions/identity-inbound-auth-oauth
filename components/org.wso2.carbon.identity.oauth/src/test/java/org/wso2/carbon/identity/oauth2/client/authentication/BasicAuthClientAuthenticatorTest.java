@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -286,9 +287,11 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
     }
 
     @Test
-    public void testGetReferredName() {
+    public void testGetSupportedClientAuthenticationMethods() {
 
-        assertEquals(basicAuthClientAuthenticator.getReferredName(), "client_secret_basic,client_secret_post");
+        List<String> supportedAuthMethods = basicAuthClientAuthenticator.getSupportedClientAuthenticationMethods();
+        Assert.assertTrue(supportedAuthMethods.contains("client_secret_basic"));
+        Assert.assertTrue(supportedAuthMethods.contains("client_secret_post"));
     }
 
     private OAuthClientAuthnContext buildOAuthClientAuthnContext(String clientId, String clientSecret) {

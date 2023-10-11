@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +50,8 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static final String BASIC_PREFIX = "Basic";
     private static final int CREDENTIAL_LENGTH = 2;
-    private static final String REFERRED_NAME = "client_secret_basic,client_secret_post";
+    private static final String CLIENT_SECRET_BASIC = "client_secret_basic";
+    private static final String CLIENT_SECRET_POST = "client_secret_post";
 
     /**
      * Returns the execution order of this authenticator
@@ -271,13 +273,17 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     }
 
     /**
-     * Retrieve the referred name of the authenticator.
+     * Retrieve the authentication methods supported by the authenticator.
      *
-     * @return      Referred name of the authenticator.
+     * @return      Authentication methods supported by the authenticator.
      */
     @Override
-    public String getReferredName() {
-        return REFERRED_NAME;
+    public List<String> getSupportedClientAuthenticationMethods() {
+
+        List<String> supportedAuthMethods = new ArrayList<>();
+        supportedAuthMethods.add(CLIENT_SECRET_BASIC);
+        supportedAuthMethods.add(CLIENT_SECRET_POST);
+        return supportedAuthMethods;
     }
 
 }

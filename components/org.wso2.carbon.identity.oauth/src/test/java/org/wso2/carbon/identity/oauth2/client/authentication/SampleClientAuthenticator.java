@@ -18,6 +18,7 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -85,8 +86,8 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     }
 
     @Override
-    public String getReferredName() {
+    public List<String> getSupportedClientAuthenticationMethods() {
 
-        return SAMPLE_CLIENT_AUTHENTICATOR;
+        return Arrays.asList(SAMPLE_CLIENT_AUTHENTICATOR);
     }
 }
