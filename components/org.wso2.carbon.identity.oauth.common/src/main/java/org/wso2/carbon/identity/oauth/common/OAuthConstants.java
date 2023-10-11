@@ -482,6 +482,7 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String S_HASH = "s_hash";
         public static final String SESSION_ID_CLAIM = "sid";
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
