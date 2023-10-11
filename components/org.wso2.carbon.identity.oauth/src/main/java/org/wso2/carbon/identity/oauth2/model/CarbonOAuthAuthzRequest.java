@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-
 import javax.servlet.http.HttpServletRequest;
 
 /**

@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -255,18 +256,25 @@ public class OAuth2ParEndpoint {
     private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
 
         try {
-            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
-                    StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
+            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes())) {
+                if (StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
 
-                OAuth2Parameters parameters = new OAuth2Parameters();
-                parameters.setClientId(oAuthAuthzRequest.getClientId());
-                parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
-                parameters.setResponseType(oAuthAuthzRequest.getResponseType());
-                parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
+                    OAuth2Parameters parameters = new OAuth2Parameters();
+                    parameters.setClientId(oAuthAuthzRequest.getClientId());
+                    parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
+                    parameters.setResponseType(oAuthAuthzRequest.getResponseType());
+                    parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
 
-                RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
-                if (requestObject == null) {
-                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
+                    RequestObject requestObject =
+                            OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
+                    if (requestObject == null) {
+                        throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                                ParConstants.INVALID_REQUEST_OBJECT);
+                    }
+                } else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
+                    /* Mandate request object for FAPI requests
+                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
+                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
                 }
             }
         } catch (RequestObjectException e) {
@@ -274,6 +282,15 @@ public class OAuth2ParEndpoint {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
+    }
+
+    private boolean isFapiConformant(String clientId) throws ParClientException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ParClientException(e.getMessage(), e.getErrorCode());
         }
     }
 }
