@@ -292,6 +292,7 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
         List<String> supportedAuthMethods = basicAuthClientAuthenticator.getSupportedClientAuthenticationMethods();
         Assert.assertTrue(supportedAuthMethods.contains("client_secret_basic"));
         Assert.assertTrue(supportedAuthMethods.contains("client_secret_post"));
+        assertEquals(supportedAuthMethods.size(), 2);
     }
 
     private OAuthClientAuthnContext buildOAuthClientAuthnContext(String clientId, String clientSecret) {
