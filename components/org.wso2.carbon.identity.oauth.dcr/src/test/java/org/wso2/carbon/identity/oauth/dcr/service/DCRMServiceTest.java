@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.internal.util.reflection.FieldSetter;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
+import org.testng.Assert;
 import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -45,12 +47,14 @@ import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserRealm;
@@ -84,7 +88,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
  * Unit test covering DCRMService
  */
 @PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class,
-        OAuth2Util.class, OAuthServerConfiguration.class})
+        OAuth2Util.class, OAuthServerConfiguration.class, JWTSignatureValidationUtils.class, IdentityUtil.class})
 public class DCRMServiceTest extends PowerMockTestCase {
 
     private final String dummyConsumerKey = "dummyConsumerKey";
@@ -1161,5 +1165,32 @@ public class DCRMServiceTest extends PowerMockTestCase {
         boolean propertyExists = Arrays.stream(serviceProviderProperties)
                 .anyMatch(property -> property.getName().equals(OAuthConstants.IS_FAPI_CONFORMANT_APP));
         assertTrue(propertyExists);
+    }
+
+    @Test(description = "Test SSA signature validation")
+    public void testValidateSSASignature() throws IdentityOAuth2Exception {
+
+        String jwtString = "eyJ4NXQiOiJObUptT0dVeE16WmxZak0yWkRSaE5UWmxZVEExWXpkaFpUUmlPV0UwTldJMk0ySm1PVGMxWkEiLCJhb" +
+                "GciOiJSUzI1NiJ9.eyJhdF9oYXNoIjoiR2ptOGFsN21FSkRVYjZuN3V1Mi1qUSIsInN1YiI6ImFkbWluQGNhcmJvbi5zdXBlciIs" +
+                "ImF1ZCI6WyJhVmdieWhBMVY3TWV0ZW1PNEtrUjlFYnBzOW9hIiwiaHR0cHM6XC9cL2xvY2FsaG9zdDo5NDQzXC9vYXV0aDJcL3Rv" +
+                "a2VuIl0sImF6cCI6ImFWZ2J5aEExVjdNZXRlbU80S2tSOUVicHM5b2EiLCJhdXRoX3RpbWUiOjE1MjUyMzYzMzcsImlzcyI6Imh0" +
+                "dHBzOlwvXC8xMC4xMDAuOC4yOjk0NDNcL29hdXRoMlwvdG9rZW4iLCJleHAiOjE1MjUyMzk5MzcsImlhdCI6MTUyNTIzNjMzN30" +
+                ".DOPv7UHymV3zJJpxxWqbGcrvjY-OOzmdJVUxwHorDlOGABP_X_Krd584rLIbcYFmd8q5wSUuX21wXCLCOXFli1CUC-ZfP0S" +
+                "0fJqUZv_ynNo6NTFY9d3-sv0b7QYT-8mnxSmjqqsmDrOcxlD7gcYkkr1pLLQe9ZK2B_lR5KZlMW0";
+
+        String jwks = "OAuth.DCRM.SoftwareStatementJWKS";
+
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(jwks)).thenReturn("https://localhost:9444/oauth2/jwks");
+        mockStatic(JWTSignatureValidationUtils.class);
+        when(JWTSignatureValidationUtils.validateUsingJWKSUri(any(), anyString())).thenReturn(false);
+        try {
+            invokeMethod(dcrmService, "validateSSASignature", jwtString);
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof DCRMClientException);
+            Assert.assertEquals(((DCRMClientException) e).getErrorCode(),
+                    DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT);
+        }
     }
 }
