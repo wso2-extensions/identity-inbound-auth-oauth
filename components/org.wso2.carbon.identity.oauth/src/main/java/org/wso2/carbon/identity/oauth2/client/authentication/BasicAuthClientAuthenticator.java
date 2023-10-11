@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,6 +50,8 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
     private static final String BASIC_PREFIX = "Basic";
     private static final int CREDENTIAL_LENGTH = 2;
+    private static final String CLIENT_SECRET_BASIC = "client_secret_basic";
+    private static final String CLIENT_SECRET_POST = "client_secret_post";
 
     /**
      * Returns the execution order of this authenticator
@@ -267,6 +270,20 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
         Map<String, String> stringContent = getBodyParameters(bodyParams);
         context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));
         context.addParameter(OAuth.OAUTH_CLIENT_SECRET, stringContent.get(OAuth.OAUTH_CLIENT_SECRET));
+    }
+
+    /**
+     * Retrieve the authentication methods supported by the authenticator.
+     *
+     * @return      Authentication methods supported by the authenticator.
+     */
+    @Override
+    public List<String> getSupportedClientAuthenticationMethods() {
+
+        List<String> supportedAuthMethods = new ArrayList<>();
+        supportedAuthMethods.add(CLIENT_SECRET_BASIC);
+        supportedAuthMethods.add(CLIENT_SECRET_POST);
+        return supportedAuthMethods;
     }
 
 }
