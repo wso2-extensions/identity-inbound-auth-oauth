@@ -421,6 +421,18 @@
                     <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="username" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenEndpointAuthMethod" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenEndpointAuthSignatureAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="sectorIdentifierURI" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="idTokenSignatureAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="authorizationResponseSignatureAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requestObjectSignatureAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tlsClientAuthSubjectDN" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="subjectType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requestObjectEncryptionAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requestObjectEncryptionMethod" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requirePushedAuthorizationRequests" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="tlsClientCertificateBoundAccessTokens" type="xs:boolean"/>
                 </xs:sequence>
             </xs:complexType>
             <xs:complexType name="OAuthRevocationRequestDTO">
