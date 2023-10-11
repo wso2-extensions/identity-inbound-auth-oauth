@@ -548,7 +548,8 @@ public class OAuth2AuthzEndpoint {
      * @param authorizationResponseDTO AuthorizationResponseDTO instance
      * @return ResponseModeProvider
      */
-    private ResponseModeProvider getResponseModeProvider(AuthorizationResponseDTO authorizationResponseDTO) {
+    private ResponseModeProvider getResponseModeProvider(AuthorizationResponseDTO authorizationResponseDTO)
+            throws OAuthProblemException {
 
         Map<String, ResponseModeProvider> responseModeProviders =
                 OAuth2ServiceComponentHolder.getResponseModeProviders();
@@ -599,7 +600,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            URISyntaxException, ConsentHandlingFailedException {
+            URISyntaxException, ConsentHandlingFailedException, OAuthProblemException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -1040,7 +1041,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
-            throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException {
+            throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException, OAuthProblemException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(

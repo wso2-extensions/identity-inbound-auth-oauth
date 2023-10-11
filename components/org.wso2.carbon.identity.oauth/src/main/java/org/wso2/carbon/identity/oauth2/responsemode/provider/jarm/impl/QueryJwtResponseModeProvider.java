@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth2.responsemode.provider.jarm.impl;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -49,13 +51,20 @@ public class QueryJwtResponseModeProvider extends JarmResponseModeProvider {
     }
 
     @Override
-    public boolean canHandle(AuthorizationResponseDTO authorizationResponseDTO) {
+    public boolean canHandle(AuthorizationResponseDTO authorizationResponseDTO) throws OAuthProblemException {
 
         // This ResponseModeProvider cannot handle response types that contain "token" or "ide_token".
         String responseType = authorizationResponseDTO.getResponseType();
 
-        return !hasIDTokenOrTokenInResponseType(responseType) &&
-                getResponseMode().equals(authorizationResponseDTO.getResponseMode());
+
+        if (hasIDTokenOrTokenInResponseType(responseType) &&
+                getResponseMode().equals(authorizationResponseDTO.getResponseMode())) {
+            LOG.error("Query JWT Response Mode Provider cannot handle response types that contain \"token\" or " +
+                    "\"id_token\". Please use Fragment JWT Response Mode Provider instead.");
+            throw OAuthUtils.handleOAuthProblemException("Invalid response_type parameter value");
+        }
+
+        return getResponseMode().equals(authorizationResponseDTO.getResponseMode());
     }
 
     @Override
