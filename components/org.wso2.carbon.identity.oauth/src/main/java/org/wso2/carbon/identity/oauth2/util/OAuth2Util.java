@@ -4963,6 +4963,6 @@ public class OAuth2Util {
 
     public static boolean isScopeValidationOldBehaviourEnabled() {
 
-        return false;
+        return true;
     }
 }

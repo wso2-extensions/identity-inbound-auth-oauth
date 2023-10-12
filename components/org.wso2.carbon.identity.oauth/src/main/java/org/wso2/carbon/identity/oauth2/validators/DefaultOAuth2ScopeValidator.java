@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+
 /**
  * DefaultOAuth2ScopeValidator
  */
@@ -86,6 +88,11 @@ public class DefaultOAuth2ScopeValidator {
         the approved scope list. */
         List<String> approvedScopes = new ArrayList<>(requestedOIDCScopes);
         requestedScopes = removeOIDCScopes(requestedScopes, requestedOIDCScopes);
+        if (requestedScopes.contains(SYSTEM_SCOPE)) {
+            // TODO : get all internal scopes
+            List<String> allInternalScopes = new ArrayList<>();
+            requestedScopes.addAll(allInternalScopes);
+        }
         Map<String, List<String>> policies  = getAuthorizedScopes(appId, tenantDomain);
         if (policies == null) {
             return new ArrayList<>();
