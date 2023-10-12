@@ -27,7 +27,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.11.130-SNAPSHOT</version>
+    <version>6.11.137-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -962,11 +962,11 @@
         <maven-war-plugin.version>3.3.1</maven-war-plugin.version>
 
         <!--Swagger Dependency Version-->
-        <jackson-databind.version>2.13.2.1</jackson-databind.version>
-        <com.fasterxml.jackson.version>2.13.2</com.fasterxml.jackson.version>
+        <jackson-databind.version>2.15.2</jackson-databind.version>
+        <com.fasterxml.jackson.version>2.15.2</com.fasterxml.jackson.version>
         <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
-        <com.fasterxml.jackson.databind.version.range>[2.13.0, 2.14.0)</com.fasterxml.jackson.databind.version.range>
+        <com.fasterxml.jackson.databind.version.range>[2.13.0, 2.16.0)</com.fasterxml.jackson.databind.version.range>
 
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>

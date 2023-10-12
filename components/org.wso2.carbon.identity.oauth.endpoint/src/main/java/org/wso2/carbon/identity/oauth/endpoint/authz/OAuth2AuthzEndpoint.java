@@ -2023,6 +2023,10 @@ public class OAuth2AuthzEndpoint {
             validateNonceParameter(params.getNonce());
         }
 
+        if (isFapiConformant(params.getClientId())) {
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(params.getResponseType(), params.getResponseMode());
+        }
+
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -2498,6 +2502,14 @@ public class OAuth2AuthzEndpoint {
         } else if (isRequestParameter(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST);
         }
+        /* Mandate request object for FAPI requests.
+           https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1)  */
+        if (isFapiConformant(oAuthMessage.getClientId())) {
+            if (requestObjValue == null) {
+                throw new InvalidRequestException("Request Object is mandatory for FAPI Conformant Applications.",
+                        OAuth2ErrorCodes.INVALID_REQUEST, "Request object is missing.");
+            }
+        }
 
         if (StringUtils.isNotEmpty(requestObjValue)) {
             handleRequestObject(oAuthMessage, oauthRequest, parameters);
@@ -2543,8 +2555,10 @@ public class OAuth2AuthzEndpoint {
               When the request parameter is used, the OpenID Connect request parameter values contained in the JWT
               supersede those passed using the OAuth 2.0 request syntax
              */
+        boolean isFapiConformant = isFapiConformant(oAuthMessage.getClientId());
+        // If FAPI conformant, claims outside request object should be ignored.
         overrideAuthzParameters(oAuthMessage, parameters, oauthRequest.getParam(REQUEST),
-                oauthRequest.getParam(REQUEST_URI), requestObject);
+                oauthRequest.getParam(REQUEST_URI), requestObject, isFapiConformant);
 
         // If the redirect uri was not given in auth request the registered redirect uri will be available here,
         // so validating if the registered redirect uri is a single uri that can be properly redirected.
@@ -2567,17 +2581,18 @@ public class OAuth2AuthzEndpoint {
 
     private void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,
                                          String requestParameterValue,
-                                         String requestURIParameterValue, RequestObject requestObject) {
+                                         String requestURIParameterValue, RequestObject requestObject,
+                                         boolean ignoreClaimsOutsideRequestObject) {
 
         if (StringUtils.isNotBlank(requestParameterValue) || StringUtils.isNotBlank(requestURIParameterValue)) {
-            replaceIfPresent(requestObject, REDIRECT_URI, params::setRedirectURI);
-            replaceIfPresent(requestObject, NONCE, params::setNonce);
-            replaceIfPresent(requestObject, STATE, params::setState);
-            replaceIfPresent(requestObject, DISPLAY, params::setDisplay);
-            replaceIfPresent(requestObject, RESPONSE_MODE, params::setResponseMode);
-            replaceIfPresent(requestObject, LOGIN_HINT, params::setLoginHint);
-            replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint);
-            replaceIfPresent(requestObject, PROMPT, params::setPrompt);
+            replaceIfPresent(requestObject, REDIRECT_URI, params::setRedirectURI, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, NONCE, params::setNonce, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, STATE, params::setState, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, DISPLAY, params::setDisplay, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, RESPONSE_MODE, params::setResponseMode, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, LOGIN_HINT, params::setLoginHint, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint, ignoreClaimsOutsideRequestObject);
+            replaceIfPresent(requestObject, PROMPT, params::setPrompt, ignoreClaimsOutsideRequestObject);
 
             if (requestObject.getClaim(CLAIMS) instanceof net.minidev.json.JSONObject) {
                 // Claims in the request object is in the type of net.minidev.json.JSONObject,
@@ -2589,8 +2604,8 @@ public class OAuth2AuthzEndpoint {
             if (isPkceSupportEnabled()) {
                 // If code_challenge and code_challenge_method is sent inside the request object then add them to
                 // Oauth2 parameters.
-                replaceIfPresent(requestObject, CODE_CHALLENGE, params::setPkceCodeChallenge);
-                replaceIfPresent(requestObject, CODE_CHALLENGE_METHOD, params::setPkceCodeChallengeMethod);
+                replaceIfPresent(requestObject, CODE_CHALLENGE, params::setPkceCodeChallenge, false);
+                replaceIfPresent(requestObject, CODE_CHALLENGE_METHOD, params::setPkceCodeChallengeMethod, false);
             }
 
             if (StringUtils.isNotEmpty(requestObject.getClaimValue(SCOPE))) {
@@ -2654,11 +2669,14 @@ public class OAuth2AuthzEndpoint {
         return acrRequestedValues;
     }
 
-    private void replaceIfPresent(RequestObject requestObject, String claim, Consumer<String> consumer) {
+    private void replaceIfPresent(RequestObject requestObject, String claim, Consumer<String> consumer,
+                                  boolean ignoreClaimsOutsideRequestObject) {
 
         String claimValue = requestObject.getClaimValue(claim);
         if (StringUtils.isNotEmpty(claimValue)) {
             consumer.accept(claimValue);
+        } else if (ignoreClaimsOutsideRequestObject) {
+            consumer.accept(null);
         }
     }
 
@@ -3557,6 +3575,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
+        authzReqDTO.setState(oauth2Params.getState());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
@@ -4210,5 +4229,14 @@ public class OAuth2AuthzEndpoint {
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
+    }
+
+    private boolean isFapiConformant(String clientId) throws InvalidRequestException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2Exception e) {
+            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
+        }
     }
 }
