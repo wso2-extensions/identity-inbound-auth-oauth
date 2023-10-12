@@ -78,6 +78,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                         + File.separator + "test"
                         + File.separator + "resources"
                         + File.separator + "conf");
+        when(IdentityUtil.getPropertyAsList(Mockito.anyString())).thenReturn(Arrays.asList("private_key_jwt"));
 
         OAuth2ServiceComponentHolder.addAuthenticationHandler(basicAuthClientAuthenticator);
         OAuth2ServiceComponentHolder.addAuthenticationHandler(sampleClientAuthenticator);
@@ -158,6 +159,8 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         setHeaders(httpServletRequest, headers);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(false);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
                 (httpServletRequest, bodyParams);
         assertEquals(oAuthClientAuthnContext.isAuthenticated(), isAuthenticated);
@@ -233,6 +236,8 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                 .thenReturn(true);
         PowerMockito.when(oAuthClientAuthenticator.getClientId(Mockito.any(), Mockito.any(), Mockito.any()))
                 .thenReturn(CLIENT_ID);
+        PowerMockito.when(oAuthClientAuthenticator.getSupportedClientAuthenticationMethods())
+                .thenReturn(Arrays.asList("private_key_jwt"));
         OAuthClientAuthnService oAuthClientAuthnService = Mockito.spy(OAuthClientAuthnService.class);
         PowerMockito.when(oAuthClientAuthnService.getClientAuthenticators()).thenReturn
                 (Arrays.asList(oAuthClientAuthenticator));
