@@ -264,6 +264,7 @@ public final class OAuthConstants {
         public static final String REQUEST_URI = "request_uri";
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
+        public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
 
         private OAuth20Params() {
@@ -481,6 +482,7 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String S_HASH = "s_hash";
         public static final String SESSION_ID_CLAIM = "sid";
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
