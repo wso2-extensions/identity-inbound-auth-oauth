@@ -127,11 +127,7 @@ public class ProviderConfigBuilder {
             throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
         }
 
-        List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
-                .getSupportedTokenEndpointAuthMethods();
-        providerConfig.setTokenEndpointAuthMethodsSupported(supportedTokenEndpointAuthMethods.toArray(new
-                String[supportedTokenEndpointAuthMethods.size()]));
-
+        providerConfig.setTokenEndpointAuthMethodsSupported(OAuth2Util.getSupportedClientAuthMethods());
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
         providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
         providerConfig.setClaimsParameterSupported(Boolean.valueOf(OAuth2Util.isClaimsParameterSupported()));

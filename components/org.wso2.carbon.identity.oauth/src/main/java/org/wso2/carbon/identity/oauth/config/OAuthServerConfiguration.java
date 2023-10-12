@@ -315,7 +315,6 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
-    private List<String> supportedTokenEndpointAuthMethods = new ArrayList<>();
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
@@ -3253,12 +3252,6 @@ public class OAuthServerConfiguration {
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(
-                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)) != null) {
-                parseSupportedTokenEndpointAuthMethods(openIDConnectConfigElem.getFirstChildWithName(
-                        getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS)));
-            }
-
-            if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)) != null) {
                 try {
                     parseSupportedTokenEndpointSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
@@ -3589,37 +3582,9 @@ public class OAuthServerConfiguration {
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
-    public List<String> getSupportedTokenEndpointAuthMethods() {
-
-        return supportedTokenEndpointAuthMethods;
-    }
-
     public List<String> getSupportedTokenEndpointSigningAlgorithms() {
 
         return supportedTokenEndpointSigningAlgorithms;
-    }
-
-    /**
-     * Parse supported client authentication methods and add them to the supportedTokenEndpointAuthMethods list.
-     *
-     * @param methods OMElement of supported authentication methods.
-     */
-    private void parseSupportedTokenEndpointAuthMethods(OMElement methods) {
-
-        if (methods == null) {
-            return;
-        }
-
-        Iterator iterator = methods.getChildrenWithLocalName(
-                ConfigElements.SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD);
-        if (iterator != null) {
-            for (; iterator.hasNext(); ) {
-                OMElement method = (OMElement) iterator.next();
-                if (method != null) {
-                    supportedTokenEndpointAuthMethods.add(method.getText());
-                }
-            }
-        }
     }
 
     /**
@@ -3905,8 +3870,6 @@ public class OAuthServerConfiguration {
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
-        private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS = "SupportedTokenEndpointAuthMethods";
-        private static final String SUPPORTED_TOKEN_ENDPOINT_AUTH_METHOD = "SupportedTokenEndpointAuthMethod";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
     }

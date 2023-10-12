@@ -4979,4 +4979,22 @@ public class OAuth2Util {
         }
         return false;
     }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static String[] getSupportedClientAuthMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        List<String> supportedClientAuthMethods = new ArrayList<>();
+        for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
+            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            if (!supportedAuthMethods.isEmpty()) {
+                supportedClientAuthMethods.addAll(supportedAuthMethods);
+            }
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
+    }
 }

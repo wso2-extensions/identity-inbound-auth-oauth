@@ -445,15 +445,6 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testGetSupportedTokenEndpointAuthMethods() {
-
-        List<String> supportedTokenEndpointAuthMethods = OAuthServerConfiguration.getInstance()
-                .getSupportedTokenEndpointAuthMethods();
-        Assert.assertTrue(supportedTokenEndpointAuthMethods.contains("client_secret_basic"));
-        Assert.assertTrue(supportedTokenEndpointAuthMethods.size() == 4);
-    }
-
-    @Test
     public void testGetSupportedTokenEndpointSigningAlgorithms() {
 
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
