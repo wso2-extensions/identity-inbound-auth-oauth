@@ -1041,7 +1041,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private boolean hasValidationByApplicationScopeValidatorsFailed(OAuthTokenReqMessageContext tokenReqMsgContext)
             throws IdentityOAuth2Exception {
 
-        return !Oauth2ScopeUtils.validateByApplicationScopeValidator(tokenReqMsgContext, null);
+        if (OAuth2Util.isScopeValidationOldBehaviourEnabled()) {
+            return !Oauth2ScopeUtils.validateByApplicationScopeValidator(tokenReqMsgContext, null);
+        }
+        return true;
     }
 
     /**

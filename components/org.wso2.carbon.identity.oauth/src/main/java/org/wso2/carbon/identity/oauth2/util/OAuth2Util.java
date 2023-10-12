@@ -4960,4 +4960,9 @@ public class OAuth2Util {
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
+
+    public static boolean isScopeValidationOldBehaviourEnabled() {
+
+        return false;
+    }
 }

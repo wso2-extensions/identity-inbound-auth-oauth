@@ -2,6 +2,9 @@ package org.wso2.carbon.identity.oauth2.validators.policyhandler;
 
 import java.util.List;
 
+/**
+ * ScopeValidatorPolicyHandler
+ */
 public interface ScopeValidatorPolicyHandler {
 
     boolean canHandle(String policyId);

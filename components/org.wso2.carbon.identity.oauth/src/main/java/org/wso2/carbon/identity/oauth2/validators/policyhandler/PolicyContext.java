@@ -5,6 +5,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import java.util.List;
 import java.util.Map;
 
+/**
+ * PolicyContext
+ */
 public class PolicyContext {
 
     private AuthenticatedUser authenticatedUser;

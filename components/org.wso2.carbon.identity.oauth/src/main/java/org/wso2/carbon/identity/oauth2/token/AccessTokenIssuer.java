@@ -67,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
@@ -596,6 +597,7 @@ public class AccessTokenIssuer {
 
     private boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
+        boolean isScopeValidationOldBehaviourEnabled = OAuth2Util.isScopeValidationOldBehaviourEnabled();
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
@@ -645,6 +647,7 @@ public class AccessTokenIssuer {
         List<String> requestedAllowedScopes = new ArrayList<>();
         String[] authorizedInternalScopes = new String[0];
         String[] requestedScopes = tokReqMsgCtx.getScope();
+        List<String> authorizedScopes = null;
         if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
             log.debug("Application is not configured as Management App and the grant type is client credentials. " +
                     "Hence skipping internal scope validation to stop issuing internal scopes for the client : " +
@@ -676,15 +679,23 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
-            // Execute Internal SCOPE Validation.
-            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-            authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
-            // Execute internal console scopes validation.
-            if (IdentityUtil.isSystemRolesEnabled()) {
-                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
-                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
-                authorizedInternalScopes = (String[]) ArrayUtils
-                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+            if (isScopeValidationOldBehaviourEnabled) {
+                // Execute Internal SCOPE Validation.
+                JDBCPermissionBasedInternalScopeValidator scopeValidator =
+                        new JDBCPermissionBasedInternalScopeValidator();
+                authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+                // Execute internal console scopes validation.
+                if (IdentityUtil.isSystemRolesEnabled()) {
+                    RoleBasedInternalScopeValidator roleBasedInternalScopeValidator =
+                            new RoleBasedInternalScopeValidator();
+                    String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator
+                            .validateScope(tokReqMsgCtx);
+                    authorizedInternalScopes = (String[]) ArrayUtils
+                            .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+                }
+            } else {
+                // Engage new scope validator
+                authorizedScopes = getAuthorizedScopes(tokReqMsgCtx);
             }
             if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
@@ -705,10 +716,15 @@ public class AccessTokenIssuer {
          Those scopes should not send to the other scopes validators. Thus remove the scopes from the tokReqMsgCtx.
          Will be added to the response after executing the other scope validators.
         */
-        removeInternalScopes(tokReqMsgCtx);
+        if (isScopeValidationOldBehaviourEnabled) {
+            removeInternalScopes(tokReqMsgCtx);
 
-        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
-        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+            // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+            tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+        } else {
+            removeAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
+        }
+
 
         boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
         if (isDropUnregisteredScopes) {
@@ -725,7 +741,11 @@ public class AccessTokenIssuer {
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             // Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            if (isScopeValidationOldBehaviourEnabled) {
+                addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            } else {
+                addAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
+            }
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -742,6 +762,13 @@ public class AccessTokenIssuer {
             }
         }
         return isValidScope;
+    }
+
+    private List<String> getAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        DefaultOAuth2ScopeValidator scopeValidator = new DefaultOAuth2ScopeValidator();
+        return scopeValidator.validateScope(tokReqMsgCtx);
     }
 
     private List<String> getScopeList(String[] scopes) {
@@ -925,6 +952,19 @@ public class AccessTokenIssuer {
                 .distinct().toArray(String[]::new));
     }
 
+    private void addAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> authorizedScopes) {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        if (scopes == null) {
+            scopes = new String[0];
+        }
+        if (authorizedScopes == null) {
+            authorizedScopes = new ArrayList<>();
+        }
+        tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), authorizedScopes.stream())
+                .distinct().toArray(String[]::new));
+    }
+
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
                                         String[] requestedOIDCScopes) {
 
@@ -954,6 +994,20 @@ public class AccessTokenIssuer {
         for (String scope : tokReqMsgCtx.getScope()) {
             if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
                     .equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
+    }
+
+    private void removeAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> authorizedScopes) {
+
+        if (tokReqMsgCtx.getScope() == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : tokReqMsgCtx.getScope()) {
+            if (!authorizedScopes.contains(scope)) {
                 scopes.add(scope);
             }
         }

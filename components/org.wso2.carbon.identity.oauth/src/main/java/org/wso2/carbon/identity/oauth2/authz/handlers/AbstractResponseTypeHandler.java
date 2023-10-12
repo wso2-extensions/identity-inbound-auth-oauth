@@ -234,6 +234,9 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
     private boolean hasValidationByApplicationScopeValidatorsFailed(OAuthAuthzReqMessageContext authzReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        return !Oauth2ScopeUtils.validateByApplicationScopeValidator(null, authzReqMessageContext);
+        if (OAuth2Util.isScopeValidationOldBehaviourEnabled()) {
+            return !Oauth2ScopeUtils.validateByApplicationScopeValidator(null, authzReqMessageContext);
+        }
+        return true;
     }
 }

@@ -4,7 +4,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.opensaml.xmlsec.signature.P;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -18,16 +17,20 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.PolicyContext;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPolicyHandler;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPolicyHandlerException;
-import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * DefaultOAuth2ScopeValidator
+ */
 public class DefaultOAuth2ScopeValidator {
 
     public static final String CLIENT_TYPE = "oauth2";
@@ -100,7 +103,7 @@ public class DefaultOAuth2ScopeValidator {
                     policyContext.setAuthenticatedUser(authenticatedUser);
                     policyContext.setAppId(appId);
                     policyContext.setValidatedScopesByHandler(validatedScopesByHandler);
-                    List<String> validatedScopes = null;
+                    List<String> validatedScopes;
                     try {
                         validatedScopes = scopeValidatorPolicyHandler.validateScopes(authorizedScopes,
                                 requestedScopes, policyContext);
@@ -108,18 +111,42 @@ public class DefaultOAuth2ScopeValidator {
                         throw new IdentityOAuth2Exception("Error while validating policies roles from " +
                                 "authorization service.", e);
                     }
-                    approvedScopes.addAll(validatedScopes);
                     validatedScopesByHandler.put(scopeValidatorPolicyHandler.getName(), validatedScopes);
                 }
             }
         }
+
+        // If "NoPolicy" exists, add all its scopes to the result
+        Set<String> scopes = new HashSet<>(validatedScopesByHandler.getOrDefault("NoPolicy",
+                Collections.emptyList()));
+
+        // Separate "NoPolicy" and get the intersection of the rest of the scopes validated by other validators
+        List<List<String>> otherHandlerScopes = new ArrayList<>(validatedScopesByHandler.values());
+        otherHandlerScopes.remove(validatedScopesByHandler.get("NoPolicy"));
+
+        List<String> intersection = new ArrayList<>();
+        if (!otherHandlerScopes.isEmpty()) {
+            intersection = otherHandlerScopes.get(0);
+            for (int i = 1; i < otherHandlerScopes.size(); i++) {
+                intersection = intersection.stream().filter(otherHandlerScopes.get(i)::contains)
+                        .collect(Collectors.toList());
+            }
+        }
+        scopes.addAll(intersection);
+        approvedScopes.addAll(scopes);
         return approvedScopes;
     }
 
     private Map<String, List<String>> getAuthorizedScopes(String appId, String tenantDomain) {
 
         // TODO : get authorized scopes
-        return null;
+        Map<String, List<String>> authorizedScopes = new HashMap<>();
+        List<String> scopes = new ArrayList<>();
+        scopes.add("scope1");
+        scopes.add("scope2");
+        authorizedScopes.put("NoPolicy", scopes);
+        authorizedScopes.put("RBAC", scopes);
+        return authorizedScopes;
     }
 
     private Set<String> getRequestedOIDCScopes(String tenantDomain, List<String> requestedScopes)

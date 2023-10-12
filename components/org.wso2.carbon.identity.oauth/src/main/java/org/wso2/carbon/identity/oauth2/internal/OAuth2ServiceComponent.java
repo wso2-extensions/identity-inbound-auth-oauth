@@ -77,6 +77,9 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPolicyHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.NoPolicyPolicyHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.RoleBasedPolicyHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
@@ -331,6 +334,8 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
             // Registering OAuth2ScopeService under ScopeService interface as the default service.
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
+            bundleContext.registerService(ScopeValidatorPolicyHandler.class, new RoleBasedPolicyHandler(), null);
+            bundleContext.registerService(ScopeValidatorPolicyHandler.class, new NoPolicyPolicyHandler(), null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 

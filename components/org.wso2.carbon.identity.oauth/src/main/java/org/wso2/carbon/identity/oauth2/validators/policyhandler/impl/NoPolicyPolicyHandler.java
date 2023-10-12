@@ -7,6 +7,9 @@ import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPo
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * NoPolicyPolicyHandler
+ */
 public class NoPolicyPolicyHandler implements ScopeValidatorPolicyHandler {
 
     @Override
