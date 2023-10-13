@@ -496,7 +496,7 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
-        /*dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
+        dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
         dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
         dto.setSectorIdentifierURI(appDO.getSectorIdentifierURI());
         dto.setIdTokenSignatureAlgorithm(appDO.getIdTokenSignatureAlgorithm());
@@ -507,7 +507,7 @@ public final class OAuthUtil {
         dto.setRequestObjectEncryptionAlgorithm(appDO.getRequestObjectEncryptionAlgorithm());
         dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
         dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
-        dto.setTlsClientCertificateBoundAccessTokens(appDO.isTlsClientCertificateBoundAccessTokens());*/
+        dto.setTlsClientCertificateBoundAccessTokens(appDO.isTlsClientCertificateBoundAccessTokens());
         return dto;
     }
 
