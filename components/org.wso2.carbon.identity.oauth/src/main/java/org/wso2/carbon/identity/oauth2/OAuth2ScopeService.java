@@ -841,9 +841,13 @@ public class OAuth2ScopeService implements ScopeMetadataService {
                         scope.getDescription());
                 scopesArray.add(scopeMetadata);
             } catch (IdentityOAuth2ScopeException e) {
-                log.warn("Error while retrieving scopes", e);
-                throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
-                        ERROR_CODE_FAILED_TO_GET_SCOPE_METADATA, e);
+                if (e instanceof IdentityOAuth2ScopeServerException) {
+                    throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                            ERROR_CODE_FAILED_TO_GET_SCOPE_METADATA, e);
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("No scope found with name: " + scopeName);
+                }
             }
         }
         if (scopesArray.isEmpty()) {
