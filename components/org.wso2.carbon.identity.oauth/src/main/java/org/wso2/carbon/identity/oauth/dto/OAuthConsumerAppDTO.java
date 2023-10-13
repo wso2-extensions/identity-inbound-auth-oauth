@@ -323,10 +323,12 @@ public class OAuthConsumerAppDTO {
     }
 
     public String getTokenEndpointAuthMethod() {
+
         return tokenEndpointAuthMethod;
     }
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
     }
 
@@ -437,6 +439,5 @@ public class OAuthConsumerAppDTO {
 
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
     }
-
 }
 
