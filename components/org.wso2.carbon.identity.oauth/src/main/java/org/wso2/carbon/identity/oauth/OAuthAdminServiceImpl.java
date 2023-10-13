@@ -129,6 +129,9 @@ public class OAuthAdminServiceImpl {
     private static final String VALIDATE_SECOTR_IDENTIFIER = "OAuth.OpenIDConnect.FAPI." +
             "EnableSectorIdentifierURIValidation";
 
+    boolean validateFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+            OAuthConstants.ENABLE_FAPI_VALIDATION));
+
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
      * consumer secret at a time. Calling this method again and again will update the existing
@@ -338,7 +341,7 @@ public class OAuthAdminServiceImpl {
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
-                            if (isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                            if (validateFAPIDCR) {
                                 filterAllowedFAPIEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm());
                             }
                             app.setIdTokenEncryptionAlgorithm(
@@ -360,13 +363,12 @@ public class OAuthAdminServiceImpl {
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
-                        if (StringUtils.isNotEmpty(application.getTokenEndpointAuthMethod()) &&
-                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                        if (StringUtils.isNotEmpty(application.getTokenEndpointAuthMethod()) && validateFAPIDCR) {
                             filterAllowedFAPITokenAuthMethods(application.getTokenEndpointAuthMethod());
                         }
                         app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
                         if (StringUtils.isNotEmpty(application.getTokenEndpointAuthSignatureAlgorithm()) &&
-                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                                validateFAPIDCR) {
                             filterAllowedFAPITSignatureAlgorithms(
                                     application.getTokenEndpointAuthSignatureAlgorithm());
                         }
@@ -402,20 +404,19 @@ public class OAuthAdminServiceImpl {
                                 }
                             }
                         }
-                        if (StringUtils.isNotEmpty(application.getIdTokenSignatureAlgorithm()) &&
-                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                        if (StringUtils.isNotEmpty(application.getIdTokenSignatureAlgorithm()) && validateFAPIDCR) {
                             filterAllowedFAPITSignatureAlgorithms(application.getIdTokenSignatureAlgorithm());
                         }
                         app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
-                        if (StringUtils.isNotEmpty(application.getAuthorizationResponseSignatureAlgorithm()) &&
-                                isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                        if (StringUtils.isNotEmpty(application.getAuthorizationResponseSignatureAlgorithm())
+                                && validateFAPIDCR) {
                             filterAllowedFAPITSignatureAlgorithms(
                                     application.getAuthorizationResponseSignatureAlgorithm());
                         }
                         app.setAuthorizationResponseSignatureAlgorithm(
                                 application.getAuthorizationResponseSignatureAlgorithm());
                         if (StringUtils.isNotEmpty(application.getRequestObjectSignatureAlgorithm())) {
-                            if (isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                            if (validateFAPIDCR) {
                                 filterAllowedFAPITSignatureAlgorithms(
                                         application.getRequestObjectSignatureAlgorithm());
                             }
@@ -424,7 +425,7 @@ public class OAuthAdminServiceImpl {
                         app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
                         app.setSubjectType(application.getSubjectType());
                         if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionAlgorithm())) {
-                            if (isFAPIValidationEnabled(application.getOauthConsumerKey())) {
+                            if (validateFAPIDCR) {
                                 filterAllowedFAPIEncryptionAlgorithms(
                                         application.getRequestObjectEncryptionAlgorithm());
                             }
@@ -706,7 +707,7 @@ public class OAuthAdminServiceImpl {
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                if (isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+                if (validateFAPIDCR) {
                     filterAllowedFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
                 }
                 oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
@@ -723,13 +724,11 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthMethod()) &&
-                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthMethod()) && validateFAPIDCR) {
                 filterAllowedFAPITokenAuthMethods(consumerAppDTO.getTokenEndpointAuthMethod());
             }
             oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm()) && validateFAPIDCR) {
                 filterAllowedFAPITSignatureAlgorithms(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
             }
             oauthappdo.setTokenEndpointAuthSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
@@ -761,20 +760,18 @@ public class OAuthAdminServiceImpl {
             }
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getIdTokenSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+            if (StringUtils.isNotEmpty(consumerAppDTO.getIdTokenSignatureAlgorithm()) && validateFAPIDCR) {
                 filterAllowedFAPITSignatureAlgorithms(consumerAppDTO.getIdTokenSignatureAlgorithm());
             }
             oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm())
+                    && validateFAPIDCR) {
                 filterAllowedFAPITSignatureAlgorithms(
                         consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
             }
             oauthappdo.setAuthorizationResponseSignatureAlgorithm(
                     consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectSignatureAlgorithm()) &&
-                    isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectSignatureAlgorithm()) && validateFAPIDCR) {
                 filterAllowedFAPITSignatureAlgorithms(consumerAppDTO.getRequestObjectSignatureAlgorithm());
             }
             oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
@@ -782,7 +779,7 @@ public class OAuthAdminServiceImpl {
                     .isRequestObjectSignatureValidationEnabled());
             oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
             if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectEncryptionAlgorithm())) {
-                if (isFAPIValidationEnabled(consumerAppDTO.getOauthConsumerKey())) {
+                if (validateFAPIDCR) {
                     filterAllowedFAPIEncryptionAlgorithms(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
                 }
                 oauthappdo.setRequestObjectEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
@@ -2248,21 +2245,6 @@ public class OAuthAdminServiceImpl {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
             }
-        }
-    }
-
-    /**
-     * retrieve configuration for FAPI related validations during application registration
-     *
-     * @return isFAPIValidationEnabled
-     */
-    private boolean isFAPIValidationEnabled(String clientId) throws IdentityOAuthAdminException {
-
-        try {
-            return OAuth2Util.isFapiConformantApp(clientId);
-        } catch (IdentityOAuth2Exception e) {
-            throw new IdentityOAuthAdminException(INVALID_OAUTH_CLIENT.getErrorCode(),
-                    "Error while retrieving FAPI conformance status for client: " + clientId, e);
         }
     }
 

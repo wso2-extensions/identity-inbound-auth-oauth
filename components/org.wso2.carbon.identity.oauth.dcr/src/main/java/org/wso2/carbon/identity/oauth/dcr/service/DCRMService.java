@@ -82,7 +82,6 @@ public class DCRMService {
     private static final String APP_DISPLAY_NAME = "DisplayName";
     private static Pattern clientIdRegexPattern = null;
     private static final String SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
-    private static final String ENABLE_FAPI_VALIDATION = "OAuth.DCRM.EnableFAPIEnforcement";
 
 
     /**
@@ -536,10 +535,14 @@ public class DCRMService {
         sp.setManagementApp(isManagementApp);
 
         Map<String, Object> spProperties = new HashMap<>();
-        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_FAPI_VALIDATION));
+        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
-            // Add FAPI conformant application nad isThirdParty property to the service provider.
-            spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
+            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+                    OAuthConstants.ENABLE_FAPI_VALIDATION));
+            if (enableFAPIDCR) {
+                // Add FAPI conformant application nad isThirdParty property to the service provider.
+                spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
+            }
         }
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
         addSPProperties(spProperties, sp);
