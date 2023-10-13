@@ -937,4 +937,25 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         newArray[originalArray.length] = value;
         return newArray;
     }
+
+    @DataProvider(name = "provideResponseTypeAndMode")
+    public Object[][] provideResponseTypeAndMode() {
+
+        return new Object[][]{
+                {"code", "form_post", false},
+                {"code", "jwt", true},
+                {"code id_token", null, true},
+                {"code token", "jwt", false}
+        };
+    }
+
+    @Test(dataProvider = "provideResponseTypeAndMode")
+    public void testValidateFAPIAllowedResponseMode(String responseType, String responseMode, boolean shouldPass) {
+
+        try {
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(responseType, responseMode);
+        } catch (OAuthProblemException e) {
+            Assert.assertFalse(shouldPass, "Expected exception not thrown");
+        }
+    }
 }

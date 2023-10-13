@@ -252,7 +252,7 @@ public class OAuth2AuthzEndpoint {
 
     private static ScopeMetadataService scopeMetadataService;
 
-    private DeviceAuthService deviceAuthService;
+    private static DeviceAuthService deviceAuthService;
 
     public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
 
@@ -2023,6 +2023,10 @@ public class OAuth2AuthzEndpoint {
             validateNonceParameter(params.getNonce());
         }
 
+        if (isFapiConformant(params.getClientId())) {
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(params.getResponseType(), params.getResponseMode());
+        }
+
         addDataToSessionCache(oAuthMessage, params, sessionDataKey);
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -3571,6 +3575,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setRequestObjectFlow(oauth2Params.isRequestObjectFlow());
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
+        authzReqDTO.setState(oauth2Params.getState());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
@@ -4187,9 +4192,9 @@ public class OAuth2AuthzEndpoint {
      *
      * @param deviceAuthService Device authentication service.
      */
-    public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
+    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
-        this.deviceAuthService = deviceAuthService;
+        OAuth2AuthzEndpoint.deviceAuthService = deviceAuthService;
     }
 
     private void cacheUserAttributesByDeviceCode(SessionDataCacheEntry sessionDataCacheEntry)
