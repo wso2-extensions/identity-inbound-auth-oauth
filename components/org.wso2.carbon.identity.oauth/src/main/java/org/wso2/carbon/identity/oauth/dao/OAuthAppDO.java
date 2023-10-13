@@ -82,7 +82,6 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String tokenEndpointAuthSignatureAlgorithm;
     private String sectorIdentifierURI;
     private String idTokenSignatureAlgorithm;
-    private String authorizationResponseSignatureAlgorithm;
     private String requestObjectSignatureAlgorithm;
     private String tlsClientAuthSubjectDN;
     private boolean requirePushedAuthorizationRequests;
@@ -391,15 +390,6 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
 
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
-    }
-    public String getAuthorizationResponseSignatureAlgorithm() {
-
-        return authorizationResponseSignatureAlgorithm;
-    }
-
-    public void setAuthorizationResponseSignatureAlgorithm(String authorizationResponseSignatureAlgorithm) {
-
-        this.authorizationResponseSignatureAlgorithm = authorizationResponseSignatureAlgorithm;
     }
     public String getRequestObjectSignatureAlgorithm() {
 

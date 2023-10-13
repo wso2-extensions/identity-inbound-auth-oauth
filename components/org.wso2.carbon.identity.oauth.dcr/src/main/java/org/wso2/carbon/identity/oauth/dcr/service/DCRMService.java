@@ -291,10 +291,6 @@ public class DCRMService {
             if (updateRequest.getIdTokenEncryptionMethod() != null) {
                 appDTO.setIdTokenEncryptionMethod(updateRequest.getIdTokenEncryptionMethod());
             }
-            if (updateRequest.getAuthorizationResponseSignatureAlgorithm() != null) {
-                appDTO.setAuthorizationResponseSignatureAlgorithm(
-                        updateRequest.getAuthorizationResponseSignatureAlgorithm());
-            }
             if (updateRequest.getRequestObjectSignatureAlgorithm() != null) {
                 appDTO.setRequestObjectSignatureValidationEnabled
                         (updateRequest.isRequireSignedRequestObject());
@@ -478,7 +474,6 @@ public class DCRMService {
         application.setIdTokenSignatureAlgorithm(createdApp.getIdTokenSignatureAlgorithm());
         application.setIdTokenEncryptionAlgorithm(createdApp.getIdTokenEncryptionAlgorithm());
         application.setIdTokenEncryptionMethod(createdApp.getIdTokenEncryptionMethod());
-        application.setAuthorizationResponseSignatureAlgorithm(createdApp.getAuthorizationResponseSignatureAlgorithm());
         application.setRequestObjectSignatureValidationEnabled(createdApp.isRequestObjectSignatureValidationEnabled());
         application.setRequestObjectSignatureAlgorithm(createdApp.getRequestObjectSignatureAlgorithm());
         application.setTlsClientAuthSubjectDN(createdApp.getTlsClientAuthSubjectDN());
@@ -574,10 +569,6 @@ public class DCRMService {
         }
         if (registrationRequest.getIdTokenEncryptionMethod() != null) {
             oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
-        }
-        if (registrationRequest.getAuthorizationResponseSignatureAlgorithm() != null) {
-            oAuthConsumerApp.setAuthorizationResponseSignatureAlgorithm
-                    (registrationRequest.getAuthorizationResponseSignatureAlgorithm());
         }
         if (registrationRequest.getRequestObjectSignatureAlgorithm() != null) {
             oAuthConsumerApp.setRequestObjectSignatureAlgorithm(

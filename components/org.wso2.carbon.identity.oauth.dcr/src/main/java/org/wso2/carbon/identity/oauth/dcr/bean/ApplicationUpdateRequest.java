@@ -51,7 +51,6 @@ public class ApplicationUpdateRequest implements Serializable {
     private String idTokenSignatureAlgorithm;
     private String idTokenEncryptionAlgorithm;
     private String idTokenEncryptionMethod;
-    private String authorizationResponseSignatureAlgorithm;
     private String requestObjectSignatureAlgorithm;
     private String tlsClientAuthSubjectDN;
     private boolean requirePushedAuthorizationRequests;
@@ -301,16 +300,6 @@ public class ApplicationUpdateRequest implements Serializable {
     public void setSectorIdentifierURI(String sectorIdentifierURI) {
 
         this.sectorIdentifierURI = sectorIdentifierURI;
-    }
-
-    public String getAuthorizationResponseSignatureAlgorithm() {
-
-        return authorizationResponseSignatureAlgorithm;
-    }
-
-    public void setAuthorizationResponseSignatureAlgorithm(String authorizationResponseSignatureAlgorithm) {
-
-        this.authorizationResponseSignatureAlgorithm = authorizationResponseSignatureAlgorithm;
     }
 
     public String getRequestObjectSignatureAlgorithm() {

@@ -47,7 +47,6 @@ public class RegistrationRequestDTO  {
   private String idTokenSignedResponseAlg = null;
   private String idTokenEncryptedResponseAlg = null;
   private String idTokenEncryptedResponseEnc = null;
-  private String authorizationSignedResponseAlg = null;
   private String requestObjectSigningAlg = null;
   private String tlsClientAuthSubjectDn = null;
   private boolean requirePushAuthorizationRequest;
@@ -362,14 +361,6 @@ public class RegistrationRequestDTO  {
     this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
   }
   @ApiModelProperty(value = "")
-  @JsonProperty("authorization_signed_response_alg")
-  public String getAuthorizationSignedResponseAlg() {
-    return authorizationSignedResponseAlg;
-  }
-  public void setAuthorizationSignedResponseAlg(String authorizationSignedResponseAlg) {
-    this.authorizationSignedResponseAlg = authorizationSignedResponseAlg;
-  }
-  @ApiModelProperty(value = "")
   @JsonProperty("request_object_signing_alg")
   public String getRequestObjectSigningAlg() {
     return requestObjectSigningAlg;
@@ -494,7 +485,6 @@ public class RegistrationRequestDTO  {
     sb.append("  id_token_signed_response_alg: ").append(idTokenSignedResponseAlg).append("\n");
     sb.append("  id_token_encrypted_response_alg: ").append(idTokenEncryptedResponseAlg).append("\n");
     sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptedResponseEnc).append("\n");
-    sb.append("  authorization_signed_response_alg: ").append(authorizationSignedResponseAlg).append("\n");
     sb.append("  request_object_signing_alg: ").append(requestObjectSigningAlg).append("\n");
     sb.append("  tls_client_auth_subject_dn: ").append(tlsClientAuthSubjectDn).append("\n");
     sb.append(" require_signed_request_object: ").append(requireSignedRequestObject).append("\n");

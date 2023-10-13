@@ -350,8 +350,6 @@ public class OAuthAdminServiceImpl {
                                 application.getTokenEndpointAuthSignatureAlgorithm());
                         app.setSectorIdentifierURI(application.getSectorIdentifierURI());
                         app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
-                        app.setAuthorizationResponseSignatureAlgorithm(
-                                application.getAuthorizationResponseSignatureAlgorithm());
                         app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
                         app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
                         app.setSubjectType(application.getSubjectType());
@@ -643,8 +641,6 @@ public class OAuthAdminServiceImpl {
                     consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
             oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
-            oauthappdo.setAuthorizationResponseSignatureAlgorithm(
-                    consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
             oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
             oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());

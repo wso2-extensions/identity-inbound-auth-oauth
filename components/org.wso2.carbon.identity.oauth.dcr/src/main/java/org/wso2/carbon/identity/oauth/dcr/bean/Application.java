@@ -38,7 +38,6 @@ public class Application implements Serializable {
     private String tokenEndpointAuthSignatureAlgorithm = null;
     private String sectorIdentifierURI = null;
     private String idTokenSignatureAlgorithm = null;
-    private String authorizationResponseSignatureAlgorithm = null;
     private String requestObjectSignatureAlgorithm = null;
     private String tlsClientAuthSubjectDN = null;
     private boolean requirePushedAuthorizationRequests;
@@ -148,17 +147,6 @@ public class Application implements Serializable {
 
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
     }
-
-    public String getAuthorizationResponseSignatureAlgorithm() {
-
-        return authorizationResponseSignatureAlgorithm;
-    }
-
-    public void setAuthorizationResponseSignatureAlgorithm(String authorizationResponseSignatureAlgorithm) {
-
-        this.authorizationResponseSignatureAlgorithm = authorizationResponseSignatureAlgorithm;
-    }
-
     public String getRequestObjectSignatureAlgorithm() {
 
         return requestObjectSignatureAlgorithm;

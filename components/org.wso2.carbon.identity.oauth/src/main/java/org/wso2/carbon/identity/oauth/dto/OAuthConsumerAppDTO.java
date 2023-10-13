@@ -56,7 +56,6 @@ public class OAuthConsumerAppDTO {
     private String tokenEndpointAuthSignatureAlgorithm;
     private String sectorIdentifierURI;
     private String idTokenSignatureAlgorithm;
-    private String authorizationResponseSignatureAlgorithm;
     private String requestObjectSignatureAlgorithm;
     private String tlsClientAuthSubjectDN;
     private boolean requirePushedAuthorizationRequests;
@@ -351,16 +350,6 @@ public class OAuthConsumerAppDTO {
 
         this.sectorIdentifierURI = sectorIdentifierURI;
     }
-    public String getAuthorizationResponseSignatureAlgorithm() {
-
-        return authorizationResponseSignatureAlgorithm;
-    }
-
-    public void setAuthorizationResponseSignatureAlgorithm(String authorizationResponseSignatureAlgorithm) {
-
-        this.authorizationResponseSignatureAlgorithm = authorizationResponseSignatureAlgorithm;
-    }
-
     public String getRequestObjectSignatureAlgorithm() {
 
         return requestObjectSignatureAlgorithm;

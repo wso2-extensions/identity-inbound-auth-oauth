@@ -526,7 +526,6 @@ public final class OAuthConstants {
         public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
         public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
         public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
-        public static final String AUTH_RESPONSE_SIGNATURE_ALGORITHM = "authorizationSignedResponseAlg";
         public static final String REQUEST_OBJECT_SIGNATURE_ALGORITHM = "requestObjectSigningAlg";
         public static final String TLS_SUBJECT_DN = "tlsClientAuthSubjectDn";
         public static final String IS_PUSH_AUTH = "requirePushAuthorizationRequest";

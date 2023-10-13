@@ -500,7 +500,6 @@ public final class OAuthUtil {
         dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
         dto.setSectorIdentifierURI(appDO.getSectorIdentifierURI());
         dto.setIdTokenSignatureAlgorithm(appDO.getIdTokenSignatureAlgorithm());
-        dto.setAuthorizationResponseSignatureAlgorithm(appDO.getAuthorizationResponseSignatureAlgorithm());
         dto.setRequestObjectSignatureAlgorithm(appDO.getRequestObjectSignatureAlgorithm());
         dto.setTlsClientAuthSubjectDN(appDO.getTlsClientAuthSubjectDN());
         dto.setSubjectType(appDO.getSubjectType());

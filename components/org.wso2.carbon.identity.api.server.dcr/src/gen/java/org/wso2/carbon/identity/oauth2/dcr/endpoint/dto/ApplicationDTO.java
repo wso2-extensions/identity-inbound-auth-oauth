@@ -40,9 +40,6 @@ public class ApplicationDTO  {
   private String idTokenSignedResponseAlg = null;
   private String idTokenEncryptedResponseAlg = null;
   private String idTokenEncryptedResponseEnc = null;
-  private String authorizationEncryptedResponseAlg = null;
-  private String authorizationSignedResponseAlg = null;
-  private String authorizationEncryptedResponseEnc = null;
   private String requestObjectSigningAlg = null;
   private String tlsClientAuthSubjectDn = null;
   private boolean requirePushAuthorizationRequest;
@@ -187,33 +184,6 @@ public class ApplicationDTO  {
   }
   public void setIdTokenEncryptedResponseEnc(String idTokenEncryptedResponseEnc) {
     this.idTokenEncryptedResponseEnc = idTokenEncryptedResponseEnc;
-  }
-
-  @ApiModelProperty(value = "")
-  @JsonProperty("authorization_encrypted_response_alg")
-  public String getAuthorizationEncryptedResponseAlg() {
-    return authorizationEncryptedResponseAlg;
-  }
-  public void setAuthorizationEncryptedResponseAlg(String authorizationEncryptedResponseAlg) {
-    this.authorizationEncryptedResponseAlg = authorizationEncryptedResponseAlg;
-  }
-
-  @ApiModelProperty(value = "")
-  @JsonProperty("authorization_signed_response_alg")
-  public String getAuthorizationSignedResponseAlg() {
-    return authorizationSignedResponseAlg;
-  }
-  public void setAuthorizationSignedResponseAlg(String authorizationSignedResponseAlg) {
-    this.authorizationSignedResponseAlg = authorizationSignedResponseAlg;
-  }
-
-  @ApiModelProperty(value = "")
-  @JsonProperty("authorization_encrypted_response_enc")
-  public String getAuthorizationEncryptedResponseEnc() {
-    return authorizationEncryptedResponseEnc;
-  }
-  public void setAuthorizationEncryptedResponseEnc(String authorizationEncryptedResponseEnc) {
-    this.authorizationEncryptedResponseEnc = authorizationEncryptedResponseEnc;
   }
 
   @ApiModelProperty(value = "")

@@ -67,7 +67,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.AUTH_RESPONSE_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
@@ -881,10 +880,6 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                AUTH_RESPONSE_SIGNATURE_ALGORITHM, oauthAppDO.getAuthorizationResponseSignatureAlgorithm(),
-                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-
-        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 REQUEST_OBJECT_SIGNATURE_ALGORITHM, oauthAppDO.getRequestObjectSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
@@ -1509,9 +1504,6 @@ public class OAuthAppDAO {
                     ID_TOKEN_SIGNATURE_ALGORITHM, consumerAppDO.getIdTokenSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    AUTH_RESPONSE_SIGNATURE_ALGORITHM, consumerAppDO.getAuthorizationResponseSignatureAlgorithm());
-
-            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     REQUEST_OBJECT_SIGNATURE_ALGORITHM, consumerAppDO.getRequestObjectSignatureAlgorithm());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
@@ -1652,11 +1644,6 @@ public class OAuthAppDAO {
         String idTokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, ID_TOKEN_SIGNATURE_ALGORITHM);
         if (idTokenSignatureAlgorithm != null) {
             oauthApp.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
-        }
-        String authResponseSignatureAlgorithm = getFirstPropertyValue(
-                spOIDCProperties, AUTH_RESPONSE_SIGNATURE_ALGORITHM);
-        if (authResponseSignatureAlgorithm != null) {
-            oauthApp.setAuthorizationResponseSignatureAlgorithm(authResponseSignatureAlgorithm);
         }
         String requestObjectSignatureAlgorithm = getFirstPropertyValue(
                 spOIDCProperties, REQUEST_OBJECT_SIGNATURE_ALGORITHM);

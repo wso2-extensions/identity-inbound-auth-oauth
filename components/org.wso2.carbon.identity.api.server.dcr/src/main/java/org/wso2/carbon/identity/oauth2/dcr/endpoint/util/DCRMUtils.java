@@ -86,8 +86,6 @@ public class DCRMUtils {
         appRegistrationRequest.setIdTokenSignatureAlgorithm(registrationRequestDTO.getIdTokenSignedResponseAlg());
         appRegistrationRequest.setIdTokenEncryptionAlgorithm(registrationRequestDTO.getIdTokenEncryptedResponseAlg());
         appRegistrationRequest.setIdTokenEncryptionMethod(registrationRequestDTO.getIdTokenEncryptedResponseEnc());
-        appRegistrationRequest.setAuthorizationResponseSignatureAlgorithm
-                (registrationRequestDTO.getAuthorizationSignedResponseAlg());
         appRegistrationRequest.setRequestObjectSignatureAlgorithm(registrationRequestDTO.getRequestObjectSigningAlg());
         appRegistrationRequest.setRequestObjectEncryptionAlgorithm
                 (registrationRequestDTO.getRequestObjectEncryptionAlgorithm());
@@ -130,8 +128,6 @@ public class DCRMUtils {
         applicationUpdateRequest.setIdTokenSignatureAlgorithm(updateRequestDTO.getIdTokenSignedResponseAlg());
         applicationUpdateRequest.setIdTokenEncryptionAlgorithm(updateRequestDTO.getIdTokenEncryptedResponseAlg());
         applicationUpdateRequest.setIdTokenEncryptionMethod(updateRequestDTO.getIdTokenEncryptedResponseEnc());
-        applicationUpdateRequest.setAuthorizationResponseSignatureAlgorithm(
-                updateRequestDTO.getAuthorizationSignedResponseAlg());
         applicationUpdateRequest.setRequestObjectSignatureAlgorithm(
                 updateRequestDTO.getRequestObjectSigningAlg());
         applicationUpdateRequest.setRequestObjectEncryptionAlgorithm(
@@ -225,8 +221,6 @@ public class DCRMUtils {
         applicationDTO.setIdTokenSignedResponseAlg(application.getIdTokenSignatureAlgorithm());
         applicationDTO.setIdTokenEncryptedResponseAlg(application.getIdTokenEncryptionAlgorithm());
         applicationDTO.setIdTokenEncryptedResponseEnc(application.getIdTokenEncryptionMethod());
-        applicationDTO.setAuthorizationSignedResponseAlg(application.getAuthorizationResponseSignatureAlgorithm());
-        applicationDTO.setAuthorizationEncryptedResponseEnc(application.getRequestObjectEncryptionMethod());
         applicationDTO.setRequireSignedRequestObject(application.isRequestObjectSignatureValidationEnabled());
         applicationDTO.setRequestObjectSigningAlg(application.getRequestObjectSignatureAlgorithm());
         applicationDTO.setTlsClientAuthSubjectDn(application.getTlsClientAuthSubjectDN());
