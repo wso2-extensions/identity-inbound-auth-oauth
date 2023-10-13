@@ -561,7 +561,6 @@ public class OIDProviderConfigResponse {
                 .userinfoSigningAlgValuesSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SUPPORTED, this.backchannelLogoutSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
-        configMap.put(DiscoveryConstants.RESPONSE_MODES_SUPPORTED, this.responseModesSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         return configMap;
