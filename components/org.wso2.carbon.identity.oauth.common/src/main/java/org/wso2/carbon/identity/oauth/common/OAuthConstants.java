@@ -187,6 +187,7 @@ public final class OAuthConstants {
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+    public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String OAUTH_JWT_ASSERTION = "client_assertion";
     public static final String PRIVATE_KEY_JWT = "private_key_jwt";
     public static final String PRIVATE_KEY_JWT_AUTHENTICATOR = "PrivateKeyJWTClientAuthenticator";
