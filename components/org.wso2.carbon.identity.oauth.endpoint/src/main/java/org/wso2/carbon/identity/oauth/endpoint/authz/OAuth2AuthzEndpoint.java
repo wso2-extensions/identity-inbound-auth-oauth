@@ -252,7 +252,7 @@ public class OAuth2AuthzEndpoint {
 
     private static ScopeMetadataService scopeMetadataService;
 
-    private DeviceAuthService deviceAuthService;
+    private static DeviceAuthService deviceAuthService;
 
     public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
 
@@ -4192,9 +4192,9 @@ public class OAuth2AuthzEndpoint {
      *
      * @param deviceAuthService Device authentication service.
      */
-    public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
+    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
-        this.deviceAuthService = deviceAuthService;
+        OAuth2AuthzEndpoint.deviceAuthService = deviceAuthService;
     }
 
     private void cacheUserAttributesByDeviceCode(SessionDataCacheEntry sessionDataCacheEntry)
