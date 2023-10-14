@@ -802,7 +802,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "filterAllowedFAPITSignatureAlgorithms", "PS256");
+        invokeMethod(oAuthAdminService, "filterAllowedFAPISignatureAlgorithms", "PS256");
     }
 
     @Test(description = "Test validating signature algorithm with invalid value")
@@ -812,7 +812,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "filterAllowedFAPITSignatureAlgorithms", "PS256");
+            invokeMethod(oAuthAdminService, "filterAllowedFAPISignatureAlgorithms", "PS256");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
@@ -942,5 +942,21 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
                     Error.INVALID_REQUEST.getErrorCode());
         }
+    }
+
+    @Test(description = "Test obtaining ur list from regex")
+    private void testGetRedirectURIList() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+
+        String callbackURls = "regexp=(http://TestApp.com|http://TestApp.com/a)";
+        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+        appDTO.setCallbackUrl(callbackURls);
+        List<String> redirectURIList = invokeMethod(oAuthAdminService, "getRedirectURIList", appDTO);
+
+        Assert.assertEquals(redirectURIList.size(), 2);
+        Assert.assertTrue(redirectURIList.contains("http://TestApp.com"));
+        Assert.assertTrue(redirectURIList.contains("http://TestApp.com/a"));
+
     }
 }

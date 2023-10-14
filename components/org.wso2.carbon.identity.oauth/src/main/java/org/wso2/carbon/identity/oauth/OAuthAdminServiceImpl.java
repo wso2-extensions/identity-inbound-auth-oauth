@@ -369,8 +369,7 @@ public class OAuthAdminServiceImpl {
                         app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
                         if (StringUtils.isNotEmpty(application.getTokenEndpointAuthSignatureAlgorithm()) &&
                                 validateFAPIDCR) {
-                            filterAllowedFAPITSignatureAlgorithms(
-                                    application.getTokenEndpointAuthSignatureAlgorithm());
+                            filterAllowedFAPISignatureAlgorithms(application.getTokenEndpointAuthSignatureAlgorithm());
                         }
                         app.setTokenEndpointAuthSignatureAlgorithm(
                                 application.getTokenEndpointAuthSignatureAlgorithm());
@@ -388,37 +387,25 @@ public class OAuthAdminServiceImpl {
                                 // into one regular expression.
                                 if (application.getCallbackUrl().startsWith(
                                         OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                                    String redirectURI = application.getCallbackUrl();
-                                    redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1,
-                                            redirectURI.indexOf(")"));
-                                    callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+                                    callBackURIList = getRedirectURIList(application);
                                 } else {
                                     callBackURIList.add(application.getCallbackUrl());
                                 }
                                 if (StringUtils.isEmpty(application.getSectorIdentifierURI())) {
                                     validateRedirectURIForPPID(callBackURIList);
-                                }
-                                if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
+                                } else {
                                     validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
                                     app.setSectorIdentifierURI(application.getSectorIdentifierURI());
                                 }
                             }
                         }
                         if (StringUtils.isNotEmpty(application.getIdTokenSignatureAlgorithm()) && validateFAPIDCR) {
-                            filterAllowedFAPITSignatureAlgorithms(application.getIdTokenSignatureAlgorithm());
+                            filterAllowedFAPISignatureAlgorithms(application.getIdTokenSignatureAlgorithm());
                         }
                         app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
-                        if (StringUtils.isNotEmpty(application.getAuthorizationResponseSignatureAlgorithm())
-                                && validateFAPIDCR) {
-                            filterAllowedFAPITSignatureAlgorithms(
-                                    application.getAuthorizationResponseSignatureAlgorithm());
-                        }
-                        app.setAuthorizationResponseSignatureAlgorithm(
-                                application.getAuthorizationResponseSignatureAlgorithm());
                         if (StringUtils.isNotEmpty(application.getRequestObjectSignatureAlgorithm())) {
                             if (validateFAPIDCR) {
-                                filterAllowedFAPITSignatureAlgorithms(
-                                        application.getRequestObjectSignatureAlgorithm());
+                                filterAllowedFAPISignatureAlgorithms(application.getRequestObjectSignatureAlgorithm());
                             }
                             app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
                         }
@@ -715,7 +702,6 @@ public class OAuthAdminServiceImpl {
                 oauthappdo.setIdTokenEncryptionMethod(filterEncryptionMethod(
                         consumerAppDTO.getIdTokenEncryptionMethod()));
             }
-
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
@@ -729,7 +715,7 @@ public class OAuthAdminServiceImpl {
             }
             oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
             if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm()) && validateFAPIDCR) {
-                filterAllowedFAPITSignatureAlgorithms(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+                filterAllowedFAPISignatureAlgorithms(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
             }
             oauthappdo.setTokenEndpointAuthSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
             if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
@@ -744,16 +730,13 @@ public class OAuthAdminServiceImpl {
                     // Need to split the redirect uris for validating the host names since it is combined
                     // into one regular expression.
                     if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                        String redirectURI = consumerAppDTO.getCallbackUrl();
-                        redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1, redirectURI.indexOf(")"));
-                        callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+                        callBackURIList = getRedirectURIList(consumerAppDTO);;
                     } else {
                         callBackURIList.add(consumerAppDTO.getCallbackUrl());
                     }
                     if (StringUtils.isEmpty(consumerAppDTO.getSectorIdentifierURI())) {
                         validateRedirectURIForPPID(callBackURIList);
-                    }
-                    if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                    } else {
                         validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
                     }
                 }
@@ -761,18 +744,11 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
             if (StringUtils.isNotEmpty(consumerAppDTO.getIdTokenSignatureAlgorithm()) && validateFAPIDCR) {
-                filterAllowedFAPITSignatureAlgorithms(consumerAppDTO.getIdTokenSignatureAlgorithm());
+                filterAllowedFAPISignatureAlgorithms(consumerAppDTO.getIdTokenSignatureAlgorithm());
             }
             oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getAuthorizationResponseSignatureAlgorithm())
-                    && validateFAPIDCR) {
-                filterAllowedFAPITSignatureAlgorithms(
-                        consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
-            }
-            oauthappdo.setAuthorizationResponseSignatureAlgorithm(
-                    consumerAppDTO.getAuthorizationResponseSignatureAlgorithm());
             if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectSignatureAlgorithm()) && validateFAPIDCR) {
-                filterAllowedFAPITSignatureAlgorithms(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+                filterAllowedFAPISignatureAlgorithms(consumerAppDTO.getRequestObjectSignatureAlgorithm());
             }
             oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
@@ -783,7 +759,6 @@ public class OAuthAdminServiceImpl {
                     filterAllowedFAPIEncryptionAlgorithms(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
                 }
                 oauthappdo.setRequestObjectEncryptionAlgorithm(consumerAppDTO.getRequestObjectEncryptionAlgorithm());
-
             }
             if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectEncryptionMethod())) {
                 oauthappdo.setRequestObjectEncryptionMethod(filterEncryptionMethod(
@@ -2272,7 +2247,7 @@ public class OAuthAdminServiceImpl {
      * @param signatureAlgorithm signature algorithm used to sign the assertions.
      * @throws IdentityOAuthClientException
      */
-    private void filterAllowedFAPITSignatureAlgorithms(String signatureAlgorithm)
+    private void filterAllowedFAPISignatureAlgorithms(String signatureAlgorithm)
             throws IdentityOAuthClientException {
 
         List<String> allowedSignatureAlgorithms = IdentityUtil
@@ -2365,5 +2340,25 @@ public class OAuthAdminServiceImpl {
                 }
             }
         }
+    }
+
+    /**
+     * Get call back URIs as a list
+     * @param application  OAuthConsumerAppDTO
+     * @return list of callback urls
+     */
+    private List<String> getRedirectURIList(OAuthConsumerAppDTO application) {
+
+        List<String> callBackURIList = new ArrayList<>();
+        // Need to split the redirect uris for validating the host names since it is combined
+        // into one regular expression.
+        if (application.getCallbackUrl().startsWith(
+                OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+            String redirectURI = application.getCallbackUrl();
+            redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1,
+                    redirectURI.indexOf(")"));
+            callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+        }
+        return callBackURIList;
     }
 }

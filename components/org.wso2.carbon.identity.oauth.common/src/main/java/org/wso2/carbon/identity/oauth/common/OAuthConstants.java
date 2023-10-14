@@ -188,7 +188,7 @@ public final class OAuthConstants {
     public static final String ORG_ID = "org_id";
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
-    private static final String ENABLE_FAPI_VALIDATION = "OAuth.DCRM.EnableFAPIEnforcement";
+    public static final String ENABLE_FAPI_VALIDATION = "OAuth.DCRM.EnableFAPIEnforcement";
 
     public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
     public static final String PRIVATE_KEY_JWT = "private_key_jwt";
