@@ -4142,11 +4142,8 @@ public class OAuth2AuthzEndpoint {
             request.setAttribute(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
             request.setAttribute(TENANT_DOMAIN, authorizationResponseDTO.getSigningTenantDomain());
             ServiceProvider serviceProvider = getServiceProvider(authorizationResponseDTO.getClientId());
-            if (serviceProvider != null) {
-                String applicationName = serviceProvider.getApplicationName();
-                if (applicationName != null) {
-                    request.setAttribute(SERVICE_PROVIDER, applicationName);
-                }
+            if (serviceProvider != null && serviceProvider.getApplicationName() != null) {
+                request.setAttribute(SERVICE_PROVIDER, serviceProvider.getApplicationName());
             }
             forwardToOauthResponseJSP(oAuthMessage, params, redirectURI);
             return Response.ok().build();
