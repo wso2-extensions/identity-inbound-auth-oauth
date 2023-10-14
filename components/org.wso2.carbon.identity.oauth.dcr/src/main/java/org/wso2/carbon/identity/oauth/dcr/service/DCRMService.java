@@ -566,6 +566,7 @@ public class DCRMService {
         }
         if (registrationRequest.getIdTokenEncryptionAlgorithm() != null) {
             oAuthConsumerApp.setIdTokenEncryptionAlgorithm(registrationRequest.getIdTokenEncryptionAlgorithm());
+            oAuthConsumerApp.setIdTokenEncryptionEnabled(true);
         }
         if (registrationRequest.getIdTokenEncryptionMethod() != null) {
             oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
