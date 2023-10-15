@@ -62,6 +62,7 @@ public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
         String responseType = authAuthzReqMessageContext.getAuthorizationReqDTO().getResponseType();
         String authorizationCode = authorizeRespDTO.getAuthorizationCode();
         String accessToken = authorizeRespDTO.getAccessToken();
+        String stateValue = authAuthzReqMessageContext.getAuthorizationReqDTO().getState();
 
         if (isIDTokenSigned() && isAccessTokenHashApplicable(responseType) && isNotBlank(accessToken)) {
             String atHash = getHashValue(accessToken);
@@ -72,6 +73,12 @@ public class OpenIDConnectSystemClaimImpl implements ClaimProvider {
             String cHash = getHashValue(authorizationCode);
             oidcSystemClaims.put(C_HASH, cHash);
         }
+
+        if (isIDTokenSigned() && isNotBlank(stateValue)) {
+            String sHash = getHashValue(stateValue);
+            oidcSystemClaims.put(OAuthConstants.OIDCClaims.S_HASH, sHash);
+        }
+
         return oidcSystemClaims;
     }
 

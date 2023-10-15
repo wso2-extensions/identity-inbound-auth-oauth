@@ -43,6 +43,7 @@ public class ParConstants {
     public static final String INVALID_CLIENT_ERROR = "A valid OAuth client could not be found for client_id: ";
     public static final String INVALID_REQUEST_OBJECT = "Unable to build a valid Request Object from the" +
             " pushed authorization request.";
+    public static final String REQUEST_OBJECT_MISSING = "Request object is missing.";
 
     private ParConstants() {
 
