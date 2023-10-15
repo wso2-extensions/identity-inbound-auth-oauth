@@ -126,8 +126,7 @@ public class OAuthAdminServiceImpl {
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
     private static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
-    private static final String VALIDATE_SECOTR_IDENTIFIER = "OAuth.OpenIDConnect.FAPI." +
-            "EnableSectorIdentifierURIValidation";
+    private static final String VALIDATE_SECOTR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
 
     boolean validateFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
             OAuthConstants.ENABLE_FAPI_VALIDATION));

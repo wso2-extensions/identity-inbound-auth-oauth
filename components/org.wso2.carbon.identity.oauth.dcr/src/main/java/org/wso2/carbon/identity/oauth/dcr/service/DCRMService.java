@@ -272,6 +272,8 @@ public class DCRMService {
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
             oAuthAdminService.updateConsumerApplication(appDTO);
+        } catch (IdentityOAuthClientException e) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA, e.getMessage(), e);
         } catch (IdentityOAuthAdminException e) {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION, clientId, e);

@@ -119,7 +119,8 @@ public class DCRMUtils {
                 status = Response.Status.UNAUTHORIZED;
             } else if (errorCode.startsWith(FORBIDDEN_STATUS)) {
                 status = Response.Status.FORBIDDEN;
-            } else if (errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA)) {
+            } else if (errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA) ||
+                    errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {
                 status = Response.Status.BAD_REQUEST;
                 isStatusOnly = false;
             }
