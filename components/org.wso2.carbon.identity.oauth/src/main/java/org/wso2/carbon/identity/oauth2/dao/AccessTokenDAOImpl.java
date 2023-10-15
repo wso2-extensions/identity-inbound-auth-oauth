@@ -1133,6 +1133,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
 
+                    /* For organization bound access tokens, the authenticated user should be populated considering
+                    below factors. */
                     if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                         dataDO.getAuthzUser().setAccessingOrganization(authorizedOrganization);
                         String userResidentOrg = resolveOrganizationId(dataDO.getAuthzUser().getTenantDomain());
