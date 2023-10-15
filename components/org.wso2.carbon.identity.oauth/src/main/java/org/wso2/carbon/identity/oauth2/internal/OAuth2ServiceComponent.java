@@ -31,6 +31,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
@@ -69,6 +70,7 @@ import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeReq
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.scopeservice.DefaultScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
@@ -329,8 +331,10 @@ public class OAuth2ServiceComponent {
             OAuth2ScopeService oAuth2ScopeService = new OAuth2ScopeService();
             // Registering OAuth2ScopeService as a OSGIService
             bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
-            // Registering OAuth2ScopeService under ScopeService interface as the default service.
+            // Registering OAuth2ScopeService under ScopeService interface.
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
+            // Registering DefaultScopeMetadataService under ScopeService interface.
+            bundleContext.registerService(ScopeMetadataService.class, new DefaultScopeMetadataService(), null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -1187,5 +1191,33 @@ public class OAuth2ServiceComponent {
     protected void unsetRealmService(RealmService realmService) {
 
         OAuth2ServiceComponentHolder.getInstance().setRealmService(null);
+    }
+
+    /**
+     * Set API Resource manager service.
+     *
+     * @param apiResourceManager API Resource Manager.
+     */
+    @Reference(
+            name = "api.resource.mgt.service.component",
+            service = APIResourceManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAPIResourceManager")
+    protected void setAPIResourceManager(APIResourceManager apiResourceManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setAPIResourceManager(apiResourceManager);
+        log.debug("Set the API Resource Manager into OAuth2Service bundle.");
+    }
+
+    /**
+     * Unset API Resource manager service.
+     *
+     * @param apiResourceManager API Resource Manager.
+     */
+    protected void unsetAPIResourceManager(APIResourceManager apiResourceManager) {
+
+        OAuth2ServiceComponentHolder.getInstance().setAPIResourceManager(null);
+        log.debug("Unset the API Resource Manager into OAuth2Service bundle.");
     }
 }

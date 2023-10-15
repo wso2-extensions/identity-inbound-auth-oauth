@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
@@ -101,6 +102,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private APIResourceManager apiResourceManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -711,5 +713,25 @@ public class OAuth2ServiceComponentHolder {
     public void removeAuthorizationRequestBuilder(OAuthAuthorizationRequestBuilder oAuthAuthorizationRequestBuilder) {
 
         oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
+    }
+
+    /**
+     * Set API resource manager.
+     *
+     * @param apiResourceManager API resource manager.
+     */
+    public void setAPIResourceManager(APIResourceManager apiResourceManager) {
+
+        this.apiResourceManager = apiResourceManager;
+    }
+
+    /**
+     * Get API resource manager.
+     *
+     * @return API resource manager.
+     */
+    public APIResourceManager getAPIResourceManager() {
+
+        return apiResourceManager;
     }
 }
