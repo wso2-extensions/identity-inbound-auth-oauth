@@ -149,14 +149,12 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
         String jwtToken;
         try {
             String signingTenantDomain = authorizationResponseDTO.getSigningTenantDomain();
-            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(authorizationResponseDTO.getClientId(),
-                    signingTenantDomain);
-            JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm(oAuthAppDO);
+            JWSAlgorithm signatureAlgorithm = getJWTSignatureAlgorithm();
             if (JWSAlgorithm.NONE.equals(signatureAlgorithm)) {
                 signatureAlgorithm = JWSAlgorithm.parse(new PlainJWT(jwtClaimsSet).serialize());
             }
             jwtToken = OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             authorizationResponseDTO.setError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Error in signing JWT.", OAuth2ErrorCodes.SERVER_ERROR);
             throw new OAuthSystemException("Error in signing JWT");
@@ -164,16 +162,11 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
         return jwtToken;
     }
 
-    protected static JWSAlgorithm getJWTSignatureAlgorithm(OAuthAppDO oAuthAppDO) throws OAuthSystemException {
+    protected static JWSAlgorithm getJWTSignatureAlgorithm() throws OAuthSystemException {
 
         String sigAlg;
         JWSAlgorithm signatureAlgorithm = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
-        if (oAuthAppDO != null && StringUtils.isNotEmpty(oAuthAppDO.getAuthorizationResponseSignatureAlgorithm())) {
-            sigAlg = oAuthAppDO.getAuthorizationResponseSignatureAlgorithm();
-        } else {
-            sigAlg = OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm();
-
-        }
+        sigAlg = OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm();
         if (isNotBlank(sigAlg)) {
             try {
                 signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
