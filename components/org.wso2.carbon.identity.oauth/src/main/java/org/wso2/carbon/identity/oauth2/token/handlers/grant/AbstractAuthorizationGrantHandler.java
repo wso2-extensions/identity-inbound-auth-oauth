@@ -132,7 +132,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
         try {
             authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
-            if (tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
+            if (StringUtils.isNotEmpty(tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization())) {
                 authorizedOrganization = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
             }
         } catch (UserIdNotFoundException e) {

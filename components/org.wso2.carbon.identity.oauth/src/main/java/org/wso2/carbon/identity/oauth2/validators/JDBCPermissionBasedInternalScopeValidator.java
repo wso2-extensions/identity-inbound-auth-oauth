@@ -172,13 +172,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
             startTenantFlow(tenantDomain, tenantId);
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
-            String[] allowedResourcesForUser = null;
-
-            String userResidentTenantDomain = null;
-            if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
-                userResidentTenantDomain = resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-            }
-
+            String[] allowedResourcesForUser;
             if (StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization())) {
                 // Validate organization roles only for B2B users.
                 allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,

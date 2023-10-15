@@ -207,16 +207,15 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
+                    }
                     // For B2B users, the users tenant domain and user resident organization should be properly set.
                     if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                         user.setAccessingOrganization(authorizedOrganization);
                         user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
                         user.setTenantDomain(getAppTenantDomain());
-                    }
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
-                            resultSet.getString(18) != null) {
-                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
                     validationDataDO.setAuthorizedUser(user);
 
