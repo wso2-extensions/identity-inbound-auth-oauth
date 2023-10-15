@@ -92,6 +92,20 @@ public class OAuthAppDAO {
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
+    private static final String OAUTH_VERSION = "OAUTH_VERSION";
+    private static final String CONSUMER_SECRET = "CONSUMER_SECRET";
+    private static final String APP_NAME = "APP_NAME";
+    private static final String CALLBACK_URL = "CALLBACK_URL";
+    private static final String TENANT_ID = "TENANT_ID";
+    private static final String USER_DOMAIN = "USER_DOMAIN";
+    private static final String GRANT_TYPES = "GRANT_TYPES";
+    private static final String ID = "ID";
+    private static final String PKCE_MANDATORY = "PKCE_MANDATORY";
+    private static final String PKCE_SUPPORT_PLAIN = "PKCE_SUPPORT_PLAIN";
+    private static final String USER_ACCESS_TOKEN_EXPIRE_TIME = "USER_ACCESS_TOKEN_EXPIRE_TIME";
+    private static final String APP_ACCESS_TOKEN_EXPIRE_TIME = "APP_ACCESS_TOKEN_EXPIRE_TIME";
+    private static final String REFRESH_TOKEN_EXPIRE_TIME = "REFRESH_TOKEN_EXPIRE_TIME";
+    private static final String ID_TOKEN_EXPIRE_TIME = "ID_TOKEN_EXPIRE_TIME";
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
@@ -431,64 +445,61 @@ public class OAuthAppDAO {
         if (StringUtils.isBlank(tokenId)) {
             throw new IdentityOAuth2Exception("Error while retrieving the application. Token id is empty.");
         }
+        String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_TOKEN_ID_WITH_PKCE;
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_TOKEN_ID_WITH_PKCE;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false); PreparedStatement
+                prepStmt = connection.prepareStatement(sqlQuery)) {
+            prepStmt.setString(1, tokenId);
 
-            try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
-                prepStmt.setString(1, tokenId);
-
-                try (ResultSet rSet = prepStmt.executeQuery()) {
-                    /*
-                      We need to determine whether the result set has more than 1 row. Meaning, we found an
-                      application for the given consumer key. There can be situations where a user passed a key which
-                      doesn't yet have an associated application. We need to barf with a meaningful error message
-                      for this case.
-                    */
-                    boolean appExists = false;
-                    while (rSet.next()) {
-                        // There is at least one application associated with a given key.
-                        appExists = true;
-                        if (StringUtils.isNotBlank(rSet.getString("OAUTH_VERSION"))) {
-                            oauthApp = new OAuthAppDO();
-                            oauthApp.setOauthConsumerKey(consumerKey);
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                        .getString("CONSUMER_SECRET")));
-                            } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString("CONSUMER_SECRET"));
-                            }
-                            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                            authenticatedUser.setUserName(rSet.getString("USERNAME"));
-                            oauthApp.setApplicationName(rSet.getString("APP_NAME"));
-                            oauthApp.setOauthVersion(rSet.getString("OAUTH_VERSION"));
-                            oauthApp.setCallbackUrl(rSet.getString("CALLBACK_URL"));
-                            authenticatedUser.setTenantDomain(
-                                    IdentityTenantUtil.getTenantDomain(rSet.getInt("TENANT_ID")));
-                            authenticatedUser.setUserStoreDomain(rSet.getString("USER_DOMAIN"));
-                            oauthApp.setAppOwner(authenticatedUser);
-                            oauthApp.setGrantTypes(rSet.getString("GRANT_TYPES"));
-                            oauthApp.setId(rSet.getInt("ID"));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString("PKCE_MANDATORY")));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString("PKCE_SUPPORT_PLAIN")));
-                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong("USER_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong("APP_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong("REFRESH_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setIdTokenExpiryTime(rSet.getLong("ID_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setState(rSet.getString("APP_STATE"));
-
-                            String spTenantDomain = authenticatedUser.getTenantDomain();
-                            handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
-                                    spTenantDomain, oauthApp);
-                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+            try (ResultSet rSet = prepStmt.executeQuery()) {
+                /*
+                  We need to determine whether the result set has more than 1 row. Meaning, we found an
+                  application for the given consumer key. There can be situations where a user passed a key which
+                  doesn't yet have an associated application. We need to barf with a meaningful error message
+                  for this case.
+                */
+                boolean appExists = false;
+                while (rSet.next()) {
+                    // There is at least one application associated with a given key.
+                    appExists = true;
+                    if (StringUtils.isNotBlank(rSet.getString(OAUTH_VERSION))) {
+                        oauthApp = new OAuthAppDO();
+                        oauthApp.setOauthConsumerKey(consumerKey);
+                        if (isHashDisabled) {
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                    .getString(CONSUMER_SECRET)));
+                        } else {
+                            oauthApp.setOauthConsumerSecret(rSet.getString(CONSUMER_SECRET));
                         }
-                    }
+                        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+                        authenticatedUser.setUserName(rSet.getString(USERNAME));
+                        oauthApp.setApplicationName(rSet.getString(APP_NAME));
+                        oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
+                        oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
+                        authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
+                        authenticatedUser.setUserStoreDomain(rSet.getString(USER_DOMAIN));
+                        oauthApp.setAppOwner(authenticatedUser);
+                        oauthApp.setGrantTypes(rSet.getString(GRANT_TYPES));
+                        oauthApp.setId(rSet.getInt(ID));
+                        oauthApp.setPkceMandatory(!"0".equals(rSet.getString(PKCE_MANDATORY)));
+                        oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(PKCE_SUPPORT_PLAIN)));
+                        oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(USER_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(APP_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setRefreshTokenExpiryTime(rSet.getLong(REFRESH_TOKEN_EXPIRE_TIME));
+                        oauthApp.setIdTokenExpiryTime(rSet.getLong(ID_TOKEN_EXPIRE_TIME));
+                        oauthApp.setState(rSet.getString(APP_STATE));
 
-                    if (!appExists) {
-                        handleRequestForANonExistingConsumerKey(consumerKey);
+                        String spTenantDomain = authenticatedUser.getTenantDomain();
+                        handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
+                                spTenantDomain, oauthApp);
+                        oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
                     }
-                    connection.commit();
                 }
+
+                if (!appExists) {
+                    handleRequestForANonExistingConsumerKey(consumerKey);
+                }
+                connection.commit();
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
@@ -508,56 +519,54 @@ public class OAuthAppDAO {
             throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
         List<OAuthAppDO> oauthAppList = new ArrayList<>();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_CONSUMER_KEY_WITH_PKCE;
+        String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_CONSUMER_KEY_WITH_PKCE;
 
-            try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
-                String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
-                prepStmt.setString(1, preprocessedClientId);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false); PreparedStatement
+                prepStmt = connection.prepareStatement(sqlQuery)) {
+            String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
+            prepStmt.setString(1, preprocessedClientId);
 
-                try (ResultSet rSet = prepStmt.executeQuery()) {
-                    while (rSet.next()) {
-                        if (StringUtils.isNotBlank(rSet.getString("OAUTH_VERSION"))) {
-                            OAuthAppDO oauthApp = new OAuthAppDO();
-                            oauthApp.setOauthConsumerKey(consumerKey);
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(
-                                        rSet.getString("CONSUMER_SECRET")));
-                            } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString("CONSUMER_SECRET"));
-                            }
-                            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                            authenticatedUser.setUserName(rSet.getString("USERNAME"));
-                            oauthApp.setApplicationName(rSet.getString("APP_NAME"));
-                            oauthApp.setOauthVersion(rSet.getString("OAUTH_VERSION"));
-                            oauthApp.setCallbackUrl(rSet.getString("CALLBACK_URL"));
-                            authenticatedUser.setTenantDomain(
-                                    IdentityTenantUtil.getTenantDomain(rSet.getInt("TENANT_ID")));
-                            authenticatedUser.setUserStoreDomain(rSet.getString("USER_DOMAIN"));
-                            oauthApp.setAppOwner(authenticatedUser);
-                            oauthApp.setGrantTypes(rSet.getString("GRANT_TYPES"));
-                            oauthApp.setId(rSet.getInt("ID"));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString("PKCE_MANDATORY")));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString("PKCE_SUPPORT_PLAIN")));
-                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong("USER_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong("APP_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong("REFRESH_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setIdTokenExpiryTime(rSet.getLong("ID_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setState(rSet.getString("APP_STATE"));
-
-                            String spTenantDomain = authenticatedUser.getTenantDomain();
-                            handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
-                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
-
-                            oauthAppList.add(oauthApp);
+            try (ResultSet rSet = prepStmt.executeQuery()) {
+                while (rSet.next()) {
+                    if (StringUtils.isNotBlank(rSet.getString(OAUTH_VERSION))) {
+                        OAuthAppDO oauthApp = new OAuthAppDO();
+                        oauthApp.setOauthConsumerKey(consumerKey);
+                        if (isHashDisabled) {
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(
+                                    rSet.getString(CONSUMER_SECRET)));
+                        } else {
+                            oauthApp.setOauthConsumerSecret(rSet.getString(CONSUMER_SECRET));
                         }
-                    }
+                        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+                        authenticatedUser.setUserName(rSet.getString(USERNAME));
+                        oauthApp.setApplicationName(rSet.getString(APP_NAME));
+                        oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
+                        oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
+                        authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
+                        authenticatedUser.setUserStoreDomain(rSet.getString(USER_DOMAIN));
+                        oauthApp.setAppOwner(authenticatedUser);
+                        oauthApp.setGrantTypes(rSet.getString(GRANT_TYPES));
+                        oauthApp.setId(rSet.getInt(ID));
+                        oauthApp.setPkceMandatory(!"0".equals(rSet.getString(PKCE_MANDATORY)));
+                        oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(PKCE_SUPPORT_PLAIN)));
+                        oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(USER_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(APP_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setRefreshTokenExpiryTime(rSet.getLong(REFRESH_TOKEN_EXPIRE_TIME));
+                        oauthApp.setIdTokenExpiryTime(rSet.getLong(ID_TOKEN_EXPIRE_TIME));
+                        oauthApp.setState(rSet.getString(APP_STATE));
 
-                    if (oauthAppList.isEmpty()) {
-                        handleRequestForANonExistingConsumerKey(consumerKey);
+                        String spTenantDomain = authenticatedUser.getTenantDomain();
+                        handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
+                        oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+
+                        oauthAppList.add(oauthApp);
                     }
-                    connection.commit();
                 }
+
+                if (oauthAppList.isEmpty()) {
+                    handleRequestForANonExistingConsumerKey(consumerKey);
+                }
+                connection.commit();
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
