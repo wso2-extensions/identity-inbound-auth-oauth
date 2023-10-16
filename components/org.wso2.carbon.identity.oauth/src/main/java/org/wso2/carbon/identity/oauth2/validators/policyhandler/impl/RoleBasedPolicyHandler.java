@@ -66,7 +66,7 @@ public class RoleBasedPolicyHandler implements ScopeValidatorPolicyHandler {
         }
         // TODO: Get roles of the groups
 
-        //
+        // TODO : Filter roles by app
 
         return null;
     }
