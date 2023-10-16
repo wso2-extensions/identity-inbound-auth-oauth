@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -108,9 +109,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         try {
             Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(tokenReqMessageContext);
             tokenReqMessageContext.addProperty(ID_TOKEN_USER_CLAIMS_PROP_KEY, userClaimsInOIDCDialect.keySet());
-            if (OAuth2Util.isFapiConformantApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
-                    .getClientId())) {
-                addCnfClaimToOIDCDialect(tokenReqMessageContext);
+            String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
+            try {
+                if (OAuth2Util.isFapiConformantApp(clientId)) {
+                    addCnfClaimToOIDCDialect(tokenReqMessageContext);
+                }
+            } catch (IdentityOAuth2ClientException e) {
+                throw new IdentityOAuth2Exception("Could not find an existing app for clientId: " + clientId, e);
+            } catch (IdentityOAuth2Exception e) {
+                throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
+                        clientId, e);
             }
             return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
         } catch (OAuthSystemException e) {
