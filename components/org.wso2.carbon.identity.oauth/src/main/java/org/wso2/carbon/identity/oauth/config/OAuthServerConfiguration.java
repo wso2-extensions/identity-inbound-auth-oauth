@@ -3602,7 +3602,7 @@ public class OAuthServerConfiguration {
         Iterator iterator = algorithms.getChildrenWithLocalName(
                 ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG);
         if (iterator != null) {
-            for (; iterator.hasNext(); ) {
+            while (iterator.hasNext()) {
                 OMElement algorithm = (OMElement) iterator.next();
                 if (algorithm != null) {
                     try {
