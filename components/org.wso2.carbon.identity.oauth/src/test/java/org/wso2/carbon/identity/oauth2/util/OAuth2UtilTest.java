@@ -2555,6 +2555,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
         ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(anyString())).thenReturn("true");
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
         Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
