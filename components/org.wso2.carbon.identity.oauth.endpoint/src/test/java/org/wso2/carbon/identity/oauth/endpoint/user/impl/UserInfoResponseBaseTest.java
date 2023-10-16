@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenValidationProcessor;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -70,7 +71,7 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
  */
 @PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
         AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class,
-        FrameworkUtils.class})
+        FrameworkUtils.class, OAuth2ServiceComponentHolder.class})
 public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     public static final String AUTHORIZED_USER_FULL_QUALIFIED = "JDBC/peter@tenant.com";
@@ -112,6 +113,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     public static final String[] OIDC_SCOPE_ARRAY = new String[]{OIDC_SCOPE};
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
+    private static final String MOCK_CLIENT_ID = "mock_client_id";
 
     @Mock
     private OAuthIssuer oAuthIssuer;
@@ -228,7 +230,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     protected void prepareOAuth2Util() throws Exception {
 
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn("mock_client_id");
+        when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(MOCK_CLIENT_ID);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn(TENANT_DOT_COM);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(TENANT_DOT_COM);
         ArrayList<String> userAttributesFromCache = new ArrayList<>();
@@ -365,6 +367,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAuthzUser(authorizedUser);
+        accessTokenDO.setConsumerKey(MOCK_CLIENT_ID);
         when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken)).thenReturn(accessTokenDO);
 
         when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
@@ -475,14 +478,22 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
         when(OAuth2Util.getAccessTokenIdentifier(any())).thenCallRealMethod();
         when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
+        when(OAuth2Util.getAccessTokenDO(any())).thenCallRealMethod();
         when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
                 thenCallRealMethod();
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAccessToken(accessToken);
+        accessTokenDO.setConsumerKey(MOCK_CLIENT_ID);
         when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(DEFAULT_TOKEN_TYPE, new OauthTokenIssuerImpl());
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, new JWTTokenIssuer());
         when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                Mockito.mock(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
+        when(oAuth2ServiceComponentHolderInstance.getTokenValidationProcessor())
+                .thenReturn(new DefaultTokenValidationProcessor());
     }
 }
