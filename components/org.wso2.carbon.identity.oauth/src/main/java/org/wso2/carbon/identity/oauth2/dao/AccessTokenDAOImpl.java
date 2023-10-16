@@ -828,7 +828,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
             } else {
@@ -845,6 +846,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 prepStmt.setString(8, authenticatedIDP);
+                // Set tenant ID of the IDP by considering it is same as appTenantID.
+                prepStmt.setInt(9, appTenantId);
             }
 
             resultSet = prepStmt.executeQuery();
