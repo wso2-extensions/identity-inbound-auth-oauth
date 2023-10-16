@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -172,27 +173,35 @@ public class OAuthClientAuthnService {
                 }
             }
             if (StringUtils.isNotBlank(clientId)) {
-                if (OAuth2Util.isFapiConformantApp(clientId)) {
-                    List<OAuthClientAuthenticator> authenticatorsForFapiApp = getAuthenticators(clientId, true);
-                    if (authenticatorsForFapiApp.isEmpty()) {
-                        setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No valid authenticators found for " +
-                                "the application.", oAuthClientAuthnContext);
-                    } else {
-                        authenticatorsForFapiApp.forEach(oAuthClientAuthenticator -> {
-                            executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
-                                    bodyContentMap);
-                        });
-                    }
-                    return;
-                } else {
-                    List<OAuthClientAuthenticator> authenticatorsForNonFapiApp = getAuthenticators(clientId, false);
-                    if (!authenticatorsForNonFapiApp.isEmpty()) {
-                        authenticatorsForNonFapiApp.forEach(oAuthClientAuthenticator -> {
-                            executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
-                                    bodyContentMap);
-                        });
+                try {
+                    if (OAuth2Util.isFapiConformantApp(clientId)) {
+                        List<OAuthClientAuthenticator> authenticatorsForFapiApp = getAuthenticators(clientId, true);
+                        if (authenticatorsForFapiApp.isEmpty()) {
+                            setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No valid authenticators found for " +
+                                    "the application.", oAuthClientAuthnContext);
+                        } else {
+                            authenticatorsForFapiApp.forEach(oAuthClientAuthenticator -> {
+                                executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
+                                        bodyContentMap);
+                            });
+                        }
                         return;
+                    } else {
+                        List<OAuthClientAuthenticator> authenticatorsForNonFapiApp = getAuthenticators(clientId, false);
+                        if (!authenticatorsForNonFapiApp.isEmpty()) {
+                            authenticatorsForNonFapiApp.forEach(oAuthClientAuthenticator -> {
+                                executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
+                                        bodyContentMap);
+                            });
+                            return;
+                        }
                     }
+                } catch (IdentityOAuth2ClientException e) {
+                    throw new OAuthClientAuthnException("Could not find an existing app for clientId: " + clientId,
+                            OAuth2ErrorCodes.INVALID_CLIENT);
+                } catch (IdentityOAuth2Exception e) {
+                    throw new OAuthClientAuthnException("Error while obtaining the service provider for client_id: " +
+                            clientId, OAuth2ErrorCodes.SERVER_ERROR);
                 }
             } else {
                 setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Client ID not found in the request.",
