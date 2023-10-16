@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -332,12 +333,16 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private boolean isFapiConformant(String clientId) throws ParClientException {
+    private boolean isFapiConformant(String clientId) throws ParCoreException {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
+                    "clientId: " + clientId, e);
         } catch (IdentityOAuth2Exception e) {
-            throw new ParClientException(e.getMessage(), e.getErrorCode());
+            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
+                    "provider for clientId: " + clientId, e);
         }
     }
 

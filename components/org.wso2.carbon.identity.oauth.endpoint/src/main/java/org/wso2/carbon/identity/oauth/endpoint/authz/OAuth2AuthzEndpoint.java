@@ -4235,8 +4235,12 @@ public class OAuth2AuthzEndpoint {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            throw new InvalidRequestException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
+                    "clientId: " + clientId, e);
         } catch (IdentityOAuth2Exception e) {
-            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
+            throw new InvalidRequestException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
+                    "provider for clientId: " + clientId, e);
         }
     }
 }
