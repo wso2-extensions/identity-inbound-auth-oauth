@@ -220,7 +220,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 log.debug(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
             }
             OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
         }
     }
@@ -249,7 +249,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 log.debug(String.format("User %s is disabled. Hence revoking user's access tokens.", userName));
             }
             OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
         }
     }
@@ -272,7 +272,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                     try {
                         userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
                         OAuth2ServiceComponentHolder.getInstance()
-                                .getIndirectTokenRevocationHandler()
+                                .getRevocationProcessor()
                                 .revokeTokens(userName, userStoreManager);
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
                         OAuth2ServiceComponentHolder.getUserSessionManagementService()

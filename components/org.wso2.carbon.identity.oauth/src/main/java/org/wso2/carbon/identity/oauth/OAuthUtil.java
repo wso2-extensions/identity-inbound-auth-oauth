@@ -536,8 +536,9 @@ public final class OAuthUtil {
     }
 
     /**
-     * This will be called before when Tokens Revoked through Listeners directly.
-     *
+     * This will be called before when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked pre user events
+     * for the user.
      * @param userUUID - UUID of the user.
      * @param params   - Additional parameters.
      */
@@ -555,8 +556,9 @@ public final class OAuthUtil {
     }
 
     /**
-     * This will be called after when Tokens Revoked through Listeners directly.
-     *
+     * This will be called after when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked post user events
+     * for the user.
      * @param userUUID - UUID of the user.
      * @param params   - Additional parameters.
      */

@@ -90,7 +90,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         removeClaimCacheEntry(username, userStoreManager);
         return OAuth2ServiceComponentHolder.getInstance()
-                .getIndirectTokenRevocationHandler()
+                .getRevocationProcessor()
                 .revokeTokens(username, userStoreManager) &&
                 OAuthUtil.revokeAuthzCodes(username, userStoreManager);
 
@@ -157,7 +157,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
         return OAuth2ServiceComponentHolder.getInstance()
-                .getIndirectTokenRevocationHandler()
+                .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
     }
 
@@ -169,7 +169,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
         return OAuth2ServiceComponentHolder.getInstance()
-                .getIndirectTokenRevocationHandler()
+                .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
     }
 
@@ -193,7 +193,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
         if (ArrayUtils.isNotEmpty(deletedRoles)) {
             OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
         }
         return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
@@ -209,7 +209,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
         if (ArrayUtils.isNotEmpty(deletedInternalRoles)) {
             OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
         }
         return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
@@ -264,7 +264,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             for (User user : userList) {
                 OAuthUtil.removeUserClaimsFromCache(user.getUsername(), userStoreManager);
                 OAuth2ServiceComponentHolder.getInstance()
-                        .getIndirectTokenRevocationHandler()
+                        .getRevocationProcessor()
                         .revokeTokens(user.getUsername(), userStoreManager);
             }
         } else {
@@ -296,7 +296,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
         for (String deletedUser : deletedUsers) {
             OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(deletedUser, userStoreManager);
         }
         return true;
@@ -310,7 +310,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         if (errorCode != null && (errorCode.equalsIgnoreCase(UserCoreConstants.ErrorCode.USER_IS_LOCKED))) {
             return OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
         }
         return true;
@@ -324,7 +324,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         if (errorCode != null && errorCode.equalsIgnoreCase(IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE)) {
             return OAuth2ServiceComponentHolder.getInstance()
-                    .getIndirectTokenRevocationHandler()
+                    .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
         }
         return true;
