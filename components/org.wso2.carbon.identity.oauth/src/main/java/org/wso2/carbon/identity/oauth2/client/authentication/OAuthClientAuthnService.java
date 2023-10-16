@@ -158,65 +158,40 @@ public class OAuthClientAuthnService {
             log.debug("Executing OAuth client authenticators.");
         }
         try {
-            String clientId = null;
-            for (OAuthClientAuthenticator oAuthClientAuthenticator : this.getClientAuthenticators()) {
-                try {
-                    clientId = extractClientId(oAuthClientAuthenticator, request,
-                            bodyContentMap);
-                    if (StringUtils.isNotBlank(clientId)) {
-                        break;
-                    }
-                } catch (OAuthClientAuthnException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Client ID cannot be extracted using the " + oAuthClientAuthenticator.getName());
-                    }
-                }
-            }
-            if (StringUtils.isNotBlank(clientId)) {
-                try {
-                    if (OAuth2Util.isFapiConformantApp(clientId)) {
-                        List<OAuthClientAuthenticator> authenticatorsForFapiApp = getAuthenticators(clientId, true);
-                        if (authenticatorsForFapiApp.isEmpty()) {
-                            setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No valid authenticators found for " +
-                                    "the application.", oAuthClientAuthnContext);
-                        } else {
-                            authenticatorsForFapiApp.forEach(oAuthClientAuthenticator -> {
-                                executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
-                                        bodyContentMap);
-                            });
-                        }
-                        return;
-                    } else {
-                        List<OAuthClientAuthenticator> authenticatorsForNonFapiApp = getAuthenticators(clientId, false);
-                        if (!authenticatorsForNonFapiApp.isEmpty()) {
-                            authenticatorsForNonFapiApp.forEach(oAuthClientAuthenticator -> {
-                                executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request,
-                                        bodyContentMap);
-                            });
-                            return;
-                        }
-                    }
-                } catch (IdentityOAuth2ClientException e) {
-                    throw new OAuthClientAuthnException("Could not find an existing app for clientId: " + clientId,
-                            OAuth2ErrorCodes.INVALID_CLIENT);
-                } catch (IdentityOAuth2Exception e) {
-                    throw new OAuthClientAuthnException("Error while obtaining the service provider for client_id: " +
-                            clientId, OAuth2ErrorCodes.SERVER_ERROR);
-                }
-            } else {
+            String clientId = extractClientId(request, bodyContentMap);
+            if (StringUtils.isBlank(clientId)) {
                 setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Client ID not found in the request.",
                         oAuthClientAuthnContext);
+                return;
+            }
+            try {
+                List<String> configuredClientAuthMethods = getConfiguredClientAuthMethods(clientId);
+                List<OAuthClientAuthenticator> authenticators;
+                if (OAuth2Util.isFapiConformantApp(clientId)) {
+                    authenticators = getClientAuthenticatorsForFapiApp(configuredClientAuthMethods);
+                } else {
+                    authenticators = getClientAuthenticatorsForNonFapiApp(configuredClientAuthMethods);
+                }
+                if (authenticators.isEmpty()) {
+                    setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No valid authenticators found for " +
+                            "the application.", oAuthClientAuthnContext);
+                    return;
+                }
+                authenticators.forEach(oAuthClientAuthenticator -> {
+                    executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
+                });
+            } catch (IdentityOAuth2ClientException e) {
+                throw new OAuthClientAuthnException("Could not find an existing app for client_id: " + clientId,
+                        OAuth2ErrorCodes.INVALID_CLIENT);
+            } catch (IdentityOAuth2Exception e) {
+                throw new OAuthClientAuthnException("Error while obtaining the service provider for client_id: " +
+                        clientId, OAuth2ErrorCodes.SERVER_ERROR);
             }
         } catch (IdentityOAuth2Exception e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while processing the request to validate the client authentication method.");
-            }
+            log.error("Error occurred while processing the request to validate the client authentication method.", e);
             setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Error occurred while validating the " +
                     "request auth method with the configured token endpoint auth methods.", oAuthClientAuthnContext);
         }
-        this.getClientAuthenticators().forEach(oAuthClientAuthenticator -> {
-            executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
-        });
     }
 
     /**
@@ -335,83 +310,103 @@ public class OAuthClientAuthnService {
      * @return Configured client authentication method for the application.
      * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
-    public List<String> getConfiguredClientAuthMethods(String clientId, boolean isFapiApp)
-            throws OAuthClientAuthnException {
+    public List<String> getConfiguredClientAuthMethods(String clientId) throws OAuthClientAuthnException {
 
-        List<String> fapiAllowedAuthMethods = IdentityUtil.getPropertyAsList(FAPI_CLIENT_AUTH_METHOD_CONFIGURATION);
         try {
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
             ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
             for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
                 if (OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD.equals(serviceProviderProperty.getName())) {
-                    List<String> configuredAuthMethods = Arrays.asList(serviceProviderProperty.getValue());
-                    if (isFapiApp) {
-                        for (String authMethod : configuredAuthMethods) {
-                            if (!fapiAllowedAuthMethods.contains(authMethod)) {
-                                return Collections.emptyList();
-                            }
-                        }
-                    }
-                    return configuredAuthMethods;
+                    return Arrays.asList(serviceProviderProperty.getValue());
                 }
             }
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthClientAuthnException("Error occurred while retrieving the service provider.",
                     OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
-
-        if (isFapiApp) {
-            return fapiAllowedAuthMethods;
-        } else {
-            return Collections.emptyList();
-        }
+        return Collections.emptyList();
     }
 
     /**
      * Obtain the client ID of the application from the request.
      *
-     * @param oAuthClientAuthenticator  OAuth client authenticator.
      * @param request                   Http servlet request.
      * @param bodyContentMap            Content of the body of the request as a parameter map.
      * @return Client ID of the application.
      * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
-    private String extractClientId(OAuthClientAuthenticator oAuthClientAuthenticator, HttpServletRequest request,
-                                   Map<String, List> bodyContentMap)
+    private String extractClientId(HttpServletRequest request, Map<String, List> bodyContentMap)
             throws OAuthClientAuthnException {
 
-        /* A new OAuthClientAuthnContext is used each time as we just need to extract the Client ID and we do not want
-           to overwrite the original OAuthClientAuthnContext.  */
-        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-        return oAuthClientAuthenticator.getClientId(request, bodyContentMap, oAuthClientAuthnContext);
+        String clientId = null;
+        for (OAuthClientAuthenticator oAuthClientAuthenticator : this.getClientAuthenticators()) {
+            try {
+                /* A new OAuthClientAuthnContext is used each time as we just need to extract the Client ID and we do
+                not want to overwrite the original OAuthClientAuthnContext.  */
+                OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+                clientId = oAuthClientAuthenticator.getClientId(request, bodyContentMap, oAuthClientAuthnContext);
+                if (StringUtils.isNotBlank(clientId)) {
+                    break;
+                }
+            } catch (OAuthClientAuthnException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Client ID cannot be extracted using the " + oAuthClientAuthenticator.getName());
+                }
+            }
+        }
+        return clientId;
     }
 
     /**
-     * Obtain the list of client authenticators which should be triggered for the application.
+     * Obtain the list of client auth methods that could be used to authenticate the request for a FAPI app.
      *
-     * @param clientId     Client ID of the application.
-     * @param isFapiApp    Whether the application is FAPI compliant.
-     * @return The list of allowed client authenticators for the application.
+     * @param configuredAuthenticators  List of client authenticators configured for the application.
+     * @return   List of applicable client authentication methods for the application.
      */
-    private List<OAuthClientAuthenticator> getAuthenticators(String clientId, boolean isFapiApp)
-            throws OAuthClientAuthnException {
+    private List<OAuthClientAuthenticator> getClientAuthenticatorsForFapiApp(List<String> configuredAuthenticators) {
 
-        //  Obtain the list of available client authenticators.
-        List<OAuthClientAuthenticator> availableClientAuthenticators = this.getClientAuthenticators();
-        //  Obtain the list of client authentication methods configured for the application.
-        List<String> configuredClientAuthMethods = getConfiguredClientAuthMethods(clientId, isFapiApp);
-        if (configuredClientAuthMethods.isEmpty()) {
-            return Collections.emptyList();
+        List<String> fapiAllowedAuthMethods = IdentityUtil.getPropertyAsList(FAPI_CLIENT_AUTH_METHOD_CONFIGURATION);
+        if (configuredAuthenticators.isEmpty()) {
+            configuredAuthenticators = fapiAllowedAuthMethods;
         } else {
-            //  Obtain the list of authenticators which should be triggered for the application.
-            List<OAuthClientAuthenticator> updatedAuthenticators = new ArrayList<>();
-            for (OAuthClientAuthenticator authenticator : availableClientAuthenticators) {
-                if (configuredClientAuthMethods.stream().anyMatch(
-                        authenticator.getSupportedClientAuthenticationMethods()::contains)) {
-                    updatedAuthenticators.add(authenticator);
+            for (String authMethod : configuredAuthenticators) {
+                if (!fapiAllowedAuthMethods.contains(authMethod)) {
+                    return Collections.emptyList();
                 }
             }
-            return updatedAuthenticators;
         }
+        return getApplicableClientAuthenticators(configuredAuthenticators);
+    }
+
+    /**
+     * Obtain the list of client auth methods that could be used to authenticate the request for a Non-FAPI app.
+     *
+     * @param configuredAuthenticators  List of client authenticators configured for the application.
+     * @return   List of applicable client authentication methods for the application.
+     */
+    private List<OAuthClientAuthenticator> getClientAuthenticatorsForNonFapiApp(List<String> configuredAuthenticators) {
+        if (configuredAuthenticators.isEmpty()) {
+            return this.getClientAuthenticators();
+        } else {
+            return getApplicableClientAuthenticators(configuredAuthenticators);
+        }
+    }
+
+    /**
+     * Obtain the list of client auth methods that could be used to authenticate the request for an app.
+     *
+     * @param configuredAuthenticators  List of client authenticators configured for the application.
+     * @return   List of applicable client authentication methods for the application.
+     */
+    private List<OAuthClientAuthenticator> getApplicableClientAuthenticators(List<String> configuredAuthenticators) {
+
+        List<OAuthClientAuthenticator> applicableClientAuthenticators = new ArrayList<>();
+        for (OAuthClientAuthenticator authenticator : this.getClientAuthenticators()) {
+            if (configuredAuthenticators.stream().anyMatch(
+                    authenticator.getSupportedClientAuthenticationMethods()::contains)) {
+                applicableClientAuthenticators.add(authenticator);
+            }
+        }
+        return applicableClientAuthenticators;
     }
 }
