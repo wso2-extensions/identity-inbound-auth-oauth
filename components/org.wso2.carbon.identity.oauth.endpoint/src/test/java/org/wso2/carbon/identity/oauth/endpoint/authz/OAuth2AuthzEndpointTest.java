@@ -2094,8 +2094,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setRequestObjectSignatureValidationEnabled(false);
+        appDO.setRequirePushedAuthorizationRequests(false);
         spy(OAuth2Util.class);
         doReturn(appDO).when(OAuth2Util.class, "getAppInformationByClientId", oAuth2Parameters.getClientId());
+        doReturn(appDO).when(OAuth2Util.class, "getAppInformationByClientId",
+                oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
         doReturn(true).when(OAuth2Util.class, "isFapiConformantApp", any());
         mockEndpointUtil(false);
         when(oAuth2Service.isPKCESupportEnabled()).thenReturn(false);
@@ -2116,6 +2119,33 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         } catch (InvocationTargetException e) {
             Assert.assertEquals(e.getTargetException().getMessage(),
                     "Request Object is mandatory for FAPI Conformant Applications.", testName);
+        }
+    }
+    @Test(description = "Test return error when PAR is mandated")
+    public void testIsPARMandated() throws Exception {
+
+        OAuthAppDO appDO = new OAuthAppDO();
+        appDO.setRequestObjectSignatureValidationEnabled(false);
+
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setClientId(TestConstants.CLIENT_ID);
+        oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
+        oAuth2Parameters.setTenantDomain(TestConstants.TENANT_DOMAIN);
+        oAuth2Parameters.setNonce("nonceInParams");
+        oAuth2Parameters.setState("stateInParams");
+        oAuth2Parameters.setPrompt("promptInParams");
+        spy(OAuth2Util.class);
+
+        doReturn(appDO).when(OAuth2Util.class, "getAppInformationByClientId",
+                oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
+        Method handleOIDCRequestObject = authzEndpointObject.getClass().getDeclaredMethod(
+                "handleOIDCRequestObject", OAuthMessage.class, OAuthAuthzRequest.class, OAuth2Parameters.class);
+        handleOIDCRequestObject.setAccessible(true);
+        try {
+            handleOIDCRequestObject.invoke(authzEndpointObject, oAuthMessage, oAuthAuthzRequest, oAuth2Parameters);
+        } catch (InvocationTargetException e) {
+            Assert.assertEquals(e.getTargetException().getMessage(),
+                    "PAR request is mandatory for the application.");
         }
     }
 
