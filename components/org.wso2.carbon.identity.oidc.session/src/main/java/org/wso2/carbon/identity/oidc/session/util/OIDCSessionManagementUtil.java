@@ -237,7 +237,12 @@ public class OIDCSessionManagementUtil {
                         // check whether the opbs cookie has a tenanted path.
                         if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
                             String tenantDomain = resolveTenantDomain(request);
-                            servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                            if (!IdentityTenantUtil.isSuperTenantRequiredInUrl() &&
+                                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                                servletCookie.setPath("/");
+                            } else {
+                                servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                            }
                         } else {
                             servletCookie.setPath("/");
                         }
@@ -262,6 +267,9 @@ public class OIDCSessionManagementUtil {
      */
     private static String resolveTenantDomain(HttpServletRequest request) {
 
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            return IdentityTenantUtil.resolveTenantDomain();
+        }
         String tenantDomain = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
         if (StringUtils.isBlank(tenantDomain)) {
             return IdentityTenantUtil.getTenantDomainFromContext();
