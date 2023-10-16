@@ -73,8 +73,19 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_METHOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SECTOR_IDENTIFIER_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TLS_SUBJECT_DN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_AUTH_METHOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_AUTH_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
@@ -861,6 +872,50 @@ public class OAuthAppDAO {
                 TOKEN_BINDING_VALIDATION, String.valueOf(oauthAppDO.isTokenBindingValidationEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_AUTH_METHOD, oauthAppDO.getTokenEndpointAuthMethod(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_AUTH_SIGNATURE_ALGORITHM, oauthAppDO.getTokenEndpointAuthSignatureAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                SECTOR_IDENTIFIER_URI, oauthAppDO.getSectorIdentifierURI(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                ID_TOKEN_SIGNATURE_ALGORITHM, oauthAppDO.getIdTokenSignatureAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                REQUEST_OBJECT_SIGNATURE_ALGORITHM, oauthAppDO.getRequestObjectSignatureAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                REQUEST_OBJECT_ENCRYPTION_ALGORITHM, oauthAppDO.getRequestObjectEncryptionAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                REQUEST_OBJECT_ENCRYPTION_METHOD, oauthAppDO.getRequestObjectEncryptionMethod(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TLS_SUBJECT_DN, oauthAppDO.getTlsClientAuthSubjectDN(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                IS_PUSH_AUTH, String.valueOf(oauthAppDO.isRequirePushedAuthorizationRequests()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                IS_CERTIFICATE_BOUND_ACCESS_TOKEN, String.valueOf(oauthAppDO.isTlsClientCertificateBoundAccessTokens()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                SUBJECT_TYPE, oauthAppDO.getSubjectType(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1445,6 +1500,41 @@ public class OAuthAppDAO {
                     TOKEN_BINDING_VALIDATION,
                     String.valueOf(consumerAppDO.isTokenBindingValidationEnabled()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TOKEN_AUTH_SIGNATURE_ALGORITHM, consumerAppDO.getTokenEndpointAuthSignatureAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, SECTOR_IDENTIFIER_URI,
+                    consumerAppDO.getSectorIdentifierURI());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    ID_TOKEN_SIGNATURE_ALGORITHM, consumerAppDO.getIdTokenSignatureAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_SIGNATURE_ALGORITHM, consumerAppDO.getRequestObjectSignatureAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_ENCRYPTION_ALGORITHM, consumerAppDO.getRequestObjectEncryptionAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_ENCRYPTION_METHOD, consumerAppDO.getRequestObjectEncryptionMethod());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TLS_SUBJECT_DN, consumerAppDO.getTlsClientAuthSubjectDN());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_PUSH_AUTH,
+                    String.valueOf(consumerAppDO.isRequirePushedAuthorizationRequests()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_CERTIFICATE_BOUND_ACCESS_TOKEN,
+                    String.valueOf(consumerAppDO.isTlsClientCertificateBoundAccessTokens()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    SUBJECT_TYPE, consumerAppDO.getSubjectType());
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1548,6 +1638,55 @@ public class OAuthAppDAO {
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
 
+        String tokenAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_METHOD);
+        if (tokenAuthMethod != null) {
+            oauthApp.setTokenEndpointAuthMethod(tokenAuthMethod);
+        }
+        String tokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_SIGNATURE_ALGORITHM);
+        if (tokenSignatureAlgorithm != null) {
+            oauthApp.setTokenEndpointAuthSignatureAlgorithm(tokenSignatureAlgorithm);
+        }
+        String sectorIdentifierURI = getFirstPropertyValue(spOIDCProperties, SECTOR_IDENTIFIER_URI);
+        if (sectorIdentifierURI != null) {
+            oauthApp.setSectorIdentifierURI(sectorIdentifierURI);
+        }
+        String idTokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, ID_TOKEN_SIGNATURE_ALGORITHM);
+        if (idTokenSignatureAlgorithm != null) {
+            oauthApp.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
+        }
+        String requestObjectSignatureAlgorithm = getFirstPropertyValue(
+                spOIDCProperties, REQUEST_OBJECT_SIGNATURE_ALGORITHM);
+        if (requestObjectSignatureAlgorithm != null) {
+            oauthApp.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
+        }
+        String tlsClientAuthSubjectDn = getFirstPropertyValue(
+                spOIDCProperties, TLS_SUBJECT_DN);
+        if (tlsClientAuthSubjectDn != null) {
+            oauthApp.setTlsClientAuthSubjectDN(tlsClientAuthSubjectDn);
+        }
+        String subjectType = getFirstPropertyValue(spOIDCProperties, SUBJECT_TYPE);
+        if (subjectType != null) {
+            oauthApp.setSubjectType(subjectType);
+        }
+        String requestObjectEncryptionAlgorithm = getFirstPropertyValue(
+                spOIDCProperties, REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
+        if (requestObjectEncryptionAlgorithm != null) {
+            oauthApp.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+        }
+        String requestObjectEncryptionMethod = getFirstPropertyValue(
+                spOIDCProperties, REQUEST_OBJECT_ENCRYPTION_METHOD);
+        if (requestObjectEncryptionMethod != null) {
+            oauthApp.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
+        }
+        String isPAR = getFirstPropertyValue(spOIDCProperties, IS_PUSH_AUTH);
+        if (isPAR != null) {
+            oauthApp.setRequirePushedAuthorizationRequests(Boolean.parseBoolean(isPAR));
+        }
+        String isCertificateBoundAccessToken = getFirstPropertyValue(
+                spOIDCProperties, IS_CERTIFICATE_BOUND_ACCESS_TOKEN);
+        if (isCertificateBoundAccessToken != null) {
+            oauthApp.setTlsClientCertificateBoundAccessTokens(Boolean.parseBoolean(isCertificateBoundAccessToken));
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
