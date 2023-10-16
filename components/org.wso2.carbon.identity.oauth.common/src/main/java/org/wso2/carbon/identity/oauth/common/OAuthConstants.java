@@ -189,11 +189,6 @@ public final class OAuthConstants {
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
-    public static final String OAUTH_JWT_ASSERTION = "client_assertion";
-    public static final String PRIVATE_KEY_JWT = "private_key_jwt";
-    public static final String PRIVATE_KEY_JWT_AUTHENTICATOR = "PrivateKeyJWTClientAuthenticator";
-    public static final String TLS_CLIENT_AUTH = "tls_client_auth";
-    public static final String TLS_CLIENT_AUTHENTICATOR = "MutualTLSClientAuthenticator";
     public static final String TOKEN_ENDPOINT_AUTH_METHOD = "token_endpoint_auth_method";
 
     private OAuthConstants() {

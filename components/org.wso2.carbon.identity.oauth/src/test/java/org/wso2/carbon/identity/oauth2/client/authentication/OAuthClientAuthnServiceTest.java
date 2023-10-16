@@ -228,7 +228,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
         OAuthClientAuthenticator oAuthClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
-        PowerMockito.when(oAuthClientAuthenticator.getName()).thenReturn(OAuthConstants.PRIVATE_KEY_JWT_AUTHENTICATOR);
+        PowerMockito.when(oAuthClientAuthenticator.getName()).thenReturn("PrivateKeyJWTClientAuthenticator");
         PowerMockito.when(oAuthClientAuthenticator.isEnabled()).thenReturn(true);
         PowerMockito.when(oAuthClientAuthenticator.canAuthenticate(Mockito.any(), Mockito.any(), Mockito.any()))
                 .thenReturn(true);
