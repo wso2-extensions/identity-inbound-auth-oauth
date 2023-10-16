@@ -288,6 +288,7 @@
             <SupportedTokenEndpointSigningAlgorithms>
                 <SupportedTokenEndpointSigningAlgorithm>PS256</SupportedTokenEndpointSigningAlgorithm>
                 <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>
+                <SupportedTokenEndpointSigningAlgorithm>SHA256withRSA</SupportedTokenEndpointSigningAlgorithm>
             </SupportedTokenEndpointSigningAlgorithms>
         </OpenIDConnect>
 

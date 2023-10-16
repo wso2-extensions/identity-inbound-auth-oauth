@@ -473,15 +473,4 @@ public class OIDProviderConfigResponseTest {
         oidProviderConfigResponse.setCodeChallengeMethodsSupported(codeChallengeMethodsSupported);
         assertEquals(oidProviderConfigResponse.getCodeChallengeMethodsSupported(), codeChallengeMethodsSupported);
     }
-
-    @Test
-    public void testGetandTlsClientCertificateBoundAccessTokensSupported() {
-
-        boolean isTlsClientCertificateBoundAccessTokensSupported = true;
-        oidProviderConfigResponse.setTlsClientCertificateBoundAccessTokensSupported(true);
-        boolean tlsClientCertificateBoundAccessTokensSupportedValue = oidProviderConfigResponse
-                .isTlsClientCertificateBoundAccessTokensSupported();
-        assertEquals(isTlsClientCertificateBoundAccessTokensSupported,
-                tlsClientCertificateBoundAccessTokensSupportedValue);
-    }
 }

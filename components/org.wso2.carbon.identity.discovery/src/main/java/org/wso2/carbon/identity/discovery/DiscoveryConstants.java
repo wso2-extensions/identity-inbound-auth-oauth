@@ -357,12 +357,4 @@ public class DiscoveryConstants {
      * as defined in OAuth 2.0 Device Grant [rfc8628]
      */
     public static final String DEVICE_AUTHORIZATION_ENDPOINT = "device_authorization_endpoint";
-
-    /**
-     * tls_client_certificate_bound_access_tokens
-     * OPTIONAL. Boolean value indicating server support for mutual-TLS client certificate-bound access tokens.
-     * If omitted, the default value is false.
-     */
-    public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
-
 }

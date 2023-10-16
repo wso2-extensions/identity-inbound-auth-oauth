@@ -179,6 +179,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -378,7 +379,6 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
-    private static final String MTLS_CLIENT_AUTHENTICATOR = "MutualTLSClientAuthenticator";
 
     private OAuth2Util() {
 
@@ -4965,22 +4965,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether TLS client certificate bound access tokens are supported by the server.
-     *
-     * @return     Whether TLS client certificate bound access tokens are supported.
-     */
-    public static boolean isTlsClientCertificateBoundAccessTokensSupported() {
-
-        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
-        for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
-            if (MTLS_CLIENT_AUTHENTICATOR.equals(clientAuthenticator.getName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * Retrieve the list of client authentication methods supported by the server.
      *
      * @return     Client authentication methods supported by the server.
@@ -4988,7 +4972,7 @@ public class OAuth2Util {
     public static String[] getSupportedClientAuthMethods() {
 
         List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
-        List<String> supportedClientAuthMethods = new ArrayList<>();
+        HashSet<String> supportedClientAuthMethods = new HashSet<>();
         for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
             List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
             if (!supportedAuthMethods.isEmpty()) {

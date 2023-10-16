@@ -2604,16 +2604,6 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 {clientAuthenticatorsWithoutMTLS, false}
         };
     }
-    @Test(dataProvider = "clientAuthenticatorsDataProvider")
-    public void testIsTlsClientCertificateBoundAccessTokensSupported(
-            List<OAuthClientAuthenticator> clientAuthenticators, boolean expectedResult) {
-
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        when(OAuth2ServiceComponentHolder.getAuthenticationHandlers()).thenReturn(clientAuthenticators);
-        boolean isTlsClientCertificateBoundAccessTokensSupported = OAuth2Util
-                .isTlsClientCertificateBoundAccessTokensSupported();
-        assertEquals(isTlsClientCertificateBoundAccessTokensSupported, expectedResult);
-    }
 
     @Test
     public void testGetSupportedClientAuthMethods() {
