@@ -816,6 +816,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         when(IdentityTenantUtil.getTenantId(TENANT_DOMAIN)).thenReturn(TENANT_ID);
         when(IdentityTenantUtil.getTenantDomain(TENANT_ID)).thenReturn(TENANT_DOMAIN);
         when(IdentityTenantUtil.getRealm(TENANT_DOMAIN, username)).thenReturn(userRealm);
+        when(IdentityTenantUtil.resolveTenantDomain()).thenReturn(TENANT_DOMAIN);
     }
 
     private UserRealm getExceptionThrowingUserRealm(UserStoreException e) throws UserStoreException {
