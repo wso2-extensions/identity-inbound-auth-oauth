@@ -82,12 +82,12 @@ public interface OAuth2RevocationProcessor {
     boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO);
 
     /**
-     * Handle indirect token revocation for internal user events
-     * @param username user on which the event occurred
-     * @param userStoreManager user store manager
-     * @return
+     * Handle indirect token revocation for internal user events.
+     * @param username User on which the event occurred.
+     * @param userStoreManager User store manager.
+     * @return true if revocation is successful. Else return false.
      * @throws UserStoreException
      */
-    public boolean revokeTokens(String username, UserStoreManager userStoreManager)
+    boolean revokeTokens(String username, UserStoreManager userStoreManager)
             throws UserStoreException;
 }
