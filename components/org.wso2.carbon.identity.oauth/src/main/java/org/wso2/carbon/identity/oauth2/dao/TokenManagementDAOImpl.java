@@ -1,21 +1,19 @@
 /*
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- *   Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   WSO2 Inc. licenses this file to you under the Apache License,
- *   Version 2.0 (the "License"); you may not use this file except
- *   in compliance with the License.
- *   You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing,
- *   software distributed under the License is distributed on an
- *   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *   KIND, either express or implied.  See the License for the
- *   specific language governing permissions and limitations
- *   under the License.
- * /
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.dao;
@@ -40,6 +38,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -198,16 +197,23 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setAccessTokenIssuedTime(
                             resultSet.getTimestamp(13, Calendar.getInstance(TimeZone.getTimeZone(UTC))));
                     validationDataDO.setAccessTokenValidityInMillis(resultSet.getLong(14));
+                    String authorizedOrganization = resultSet.getString(15);
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(15);
+                        authenticatedIDP = resultSet.getString(16);
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
-                            resultSet.getString(17) != null) {
-                        extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
+                    }
+                    // For B2B users, the users tenant domain and user resident organization should be properly set.
+                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+                        user.setAccessingOrganization(authorizedOrganization);
+                        user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
+                        user.setTenantDomain(getAppTenantDomain());
                     }
                     validationDataDO.setAuthorizedUser(user);
 
@@ -216,9 +222,9 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                             !validationDataDO.getScope()[0].equals(resultSet.getString(5))) {
                         scopes.add(resultSet.getString(5));
                     }
-                    if (isAccessTokenExtendedTableExist() && resultSet.getString(16) != null &&
-                            resultSet.getString(17) != null) {
-                        extendedParams.put(resultSet.getString(16), resultSet.getString(17));
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
                 }
 
@@ -808,4 +814,19 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         return distinctConsumerKeys;
     }
 
+    private String getAppTenantDomain() {
+
+        return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    private String resolveOrganizationId(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving organization ID for the tenant domain: " +
+                    tenantDomain, e);
+        }
+    }
 }
