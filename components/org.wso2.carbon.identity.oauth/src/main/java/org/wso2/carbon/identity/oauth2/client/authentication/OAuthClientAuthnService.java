@@ -21,11 +21,11 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -310,19 +310,18 @@ public class OAuthClientAuthnService {
      * @return Configured client authentication method for the application.
      * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
-    public List<String> getConfiguredClientAuthMethods(String clientId) throws OAuthClientAuthnException {
+    private List<String> getConfiguredClientAuthMethods(String clientId) throws OAuthClientAuthnException {
 
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
-            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-            ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                if (OAuthConstants.TOKEN_ENDPOINT_AUTH_METHOD.equals(serviceProviderProperty.getName())) {
-                    return Arrays.asList(serviceProviderProperty.getValue());
-                }
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            String tokenEndpointAuthMethod = oAuthAppDO.getTokenEndpointAuthMethod();
+            if (StringUtils.isNotBlank(tokenEndpointAuthMethod)) {
+                return Arrays.asList(tokenEndpointAuthMethod);
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthClientAuthnException("Error occurred while retrieving the service provider.",
-                    OAuth2ErrorCodes.INVALID_REQUEST, e);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new OAuthClientAuthnException("Error occurred while retrieving app information for client id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
         return Collections.emptyList();
     }
