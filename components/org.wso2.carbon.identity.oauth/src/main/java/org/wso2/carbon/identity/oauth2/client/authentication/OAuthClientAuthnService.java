@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -312,7 +312,7 @@ public class OAuthClientAuthnService {
      */
     private List<String> getConfiguredClientAuthMethods(String clientId) throws OAuthClientAuthnException {
 
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
         try {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
             String tokenEndpointAuthMethod = oAuthAppDO.getTokenEndpointAuthMethod();
