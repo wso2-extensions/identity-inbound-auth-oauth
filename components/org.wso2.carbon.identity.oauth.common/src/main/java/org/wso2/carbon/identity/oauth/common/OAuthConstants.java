@@ -224,6 +224,10 @@ public final class OAuthConstants {
 
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
+    public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+    public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
+    public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+
 
     private OAuthConstants() {
 
@@ -301,6 +305,7 @@ public final class OAuthConstants {
         public static final String REQUEST_URI = "request_uri";
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
+        public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
 
         private OAuth20Params() {
@@ -518,6 +523,7 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String S_HASH = "s_hash";
         public static final String SESSION_ID_CLAIM = "sid";
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
@@ -554,6 +560,17 @@ public final class OAuthConstants {
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
+        public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
+        public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
+        public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
+        public static final String REQUEST_OBJECT_SIGNATURE_ALGORITHM = "requestObjectSigningAlg";
+        public static final String TLS_SUBJECT_DN = "tlsClientAuthSubjectDn";
+        public static final String IS_PUSH_AUTH = "requirePushAuthorizationRequest";
+        public static final String IS_CERTIFICATE_BOUND_ACCESS_TOKEN = "tlsClientCertificateBoundAccessToken";
+        public static final String SUBJECT_TYPE = "subjectType";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
+        public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
 
         private OIDCConfigProperties() {
 

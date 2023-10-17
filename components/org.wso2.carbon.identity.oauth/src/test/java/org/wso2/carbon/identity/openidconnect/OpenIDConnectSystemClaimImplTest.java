@@ -137,6 +137,17 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
         Assert.assertEquals(claims.get(AT_HASH), hashAccessToken);
     }
 
+    @Test
+    public void testStateHashClaim() throws Exception {
+
+        String state = "testState";
+        oAuth2AuthorizeReqDTO.setState(state);
+        oAuth2AuthorizeReqDTO.setResponseType("code");
+        Map<String, Object> claims = openIDConnectSystemClaim.getAdditionalClaims(oAuthAuthzReqMessageContext,
+                oAuth2AuthorizeRespDTO);
+        Assert.assertEquals(claims.get(OAuthConstants.OIDCClaims.S_HASH), getHashValue(state));
+    }
+
     private String getHashValue(String value) throws Exception {
 
         String signatureAlgorithm = "SHA256withRSA";

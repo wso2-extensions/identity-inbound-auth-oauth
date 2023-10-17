@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -67,6 +68,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     @Override
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
                                         AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
+
+        insertAuthorizationCode(authzCode, consumerKey,
+                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()), callbackUrl, authzCodeDO);
+    }
+
+    @Override
+    public void insertAuthorizationCode(String authzCode, String consumerKey, String appTenantDomain,
+                                        String callbackUrl, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
         if (!isPersistenceEnabled()) {
             return;
@@ -114,6 +123,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 prepStmt.setString(15, authenticatedIDP);
                 prepStmt.setInt(16, tenantId);
+                prepStmt.setInt(17, IdentityTenantUtil.getTenantId(appTenantDomain));
+            } else {
+                prepStmt.setInt(15, IdentityTenantUtil.getTenantId(appTenantDomain));
             }
 
             prepStmt.execute();
@@ -222,8 +234,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             //use hash value for search
-            prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
+            prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
@@ -587,6 +600,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -618,7 +632,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -930,7 +945,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         try {
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
 
