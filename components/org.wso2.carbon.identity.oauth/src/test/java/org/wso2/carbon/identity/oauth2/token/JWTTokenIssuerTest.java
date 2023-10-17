@@ -302,6 +302,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                                       long expectedExpiry) throws Exception {
 
         OAuthAppDO appDO = spy(new OAuthAppDO());
+        appDO.setSubjectType("pairwise");
+        appDO.setSectorIdentifierURI(DUMMY_SECTOR_IDENTIFIER);
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
         mockStatic(OAuth2Util.class);

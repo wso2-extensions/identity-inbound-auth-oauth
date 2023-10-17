@@ -63,6 +63,13 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
         String clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
+                    " of tenantDomain: " + spTenantDomain, e);
+        }
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
         Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);

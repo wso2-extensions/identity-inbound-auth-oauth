@@ -238,6 +238,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
         String subject =
                 getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        String callbackUri;
+        try {
+            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error while getting the registered callback URI for client_id: " +
+                    clientId, e);
+        }
 
         String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
         String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
@@ -252,6 +259,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
         }
+
+        // Get subject identifier according to the configured subject type.
+        subject = OIDCClaimUtil.getSubjectClaim(subject, callbackUri, oAuthAppDO);
 
         String[] amrValueArray =
                 (String[]) (authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants.AMR));
