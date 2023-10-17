@@ -241,7 +241,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
 
             String authorizedOrganization = accessTokenDO.getAuthzUser().getAccessingOrganization();
-            if (StringUtils.isEmpty(authorizedOrganization)) {
+            if (StringUtils.isBlank(authorizedOrganization)) {
                 authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
             }
             insertTokenPrepStmt.setString(19, authorizedOrganization);
@@ -461,7 +461,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
         String tenantDomain = getUserResidentTenantDomain(authzUser);
         String authorizedOrganization = authzUser.getAccessingOrganization();
-        if (StringUtils.isEmpty(authorizedOrganization)) {
+        if (StringUtils.isBlank(authorizedOrganization)) {
             authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
         }
         int tenantId = OAuth2Util.getTenantId(tenantDomain);
@@ -711,7 +711,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         String tenantDomain = getUserResidentTenantDomain(authzUser);
 
         String authorizedOrganization = authzUser.getAccessingOrganization();
-        if (StringUtils.isEmpty(authorizedOrganization)) {
+        if (StringUtils.isBlank(authorizedOrganization)) {
             authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
         }
 
@@ -3057,7 +3057,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
         } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain by organization ID: " +
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
                     authenticatedUser.getUserResidentOrganization(), e);
         }
     }

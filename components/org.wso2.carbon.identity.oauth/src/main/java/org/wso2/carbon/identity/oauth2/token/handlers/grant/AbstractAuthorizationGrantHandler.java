@@ -567,7 +567,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             try {
                 userId = tokenToCache.getAuthzUser().getUserId();
                 authorizedOrganization = tokenToCache.getAuthzUser().getAccessingOrganization();
-                if (StringUtils.isEmpty(authorizedOrganization)) {
+                if (StringUtils.isBlank(authorizedOrganization)) {
                     authorizedOrganization = OAuthConstants.AuthorizedOrganization.NONE;
                 }
             } catch (UserIdNotFoundException e) {

@@ -305,10 +305,11 @@ public final class OAuthUtil {
     /**
      * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
      *
-     * @param consumerKey           Client id of the application the token issued to.
-     * @param authorizedUser        Authorized user.
-     * @param scope                 Scope list.
-     * @param tokenBindingReference Token binding reference.
+     * @param consumerKey            Client id of the application the token issued to.
+     * @param authorizedUser         Authorized user.
+     * @param scope                  Scope list.
+     * @param tokenBindingReference  Token binding reference.
+     * @param authorizedOrganization Authorized organization.
      */
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
                                        String tokenBindingReference, String authorizedOrganization) {
