@@ -112,7 +112,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
             try {
                 if (OAuth2Util.isFapiConformantApp(clientId)) {
-                    addCnfClaimToOIDCDialect(tokenReqMessageContext);
+                    addCnfClaimToOIDCDialect(tokenReqMessageContext, userClaimsInOIDCDialect);
                 }
             } catch (IdentityOAuth2ClientException e) {
                 throw new IdentityOAuth2Exception("Could not find an existing app for clientId: " + clientId, e);
@@ -900,9 +900,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * Add the CNF claim to the OIDC dialect when a TLS certificate is passed in the request.
      *
      * @param tokenReqMessageContext       Token request message context.
+     * @param userClaimsInOIDCDialect      Map of the user claims in the OIDC dialect.
      * @throws IdentityOAuth2Exception     An exception is thrown if the cert could not be obtained from the request.
      */
-    private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext)
+    private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                          Map<String, Object> userClaimsInOIDCDialect)
             throws IdentityOAuth2Exception {
         
         Base64URL certThumbprint;
@@ -930,7 +932,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
         if (certificate != null) {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
-            tokenReqMessageContext.addProperty(CNF_CLAIM, Collections.singletonMap("x5t#S256", certThumbprint));
+            userClaimsInOIDCDialect.put(CNF_CLAIM, Collections.singletonMap("x5t#S256", certThumbprint));
         }
     }
 }

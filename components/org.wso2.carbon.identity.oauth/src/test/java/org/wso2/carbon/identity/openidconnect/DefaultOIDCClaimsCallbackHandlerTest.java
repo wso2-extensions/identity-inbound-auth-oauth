@@ -1212,7 +1212,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
         UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
         mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
 
-        getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
-        assertNotNull(requestMsgCtx.getProperty("cnf"));
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim("cnf"));
     }
 }
