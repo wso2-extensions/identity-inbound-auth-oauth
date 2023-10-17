@@ -574,7 +574,7 @@ public class OAuth2AuthzEndpoint {
                 OAuthConstants.ResponseModes.QUERY_JWT.equals(responseMode)) {
 
             throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
-                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_RESPONSE_TYPE_FOR_QUERY_JWT);
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_RESPONSE_TYPE_FOR_QUERY_JWT);
         }
     }
 

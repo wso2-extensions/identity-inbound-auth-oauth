@@ -58,7 +58,5 @@ public class OAuth2ErrorCodes {
         public static final String ACCESS_DENIED = "access_denied";
         public static final String INVALID_PARAMETERS = "invalid_parameters";
         public static final String INVALID_ID_TOKEN = "invalid_id_token";
-        public static final String INVALID_RESPONSE_TYPE_FOR_QUERY_JWT = "invalid_response_type_for_query_jwt";
-
     }
 }
