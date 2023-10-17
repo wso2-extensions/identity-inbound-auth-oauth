@@ -38,9 +38,11 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenValidationProcessor;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
@@ -58,6 +60,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -90,6 +93,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void setUpTest() throws Exception {
 
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+        OAuth2ServiceComponentHolder.getInstance().setTokenValidationProcessor(new DefaultTokenValidationProcessor());
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();
@@ -321,12 +325,16 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
             updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
-
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
             Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
             mockDataSource();
             mockObjectsRelatedToTokenValidation();
+//            AccessTokenDO accessTokenDO = new AccessTokenDO();
+//            accessTokenDO.setAccessToken(accessToken);
+//            accessTokenDO.setConsumerKey("mock_client_id");
+//            accessTokenDO.setAuthzUser(authzUser);
+//            when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
             String responseString =
                     userInfoJSONResponseBuilder
                             .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
