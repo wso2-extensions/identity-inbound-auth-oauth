@@ -330,11 +330,6 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
             Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
             mockDataSource();
             mockObjectsRelatedToTokenValidation();
-//            AccessTokenDO accessTokenDO = new AccessTokenDO();
-//            accessTokenDO.setAccessToken(accessToken);
-//            accessTokenDO.setConsumerKey("mock_client_id");
-//            accessTokenDO.setAuthzUser(authzUser);
-//            when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
             String responseString =
                     userInfoJSONResponseBuilder
                             .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
