@@ -73,8 +73,19 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_ALGORITHM;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_METHOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SECTOR_IDENTIFIER_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TLS_SUBJECT_DN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_AUTH_METHOD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_AUTH_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
@@ -92,6 +103,20 @@ public class OAuthAppDAO {
     private static final String USERNAME = "USERNAME";
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
+    private static final String OAUTH_VERSION = "OAUTH_VERSION";
+    private static final String CONSUMER_SECRET = "CONSUMER_SECRET";
+    private static final String APP_NAME = "APP_NAME";
+    private static final String CALLBACK_URL = "CALLBACK_URL";
+    private static final String TENANT_ID = "TENANT_ID";
+    private static final String USER_DOMAIN = "USER_DOMAIN";
+    private static final String GRANT_TYPES = "GRANT_TYPES";
+    private static final String ID = "ID";
+    private static final String PKCE_MANDATORY = "PKCE_MANDATORY";
+    private static final String PKCE_SUPPORT_PLAIN = "PKCE_SUPPORT_PLAIN";
+    private static final String USER_ACCESS_TOKEN_EXPIRE_TIME = "USER_ACCESS_TOKEN_EXPIRE_TIME";
+    private static final String APP_ACCESS_TOKEN_EXPIRE_TIME = "APP_ACCESS_TOKEN_EXPIRE_TIME";
+    private static final String REFRESH_TOKEN_EXPIRE_TIME = "REFRESH_TOKEN_EXPIRE_TIME";
+    private static final String ID_TOKEN_EXPIRE_TIME = "ID_TOKEN_EXPIRE_TIME";
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
@@ -431,64 +456,61 @@ public class OAuthAppDAO {
         if (StringUtils.isBlank(tokenId)) {
             throw new IdentityOAuth2Exception("Error while retrieving the application. Token id is empty.");
         }
+        String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_TOKEN_ID_WITH_PKCE;
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_TOKEN_ID_WITH_PKCE;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false); PreparedStatement
+                prepStmt = connection.prepareStatement(sqlQuery)) {
+            prepStmt.setString(1, tokenId);
 
-            try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
-                prepStmt.setString(1, tokenId);
-
-                try (ResultSet rSet = prepStmt.executeQuery()) {
-                    /*
-                      We need to determine whether the result set has more than 1 row. Meaning, we found an
-                      application for the given consumer key. There can be situations where a user passed a key which
-                      doesn't yet have an associated application. We need to barf with a meaningful error message
-                      for this case.
-                    */
-                    boolean appExists = false;
-                    while (rSet.next()) {
-                        // There is at least one application associated with a given key.
-                        appExists = true;
-                        if (StringUtils.isNotBlank(rSet.getString("OAUTH_VERSION"))) {
-                            oauthApp = new OAuthAppDO();
-                            oauthApp.setOauthConsumerKey(consumerKey);
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
-                                        .getString("CONSUMER_SECRET")));
-                            } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString("CONSUMER_SECRET"));
-                            }
-                            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                            authenticatedUser.setUserName(rSet.getString("USERNAME"));
-                            oauthApp.setApplicationName(rSet.getString("APP_NAME"));
-                            oauthApp.setOauthVersion(rSet.getString("OAUTH_VERSION"));
-                            oauthApp.setCallbackUrl(rSet.getString("CALLBACK_URL"));
-                            authenticatedUser.setTenantDomain(
-                                    IdentityTenantUtil.getTenantDomain(rSet.getInt("TENANT_ID")));
-                            authenticatedUser.setUserStoreDomain(rSet.getString("USER_DOMAIN"));
-                            oauthApp.setAppOwner(authenticatedUser);
-                            oauthApp.setGrantTypes(rSet.getString("GRANT_TYPES"));
-                            oauthApp.setId(rSet.getInt("ID"));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString("PKCE_MANDATORY")));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString("PKCE_SUPPORT_PLAIN")));
-                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong("USER_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong("APP_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong("REFRESH_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setIdTokenExpiryTime(rSet.getLong("ID_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setState(rSet.getString("APP_STATE"));
-
-                            String spTenantDomain = authenticatedUser.getTenantDomain();
-                            handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
-                                    spTenantDomain, oauthApp);
-                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+            try (ResultSet rSet = prepStmt.executeQuery()) {
+                /*
+                  We need to determine whether the result set has more than 1 row. Meaning, we found an
+                  application for the given consumer key. There can be situations where a user passed a key which
+                  doesn't yet have an associated application. We need to barf with a meaningful error message
+                  for this case.
+                */
+                boolean appExists = false;
+                while (rSet.next()) {
+                    // There is at least one application associated with a given key.
+                    appExists = true;
+                    if (StringUtils.isNotBlank(rSet.getString(OAUTH_VERSION))) {
+                        oauthApp = new OAuthAppDO();
+                        oauthApp.setOauthConsumerKey(consumerKey);
+                        if (isHashDisabled) {
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(rSet
+                                    .getString(CONSUMER_SECRET)));
+                        } else {
+                            oauthApp.setOauthConsumerSecret(rSet.getString(CONSUMER_SECRET));
                         }
-                    }
+                        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+                        authenticatedUser.setUserName(rSet.getString(USERNAME));
+                        oauthApp.setApplicationName(rSet.getString(APP_NAME));
+                        oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
+                        oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
+                        authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
+                        authenticatedUser.setUserStoreDomain(rSet.getString(USER_DOMAIN));
+                        oauthApp.setAppOwner(authenticatedUser);
+                        oauthApp.setGrantTypes(rSet.getString(GRANT_TYPES));
+                        oauthApp.setId(rSet.getInt(ID));
+                        oauthApp.setPkceMandatory(!"0".equals(rSet.getString(PKCE_MANDATORY)));
+                        oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(PKCE_SUPPORT_PLAIN)));
+                        oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(USER_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(APP_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setRefreshTokenExpiryTime(rSet.getLong(REFRESH_TOKEN_EXPIRE_TIME));
+                        oauthApp.setIdTokenExpiryTime(rSet.getLong(ID_TOKEN_EXPIRE_TIME));
+                        oauthApp.setState(rSet.getString(APP_STATE));
 
-                    if (!appExists) {
-                        handleRequestForANonExistingConsumerKey(consumerKey);
+                        String spTenantDomain = authenticatedUser.getTenantDomain();
+                        handleSpOIDCProperties(connection, persistenceProcessor.getProcessedClientId(consumerKey),
+                                spTenantDomain, oauthApp);
+                        oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
                     }
-                    connection.commit();
                 }
+
+                if (!appExists) {
+                    handleRequestForANonExistingConsumerKey(consumerKey);
+                }
+                connection.commit();
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
@@ -508,56 +530,54 @@ public class OAuthAppDAO {
             throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
         List<OAuthAppDO> oauthAppList = new ArrayList<>();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_CONSUMER_KEY_WITH_PKCE;
+        String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_FOR_CONSUMER_KEY_WITH_PKCE;
 
-            try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
-                String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
-                prepStmt.setString(1, preprocessedClientId);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false); PreparedStatement
+                prepStmt = connection.prepareStatement(sqlQuery)) {
+            String preprocessedClientId = persistenceProcessor.getProcessedClientId(consumerKey);
+            prepStmt.setString(1, preprocessedClientId);
 
-                try (ResultSet rSet = prepStmt.executeQuery()) {
-                    while (rSet.next()) {
-                        if (StringUtils.isNotBlank(rSet.getString("OAUTH_VERSION"))) {
-                            OAuthAppDO oauthApp = new OAuthAppDO();
-                            oauthApp.setOauthConsumerKey(consumerKey);
-                            if (isHashDisabled) {
-                                oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(
-                                        rSet.getString("CONSUMER_SECRET")));
-                            } else {
-                                oauthApp.setOauthConsumerSecret(rSet.getString("CONSUMER_SECRET"));
-                            }
-                            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                            authenticatedUser.setUserName(rSet.getString("USERNAME"));
-                            oauthApp.setApplicationName(rSet.getString("APP_NAME"));
-                            oauthApp.setOauthVersion(rSet.getString("OAUTH_VERSION"));
-                            oauthApp.setCallbackUrl(rSet.getString("CALLBACK_URL"));
-                            authenticatedUser.setTenantDomain(
-                                    IdentityTenantUtil.getTenantDomain(rSet.getInt("TENANT_ID")));
-                            authenticatedUser.setUserStoreDomain(rSet.getString("USER_DOMAIN"));
-                            oauthApp.setAppOwner(authenticatedUser);
-                            oauthApp.setGrantTypes(rSet.getString("GRANT_TYPES"));
-                            oauthApp.setId(rSet.getInt("ID"));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString("PKCE_MANDATORY")));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString("PKCE_SUPPORT_PLAIN")));
-                            oauthApp.setUserAccessTokenExpiryTime(rSet.getLong("USER_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong("APP_ACCESS_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setRefreshTokenExpiryTime(rSet.getLong("REFRESH_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setIdTokenExpiryTime(rSet.getLong("ID_TOKEN_EXPIRE_TIME"));
-                            oauthApp.setState(rSet.getString("APP_STATE"));
-
-                            String spTenantDomain = authenticatedUser.getTenantDomain();
-                            handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
-                            oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
-
-                            oauthAppList.add(oauthApp);
+            try (ResultSet rSet = prepStmt.executeQuery()) {
+                while (rSet.next()) {
+                    if (StringUtils.isNotBlank(rSet.getString(OAUTH_VERSION))) {
+                        OAuthAppDO oauthApp = new OAuthAppDO();
+                        oauthApp.setOauthConsumerKey(consumerKey);
+                        if (isHashDisabled) {
+                            oauthApp.setOauthConsumerSecret(persistenceProcessor.getPreprocessedClientSecret(
+                                    rSet.getString(CONSUMER_SECRET)));
+                        } else {
+                            oauthApp.setOauthConsumerSecret(rSet.getString(CONSUMER_SECRET));
                         }
-                    }
+                        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+                        authenticatedUser.setUserName(rSet.getString(USERNAME));
+                        oauthApp.setApplicationName(rSet.getString(APP_NAME));
+                        oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
+                        oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
+                        authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
+                        authenticatedUser.setUserStoreDomain(rSet.getString(USER_DOMAIN));
+                        oauthApp.setAppOwner(authenticatedUser);
+                        oauthApp.setGrantTypes(rSet.getString(GRANT_TYPES));
+                        oauthApp.setId(rSet.getInt(ID));
+                        oauthApp.setPkceMandatory(!"0".equals(rSet.getString(PKCE_MANDATORY)));
+                        oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(PKCE_SUPPORT_PLAIN)));
+                        oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(USER_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(APP_ACCESS_TOKEN_EXPIRE_TIME));
+                        oauthApp.setRefreshTokenExpiryTime(rSet.getLong(REFRESH_TOKEN_EXPIRE_TIME));
+                        oauthApp.setIdTokenExpiryTime(rSet.getLong(ID_TOKEN_EXPIRE_TIME));
+                        oauthApp.setState(rSet.getString(APP_STATE));
 
-                    if (oauthAppList.isEmpty()) {
-                        handleRequestForANonExistingConsumerKey(consumerKey);
+                        String spTenantDomain = authenticatedUser.getTenantDomain();
+                        handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
+                        oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+
+                        oauthAppList.add(oauthApp);
                     }
-                    connection.commit();
                 }
+
+                if (oauthAppList.isEmpty()) {
+                    handleRequestForANonExistingConsumerKey(consumerKey);
+                }
+                connection.commit();
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
@@ -850,6 +870,50 @@ public class OAuthAppDAO {
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_BINDING_VALIDATION, String.valueOf(oauthAppDO.isTokenBindingValidationEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_AUTH_METHOD, oauthAppDO.getTokenEndpointAuthMethod(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_AUTH_SIGNATURE_ALGORITHM, oauthAppDO.getTokenEndpointAuthSignatureAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                SECTOR_IDENTIFIER_URI, oauthAppDO.getSectorIdentifierURI(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                ID_TOKEN_SIGNATURE_ALGORITHM, oauthAppDO.getIdTokenSignatureAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                REQUEST_OBJECT_SIGNATURE_ALGORITHM, oauthAppDO.getRequestObjectSignatureAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                REQUEST_OBJECT_ENCRYPTION_ALGORITHM, oauthAppDO.getRequestObjectEncryptionAlgorithm(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                REQUEST_OBJECT_ENCRYPTION_METHOD, oauthAppDO.getRequestObjectEncryptionMethod(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TLS_SUBJECT_DN, oauthAppDO.getTlsClientAuthSubjectDN(),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                IS_PUSH_AUTH, String.valueOf(oauthAppDO.isRequirePushedAuthorizationRequests()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                IS_CERTIFICATE_BOUND_ACCESS_TOKEN, String.valueOf(oauthAppDO.isTlsClientCertificateBoundAccessTokens()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                SUBJECT_TYPE, oauthAppDO.getSubjectType(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         // Execute batched add/update/delete.
@@ -1436,6 +1500,41 @@ public class OAuthAppDAO {
                     TOKEN_BINDING_VALIDATION,
                     String.valueOf(consumerAppDO.isTokenBindingValidationEnabled()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TOKEN_AUTH_SIGNATURE_ALGORITHM, consumerAppDO.getTokenEndpointAuthSignatureAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty, SECTOR_IDENTIFIER_URI,
+                    consumerAppDO.getSectorIdentifierURI());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    ID_TOKEN_SIGNATURE_ALGORITHM, consumerAppDO.getIdTokenSignatureAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_SIGNATURE_ALGORITHM, consumerAppDO.getRequestObjectSignatureAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_ENCRYPTION_ALGORITHM, consumerAppDO.getRequestObjectEncryptionAlgorithm());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    REQUEST_OBJECT_ENCRYPTION_METHOD, consumerAppDO.getRequestObjectEncryptionMethod());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    TLS_SUBJECT_DN, consumerAppDO.getTlsClientAuthSubjectDN());
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_PUSH_AUTH,
+                    String.valueOf(consumerAppDO.isRequirePushedAuthorizationRequests()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_CERTIFICATE_BOUND_ACCESS_TOKEN,
+                    String.valueOf(consumerAppDO.isTlsClientCertificateBoundAccessTokens()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    SUBJECT_TYPE, consumerAppDO.getSubjectType());
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1539,6 +1638,55 @@ public class OAuthAppDAO {
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);
 
+        String tokenAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_METHOD);
+        if (tokenAuthMethod != null) {
+            oauthApp.setTokenEndpointAuthMethod(tokenAuthMethod);
+        }
+        String tokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_SIGNATURE_ALGORITHM);
+        if (tokenSignatureAlgorithm != null) {
+            oauthApp.setTokenEndpointAuthSignatureAlgorithm(tokenSignatureAlgorithm);
+        }
+        String sectorIdentifierURI = getFirstPropertyValue(spOIDCProperties, SECTOR_IDENTIFIER_URI);
+        if (sectorIdentifierURI != null) {
+            oauthApp.setSectorIdentifierURI(sectorIdentifierURI);
+        }
+        String idTokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, ID_TOKEN_SIGNATURE_ALGORITHM);
+        if (idTokenSignatureAlgorithm != null) {
+            oauthApp.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
+        }
+        String requestObjectSignatureAlgorithm = getFirstPropertyValue(
+                spOIDCProperties, REQUEST_OBJECT_SIGNATURE_ALGORITHM);
+        if (requestObjectSignatureAlgorithm != null) {
+            oauthApp.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
+        }
+        String tlsClientAuthSubjectDn = getFirstPropertyValue(
+                spOIDCProperties, TLS_SUBJECT_DN);
+        if (tlsClientAuthSubjectDn != null) {
+            oauthApp.setTlsClientAuthSubjectDN(tlsClientAuthSubjectDn);
+        }
+        String subjectType = getFirstPropertyValue(spOIDCProperties, SUBJECT_TYPE);
+        if (subjectType != null) {
+            oauthApp.setSubjectType(subjectType);
+        }
+        String requestObjectEncryptionAlgorithm = getFirstPropertyValue(
+                spOIDCProperties, REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
+        if (requestObjectEncryptionAlgorithm != null) {
+            oauthApp.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+        }
+        String requestObjectEncryptionMethod = getFirstPropertyValue(
+                spOIDCProperties, REQUEST_OBJECT_ENCRYPTION_METHOD);
+        if (requestObjectEncryptionMethod != null) {
+            oauthApp.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
+        }
+        String isPAR = getFirstPropertyValue(spOIDCProperties, IS_PUSH_AUTH);
+        if (isPAR != null) {
+            oauthApp.setRequirePushedAuthorizationRequests(Boolean.parseBoolean(isPAR));
+        }
+        String isCertificateBoundAccessToken = getFirstPropertyValue(
+                spOIDCProperties, IS_CERTIFICATE_BOUND_ACCESS_TOKEN);
+        if (isCertificateBoundAccessToken != null) {
+            oauthApp.setTlsClientCertificateBoundAccessTokens(Boolean.parseBoolean(isCertificateBoundAccessToken));
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

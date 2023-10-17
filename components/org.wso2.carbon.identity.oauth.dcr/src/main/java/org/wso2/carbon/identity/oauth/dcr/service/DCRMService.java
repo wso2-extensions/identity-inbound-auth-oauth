@@ -94,7 +94,17 @@ public class DCRMService {
     public Application getApplication(String clientId) throws DCRMException {
 
         validateRequestTenantDomain(clientId);
-        return buildResponse(getApplicationById(clientId, DCRMUtils.isApplicationRolePermissionRequired()));
+        OAuthConsumerAppDTO consumerAppDTO = getApplicationById(
+                clientId, DCRMUtils.isApplicationRolePermissionRequired());
+        // Get the jwksURI from the service provider.
+        String applicationName = consumerAppDTO.getApplicationName();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        ServiceProvider serviceProvider = getServiceProvider(applicationName, tenantDomain);
+        String jwksURI = serviceProvider.getJwksUri();
+        if (StringUtils.isNotEmpty(jwksURI)) {
+            consumerAppDTO.setJwksURI(jwksURI);
+        }
+        return buildResponse(consumerAppDTO);
     }
 
     /**
@@ -222,7 +232,10 @@ public class DCRMService {
             }
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
-
+            // Update jwksURI.
+            if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
+                sp.setJwksUri(updateRequest.getJwksURI());
+            }
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
             ServiceProvider clonedSP = cloneServiceProvider(sp);
@@ -268,6 +281,45 @@ public class DCRMService {
             if (updateRequest.getExtIdTokenLifetime() != null) {
                 appDTO.setIdTokenExpiryTime(updateRequest.getExtIdTokenLifetime());
             }
+            if (updateRequest.getTokenEndpointAuthMethod() != null) {
+                appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
+            }
+            if (updateRequest.getTokenEndpointAuthSignatureAlgorithm() != null) {
+                appDTO.setTokenEndpointAuthSignatureAlgorithm
+                        (updateRequest.getTokenEndpointAuthSignatureAlgorithm());
+            }
+            if (updateRequest.getSectorIdentifierURI() != null) {
+                appDTO.setSectorIdentifierURI(updateRequest.getSectorIdentifierURI());
+            }
+            if (updateRequest.getIdTokenSignatureAlgorithm() != null) {
+                appDTO.setIdTokenSignatureAlgorithm(updateRequest.getIdTokenSignatureAlgorithm());
+            }
+            if (updateRequest.getIdTokenEncryptionAlgorithm() != null) {
+                appDTO.setIdTokenEncryptionAlgorithm(updateRequest.getIdTokenEncryptionAlgorithm());
+            }
+            if (updateRequest.getIdTokenEncryptionMethod() != null) {
+                appDTO.setIdTokenEncryptionMethod(updateRequest.getIdTokenEncryptionMethod());
+            }
+            if (updateRequest.getRequestObjectSignatureAlgorithm() != null) {
+                appDTO.setRequestObjectSignatureValidationEnabled
+                        (updateRequest.isRequireSignedRequestObject());
+            }
+            if (updateRequest.getTlsClientAuthSubjectDN() != null) {
+                appDTO.setTlsClientAuthSubjectDN(updateRequest.getTlsClientAuthSubjectDN());
+            }
+            if (updateRequest.getSubjectType() != null) {
+                appDTO.setSubjectType(updateRequest.getSubjectType());
+            }
+            if (updateRequest.getRequestObjectEncryptionAlgorithm() != null) {
+                appDTO.setRequestObjectEncryptionAlgorithm
+                        (updateRequest.getRequestObjectEncryptionAlgorithm());
+            }
+            if (updateRequest.getRequestObjectEncryptionMethod() != null) {
+                appDTO.setRequestObjectEncryptionMethod(updateRequest.getRequestObjectEncryptionMethod());
+            }
+            appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
+            appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
+            appDTO.setTlsClientCertificateBoundAccessTokens(updateRequest.isTlsClientCertificateBoundAccessTokens());
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
@@ -278,8 +330,10 @@ public class DCRMService {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION, clientId, e);
         }
-
-        return buildResponse(getApplicationById(clientId));
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
+        // Setting the jwksURI to be sent in the response.
+        oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
+        return buildResponse(oAuthConsumerAppDTO);
     }
 
     /**
@@ -400,9 +454,15 @@ public class DCRMService {
 
         // Update the service provider properties list with the display name property.
         updateServiceProviderPropertyList(serviceProvider, registrationRequest.getExtApplicationDisplayName());
+        // Store jwksURI.
+        if (StringUtils.isNotEmpty(registrationRequest.getJwksURI())) {
+            serviceProvider.setJwksUri(registrationRequest.getJwksURI());
+        }
 
         try {
             updateServiceProviderWithOAuthAppDetails(serviceProvider, createdApp, applicationOwner, tenantDomain);
+            // Setting the jwksURI to be sent in the response.
+            createdApp.setJwksURI(registrationRequest.getJwksURI());
         } catch (DCRMException ex) {
             // Delete the OAuth app created. This will also remove the registered SP for the OAuth app.
             deleteApplication(createdApp.getOauthConsumerKey());
@@ -427,7 +487,21 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
-
+        application.setJwksURI(createdApp.getJwksURI());
+        application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
+        application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
+        application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
+        application.setIdTokenSignatureAlgorithm(createdApp.getIdTokenSignatureAlgorithm());
+        application.setIdTokenEncryptionAlgorithm(createdApp.getIdTokenEncryptionAlgorithm());
+        application.setIdTokenEncryptionMethod(createdApp.getIdTokenEncryptionMethod());
+        application.setRequestObjectSignatureValidationEnabled(createdApp.isRequestObjectSignatureValidationEnabled());
+        application.setRequestObjectSignatureAlgorithm(createdApp.getRequestObjectSignatureAlgorithm());
+        application.setTlsClientAuthSubjectDN(createdApp.getTlsClientAuthSubjectDN());
+        application.setSubjectType(createdApp.getSubjectType());
+        application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
+        application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
+        application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
+        application.setTlsClientCertificateBoundAccessTokens(createdApp.getTlsClientCertificateBoundAccessTokens());
         return application;
     }
 
@@ -497,6 +571,48 @@ public class DCRMService {
         if (registrationRequest.getExtIdTokenLifetime() != null) {
             oAuthConsumerApp.setIdTokenExpiryTime(registrationRequest.getExtIdTokenLifetime());
         }
+        if (registrationRequest.getTokenEndpointAuthMethod() != null) {
+            oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
+        }
+        if (registrationRequest.getTokenEndpointAuthSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setTokenEndpointAuthSignatureAlgorithm
+                    (registrationRequest.getTokenEndpointAuthSignatureAlgorithm());
+        }
+        if (registrationRequest.getSectorIdentifierURI() != null) {
+            oAuthConsumerApp.setSectorIdentifierURI(registrationRequest.getSectorIdentifierURI());
+        }
+        if (registrationRequest.getIdTokenSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setIdTokenSignatureAlgorithm(registrationRequest.getIdTokenSignatureAlgorithm());
+        }
+        if (registrationRequest.getIdTokenEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setIdTokenEncryptionAlgorithm(registrationRequest.getIdTokenEncryptionAlgorithm());
+            oAuthConsumerApp.setIdTokenEncryptionEnabled(true);
+        }
+        if (registrationRequest.getIdTokenEncryptionMethod() != null) {
+            oAuthConsumerApp.setIdTokenEncryptionMethod(registrationRequest.getIdTokenEncryptionMethod());
+        }
+        if (registrationRequest.getRequestObjectSignatureAlgorithm() != null) {
+            oAuthConsumerApp.setRequestObjectSignatureAlgorithm(
+                    (registrationRequest.getRequestObjectSignatureAlgorithm()));
+        }
+        if (registrationRequest.getTlsClientAuthSubjectDN() != null) {
+            oAuthConsumerApp.setTlsClientAuthSubjectDN(registrationRequest.getTlsClientAuthSubjectDN());
+        }
+        if (registrationRequest.getSubjectType() != null) {
+            oAuthConsumerApp.setSubjectType(registrationRequest.getSubjectType());
+        }
+        if (registrationRequest.getRequestObjectEncryptionAlgorithm() != null) {
+            oAuthConsumerApp.setRequestObjectEncryptionAlgorithm
+                    (registrationRequest.getRequestObjectEncryptionAlgorithm());
+        }
+        if (registrationRequest.getRequestObjectEncryptionMethod() != null) {
+            oAuthConsumerApp.setRequestObjectEncryptionMethod(registrationRequest.getRequestObjectEncryptionMethod());
+        }
+        oAuthConsumerApp.setRequestObjectSignatureValidationEnabled(registrationRequest.isRequireSignedRequestObject());
+        oAuthConsumerApp.setRequirePushedAuthorizationRequests(
+                registrationRequest.isRequirePushedAuthorizationRequests());
+        oAuthConsumerApp.setTlsClientCertificateBoundAccessTokens(
+                registrationRequest.isTlsClientCertificateBoundAccessTokens());
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());

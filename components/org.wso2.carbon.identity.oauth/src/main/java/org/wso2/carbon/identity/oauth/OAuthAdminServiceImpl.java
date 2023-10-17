@@ -348,6 +348,7 @@ public class OAuthAdminServiceImpl {
                             app.setIdTokenEncryptionMethod(
                                     filterEncryptionMethod((application.getIdTokenEncryptionMethod())));
                         }
+
                         app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                         app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
                         if (application.getTokenType() != null) {
@@ -701,6 +702,7 @@ public class OAuthAdminServiceImpl {
                 oauthappdo.setIdTokenEncryptionMethod(filterEncryptionMethod(
                         consumerAppDTO.getIdTokenEncryptionMethod()));
             }
+
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
@@ -1077,8 +1079,8 @@ public class OAuthAdminServiceImpl {
                 if (initiatorId.isPresent()) {
                     AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                             initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
-                            OAuthConstants.LogConstants.UPDATE_APP_STATE)
-                            .data(Map.of("state", newState));
+                            OAuthConstants.LogConstants.UPDATE_APP_STATE);
+
                     triggerAuditLogEvent(auditLogBuilder, true);
                 } else {
                     LOG.error("Error getting the logged in userId");
@@ -1365,7 +1367,7 @@ public class OAuthAdminServiceImpl {
                     try {
                         scopedToken = OAuthTokenPersistenceFactory.getInstance().
                                 getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                        scopeString, true);
+                                scopeString, true);
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey());
                             if (LOG.isDebugEnabled()) {
