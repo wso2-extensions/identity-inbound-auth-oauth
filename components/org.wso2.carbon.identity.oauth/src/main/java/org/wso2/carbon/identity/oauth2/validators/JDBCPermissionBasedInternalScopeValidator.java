@@ -403,8 +403,14 @@ public class JDBCPermissionBasedInternalScopeValidator {
         String[] allowedUIResourcesForUser = null;
         if (StringUtils.isNotBlank(organizationId)) {
             try {
+                String userId;
+                if (authenticatedUser.isFederatedUser()) {
+                    userId = authenticatedUser.getUserName();
+                } else {
+                    userId = authenticatedUser.getUserId();
+                }
                 List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
-                        .getUserOrganizationPermissions(authenticatedUser.getUserId(), organizationId);
+                        .getUserOrganizationPermissions(userId, organizationId);
                 allowedUIResourcesForUser = organizationPermissions.toArray(new String[0]);
             } catch (OrganizationManagementException e) {
                 log.error("Error while retrieving the organization permissions of the user.");

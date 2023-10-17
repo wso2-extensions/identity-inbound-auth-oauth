@@ -538,8 +538,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                     .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
         }
-        /* For Organization Login users, the resident organization won't be the authenticated user's tenant domain
-        which relates the app's tenant domain. Hence, the correct tenant domain need fetch user claims. */
+        /* For B2B users, the resident organization is available to find the tenant where the user's identity is
+        managed. Hence, the correct tenant domain should be used to fetch user claims. */
         if (!StringUtils.equals(userTenantDomain, userResidentTenantDomain)) {
             AbstractUserStoreManager userStoreManager =
                     (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
