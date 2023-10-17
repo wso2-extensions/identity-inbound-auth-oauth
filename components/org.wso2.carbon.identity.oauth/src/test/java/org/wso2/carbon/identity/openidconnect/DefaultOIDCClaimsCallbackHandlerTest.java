@@ -63,7 +63,9 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -1102,7 +1104,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
     }
 
     private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                        OAuthTokenReqMessageContext requestMsgCtx) throws IdentityOAuth2Exception {
+                                        OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuthServerConfiguration mockOAuthServerConfiguration = PowerMockito.mock(OAuthServerConfiguration.class);
         DataSource dataSource = mock(DataSource.class);
@@ -1142,6 +1145,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
             PowerMockito.mockStatic(OAuth2Util.class);
             PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(false);
         }
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        Map<String, String> parameters = requestMsgCtx.getOauth2AccessTokenReqDTO().getParameters();
+        if (parameters != null && parameters.containsKey("tlsBoundAccessTokenParam")) {
+            oAuthAppDO.setTlsClientCertificateBoundAccessTokens(Boolean.parseBoolean(
+                    parameters.get("tlsBoundAccessTokenParam")));
+        }
+        PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(oAuthAppDO);
         jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
                 requestMsgCtx);
 
@@ -1179,7 +1190,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
     }
 
     @Test
-    public void testHandleCustomClaimsWithHashAsCnfClaim() throws Exception {
+    public void testHandleCustomClaimsWithHashAsCnfClaimWhenFAPIApp() throws Exception {
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
 
@@ -1200,6 +1211,48 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
 
         PowerMockito.mockStatic(OAuth2Util.class);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
+
+        byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(CERTIFICATE_CONTENT
+                .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
+                .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
+        ));
+        PowerMockito.when(OAuth2Util.parseCertificate(CERTIFICATE_CONTENT))
+                .thenReturn((X509Certificate) CertificateFactory.getInstance("X.509")
+                        .generateCertificate(new ByteArrayInputStream(decodedContent)));
+
+        UserRealm userRealm = getUserRealmWithUserClaims(Collections.emptyMap());
+        mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm);
+
+        JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx);
+        assertNotNull(jwtClaimsSet);
+        assertNotNull(jwtClaimsSet.getClaim("cnf"));
+    }
+
+    @Test
+    public void testHandleCustomClaimsWithHashAsCnfClaimWhenAttributeEnabled() throws Exception {
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER)).thenReturn(CERT_HEADER_NAME);
+        HttpRequestHeader httpRequestHeader = new HttpRequestHeader(CERT_HEADER_NAME, CERTIFICATE_CONTENT);
+        HttpRequestHeader[] httpRequestHeaders = new HttpRequestHeader[1];
+        httpRequestHeaders[0] = httpRequestHeader;
+
+        HttpServletRequestWrapper httpServletRequestWrapper = PowerMockito.mock(HttpServletRequestWrapper.class);
+        OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+        accessTokenReqDTO.setHttpRequestHeaders(httpRequestHeaders);
+        accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+        HashMap<String, String> parameters = new HashMap<>();
+        parameters.put("tlsBoundAccessTokenParam", "true");
+        accessTokenReqDTO.setParameters(parameters);
+
+        OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+        requestMsgCtx.setAuthorizedUser(getDefaultAuthenticatedLocalUser());
+
+        PowerMockito.mockStatic(OAuth2Util.class);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(false);
 
         byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(CERTIFICATE_CONTENT
                 .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)

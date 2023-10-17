@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
@@ -44,7 +45,9 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -111,7 +114,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             tokenReqMessageContext.addProperty(ID_TOKEN_USER_CLAIMS_PROP_KEY, userClaimsInOIDCDialect.keySet());
             String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
             try {
-                if (OAuth2Util.isFapiConformantApp(clientId)) {
+                if (OAuth2Util.isFapiConformantApp(clientId) ||
+                        isTlsClientCertificateBoundAccessTokensEnabled(clientId)) {
                     addCnfClaimToOIDCDialect(tokenReqMessageContext, userClaimsInOIDCDialect);
                 }
             } catch (IdentityOAuth2ClientException e) {
@@ -933,6 +937,24 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         if (certificate != null) {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
             userClaimsInOIDCDialect.put(CNF_CLAIM, Collections.singletonMap("x5t#S256", certThumbprint));
+        }
+    }
+
+    /**
+     * Retrieve whether the application is configured to issue TLS client certificate bound access tokens.
+     *
+     * @param  clientId      Client ID of the application.
+     * @throws IdentityOAuth2Exception An exception is thrown if app information cannot be extracted from the client ID.
+     */
+    private boolean isTlsClientCertificateBoundAccessTokensEnabled(String clientId) throws IdentityOAuth2Exception {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            return oAuthAppDO.isTlsClientCertificateBoundAccessTokens();
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving app information for client id: " +
+                    clientId + " of tenantDomain: " + tenantDomain, e);
         }
     }
 }
