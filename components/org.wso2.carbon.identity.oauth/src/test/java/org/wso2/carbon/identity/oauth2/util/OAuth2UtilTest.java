@@ -2064,7 +2064,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedURLsEnabled);
-        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(requestTenantDomain);
+        when(IdentityTenantUtil.resolveTenantDomain()).thenReturn(requestTenantDomain);
 
         boolean isInvalidClientExceptionThrown = false;
         try {

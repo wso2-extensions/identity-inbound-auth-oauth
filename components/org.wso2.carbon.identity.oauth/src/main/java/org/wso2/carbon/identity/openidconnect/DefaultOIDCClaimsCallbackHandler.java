@@ -1,18 +1,21 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.util.Base64URL;
@@ -66,10 +69,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.security.cert.CertificateException;
@@ -80,7 +82,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -555,29 +556,23 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             return userClaimsMappedToOIDCDialect;
         }
-        String userTenantDomain;
-        String fullQualifiedUsername;
-        if (StringUtils.isNotBlank(authenticatedUser.getUserId())) {
-            String userId = authenticatedUser.getUserId();
-            userTenantDomain = authenticatedUser.getTenantDomain();
-            int tenantId = IdentityTenantUtil.getTenantId(userTenantDomain);
-            Tenant tenant =
-                    OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
-            if (tenant != null && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
-                Optional<User> user = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
-                        .resolveUserFromResidentOrganization(null, userId, tenant.getAssociatedOrganizationUUID());
-                if (!user.isPresent()) {
-                    return userClaimsMappedToOIDCDialect;
-                }
-                userTenantDomain = user.get().getTenantDomain();
-                fullQualifiedUsername = user.get().getFullQualifiedUsername();
-            } else {
-                userTenantDomain = authenticatedUser.getTenantDomain();
-                fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
-            }
-        } else {
-            userTenantDomain = authenticatedUser.getTenantDomain();
-            fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        String userResidentTenantDomain = userTenantDomain;
+        if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
+            userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+        }
+        /* For B2B users, the resident organization is available to find the tenant where the user's identity is
+        managed. Hence, the correct tenant domain should be used to fetch user claims. */
+        if (!StringUtils.equals(userTenantDomain, userResidentTenantDomain)) {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(userResidentTenantDomain))
+                            .getUserStoreManager();
+            userTenantDomain = userResidentTenantDomain;
+            fullQualifiedUsername = userStoreManager.getUser(authenticatedUser.getUserId(), null)
+                    .getFullQualifiedUsername();
         }
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
         if (realm == null) {
