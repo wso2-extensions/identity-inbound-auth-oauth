@@ -384,11 +384,13 @@ public class OAuthClientAuthnService {
      * @return   List of applicable client authentication methods for the application.
      */
     private List<OAuthClientAuthenticator> getClientAuthenticatorsForNonFapiApp(List<String> configuredAuthenticators) {
-        if (configuredAuthenticators.isEmpty()) {
-            return this.getClientAuthenticators();
-        } else {
-            return getApplicableClientAuthenticators(configuredAuthenticators);
+
+        List<OAuthClientAuthenticator> clientAuthMethods = getApplicableClientAuthenticators(configuredAuthenticators);
+        if (!clientAuthMethods.isEmpty()) {
+            return clientAuthMethods;
         }
+
+        return this.getClientAuthenticators();
     }
 
     /**
