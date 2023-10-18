@@ -114,7 +114,7 @@ public final class OAuthConstants {
     public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
     public static final String SUBJECT_TYPE = "subject_type";
     /**
-     * Enum for OIDC supported subject types
+     * Enum for OIDC supported subject types.
      */
     public enum SubjectType {
 
@@ -124,6 +124,7 @@ public final class OAuthConstants {
         private final String subjectType;
 
         SubjectType(String subjectType) {
+        
             this.subjectType = subjectType;
         }
 
