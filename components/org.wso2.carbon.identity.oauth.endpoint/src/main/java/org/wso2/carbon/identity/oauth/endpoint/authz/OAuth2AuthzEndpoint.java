@@ -548,8 +548,10 @@ public class OAuth2AuthzEndpoint {
      * @param authorizationResponseDTO AuthorizationResponseDTO instance
      * @return ResponseModeProvider
      */
-    private ResponseModeProvider getResponseModeProvider(AuthorizationResponseDTO authorizationResponseDTO) {
+    private ResponseModeProvider getResponseModeProvider(AuthorizationResponseDTO authorizationResponseDTO)
+            throws OAuthProblemException {
 
+        validateResponseModeWithResponseType(authorizationResponseDTO);
         Map<String, ResponseModeProvider> responseModeProviders =
                 OAuth2ServiceComponentHolder.getResponseModeProviders();
         for (Map.Entry<String, ResponseModeProvider> entry : responseModeProviders.entrySet()) {
@@ -559,6 +561,21 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return OAuth2ServiceComponentHolder.getResponseModeProvider(OAuthConstants.ResponseModes.DEFAULT);
+    }
+
+    private void validateResponseModeWithResponseType(AuthorizationResponseDTO authorizationResponseDTO)
+            throws OAuthProblemException {
+
+        String responseType = authorizationResponseDTO.getResponseType();
+        String responseMode = authorizationResponseDTO.getResponseMode();
+
+        // Response mode query.jwt should not be used in conjunction with the response types token and/or id_token.
+        if (hasIDTokenOrTokenInResponseType(responseType) &&
+                OAuthConstants.ResponseModes.QUERY_JWT.equals(responseMode)) {
+
+            throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_RESPONSE_TYPE_FOR_QUERY_JWT);
+        }
     }
 
     /**
@@ -599,7 +616,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleResponseFromConsent(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            URISyntaxException, ConsentHandlingFailedException {
+            URISyntaxException, ConsentHandlingFailedException, OAuthProblemException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -1040,7 +1057,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response handleAuthenticationResponse(OAuthMessage oAuthMessage)
-            throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException {
+            throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException, OAuthProblemException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(

@@ -865,7 +865,7 @@ public class OAuth2ScopeService implements ScopeMetadataService {
             }
         }
         if (scopesArray.isEmpty()) {
-            return Collections.singletonList(new OAuth2Resource());
+            return new ArrayList<>();
         } else {
             OAuth2Resource resource = new OAuth2Resource(OAuth2ScopeResourceName, OAuth2ScopeResourceName, scopesArray);
             return Collections.singletonList(resource);
