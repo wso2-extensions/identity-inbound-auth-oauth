@@ -301,8 +301,7 @@ public class DCRMService {
                 appDTO.setIdTokenEncryptionMethod(updateRequest.getIdTokenEncryptionMethod());
             }
             if (updateRequest.getRequestObjectSignatureAlgorithm() != null) {
-                appDTO.setRequestObjectSignatureValidationEnabled
-                        (updateRequest.isRequireSignedRequestObject());
+                appDTO.setRequestObjectSignatureAlgorithm(updateRequest.getRequestObjectSignatureAlgorithm());
             }
             if (updateRequest.getTlsClientAuthSubjectDN() != null) {
                 appDTO.setTlsClientAuthSubjectDN(updateRequest.getTlsClientAuthSubjectDN());
@@ -333,7 +332,9 @@ public class DCRMService {
         OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
         // Setting the jwksURI to be sent in the response.
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
-        return buildResponse(oAuthConsumerAppDTO);
+        Application application = buildResponse(oAuthConsumerAppDTO);
+        application.setSoftwareStatement(updateRequest.getSoftwareStatement());
+        return application;
     }
 
     /**
@@ -468,7 +469,9 @@ public class DCRMService {
             deleteApplication(createdApp.getOauthConsumerKey());
             throw ex;
         }
-        return buildResponse(createdApp);
+        Application application = buildResponse(createdApp);
+        application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
+        return application;
     }
 
     private Application buildResponse(OAuthConsumerAppDTO createdApp) {

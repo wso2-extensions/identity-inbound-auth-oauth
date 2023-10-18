@@ -233,6 +233,7 @@ public class DCRMUtils {
         applicationDTO.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
+        applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
         return applicationDTO;
     }
 
