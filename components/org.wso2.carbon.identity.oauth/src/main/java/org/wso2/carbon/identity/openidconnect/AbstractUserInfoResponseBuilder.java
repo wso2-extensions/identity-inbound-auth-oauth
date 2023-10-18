@@ -71,7 +71,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
         String callbackUri;
         try {
-            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId);
+            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId, spTenantDomain);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException("Error while getting the registered callback URI for client_id: " +
                     clientId, e);

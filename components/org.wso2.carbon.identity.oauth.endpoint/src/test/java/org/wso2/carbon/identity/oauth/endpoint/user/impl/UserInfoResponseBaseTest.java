@@ -367,6 +367,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     }
 
     private String getNameUUID(String uri, String subject) {
+
         return UUID.nameUUIDFromBytes((URI.create(uri).getHost() + subject)
                 .getBytes(StandardCharsets.UTF_8)).toString();
     }

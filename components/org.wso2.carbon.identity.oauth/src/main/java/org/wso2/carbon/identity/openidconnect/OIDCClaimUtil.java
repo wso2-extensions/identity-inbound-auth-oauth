@@ -294,17 +294,14 @@ public class OIDCClaimUtil {
 
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-        try {
-            for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-                if (SUBJECT_TYPE.equals(serviceProviderProperty.getName())) {
-                    return SubjectType.fromValue(serviceProviderProperty.getValue());
-                }
+        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+            if (SUBJECT_TYPE.equals(serviceProviderProperty.getName())) {
+                return SubjectType.fromValue(serviceProviderProperty.getValue());
             }
-        } catch (IllegalArgumentException e) {
-            throw new IdentityOAuth2Exception("Invalid subject type configured for the service provider: " + clientId,
-                    e);
         }
         // return default subject type if the property is not configured.
+        log.debug("Subject type is not configured for the service provider: " + clientId + ". Returning default " +
+                "subject type: " + getDefaultSubjectType());
         return getDefaultSubjectType();
     }
 
@@ -366,8 +363,12 @@ public class OIDCClaimUtil {
     private static String getPairwiseSubjectIdentifier(String sectorIdentifierUri, String userId, String callBackURI)
             throws IdentityOAuth2Exception {
 
-        URI uri = StringUtils.isNotBlank(sectorIdentifierUri) ? URI.create(sectorIdentifierUri) :
-                StringUtils.isNotBlank(callBackURI) && isValidCallBackURI(callBackURI) ? URI.create(callBackURI) : null;
+        URI uri = null;
+        if (StringUtils.isNotBlank(sectorIdentifierUri)) {
+            uri = URI.create(sectorIdentifierUri);
+        } else if (StringUtils.isNotBlank(callBackURI) && isValidCallBackURI(callBackURI)) {
+            uri = URI.create(callBackURI);
+        }
         String hostname;
         if (uri != null) {
             hostname = uri.getHost();
@@ -383,14 +384,22 @@ public class OIDCClaimUtil {
         return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
+    /**
+     * Check whether the callback URI is not a regex. If multiple callbacks are configured, then that callback URI
+     * cannot be used in pairwise subject identifier calculation.
+     *
+     * @param callBackURI callback URI
+     * @return true if the callback URI is not a regex
+     */
     private static boolean isValidCallBackURI(String callBackURI) {
 
         return !callBackURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX);
     }
 
-    public static String getCallbackUrl(String clientId) throws IdentityOAuth2Exception, InvalidOAuthClientException {
+    public static String getCallbackUrl(String clientId, String tenantDomain) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         return oAuthAppDO != null ? oAuthAppDO.getCallbackUrl() : null;
     }
 }
