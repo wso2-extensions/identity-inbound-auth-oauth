@@ -297,6 +297,23 @@ public final class OAuthUtil {
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
                                        String tokenBindingReference) {
 
+        clearOAuthCache(consumerKey, authorizedUser, scope, tokenBindingReference,
+                OAuthConstants.AuthorizedOrganization.NONE);
+    }
+
+
+    /**
+     * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
+     *
+     * @param consumerKey            Client id of the application the token issued to.
+     * @param authorizedUser         Authorized user.
+     * @param scope                  Scope list.
+     * @param tokenBindingReference  Token binding reference.
+     * @param authorizedOrganization Authorized organization.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
+                                       String tokenBindingReference, String authorizedOrganization) {
+
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
         String userId;
@@ -309,8 +326,8 @@ public final class OAuthUtil {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userId,
-                authenticatedIDP, tokenBindingReference), tenantDomain);
+        clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
+                authenticatedIDP, tokenBindingReference, authorizedOrganization), tenantDomain);
     }
 
 
@@ -496,6 +513,17 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
+        dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
+        dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
+        dto.setSectorIdentifierURI(appDO.getSectorIdentifierURI());
+        dto.setIdTokenSignatureAlgorithm(appDO.getIdTokenSignatureAlgorithm());
+        dto.setRequestObjectSignatureAlgorithm(appDO.getRequestObjectSignatureAlgorithm());
+        dto.setTlsClientAuthSubjectDN(appDO.getTlsClientAuthSubjectDN());
+        dto.setSubjectType(appDO.getSubjectType());
+        dto.setRequestObjectEncryptionAlgorithm(appDO.getRequestObjectEncryptionAlgorithm());
+        dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
+        dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
+        dto.setTlsClientCertificateBoundAccessTokens(appDO.isTlsClientCertificateBoundAccessTokens());
         return dto;
     }
 
