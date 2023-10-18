@@ -480,7 +480,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
         if (checkPairwiseSubEnabledForAccessTokens()) {
             // pairwise sub claim is returned only if pairwise subject identifier for access tokens is enabled.
-            sub = OIDCClaimUtil.getSubjectClaim(consumerKey, sub, oAuthAppDO.getCallbackUrl());
+            sub = OIDCClaimUtil.getSubjectClaim(sub, oAuthAppDO);
         }
 
         // Set the default claims.

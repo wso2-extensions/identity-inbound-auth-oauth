@@ -24,7 +24,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -56,8 +55,6 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
         APPLICATION_DOMAIN;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.InternalRoleDomains.
         WORKFLOW_DOMAIN;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SECTOR_IDENTIFIER_URI;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TYPE;
 
 /**
  * Utility to handle OIDC Claim related functionality.
@@ -287,25 +284,22 @@ public class OIDCClaimUtil {
     /**
      * Get the application's preferred subject type.
      *
-     * @param clientId client id
+     * @param authAppDO oauth app
      * @return subject type
      */
-    private static SubjectType getSubjectType(String clientId) throws IdentityOAuth2Exception {
 
-        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-            if (SUBJECT_TYPE.equals(serviceProviderProperty.getName())) {
-                return SubjectType.fromValue(serviceProviderProperty.getValue());
-            }
+    private static SubjectType getSubjectType(OAuthAppDO authAppDO) {
+
+        if (StringUtils.isNotEmpty(authAppDO.getSubjectType())) {
+            return SubjectType.fromValue(authAppDO.getSubjectType());
         }
         // return default subject type if the property is not configured.
-        log.debug("Subject type is not configured for the service provider: " + clientId + ". Returning default " +
-                "subject type: " + getDefaultSubjectType());
+        log.debug("Subject type is not configured for the service provider: " + authAppDO.getOauthConsumerKey() +
+                ". Returning default subject type: " + getDefaultSubjectType());
         return getDefaultSubjectType();
     }
 
-    private static SubjectType getDefaultSubjectType() {
+    public static SubjectType getDefaultSubjectType() {
 
         return StringUtils.isNotBlank(IdentityUtil.getProperty(DEFAULT_SUBJECT_TYPE)) ?
                 SubjectType.fromValue(IdentityUtil.getProperty(DEFAULT_SUBJECT_TYPE)) : SubjectType.PUBLIC;
@@ -315,39 +309,20 @@ public class OIDCClaimUtil {
      * Get the subject claim for the given user. If pairwise subject type is opted, then a PPID will be returned,
      * otherwise, the authenticated user's username will be returned.
      *
-     * @param clientId                       client id
      * @param authenticatedSubjectIdentifier authenticated subject identifier
-     * @param callBackURI                    callback uri
+     * @param application                    oauth app
      * @return sub claim
      * @throws IdentityOAuth2Exception when an error occurred while getting the service provider properties or user id
      */
-    public static String getSubjectClaim(String clientId, String authenticatedSubjectIdentifier, String callBackURI)
+    public static String getSubjectClaim(String authenticatedSubjectIdentifier, OAuthAppDO application)
             throws IdentityOAuth2Exception {
 
-        if (SubjectType.PAIRWISE.equals(getSubjectType(clientId))) {
-            String sectorIdentifierUri = getSectorIdentifierUri(clientId);
-            return getPairwiseSubjectIdentifier(sectorIdentifierUri, authenticatedSubjectIdentifier, callBackURI);
+        if (SubjectType.PAIRWISE.equals(getSubjectType(application))) {
+            String sectorIdentifierUri = application.getSectorIdentifierURI();
+            return getPairwiseSubjectIdentifier(sectorIdentifierUri, authenticatedSubjectIdentifier,
+                    application.getCallbackUrl());
         }
         return authenticatedSubjectIdentifier;
-    }
-
-    /**
-     * Get the sector identifier URI from the service provider properties.
-     *
-     * @param clientId client id
-     * @return sector identifier URI
-     * @throws IdentityOAuth2Exception when an error occurred while getting the service provider properties
-     */
-    private static String getSectorIdentifierUri(String clientId) throws IdentityOAuth2Exception {
-
-        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId);
-        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-            if (SECTOR_IDENTIFIER_URI.equals(serviceProviderProperty.getName())) {
-                return serviceProviderProperty.getValue();
-            }
-        }
-        return null;
     }
 
     /**

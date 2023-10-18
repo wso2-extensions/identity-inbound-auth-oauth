@@ -324,6 +324,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                                       long expectedExpiry, boolean ppidEnabled) throws Exception {
 
         OAuthAppDO appDO = spy(new OAuthAppDO());
+        appDO.setSubjectType("pairwise");
+        appDO.setSectorIdentifierURI(DUMMY_SECTOR_IDENTIFIER);
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
         mockStatic(OAuth2Util.class);
@@ -345,8 +347,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         PowerMockito.spy(OIDCClaimUtil.class);
         OAuthConstants.SubjectType subjectType = ppidEnabled ? OAuthConstants.SubjectType.PAIRWISE : OAuthConstants
                 .SubjectType.PUBLIC;
-        PowerMockito.doReturn(subjectType).when(OIDCClaimUtil.class, "getSubjectType", anyString());
-        PowerMockito.doReturn(DUMMY_SECTOR_IDENTIFIER).when(OIDCClaimUtil.class, "getSectorIdentifierUri", anyString());
+        PowerMockito.doReturn(subjectType).when(OIDCClaimUtil.class, "getSubjectType", any());
         JWTClaimsSet jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
                 (OAuthTokenReqMessageContext) tokenReqMessageContext,

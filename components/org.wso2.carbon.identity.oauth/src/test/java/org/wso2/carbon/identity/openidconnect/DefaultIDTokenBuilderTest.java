@@ -416,7 +416,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
             defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
         } catch (IdentityOAuth2Exception e) {
             Assert.assertEquals(e.getMessage(),
-                    "Error while getting the registered callback URI for client_id: " + invalidClientId);
+                    "Error occurred while getting app information for client_id: " + invalidClientId);
         }
     }
 

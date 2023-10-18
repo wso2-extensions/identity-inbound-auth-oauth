@@ -40,7 +40,6 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -129,8 +128,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
         String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
         // Get subject identifier according to the configured subject type.
-        String callbackUri = getCallbackURI(clientId, spTenantDomain);
-        subjectClaim = OIDCClaimUtil.getSubjectClaim(clientId, subjectClaim, callbackUri);
+        subjectClaim = OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
 
         String nonceValue = null;
         String idpSessionKey = null;
@@ -229,16 +227,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt));
     }
 
-    private String getCallbackURI(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
-
-        try {
-            return OIDCClaimUtil.getCallbackUrl(clientId, tenantDomain);
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2ClientException("Error while getting the registered callback URI for client_id: " +
-                    clientId, e);
-        }
-    }
-
     @Override
     public String buildIDToken(OAuthAuthzReqMessageContext authzReqMessageContext,
                                OAuth2AuthorizeRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
@@ -248,19 +236,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
         String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
 
-        // Get subject from Authenticated Subject Identifier
-        AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        String subject =
-                getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
-        String callbackUri = getCallbackURI(clientId, spTenantDomain);
-        // Get subject identifier according to the configured subject type.
-        subject = OIDCClaimUtil.getSubjectClaim(clientId, subject, callbackUri);
-
-        String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
-        String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
-        List<String> amrValues = Collections.emptyList(); //TODO:
-        String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
-
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
         try {
@@ -269,6 +244,18 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
         }
+
+        // Get subject from Authenticated Subject Identifier
+        AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
+        String subject =
+                getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        // Get subject identifier according to the configured subject type.
+        subject = OIDCClaimUtil.getSubjectClaim(subject, oAuthAppDO);
+
+        String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
+        String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
+        List<String> amrValues = Collections.emptyList(); //TODO:
+        String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
 
         String[] amrValueArray =
                 (String[]) (authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants.AMR));
