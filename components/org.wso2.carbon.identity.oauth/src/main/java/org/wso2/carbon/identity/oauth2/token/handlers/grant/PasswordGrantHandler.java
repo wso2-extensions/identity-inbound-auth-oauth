@@ -126,7 +126,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         boolean isSaasApp = serviceProvider.isSaasApp();
         boolean isLegacySaaSAuthenticationEnabled = IdentityTenantUtil.isLegacySaaSAuthenticationEnabled();
         String usernameFromRequest = tokenReq.getResourceOwnerUsername();
-        String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+        String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
 
         if (!isSaasApp) {
             /*
