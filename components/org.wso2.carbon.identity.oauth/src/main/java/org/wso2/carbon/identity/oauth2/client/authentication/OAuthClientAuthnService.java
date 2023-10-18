@@ -349,7 +349,7 @@ public class OAuthClientAuthnService {
                 }
             } catch (OAuthClientAuthnException e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Client ID cannot be extracted using the " + oAuthClientAuthenticator.getName());
+                    log.debug("Client ID cannot be extracted using the " + oAuthClientAuthenticator.getName(), e);
                 }
             }
         }
