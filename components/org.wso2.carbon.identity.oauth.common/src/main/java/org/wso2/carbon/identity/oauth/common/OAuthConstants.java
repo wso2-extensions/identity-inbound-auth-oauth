@@ -124,6 +124,7 @@ public final class OAuthConstants {
         private final String subjectType;
 
         SubjectType(String subjectType) {
+        
             this.subjectType = subjectType;
         }
 
