@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -840,6 +840,7 @@ public class OAuth2Util {
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
+    @Deprecated
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
                                                      String authenticatedIDP, String tokenBindingReference) {
 
@@ -851,6 +852,29 @@ public class OAuth2Util {
         return oauthCacheKey;
     }
 
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUserId   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithUserIdOrgId(String clientId, String scope,
+                                                                    String authorizedUserId, String authenticatedIDP,
+                                                                    String tokenBindingReference,
+                                                                    String authorizedOrganization) {
+
+        String oauthCacheKey =
+                clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference +
+                        ":" + authorizedOrganization;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Building cache key: %s to access OAuthCache.", oauthCacheKey));
+        }
+        return oauthCacheKey;
+    }
     /**
      * Build the cache key string when storing token info in cache.
      *
@@ -4561,8 +4585,8 @@ public class OAuth2Util {
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            // In tenant qualified URL mode we would always have the tenant domain in the context.
-            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+
+            String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
                 if (log.isDebugEnabled()) {
@@ -4591,8 +4615,10 @@ public class OAuth2Util {
             String tenantDomainFromContext;
             if (contextTenantDomainFromTokenReqDTO.isPresent()) {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+                if (StringUtils.isBlank(tenantDomainFromContext)) {
+                    tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+                }
 
-                // In tenant qualified URL mode we would always have the tenant domain in the context.
                 if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                     // This means the tenant domain sent in the request and app's tenant domain do not match.
                     throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
@@ -4910,6 +4936,10 @@ public class OAuth2Util {
      */
     public static boolean isFapiConformantApp(String clientId) throws IdentityOAuth2Exception {
 
+        boolean enableFAPIValidation = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
+        if (!enableFAPIValidation) {
+            return false;
+        }
         ServiceProvider serviceProvider = getServiceProvider(clientId);
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {

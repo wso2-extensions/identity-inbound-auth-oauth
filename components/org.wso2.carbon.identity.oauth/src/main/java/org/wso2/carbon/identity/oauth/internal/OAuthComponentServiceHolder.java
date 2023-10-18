@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -59,6 +60,7 @@ public class OAuthComponentServiceHolder {
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
+    private OrganizationManager organizationManager;
     private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
     private AccessTokenDAO accessTokenDAOService;
     private TokenManagementDAO tokenManagementDAOService;
@@ -235,6 +237,26 @@ public class OAuthComponentServiceHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         this.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    /**
+     * Get OrganizationManager instance.
+     *
+     * @return OrganizationManager instance.
+     */
+    public OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    /**
+     * Set OrganizationManager instance.
+     *
+     * @param organizationManager OrganizationManager instance.
+     */
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
     }
 
     /**
