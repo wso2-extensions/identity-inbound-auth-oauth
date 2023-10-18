@@ -420,13 +420,13 @@ public class TestUtils {
         String jsonWebEncryption2 = buildJWE(testClientId, testClientId, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption3 = buildJWE(testClientId, testClientId, "2001", audience,
-                JWSAlgorithm.PS256.getName(), privateKey, publicKey, 0, claims5);
-        String jsonWebEncryption4 = buildJWE(testClientId, testClientId, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims5);
+        String jsonWebEncryption4 = buildJWE(testClientId, testClientId, "2001", audience,
+                JWSAlgorithm.RS384.getName(), privateKey, publicKey, 0, claims5);
         String jsonWebEncryption5 = buildJWE(testClientId, testClientId, "2001", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims5);
         String jsonWebEncryption6 = buildJWE(testClientId, testClientId, "2001", audience,
-                JWSAlgorithm.PS256.getName(), privateKey, publicKey, 0, claims1);
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         return new Object[][]{
                 {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted.", false},
                 {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted.", false},
@@ -443,14 +443,15 @@ public class TestUtils {
                 {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted.", false},
                 {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted.", false},
                 // FAPI tests.
+                // For testing, PS256, RS256 and ES256 are assumed as permitted algorithms.
                 {jsonWebEncryption3, claims5, true, true, true, "FAPI Request Object with a permitted signing " +
-                        "algorithm PS256, signed and encrypted.", true},
-                {jsonWebEncryption4, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
                         "algorithm RS256, signed and encrypted.", true},
+                {jsonWebEncryption4, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
+                        "algorithm RS384, signed and encrypted.", true},
                 {jsonWebEncryption5, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
                         "algorithm NONE, signed and encrypted.", true},
                 {jsonWebEncryption6, claims5, true, true, false, "FAPI Request Object without mandatory parameters " +
-                        "and signed with a permitted signing algorithm PS256, signed and encrypted.", true}
+                        "and signed with a permitted signing algorithm RS256, signed and encrypted.", true}
         };
     }
 }

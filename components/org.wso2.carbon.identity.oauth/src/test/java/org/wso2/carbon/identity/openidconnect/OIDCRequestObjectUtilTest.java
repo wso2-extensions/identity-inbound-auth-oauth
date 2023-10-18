@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
+import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -54,6 +55,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -124,6 +126,11 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
         when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
         PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
+                .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
+                        JWSAlgorithm.RS256.getName()));
 
         OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
         mockStatic(OAuthServerConfiguration.class);

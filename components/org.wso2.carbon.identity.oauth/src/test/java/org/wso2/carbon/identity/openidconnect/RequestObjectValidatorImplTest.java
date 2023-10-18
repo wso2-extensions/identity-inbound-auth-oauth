@@ -59,6 +59,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -144,17 +145,17 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         String jsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption3 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
-                JWSAlgorithm.PS256.getName(), privateKey, publicKey, 0, claims2);
-        String jsonWebEncryption4 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims2);
+        String jsonWebEncryption4 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
+                JWSAlgorithm.RS384.getName(), privateKey, publicKey, 0, claims2);
         String jsonWebEncryption5 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims2);
         String jsonWebEncryption6 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
-                JWSAlgorithm.PS256.getName(), privateKey, publicKey, 0, claims3);
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims3);
         String jsonWebEncryption7 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
-                JWSAlgorithm.PS256.getName(), privateKey, publicKey, 0, claims4);
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims4);
         String jsonWebEncryption8 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
-                JWSAlgorithm.PS256.getName(), privateKey, publicKey, 0, claims5);
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims5);
         return new Object[][]{
                 {jsonWebToken1, true, false, true, true, false, "Valid Request Object, signed not encrypted."},
                 {jsonWebToken2, false, false, true, true, false, "Valid Request Object, not xsigned not encrypted."},
@@ -167,8 +168,9 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 // FAPI tests
                 {jsonWebEncryption3, true, true, true, true, true, "FAPI Request Object with a permitted signing " +
                         "algorithm PS256, signed and encrypted."},
+                // For testing, PS256, RS256 and ES256 are assumed as permitted algorithms.
                 {jsonWebEncryption4, true, true, false, true, true, "FAPI Request Object with an unpermitted signing " +
-                        "algorithm RS256, signed and encrypted."},
+                        "algorithm RS384, signed and encrypted."},
                 {jsonWebEncryption5, false, true, true, true, true, "FAPI Request Object with an unpermitted signing " +
                         "algorithm NONE, signed and encrypted."},
                 {jsonWebEncryption6, true, true, true, false, true, "FAPI Request Object without mandatory parameter " +
@@ -196,6 +198,9 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
 
         mockStatic(IdentityUtil.class);
         when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn("some-server-url");
+        when(IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
+                .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
+                        JWSAlgorithm.RS256.getName()));
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);

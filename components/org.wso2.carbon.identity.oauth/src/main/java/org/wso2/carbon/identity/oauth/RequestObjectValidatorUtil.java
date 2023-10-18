@@ -22,13 +22,13 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -42,12 +42,9 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.interfaces.RSAPublicKey;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.nimbusds.jose.JWSAlgorithm.ES256;
-import static com.nimbusds.jose.JWSAlgorithm.PS256;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
@@ -57,6 +54,8 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 public class RequestObjectValidatorUtil {
 
     private static final Log log = LogFactory.getLog(RequestObjectValidatorUtil.class);
+    private static final String FAPI_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
 
     /**
      * Validate the signature of the request object
@@ -190,9 +189,7 @@ public class RequestObjectValidatorUtil {
      */
     private static boolean isValidFAPISignatureAlgorithm(String clientId, String algorithm) {
 
-        List<String> allowedFAPIAlgorithms = new ArrayList<>();
-        allowedFAPIAlgorithms.add(PS256.getName());
-        allowedFAPIAlgorithms.add(ES256.getName());
+        List<String> allowedFAPIAlgorithms = IdentityUtil.getPropertyAsList(FAPI_SIGNATURE_ALG_CONFIGURATION);
 
         if (!allowedFAPIAlgorithms.contains(algorithm)) {
             log.debug("Invalid signature algorithm. Signature algorithm should be one of " +
@@ -288,7 +285,6 @@ public class RequestObjectValidatorUtil {
             PublicKey publicKey = x509Certificate.getPublicKey();
             if (publicKey instanceof RSAPublicKey) {
                 verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
-                verifier.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
             } else {
                 if (log.isDebugEnabled()) {
                     log.debug("Public key is not an RSA public key.");
