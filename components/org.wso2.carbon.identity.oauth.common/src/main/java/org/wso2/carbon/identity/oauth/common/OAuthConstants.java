@@ -427,6 +427,7 @@ public final class OAuthConstants {
             public static final String INVALID_REQUEST_URI = "par.invalid.request.uri";
             public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
             public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
+            public static final String INVALID_RESPONSE_TYPE_FOR_QUERY_JWT = "invalid.response.type.for.query.jwt";
 
             private AuthorizationResponsei18nKey() {
 
