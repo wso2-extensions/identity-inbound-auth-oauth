@@ -156,8 +156,9 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
             prepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
             prepStmt.setString(17, "refreshToken");
             prepStmt.setString(18, null);
-            prepStmt.setString(19, consumerKey);
-            prepStmt.setInt(20, TestConstants.TENANT_ID);
+            prepStmt.setString(19, "NONE");
+            prepStmt.setString(20, consumerKey);
+            prepStmt.setInt(21, TestConstants.TENANT_ID);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
