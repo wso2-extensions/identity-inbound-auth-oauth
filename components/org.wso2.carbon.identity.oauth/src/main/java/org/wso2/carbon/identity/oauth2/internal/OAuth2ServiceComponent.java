@@ -31,11 +31,13 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
@@ -77,9 +79,9 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPolicyHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.NoPolicyPolicyHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.RoleBasedPolicyHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.NoPolicyScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.RoleBasedScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
@@ -90,6 +92,7 @@ import org.wso2.carbon.identity.organization.management.role.management.service.
 import org.wso2.carbon.identity.organization.management.service.OrganizationManagementInitialize;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -334,8 +337,8 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
             // Registering OAuth2ScopeService under ScopeService interface as the default service.
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
-            bundleContext.registerService(ScopeValidatorPolicyHandler.class, new RoleBasedPolicyHandler(), null);
-            bundleContext.registerService(ScopeValidatorPolicyHandler.class, new NoPolicyPolicyHandler(), null);
+            bundleContext.registerService(ScopeValidationHandler.class, new RoleBasedScopeValidationHandler(), null);
+            bundleContext.registerService(ScopeValidationHandler.class, new NoPolicyScopeValidationHandler(), null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -1193,4 +1196,63 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.getInstance().setRealmService(null);
     }
+
+    @Reference(
+            name = "identity.authorized.api.management.component",
+            service = AuthorizedAPIManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAuthorizedAPIManagementService"
+    )
+    protected void setAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        OAuth2ServiceComponentHolder.getInstance()
+                .setAuthorizedAPIManagementService(authorizedAPIManagementService);
+    }
+
+    protected void unsetAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizedAPIManagementService(null);
+    }
+
+    @Reference(
+            name = "api.resource.mgt.service.component",
+            service = APIResourceManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAPIResourceManagerService"
+    )
+    protected void setAPIResourceManagerService(APIResourceManager apiResourceManager) {
+        OAuth2ServiceComponentHolder.getInstance().setApiResourceManager(apiResourceManager);
+    }
+    protected void unsetAPIResourceManagerService(APIResourceManager apiResourceManager) {
+        OAuth2ServiceComponentHolder.getInstance().setApiResourceManager(null);
+    }
+
+    /**
+     * Set role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService",
+            service = org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementServiceV2")
+    protected void setRoleManagementServiceV2(RoleManagementService roleManagementService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(roleManagementService);
+    }
+
+    /**
+     * Unset role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2
+     */
+    protected void unsetRoleManagementServiceV2(RoleManagementService roleManagementService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(null);
+    }
+
 }

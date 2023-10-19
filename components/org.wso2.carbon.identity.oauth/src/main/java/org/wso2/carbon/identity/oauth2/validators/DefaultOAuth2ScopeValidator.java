@@ -4,8 +4,11 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
+import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -14,9 +17,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.PolicyContext;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPolicyHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidatorPolicyHandlerException;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationContext;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandlerException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +56,7 @@ public class DefaultOAuth2ScopeValidator {
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
         return getAuthorizedScopes(requestedScopes, authzReqMessageContext.getAuthorizationReqDTO().getUser(), appId,
-                tenantDomain);
+                null, tenantDomain);
     }
 
     public List<String> validateScope(OAuthTokenReqMessageContext tokenReqMessageContext)
@@ -69,11 +72,13 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
-        return getAuthorizedScopes(requestedScopes, tokenReqMessageContext.getAuthorizedUser(), appId, tenantDomain);
+        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        return getAuthorizedScopes(requestedScopes, tokenReqMessageContext.getAuthorizedUser(), appId, grantType,
+                tenantDomain);
     }
 
     private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
-                                             String appId, String tenantDomain) throws IdentityOAuth2Exception  {
+                                             String appId, String grantType, String tenantDomain) throws IdentityOAuth2Exception  {
 
         // Filter OIDC scopes and add to approved scopes list.
         if (LOG.isDebugEnabled()) {
@@ -89,36 +94,31 @@ public class DefaultOAuth2ScopeValidator {
         List<String> approvedScopes = new ArrayList<>(requestedOIDCScopes);
         requestedScopes = removeOIDCScopes(requestedScopes, requestedOIDCScopes);
         if (requestedScopes.contains(SYSTEM_SCOPE)) {
-            // TODO : get all internal scopes
-            List<String> allInternalScopes = new ArrayList<>();
-            requestedScopes.addAll(allInternalScopes);
+            requestedScopes.addAll(getInternalScopes(tenantDomain));
         }
-        Map<String, List<String>> policies  = getAuthorizedScopes(appId, tenantDomain);
-        if (policies == null) {
-            return new ArrayList<>();
-        }
-        List<ScopeValidatorPolicyHandler> scopeValidatorPolicyHandlers =
+        List<AuthorizedScopes> authorizedScopesList  = getAuthorizedScopes(appId, tenantDomain);
+        List<ScopeValidationHandler> scopeValidationHandlers =
                 OAuthComponentServiceHolder.getInstance().getScopeValidatorPolicyHandlers();
         Map<String, List<String>> validatedScopesByHandler = new HashMap<>();
-        for (Map.Entry<String, List<String>> entry : policies.entrySet()) {
-            String policyId = entry.getKey();
-            List<String> authorizedScopes = entry.getValue();
-
-            for (ScopeValidatorPolicyHandler scopeValidatorPolicyHandler : scopeValidatorPolicyHandlers) {
-                if (scopeValidatorPolicyHandler.canHandle(policyId)) {
-                    PolicyContext policyContext =  new PolicyContext();
-                    policyContext.setAuthenticatedUser(authenticatedUser);
-                    policyContext.setAppId(appId);
+        for (AuthorizedScopes authorizedScopes: authorizedScopesList) {
+            String policyId = authorizedScopes.getPolicyId();
+            ScopeValidationContext policyContext =  new ScopeValidationContext();
+            policyContext.setAuthenticatedUser(authenticatedUser);
+            policyContext.setAppId(appId);
+            policyContext.setPolicyId(policyId);
+            policyContext.setGrantType(grantType);
+            for (ScopeValidationHandler scopeValidationHandler : scopeValidationHandlers) {
+                if (scopeValidationHandler.canHandle(policyContext)) {
                     policyContext.setValidatedScopesByHandler(validatedScopesByHandler);
                     List<String> validatedScopes;
                     try {
-                        validatedScopes = scopeValidatorPolicyHandler.validateScopes(authorizedScopes,
+                        validatedScopes = scopeValidationHandler.validateScopes(authorizedScopes.getScopes(),
                                 requestedScopes, policyContext);
-                    } catch (ScopeValidatorPolicyHandlerException e) {
+                    } catch (ScopeValidationHandlerException e) {
                         throw new IdentityOAuth2Exception("Error while validating policies roles from " +
                                 "authorization service.", e);
                     }
-                    validatedScopesByHandler.put(scopeValidatorPolicyHandler.getName(), validatedScopes);
+                    validatedScopesByHandler.put(scopeValidationHandler.getName(), validatedScopes);
                 }
             }
         }
@@ -144,16 +144,28 @@ public class DefaultOAuth2ScopeValidator {
         return approvedScopes;
     }
 
-    private Map<String, List<String>> getAuthorizedScopes(String appId, String tenantDomain) {
+    private List<AuthorizedScopes> getAuthorizedScopes(String appId, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
-        // TODO : get authorized scopes
-        Map<String, List<String>> authorizedScopes = new HashMap<>();
-        List<String> scopes = new ArrayList<>();
-        scopes.add("scope1");
-        scopes.add("scope2");
-        authorizedScopes.put("NoPolicy", scopes);
-        authorizedScopes.put("RBAC", scopes);
-        return authorizedScopes;
+        try {
+            return OAuth2ServiceComponentHolder.getInstance()
+                    .getAuthorizedAPIManagementService().getAuthorizedScopes(appId, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving authorized scopes for app : " + appId
+                    + "tenant domain : " + tenantDomain, e);
+        }
+    }
+
+    private List<String> getInternalScopes(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            List<Scope> scopes =  OAuth2ServiceComponentHolder.getInstance()
+                    .getApiResourceManager().getScopesByTenantDomain(tenantDomain, "name sw internal_");
+            return scopes.stream().map(Scope::getName).collect(Collectors.toCollection(ArrayList::new));
+        } catch (APIResourceMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving internal scopes for tenant domain : "
+                    + tenantDomain, e);
+        }
     }
 
     private Set<String> getRequestedOIDCScopes(String tenantDomain, List<String> requestedScopes)
@@ -164,7 +176,8 @@ public class DefaultOAuth2ScopeValidator {
             List<String> oidcScopes =  oAuthAdminServiceImpl.getRegisteredOIDCScope(tenantDomain);
             return requestedScopes.stream().distinct().filter(oidcScopes::contains).collect(Collectors.toSet());
         } catch (IdentityOAuthAdminException e) {
-            throw new RuntimeException(e);
+            throw new IdentityOAuth2Exception("Error while retrieving oidc scopes for tenant domain : "
+                    + tenantDomain, e);
         }
     }
 

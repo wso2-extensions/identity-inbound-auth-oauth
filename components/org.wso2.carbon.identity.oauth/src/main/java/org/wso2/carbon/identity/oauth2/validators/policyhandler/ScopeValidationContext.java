@@ -8,10 +8,13 @@ import java.util.Map;
 /**
  * PolicyContext
  */
-public class PolicyContext {
+public class ScopeValidationContext {
 
     private AuthenticatedUser authenticatedUser;
     private String appId;
+    private String grantType;
+
+    private String policyId;
     private Map<String, List<String>> validatedScopesByHandler;
 
     public AuthenticatedUser getAuthenticatedUser() {
@@ -42,5 +45,25 @@ public class PolicyContext {
     public void setValidatedScopesByHandler(Map<String, List<String>> validatedScopesByHandler) {
 
         this.validatedScopesByHandler = validatedScopesByHandler;
+    }
+
+    public String getGrantType() {
+
+        return grantType;
+    }
+
+    public void setGrantType(String grantType) {
+
+        this.grantType = grantType;
+    }
+
+    public String getPolicyId() {
+
+        return policyId;
+    }
+
+    public void setPolicyId(String policyId) {
+
+        this.policyId = policyId;
     }
 }
