@@ -4017,7 +4017,7 @@ public class OAuth2Util {
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             AccessTokenDO accessTokenDO;
             try {
-                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                         .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -4044,7 +4044,7 @@ public class OAuth2Util {
         AccessTokenDO accessTokenDO = null;
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             try {
-                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                         .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);

@@ -103,7 +103,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
-    private AccessTokenProvider tokenValidationProcessor;
+    private AccessTokenProvider accessTokenProvider;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -717,25 +717,25 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Get Token Validation Processor.
+     * Get access token provider.
      *
-     * @return TokenValidationProcessor
+     * @return AccessTokenProvider
      */
-    public AccessTokenProvider getTokenValidationProcessor() {
+    public AccessTokenProvider getAccessTokenProvider() {
 
-        if (tokenValidationProcessor == null) {
-            tokenValidationProcessor = new DefaultAccessTokenProvider();
+        if (accessTokenProvider == null) {
+            accessTokenProvider = new DefaultAccessTokenProvider();
         }
-        return tokenValidationProcessor;
+        return accessTokenProvider;
     }
 
     /**
-     * Set Token Validation Processor.
+     * Set access token provider.
      *
-     * @param tokenValidationProcessor TokenValidationProcessor
+     * @param accessTokenProvider AccessTokenProvider
      */
-    public void setTokenValidationProcessor(AccessTokenProvider tokenValidationProcessor) {
+    public void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
 
-        this.tokenValidationProcessor = tokenValidationProcessor;
+        this.accessTokenProvider = accessTokenProvider;
     }
 }

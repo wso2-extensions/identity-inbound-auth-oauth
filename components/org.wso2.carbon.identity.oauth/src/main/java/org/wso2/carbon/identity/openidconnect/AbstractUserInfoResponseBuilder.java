@@ -84,7 +84,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         AccessTokenDO accessTokenDO;
         String accessToken;
         try {
-            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                     .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             accessToken = accessTokenDO == null ? null : accessTokenDO.getAccessToken();
         } catch (IdentityOAuth2Exception e) {
@@ -159,7 +159,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         AuthenticatedUser authenticatedUser;
         try {
             authenticatedUser = OAuth2Util.getAuthenticatedUser(OAuth2ServiceComponentHolder.getInstance()
-                    .getTokenValidationProcessor().getVerifiedAccessToken(
+                    .getAccessTokenProvider().getVerifiedAccessToken(
                             tokenResponse.getAuthorizationContextToken().getTokenString(), false));
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -205,7 +205,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String grantType;
         try {
             String accessToken = validationResponseDTO.getAuthorizationContextToken().getTokenString();
-            AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+            AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                     .getVerifiedAccessToken(accessToken, false);
             grantType = getGrantType(accessTokenDO);
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {

@@ -320,7 +320,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
                 Mockito.mock(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
-        when(oAuth2ServiceComponentHolderInstance.getTokenValidationProcessor())
+        when(oAuth2ServiceComponentHolderInstance.getAccessTokenProvider())
                 .thenReturn(new DefaultAccessTokenProvider());
         Map<String, Object> claimsMap;
         try {

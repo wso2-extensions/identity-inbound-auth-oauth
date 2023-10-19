@@ -120,7 +120,7 @@ public class TokenValidationHandler {
                 log.error(errorMsg, e);
             }
         }
-        tokenValidationProcessor = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor();
+        tokenValidationProcessor = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider();
     }
 
     public static TokenValidationHandler getInstance() {
@@ -178,7 +178,7 @@ public class TokenValidationHandler {
         }
 
         try {
-            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                     .getVerifiedAccessToken(requestDTO.getAccessToken().getIdentifier(), false);
         } catch (IllegalArgumentException e) {
             // Access token not found in the system.
@@ -276,7 +276,7 @@ public class TokenValidationHandler {
         // Adding the AccessTokenDO as a context property for further use
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                     .getVerifiedAccessToken(oAuth2Token.getIdentifier(), true);
             if (accessTokenDO != null) {
                 messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
@@ -500,7 +500,7 @@ public class TokenValidationHandler {
         } else {
             try {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();

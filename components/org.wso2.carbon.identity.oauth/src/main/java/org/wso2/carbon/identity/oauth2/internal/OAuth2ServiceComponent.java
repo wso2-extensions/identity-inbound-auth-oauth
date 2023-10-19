@@ -705,36 +705,36 @@ public class OAuth2ServiceComponent {
     }
 
     /**
-     * Sets the token validation processor.
+     * Sets the access token provider.
      *
-     * @param tokenValidationProcessor TokenValidationProcessor
+     * @param accessTokenProvider AccessTokenProvider
      */
     @Reference(
-            name = "token.validation.processor",
+            name = "access.token.provider",
             service = AccessTokenProvider.class,
             cardinality = ReferenceCardinality.OPTIONAL,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetTokenValidationProcessor"
+            unbind = "unsetAccessTokenProvider"
     )
-    protected void setTokenValidationProcessor(AccessTokenProvider tokenValidationProcessor) {
+    protected void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting token validation processor.");
+            log.debug("Setting access token provider.");
         }
-        OAuth2ServiceComponentHolder.getInstance().setTokenValidationProcessor(tokenValidationProcessor);
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(accessTokenProvider);
     }
 
     /**
-     * Unsets the token validation processor.
+     * Unsets the access token provider.
      *
-     * @param accessTokenProvider TokenValidationProcessor
+     * @param accessTokenProvider AccessTokenProvider
      */
-    protected void unsetTokenValidationProcessor(AccessTokenProvider accessTokenProvider) {
+    protected void unsetAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unset token validation processor.");
+            log.debug("Unset access token provider.");
         }
-        OAuth2ServiceComponentHolder.getInstance().setTokenValidationProcessor(null);
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(null);
     }
 
     /**

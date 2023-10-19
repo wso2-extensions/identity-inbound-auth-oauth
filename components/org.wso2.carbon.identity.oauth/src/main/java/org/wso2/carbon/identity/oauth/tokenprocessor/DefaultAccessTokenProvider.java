@@ -23,7 +23,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
- * Default token validation processor with token persistence.
+ * Default implementation of AccessTokenProvider for scenarios with token persistence enabled.
+ * Verifies access tokens by querying the database, including optional inclusion of expired tokens.
  */
 public class DefaultAccessTokenProvider implements AccessTokenProvider {
 

@@ -24,18 +24,23 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 /**
  * The AccessTokenProvider interface defines the contract for classes that are responsible
  * for verifying and providing access tokens. Implementing classes should offer methods
- * to retrieve access tokens based on token identifiers, with verification of the token's
- * validity, ensuring it is in an active or expired state.
+ * to retrieve access tokens based on token data objects, with the option to include expired
+ * tokens in the verification process and handle potential exceptions.
  */
 public interface AccessTokenProvider {
 
     /**
-     *  token.
+     * Retrieves and verifies an access token based on the provided access token data object,
+     * with an option to include expired tokens in the verification process.
      *
-     * @param accessToken    access token
-     * @param includeExpired include expired tokens
-     * @return AccessTokenDO
-     * @throws IdentityOAuth2Exception if an error occurred while validating the token
+     * @param accessToken    The access token data object to retrieve and verify.
+     * @param includeExpired A boolean flag indicating whether to include expired tokens in the verification.
+     *                       Set to true to include expired tokens, false to exclude them.
+     * @return The AccessTokenDO if the token is valid (ACTIVE or, optionally, EXPIRED), or null if the token
+     * is not found either in ACTIVE or EXPIRED states when includeExpired is true.
+     * @throws IdentityOAuth2Exception  If there is an error during the access token retrieval or verification process.
+     * @throws IllegalArgumentException If the access token is in an inactive or invalid state
+     *                                  (e.g., 'REVOKED' or 'INVALID') when includeExpired is false.
      */
     AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
 }

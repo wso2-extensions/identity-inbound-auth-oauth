@@ -91,7 +91,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void setUpTest() throws Exception {
 
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
-        OAuth2ServiceComponentHolder.getInstance().setTokenValidationProcessor(new DefaultAccessTokenProvider());
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(new DefaultAccessTokenProvider());
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();

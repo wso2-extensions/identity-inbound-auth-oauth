@@ -120,7 +120,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
 
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                     .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
         } catch (IdentityOAuth2Exception e) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
