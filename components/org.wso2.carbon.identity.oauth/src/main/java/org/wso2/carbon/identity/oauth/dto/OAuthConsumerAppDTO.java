@@ -52,7 +52,27 @@ public class OAuthConsumerAppDTO {
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
+    private String tokenEndpointAuthMethod;
+    private String tokenEndpointAuthSignatureAlgorithm;
+    private String sectorIdentifierURI;
+    private String idTokenSignatureAlgorithm;
+    private String requestObjectSignatureAlgorithm;
+    private String tlsClientAuthSubjectDN;
+    private boolean requirePushedAuthorizationRequests;
+    private boolean tlsClientCertificateBoundAccessTokens;
+    private String subjectType;
+    private String requestObjectEncryptionAlgorithm;
+    private String requestObjectEncryptionMethod;
+    private String jwksURI;
 
+    public String getJwksURI() {
+
+        return jwksURI;
+    }
+    public void setJwksURI(String jwksURi) {
+
+        this.jwksURI = jwksURi;
+    }
     public long getUserAccessTokenExpiryTime() {
         return userAccessTokenExpiryTime;
     }
@@ -252,7 +272,7 @@ public class OAuthConsumerAppDTO {
      * This method is deprecated. Use the 'isBypassClientCredentials' method instead.
      */
     @Deprecated
-    public boolean getBypassClientCredentials() { 
+    public boolean getBypassClientCredentials() {
         return bypassClientCredentials;
     }
 
@@ -299,6 +319,114 @@ public class OAuthConsumerAppDTO {
     public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
+    }
+
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getTokenEndpointAuthSignatureAlgorithm() {
+
+        return tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
+
+        this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public String getSectorIdentifierURI() {
+
+        return sectorIdentifierURI;
+    }
+
+    public void setSectorIdentifierURI(String sectorIdentifierURI) {
+
+        this.sectorIdentifierURI = sectorIdentifierURI;
+    }
+    public String getRequestObjectSignatureAlgorithm() {
+
+        return requestObjectSignatureAlgorithm;
+    }
+
+    public void setRequestObjectSignatureAlgorithm(String requestObjectSignatureAlgorithm) {
+
+        this.requestObjectSignatureAlgorithm = requestObjectSignatureAlgorithm;
+    }
+
+    public String getTlsClientAuthSubjectDN() {
+
+        return tlsClientAuthSubjectDN;
+    }
+
+    public void setTlsClientAuthSubjectDN(String tlsClientAuthSubjectDN) {
+
+        this.tlsClientAuthSubjectDN = tlsClientAuthSubjectDN;
+    }
+
+    public boolean getRequirePushedAuthorizationRequests() {
+
+        return requirePushedAuthorizationRequests;
+    }
+
+    public void setRequirePushedAuthorizationRequests(boolean requirePushedAuthorizationRequests) {
+
+        this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
+    }
+
+    public boolean getTlsClientCertificateBoundAccessTokens() {
+
+        return tlsClientCertificateBoundAccessTokens;
+    }
+
+    public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
+
+        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    }
+
+    public String getSubjectType() {
+
+        return subjectType;
+    }
+
+    public void setSubjectType(String subjectType) {
+
+        this.subjectType = subjectType;
+    }
+
+    public String getRequestObjectEncryptionAlgorithm() {
+
+        return requestObjectEncryptionAlgorithm;
+    }
+
+    public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+
+        this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
+    }
+
+    public String getRequestObjectEncryptionMethod() {
+
+        return requestObjectEncryptionMethod;
+    }
+
+    public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+
+        this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+    }
+    public String getIdTokenSignatureAlgorithm() {
+
+        return idTokenSignatureAlgorithm;
+    }
+
+    public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
+
+        this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
     }
 }
 

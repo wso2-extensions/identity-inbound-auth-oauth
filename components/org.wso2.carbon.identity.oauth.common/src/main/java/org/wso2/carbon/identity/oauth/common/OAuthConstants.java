@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -187,6 +187,9 @@ public final class OAuthConstants {
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+    public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
+    public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+
 
     private OAuthConstants() {
 
@@ -424,6 +427,7 @@ public final class OAuthConstants {
             public static final String INVALID_REQUEST_URI = "par.invalid.request.uri";
             public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
             public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
+            public static final String INVALID_RESPONSE_TYPE_FOR_QUERY_JWT = "invalid.response.type.for.query.jwt";
 
             private AuthorizationResponsei18nKey() {
 
@@ -519,6 +523,17 @@ public final class OAuthConstants {
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
+        public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
+        public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
+        public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
+        public static final String REQUEST_OBJECT_SIGNATURE_ALGORITHM = "requestObjectSigningAlg";
+        public static final String TLS_SUBJECT_DN = "tlsClientAuthSubjectDn";
+        public static final String IS_PUSH_AUTH = "requirePushAuthorizationRequest";
+        public static final String IS_CERTIFICATE_BOUND_ACCESS_TOKEN = "tlsClientCertificateBoundAccessToken";
+        public static final String SUBJECT_TYPE = "subjectType";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
+        public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
 
         private OIDCConfigProperties() {
 
@@ -556,6 +571,14 @@ public final class OAuthConstants {
      * Define token binding constants.
      */
     public static class TokenBindings {
+
+        public static final String NONE = "NONE";
+    }
+
+    /**
+     * Define authorized organization default value.
+     */
+    public static class AuthorizedOrganization {
 
         public static final String NONE = "NONE";
     }
