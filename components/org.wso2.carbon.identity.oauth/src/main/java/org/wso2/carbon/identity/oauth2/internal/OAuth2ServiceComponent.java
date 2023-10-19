@@ -834,7 +834,7 @@ public class OAuth2ServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("Unset Oauth2 revocation processor.");
         }
-        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(null);
     }
 
     @Reference(
