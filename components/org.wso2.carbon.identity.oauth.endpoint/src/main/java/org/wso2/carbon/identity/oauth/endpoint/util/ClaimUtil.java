@@ -116,7 +116,8 @@ public class ClaimUtil {
 
             try {
                 AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                                .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
+                                false);
                 userId = accessTokenDO.getAuthzUser().getUserId();
                 userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
 

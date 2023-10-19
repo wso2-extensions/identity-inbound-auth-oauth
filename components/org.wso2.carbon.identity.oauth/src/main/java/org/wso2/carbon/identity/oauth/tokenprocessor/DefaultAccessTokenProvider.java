@@ -28,7 +28,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 public class DefaultAccessTokenProvider implements AccessTokenProvider {
 
     @Override
-    public AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception {
+    public AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired)
+            throws IdentityOAuth2Exception {
 
         return OAuth2Util.findAccessToken(accessToken, includeExpired);
     }

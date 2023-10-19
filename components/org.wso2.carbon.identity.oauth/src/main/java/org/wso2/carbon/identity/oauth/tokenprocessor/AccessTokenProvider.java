@@ -39,11 +39,3 @@ public interface AccessTokenProvider {
      */
     AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
 }
-
-/**
- * Find access tokenDO from token identifier by chaining through all available token issuers.
- *
- * @param tokenIdentifier access token data object from the validation request.
- * @return AccessTokenDO
- * @throws IdentityOAuth2Exception
- */
