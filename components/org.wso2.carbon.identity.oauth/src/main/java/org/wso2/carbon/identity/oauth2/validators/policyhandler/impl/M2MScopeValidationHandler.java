@@ -8,6 +8,9 @@ import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationH
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * M2MScopeValidationHandler
+ */
 public class M2MScopeValidationHandler implements ScopeValidationHandler {
 
     @Override

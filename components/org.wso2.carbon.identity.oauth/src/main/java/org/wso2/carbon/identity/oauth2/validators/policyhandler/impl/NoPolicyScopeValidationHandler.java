@@ -1,6 +1,5 @@
 package org.wso2.carbon.identity.oauth2.validators.policyhandler.impl;
 
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandlerException;

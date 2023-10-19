@@ -80,6 +80,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenB
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.M2MScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.NoPolicyScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.RoleBasedScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
@@ -339,6 +340,7 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
             bundleContext.registerService(ScopeValidationHandler.class, new RoleBasedScopeValidationHandler(), null);
             bundleContext.registerService(ScopeValidationHandler.class, new NoPolicyScopeValidationHandler(), null);
+            bundleContext.registerService(ScopeValidationHandler.class, new M2MScopeValidationHandler(), null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 

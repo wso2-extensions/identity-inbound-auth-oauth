@@ -78,7 +78,8 @@ public class DefaultOAuth2ScopeValidator {
     }
 
     private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
-                                             String appId, String grantType, String tenantDomain) throws IdentityOAuth2Exception  {
+                                             String appId, String grantType, String tenantDomain)
+            throws IdentityOAuth2Exception  {
 
         // Filter OIDC scopes and add to approved scopes list.
         if (LOG.isDebugEnabled()) {

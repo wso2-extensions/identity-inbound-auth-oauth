@@ -12,7 +12,6 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.RoleV2;
-import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -98,11 +97,13 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
         List<String> roleIdsOfIdGroups = null;
         if (authenticatedUser.isFederatedUser()) {
-            roleIdsOfIdGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser), authenticatedUser.getTenantDomain());
+            roleIdsOfIdGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser),
+                    authenticatedUser.getTenantDomain());
         }
         List<String> roleIds = null;
         if (roleIdsOfUser != null && roleIdsOfGroups != null && roleIdsOfIdGroups != null) {
-            roleIds = Stream.concat(Stream.concat(roleIdsOfUser.stream(), roleIdsOfGroups.stream()), roleIdsOfIdGroups.stream())
+            roleIds = Stream.concat(Stream.concat(roleIdsOfUser.stream(), roleIdsOfGroups.stream()),
+                            roleIdsOfIdGroups.stream())
                     .collect(Collectors.toList());
         }
         if (roleIds != null && !roleIds.isEmpty()) {
@@ -142,7 +143,8 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
     }
 
-    private List<String> getRoleIdsOfGroups(List<String> groups, String tenantDomain) throws ScopeValidationHandlerException {
+    private List<String> getRoleIdsOfGroups(List<String> groups, String tenantDomain)
+            throws ScopeValidationHandlerException {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
@@ -153,7 +155,8 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
     }
 
-    private List<String> getRoleIdsOfIdpGroups(List<String> groups, String tenantDomain) throws ScopeValidationHandlerException {
+    private List<String> getRoleIdsOfIdpGroups(List<String> groups, String tenantDomain)
+            throws ScopeValidationHandlerException {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
