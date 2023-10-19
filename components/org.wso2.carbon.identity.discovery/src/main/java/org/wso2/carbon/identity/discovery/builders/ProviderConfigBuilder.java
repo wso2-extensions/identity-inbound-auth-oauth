@@ -118,7 +118,6 @@ public class ProviderConfigBuilder {
                 IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL)));
         providerConfig.setEndSessionEndpoint(buildServiceUrl(IdentityConstants.OAuth.LOGOUT,
                 IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL)));
-
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
                     OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
@@ -127,8 +126,8 @@ public class ProviderConfigBuilder {
         } catch (IdentityOAuth2Exception e) {
             throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
         }
-        providerConfig.setTokenEndpointAuthMethodsSupported(
-                OAuth2Util.getSupportedClientAuthenticationMethods().stream().toArray(String[]::new));
+
+        providerConfig.setTokenEndpointAuthMethodsSupported(OAuth2Util.getSupportedClientAuthMethods());
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
         providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
         providerConfig.setClaimsParameterSupported(Boolean.valueOf(OAuth2Util.isClaimsParameterSupported()));
@@ -141,6 +140,12 @@ public class ProviderConfigBuilder {
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
         }
+
+        List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointSigningAlgorithms();
+        providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(
+                supportedTokenEndpointSigningAlgorithms.toArray(new String[0]));
+
         return providerConfig;
     }
 }
