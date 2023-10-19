@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 /**
  * OAuth 2 access token request DTO.
@@ -52,6 +53,7 @@ public class OAuth2AccessTokenReqDTO {
     private RequestParameter[] requestParameters;
     private HttpRequestHeader[] httpRequestHeaders;
     private HttpServletRequestWrapper httpServletRequestWrapper;
+    private HttpServletResponseWrapper httpServletResponseWrapper;
     private List<String> authenticationMethodReferences = new ArrayList<>();
     private OAuthClientAuthnContext oAuthClientAuthnContext;
 
@@ -241,5 +243,13 @@ public class OAuth2AccessTokenReqDTO {
             AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
 
         this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
+    }
+
+    public HttpServletResponseWrapper getHttpServletResponseWrapper() {
+        return httpServletResponseWrapper;
+    }
+
+    public void setHttpServletResponseWrapper(HttpServletResponseWrapper httpServletResponseWrapper) {
+        this.httpServletResponseWrapper = httpServletResponseWrapper;
     }
 }
