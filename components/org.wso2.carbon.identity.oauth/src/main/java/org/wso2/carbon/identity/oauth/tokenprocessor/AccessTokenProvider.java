@@ -37,10 +37,10 @@ public interface AccessTokenProvider {
      * @param includeExpired A boolean flag indicating whether to include expired tokens in the verification.
      *                       Set to true to include expired tokens, false to exclude them.
      * @return The AccessTokenDO if the token is valid (ACTIVE or, optionally, EXPIRED), or null if the token
-     * is not found either in ACTIVE or EXPIRED states when includeExpired is true.
-     * @throws IdentityOAuth2Exception  If there is an error during the access token retrieval or verification process.
-     * @throws IllegalArgumentException If the access token is in an inactive or invalid state
-     *                                  (e.g., 'REVOKED' or 'INVALID') when includeExpired is false.
+     * is not found either in ACTIVE or EXPIRED states when includeExpired is true. The method should throw
+     * IllegalArgumentException if the access token is in an inactive or invalid state (e.g., 'REVOKED' or 'INVALID')
+     * when includeExpired is false.
+     * @throws IdentityOAuth2Exception If there is an error during the access token retrieval or verification process.
      */
     AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
 }
