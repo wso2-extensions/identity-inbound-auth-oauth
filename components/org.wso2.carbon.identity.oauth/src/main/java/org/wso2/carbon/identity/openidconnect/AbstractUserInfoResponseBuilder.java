@@ -63,6 +63,22 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
 
         String clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
+
+        // Retrieve user claims.
+        Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
+        Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
+
+        // Handle subject claim.
+        String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
+        subjectClaim = getOIDCSubjectClaim(clientId, spTenantDomain, subjectClaim);
+        filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
+
+        return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+    }
+
+    private String getOIDCSubjectClaim(String clientId, String spTenantDomain, String subjectClaim)
+            throws UserInfoEndpointException {
+
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
@@ -70,29 +86,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
                     " of tenantDomain: " + spTenantDomain, e);
         }
-        // Retrieve user claims.
-        Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
-        Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
-
-        // Handle subject claim.
-        String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
-        String callbackUri;
-        try {
-            callbackUri = OIDCClaimUtil.getCallbackUrl(clientId, spTenantDomain);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new UserInfoEndpointException("Error while getting the registered callback URI for client_id: " +
-                    clientId, e);
-        }
         try {
             // Get subject identifier according to the configured subject type.
-            subjectClaim = OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
+            return OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
                     " of tenantDomain: " + spTenantDomain, e);
         }
-        filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
 
-        return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
     }
 
     private Map<String, Object> filterOIDCClaims(OAuth2TokenValidationResponseDTO tokenResponse,
