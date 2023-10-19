@@ -297,7 +297,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             userId = authzCodeDO.getAuthorizedUser().getUserId();
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("User id not found for user: "
-                    + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
+                    + authzCodeDO.getAuthorizedUser().getLoggableMaskedUserId(), e);
         }
         String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokenByTokenId(tokenId);

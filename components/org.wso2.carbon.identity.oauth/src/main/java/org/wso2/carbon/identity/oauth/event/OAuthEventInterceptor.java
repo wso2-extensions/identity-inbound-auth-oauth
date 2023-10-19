@@ -230,6 +230,32 @@ public interface OAuthEventInterceptor extends IdentityHandler {
     }
 
     /**
+     * This will be called before when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked pre user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPreTokenRevocationBySystem(String userUUID, Map<String, Object> params)
+            throws IdentityOAuth2Exception {
+
+    }
+
+    /**
+     * This will be called after when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked post user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPostTokenRevocationBySystem(String userUUID, Map<String, Object> params)
+            throws IdentityOAuth2Exception {
+
+    }
+
+    /**
      * This will be called before tokens are revoked by application.
      *
      * @param revokeRequestDTO {@link OAuthAppRevocationRequestDTO}

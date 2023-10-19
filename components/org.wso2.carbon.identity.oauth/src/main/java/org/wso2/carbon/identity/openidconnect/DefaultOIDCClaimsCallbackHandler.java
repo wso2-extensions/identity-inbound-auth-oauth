@@ -1,18 +1,21 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -47,6 +50,9 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
@@ -55,10 +61,9 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -67,7 +72,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -77,6 +81,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
@@ -275,6 +280,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
+
         Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
         if (log.isDebugEnabled()) {
             log.debug("Retrieving claims cached against access_token for user: " + requestMsgCtx.getAuthorizedUser());
@@ -290,7 +296,14 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                         requestMsgCtx.getAuthorizedUser());
             }
         }
-
+        // Check for claims cached against the device code.
+        if (isEmpty(userAttributes)) {
+            if (log.isDebugEnabled()) {
+                log.debug("No claims cached against the authorization_code for user: " +
+                        requestMsgCtx.getAuthorizedUser() + ". Retrieving claims cached against the device code.");
+            }
+            userAttributes = getUserAttributesCachedAgainstDeviceCode(getDeviceCode(requestMsgCtx));
+        }
         /* When building the jwt token, we cannot add it to authorization cache, as we save entries against, access
          token. Hence if it is added against authenticated user object.*/
         if (isEmpty(userAttributes)) {
@@ -361,6 +374,17 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userAttributes = getUserAttributesFromCacheUsingToken(accessToken);
         }
         return userAttributes;
+    }
+
+    private Map<ClaimMapping, String> getUserAttributesCachedAgainstDeviceCode(String deviceCode) {
+
+        if (StringUtils.isEmpty(deviceCode)) {
+            return Collections.emptyMap();
+        }
+        DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
+        DeviceAuthorizationGrantCacheEntry cacheEntry =
+                DeviceAuthorizationGrantCache.getInstance().getValueFromCache(cacheKey);
+        return cacheEntry == null ? Collections.emptyMap() : cacheEntry.getUserAttributes();
     }
 
     private Map<String, Object> getUserClaimsInOIDCDialect(OAuthAuthzReqMessageContext authzReqMessageContext)
@@ -507,29 +531,23 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             return userClaimsMappedToOIDCDialect;
         }
-        String userTenantDomain;
-        String fullQualifiedUsername;
-        if (StringUtils.isNotBlank(authenticatedUser.getUserId())) {
-            String userId = authenticatedUser.getUserId();
-            userTenantDomain = authenticatedUser.getTenantDomain();
-            int tenantId = IdentityTenantUtil.getTenantId(userTenantDomain);
-            Tenant tenant =
-                    OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager().getTenant(tenantId);
-            if (tenant != null && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID())) {
-                Optional<User> user = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
-                        .resolveUserFromResidentOrganization(null, userId, tenant.getAssociatedOrganizationUUID());
-                if (!user.isPresent()) {
-                    return userClaimsMappedToOIDCDialect;
-                }
-                userTenantDomain = user.get().getTenantDomain();
-                fullQualifiedUsername = user.get().getFullQualifiedUsername();
-            } else {
-                userTenantDomain = authenticatedUser.getTenantDomain();
-                fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
-            }
-        } else {
-            userTenantDomain = authenticatedUser.getTenantDomain();
-            fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
+        String userTenantDomain = authenticatedUser.getTenantDomain();
+        String userResidentTenantDomain = userTenantDomain;
+        if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
+            userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+        }
+        /* For B2B users, the resident organization is available to find the tenant where the user's identity is
+        managed. Hence, the correct tenant domain should be used to fetch user claims. */
+        if (!StringUtils.equals(userTenantDomain, userResidentTenantDomain)) {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(userResidentTenantDomain))
+                            .getUserStoreManager();
+            userTenantDomain = userResidentTenantDomain;
+            fullQualifiedUsername = userStoreManager.getUser(authenticatedUser.getUserId(), null)
+                    .getFullQualifiedUsername();
         }
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
         if (realm == null) {
@@ -823,6 +841,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private String getAccessToken(OAuthAuthzReqMessageContext authzReqMessageContext) {
         return (String) authzReqMessageContext.getProperty(ACCESS_TOKEN);
+    }
+
+    private String getDeviceCode(OAuthTokenReqMessageContext requestMsgCtx) {
+
+        return (String) requestMsgCtx.getProperty(DEVICE_CODE);
     }
 
     private boolean isLocalUser(AuthenticatedUser authenticatedUser) {

@@ -285,6 +285,11 @@
             <UserInfoEndpointAccessTokenValidator>org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator</UserInfoEndpointAccessTokenValidator>
             <UserInfoEndpointResponseBuilder>org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder</UserInfoEndpointResponseBuilder>
             <SkipUserConsent>false</SkipUserConsent>
+            <SupportedTokenEndpointSigningAlgorithms>
+                <SupportedTokenEndpointSigningAlgorithm>PS256</SupportedTokenEndpointSigningAlgorithm>
+                <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>
+                <SupportedTokenEndpointSigningAlgorithm>SHA256withRSA</SupportedTokenEndpointSigningAlgorithm>
+            </SupportedTokenEndpointSigningAlgorithms>
         </OpenIDConnect>
 
         <DeviceCodeGrant>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -48,6 +48,7 @@ import com.nimbusds.jwt.SignedJWT;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.util.base64.Base64Utils;
+import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -59,6 +60,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.common.exception.OAuthRuntimeException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -95,6 +97,7 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -115,6 +118,8 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -174,6 +179,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -351,6 +357,7 @@ public class OAuth2Util {
     private static final String SHA512_WITH_EC = "SHA512withEC";
     private static final String SHA256_WITH_PS = "SHA256withPS";
     private static final String PS256 = "PS256";
+    private static final String ES256 = "ES256";
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
@@ -370,6 +377,8 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_CONFIGURATIONS = "external_consent_page_configurations";
     private static final String EXTERNAL_CONSENT_PAGE = "external_consent_page";
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
+
+    private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
 
     private OAuth2Util() {
 
@@ -498,13 +507,16 @@ public class OAuth2Util {
     }
 
     /**
-     * Authenticate the OAuth Consumer
+     * Authenticate the OAuth Consumer.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the consumer app.
+     * Use {@link #authenticateClient(String, String, String)} instead.
      *
      * @param clientId             Consumer Key/Id
      * @param clientSecretProvided Consumer Secret issued during the time of registration
      * @return true, if the authentication is successful, false otherwise.
      * @throws IdentityOAuthAdminException Error when looking up the credentials from the database
      */
+    @Deprecated
     public static boolean authenticateClient(String clientId, String clientSecretProvided)
             throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
 
@@ -526,6 +538,63 @@ public class OAuth2Util {
             log.error("Cannot retrieve application inside deactivated tenant: " + tenantDomain);
             throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
                     + tenantDomain);
+        }
+
+        // Cache miss
+        boolean isHashDisabled = isHashDisabled();
+        String appClientSecret = appDO.getOauthConsumerSecret();
+        if (isHashDisabled) {
+            if (!StringUtils.equals(appClientSecret, clientSecretProvided)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        } else {
+            TokenPersistenceProcessor persistenceProcessor = getPersistenceProcessor();
+            // We convert the provided client_secret to the processed form stored in the DB.
+            String processedProvidedClientSecret = persistenceProcessor.getProcessedClientSecret(clientSecretProvided);
+
+            if (!StringUtils.equals(appClientSecret, processedProvidedClientSecret)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Provided the Client ID : " + clientId +
+                            " and Client Secret do not match with the issued credentials.");
+                }
+                return false;
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Successfully authenticated the client with client id : " + clientId);
+        }
+
+        return true;
+    }
+
+    /**
+     * Authenticate the OAuth Consumer.
+     *
+     * @param clientId             Consumer Key/ Id.
+     * @param clientSecretProvided Consumer Secret issued during the time of registration.
+     * @param appTenant            Tenant domain of the application.
+     * @return true, if the authentication is successful, false otherwise.
+     * @throws IdentityOAuthAdminException Error when looking up the credentials from the database
+     */
+    public static boolean authenticateClient(String clientId, String clientSecretProvided, String appTenant)
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenant);
+        if (appDO == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cannot find a valid application with the provided client_id: " + clientId);
+            }
+            return false;
+        }
+
+        if (StringUtils.isNotEmpty(appTenant) && !isTenantActive(appTenant)) {
+            throw new InvalidOAuthClientException("Cannot retrieve application inside deactivated tenant: "
+                    + appTenant);
         }
 
         // Cache miss
@@ -771,6 +840,7 @@ public class OAuth2Util {
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
+    @Deprecated
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
                                                      String authenticatedIDP, String tokenBindingReference) {
 
@@ -782,6 +852,29 @@ public class OAuth2Util {
         return oauthCacheKey;
     }
 
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUserId   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithUserIdOrgId(String clientId, String scope,
+                                                                    String authorizedUserId, String authenticatedIDP,
+                                                                    String tokenBindingReference,
+                                                                    String authorizedOrganization) {
+
+        String oauthCacheKey =
+                clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference +
+                        ":" + authorizedOrganization;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Building cache key: %s to access OAuthCache.", oauthCacheKey));
+        }
+        return oauthCacheKey;
+    }
     /**
      * Build the cache key string when storing token info in cache.
      *
@@ -2156,13 +2249,16 @@ public class OAuth2Util {
     }
 
     /**
-     * Get Oauth application information
+     * Get Oauth application information. Internally it uses the tenant present in the carbon context.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the client.
+     * Use {@link #getAppInformationByClientId(String, String)} instead.
      *
-     * @param clientId
-     * @return Oauth app information
-     * @throws IdentityOAuth2Exception
-     * @throws InvalidOAuthClientException
+     * @param clientId Client id of the application.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
      */
+    @Deprecated
     public static OAuthAppDO getAppInformationByClientId(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
@@ -2170,12 +2266,85 @@ public class OAuth2Util {
         if (oAuthAppDO != null) {
             return oAuthAppDO;
         } else {
-            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId);
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getLoginTenantId());
             if (oAuthAppDO != null) {
                 AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
             }
             return oAuthAppDO;
         }
+    }
+
+    /**
+     * Get Oauth application information.
+     * 
+     * @param clientId      Client id of the application.
+     * @param tenantDomain  Tenant domain of the application.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static OAuthAppDO getAppInformationByClientId(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO == null) {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
+        }
+        return oAuthAppDO;
+    }
+
+    /**
+     * Get Oauth application information for a given client id. This method doesn't utilize the tenant and
+     * treats the client ID as unique across the server.
+     *
+     * @param clientId Client id of the application.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static OAuthAppDO getAppInformationByClientIdOnly(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO == null) {
+            OAuthAppDO[] appList = new OAuthAppDAO().getAppsForConsumerKey(clientId);
+            if (appList == null || appList.length != 1) {
+                String message = OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
+                if (log.isDebugEnabled()) {
+                    log.debug("Cannot find an unique application associated with the given client ID: " + clientId);
+                }
+                throw new InvalidOAuthClientException(message);
+            }
+            oAuthAppDO = appList[0];
+            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+        }
+        return oAuthAppDO;
+    }
+
+    /**
+     * Get Oauth application information given an access token DO.
+     *
+     * @param accessTokenDO Access token data object.
+     * @return Oauth app information.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static OAuthAppDO getAppInformationByAccessTokenDO(AccessTokenDO accessTokenDO)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        String clientId = accessTokenDO.getConsumerKey();
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (oAuthAppDO == null) {
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, accessTokenDO);
+            if (oAuthAppDO != null) {
+                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            }
+        }
+        return oAuthAppDO;
     }
 
     /**
@@ -2194,12 +2363,13 @@ public class OAuth2Util {
     }
 
     /**
-     * This is used to get the tenant domain of an application by clientId.
+     * This is used to get the tenant domain of an application by clientId. Internally it uses the tenant present in
+     * the carbon context.
      *
-     * @param clientId Consumer key of Application
-     * @return Tenant Domain
-     * @throws IdentityOAuth2Exception
-     * @throws InvalidOAuthClientException
+     * @param clientId Consumer key of Application.
+     * @return Tenant Domain.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
      */
     public static String getTenantDomainOfOauthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
@@ -2209,13 +2379,30 @@ public class OAuth2Util {
     }
 
     /**
+     * Get all the OAuth applications for the client ID.
+     *
+     * @param clientId Client ID.
+     * @return  Array of OAuthApp data objects.
+     * @throws IdentityOAuth2Exception      If an error occurred while retrieving the applications.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static OAuthAppDO[] getAppsForClientId(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        return new OAuthAppDAO().getAppsForConsumerKey(clientId);
+    }
+
+    /**
      * Get the client secret of the application.
+     * This method is deprecated as it uses the tenant present in thread local to retrieve the client.
+     * Use {@link #getClientSecret(String, String)} instead.
      *
      * @param consumerKey Consumer Key provided by the user.
      * @return Consumer Secret.
      * @throws IdentityOAuth2Exception Error when loading the application.
      * @throws InvalidOAuthClientException Error when loading the application.
      */
+    @Deprecated
     public static String getClientSecret(String consumerKey) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
 
@@ -2223,6 +2410,26 @@ public class OAuth2Util {
         if (oAuthAppDO == null) {
             throw new InvalidOAuthClientException("Unable to retrieve app information for consumer key: "
                     + consumerKey);
+        }
+        return oAuthAppDO.getOauthConsumerSecret();
+    }
+
+    /**
+     * Get the client secret of the application.
+     *
+     * @param consumerKey   Consumer Key provided by the user.
+     * @param tenantDomain  Tenant domain of the application.
+     * @return Consumer Secret.
+     * @throws IdentityOAuth2Exception      Error when loading the application.
+     * @throws InvalidOAuthClientException  Error when loading the application.
+     */
+    public static String getClientSecret(String consumerKey, String tenantDomain) throws IdentityOAuth2Exception,
+            InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = getAppInformationByClientId(consumerKey, tenantDomain);
+        if (oAuthAppDO == null) {
+            throw new InvalidOAuthClientException("Unable to retrieve app information for consumer key: "
+                    + consumerKey + " and tenant: " + tenantDomain);
         }
         return oAuthAppDO.getOauthConsumerSecret();
     }
@@ -2311,7 +2518,7 @@ public class OAuth2Util {
             return JWSAlgorithm.HS384;
         } else if (SHA512_WITH_HMAC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.HS512;
-        } else if (SHA256_WITH_EC.equals(signatureAlgorithm)) {
+        } else if (SHA256_WITH_EC.equals(signatureAlgorithm) || ES256.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES256;
         } else if (SHA384_WITH_EC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES384;
@@ -4401,8 +4608,8 @@ public class OAuth2Util {
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            // In tenant qualified URL mode we would always have the tenant domain in the context.
-            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+
+            String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
                 if (log.isDebugEnabled()) {
@@ -4431,8 +4638,10 @@ public class OAuth2Util {
             String tenantDomainFromContext;
             if (contextTenantDomainFromTokenReqDTO.isPresent()) {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+                if (StringUtils.isBlank(tenantDomainFromContext)) {
+                    tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+                }
 
-                // In tenant qualified URL mode we would always have the tenant domain in the context.
                 if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                     // This means the tenant domain sent in the request and app's tenant domain do not match.
                     throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
@@ -4605,14 +4814,7 @@ public class OAuth2Util {
         if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-
-        if (request != null) {
-            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
-                return tenantDomainFromReq;
-            }
-        }
-        return IdentityTenantUtil.getTenantDomainFromContext();
+        return IdentityTenantUtil.resolveTenantDomain();
     }
 
     /**
@@ -4750,6 +4952,10 @@ public class OAuth2Util {
      */
     public static boolean isFapiConformantApp(String clientId) throws IdentityOAuth2Exception {
 
+        boolean enableFAPIValidation = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
+        if (!enableFAPIValidation) {
+            return false;
+        }
         ServiceProvider serviceProvider = getServiceProvider(clientId);
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
@@ -4758,5 +4964,67 @@ public class OAuth2Util {
             }
         }
         return false;
+    }
+
+    /**
+     * Check whether basic authorization header exists in a request.
+     *
+     * @param request Http servlet request.
+     * @return True if basic authorization header exists.
+     */
+    public static boolean isBasicAuthorizationHeaderExists(HttpServletRequest request) {
+
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
+        }
+        /*
+            authorizationHeader should be case-insensitive according to the
+            "The 'Basic' HTTP Authentication Scheme" spec (https://tools.ietf.org/html/rfc7617#page-3),
+            "Note that both scheme and parameter names are matched case-insensitively."
+         */
+        return StringUtils.isNotEmpty(authorizationHeader)
+                && authorizationHeader.toUpperCase().startsWith(BASIC_AUTHORIZATION_PREFIX.toUpperCase());
+    }
+
+    /**
+     * Get the oauth credentials from the oauth header.
+     *
+     * @param request Http servlet request.
+     * @return An array of string credentials.
+     * @throws OAuthClientAuthnException If an error occurs.
+     */
+    public static String[] extractCredentialsFromAuthzHeader(HttpServletRequest request)
+            throws OAuthClientAuthnException {
+
+        if (!isBasicAuthorizationHeaderExists(request)) {
+            String errMsg = "Basic authorization header is not available in the request.";
+            throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        }
+
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
+        }
+
+        return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static String[] getSupportedClientAuthMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
+            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            if (!supportedAuthMethods.isEmpty()) {
+                supportedClientAuthMethods.addAll(supportedAuthMethods);
+            }
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
     }
 }

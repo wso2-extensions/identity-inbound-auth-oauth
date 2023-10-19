@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
@@ -59,6 +61,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
@@ -211,6 +215,9 @@ public class OAuth2ParEndpoint {
         OAuth2ClientValidationResponseDTO validationResponse = getOAuth2Service().validateClientInfo(request);
 
         if (!validationResponse.isValidClient()) {
+            if (OAuth2ErrorCodes.INVALID_CLIENT.equals(validationResponse.getErrorCode())) {
+                throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, validationResponse.getErrorMsg());
+            }
             throw new ParClientException(validationResponse.getErrorCode(), validationResponse.getErrorMsg());
         }
         if (isRequestUriProvided(params)) {
@@ -232,12 +239,56 @@ public class OAuth2ParEndpoint {
 
         try {
             OAuthAuthzRequest oAuthAuthzRequest = getOAuthAuthzRequest(request);
-            validateRequestObject(oAuthAuthzRequest);
+            RequestObject requestObject = validateRequestObject(oAuthAuthzRequest);
+            Map<String, String> oauthParams = overrideRequestObjectParams(request, requestObject);
+            if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
+                EndpointUtil.validateFAPIAllowedResponseTypeAndMode(oauthParams.get(RESPONSE_TYPE),
+                        oauthParams.get(RESPONSE_MODE));
+                validatePKCEParameters(oauthParams);
+            }
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
         } catch (OAuthSystemException e) {
             throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Return a map of parameters needed for validations overriding the values from the request object if present.
+     *
+     * @param request       Http servlet request
+     * @param requestObject request object
+     * @return map of parameters
+     */
+    private Map<String, String> overrideRequestObjectParams(HttpServletRequest request, RequestObject requestObject) {
+
+        Map<String, String> oauthParams = new HashMap<>();
+        oauthParams.put(RESPONSE_MODE, getParameterValue(request, requestObject, RESPONSE_MODE));
+        oauthParams.put(RESPONSE_TYPE, getParameterValue(request, requestObject, RESPONSE_TYPE));
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE,
+                getParameterValue(request, requestObject, OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE));
+        oauthParams.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                getParameterValue(request, requestObject, OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD));
+        return oauthParams;
+    }
+
+    /**
+     * Get the parameter value from the PAR request or from the request object if present. Request object parameter
+     * will be prioritized.
+     *
+     * @param request       Http servlet request
+     * @param requestObject request object
+     * @param parameter     parameter name
+     * @return parameter value
+     */
+    private String getParameterValue(HttpServletRequest request, RequestObject requestObject, String parameter) {
+
+        String parameterValue = request.getParameter(parameter);
+        if (requestObject != null && requestObject.getClaimsSet() != null &&
+                StringUtils.isNotBlank(requestObject.getClaimValue(parameter))) {
+            parameterValue = requestObject.getClaimValue(parameter);
+        }
+        return parameterValue;
     }
 
     private void validateInputParameters(HttpServletRequest request) throws ParClientException {
@@ -249,28 +300,75 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private void validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
+    private RequestObject validateRequestObject(OAuthAuthzRequest oAuthAuthzRequest) throws ParCoreException {
 
         try {
-            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes()) &&
-                    StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
+            RequestObject requestObject = null;
+            if (OAuth2Util.isOIDCAuthzRequest(oAuthAuthzRequest.getScopes())) {
+                if (StringUtils.isNotBlank(oAuthAuthzRequest.getParam(REQUEST))) {
 
-                OAuth2Parameters parameters = new OAuth2Parameters();
-                parameters.setClientId(oAuthAuthzRequest.getClientId());
-                parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
-                parameters.setResponseType(oAuthAuthzRequest.getResponseType());
-                parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
+                    OAuth2Parameters parameters = new OAuth2Parameters();
+                    parameters.setClientId(oAuthAuthzRequest.getClientId());
+                    parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
+                    parameters.setResponseType(oAuthAuthzRequest.getResponseType());
+                    parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
 
-                RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
-                if (requestObject == null) {
-                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.INVALID_REQUEST_OBJECT);
+                    requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
+                    if (requestObject == null) {
+                        throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                                ParConstants.INVALID_REQUEST_OBJECT);
+                    }
+                } else if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
+                    /* Mandate request object for FAPI requests
+                    https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2-1) */
+                    throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, ParConstants.REQUEST_OBJECT_MISSING);
                 }
             }
+            return requestObject;
         } catch (RequestObjectException e) {
             if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
             throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+        }
+    }
+
+    private boolean isFapiConformant(String clientId) throws ParCoreException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
+                    "clientId: " + clientId, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
+                    "provider for clientId: " + clientId, e);
+        }
+    }
+
+
+    /**
+     * Validate PKCE parameters for PAR requests.
+     * According to FAPI(5.2.2-18), PAR requests require to use PKCE (RFC7636) with S256 as the code challenge method.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">...</a>
+     *
+     * @param paramMap parameter map
+     * @throws ParClientException if PKCE validation fails
+     */
+    private void validatePKCEParameters(Map<String, String> paramMap) throws ParClientException {
+
+        String codeChallenge = paramMap.get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
+        String codeChallengeMethod = paramMap.get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+
+        if (StringUtils.isEmpty(codeChallenge)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Mandatory parameter code_challenge, not found in the request.");
+        }
+        if (StringUtils.isEmpty(codeChallengeMethod)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Mandatory parameter code_challenge_method, not found in the request.");
+        } else if (!OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(codeChallengeMethod)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method.");
         }
     }
 }

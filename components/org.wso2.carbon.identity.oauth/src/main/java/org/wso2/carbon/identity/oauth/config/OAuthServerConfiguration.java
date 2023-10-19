@@ -32,6 +32,7 @@ import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -57,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
@@ -187,6 +189,7 @@ public class OAuthServerConfiguration {
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private List<String> supportedTokenTypes = new ArrayList<>();
     private List<String> publicClientSupportedGrantTypes = new ArrayList<>();
+    private List<String> publicClientNotSupportedGrantTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
@@ -312,6 +315,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -395,6 +399,9 @@ public class OAuthServerConfiguration {
         // if enabled access token and refresh token will be renewed for each token endpoint call.
         parseTokenRenewalPerRequestConfiguration(oauthElem);
 
+        // Read map federated users to local config.
+        parseMapFederatedUsersToLocalConfiguration(oauthElem);
+
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
 
@@ -403,9 +410,6 @@ public class OAuthServerConfiguration {
 
         // read supported grant types
         parseSupportedGrantTypesConfig(oauthElem);
-
-        // Read public client supported grant type names in <PublicClientSupportedGrantTypes>.
-        parsePublicClientSupportedGrantTypesConfig(oauthElem);
 
         // Read <UserConsentEnabledGrantTypes> under <OAuth> tag and populate data.
         parseUserConsentEnabledGrantTypesConfig(oauthElem);
@@ -2396,6 +2400,29 @@ public class OAuthServerConfiguration {
                         refreshTokenAllowedGrantTypes.put(grantTypeName, isRefreshAllowed);
                     }
                 }
+
+                /* Read the public client allowed grant types for all grant types.
+                 * Grant types added with PublicClientAllowed property and value set to true will be added to
+                 * publicClientSupportedGrantTypes list and value set to false will be added to
+                 * publicClientNotSupportedGrantTypes. All default grant types will have the property set to either the
+                 * value.
+                 * If the property is not mentioned in the custom grant type configuration, the grant type will not be
+                 * added to either lists. So, if the custom grant type is added to the array configuration of allowed,
+                 * grant types, it will get added to the publicClientSupportedGrantTypes list.
+                 */
+                OMElement publicClientAllowedElement = supportedGrantTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ALLOWED));
+                String publicClientAllowed = null;
+                if (publicClientAllowedElement != null) {
+                    publicClientAllowed = publicClientAllowedElement.getText();
+                }
+                if (StringUtils.isNotEmpty(publicClientAllowed)) {
+                    if (Boolean.parseBoolean(publicClientAllowed)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    } else {
+                        publicClientNotSupportedGrantTypes.add(grantTypeName);
+                    }
+                }
             }
         } else {
             // if this element is not present, assume the default case.
@@ -2419,22 +2446,6 @@ public class OAuthServerConfiguration {
                 String grantTypeName = entry.getKey().toString();
                 String authzGrantHandlerImplClass = entry.getValue().toString();
                 log.debug(grantTypeName + "supported by" + authzGrantHandlerImplClass);
-            }
-        }
-    }
-
-    private void parsePublicClientSupportedGrantTypesConfig(OMElement oauthConfigElem) {
-
-        OMElement publicClientGrantTypesElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                ConfigElements.PUBLIC_CLIENT_SUPPORTED_GRANT_TYPES));
-        if (publicClientGrantTypesElem != null) {
-            Iterator iterator = publicClientGrantTypesElem
-                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ENABLED_GRANT_TYPE_NAME));
-            while (iterator.hasNext()) {
-                OMElement publicClientSupportedGrantName = (OMElement) iterator.next();
-                if (publicClientSupportedGrantName != null) {
-                    publicClientSupportedGrantTypes.add(publicClientSupportedGrantName.getText());
-                }
             }
         }
     }
@@ -3239,6 +3250,17 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)) != null) {
+                try {
+                    parseSupportedTokenEndpointSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                            getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)));
+                } catch (ServerConfigurationException e) {
+                    log.error("Error while parsing supported token endpoint signing algorithms.", e);
+                }
+            }
+
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
             oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
@@ -3398,6 +3420,23 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the map federated users to local configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseMapFederatedUsersToLocalConfiguration(OMElement oauthConfigElem) {
+
+        OMElement mapFederatedUsersToLocalConfigElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.MAP_FED_USERS_TO_LOCAL));
+        if (mapFederatedUsersToLocalConfigElem != null) {
+            mapFederatedUsersToLocal = Boolean.parseBoolean(mapFederatedUsersToLocalConfigElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("MapFederatedUsersToLocal was set to : " + mapFederatedUsersToLocal);
+        }
+    }
+
+    /**
      * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
      * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
      * calls as well.
@@ -3541,6 +3580,40 @@ public class OAuthServerConfiguration {
     public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
 
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
+    }
+
+    public List<String> getSupportedTokenEndpointSigningAlgorithms() {
+
+        return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    /**
+     * Parse supported signing algorithms and add them to the supportedTokenEndpointSigningAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseSupportedTokenEndpointSigningAlgorithms(OMElement algorithms)
+            throws ServerConfigurationException {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG);
+        if (iterator != null) {
+            while (iterator.hasNext()) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    try {
+                        supportedTokenEndpointSigningAlgorithms.add(String.valueOf(
+                                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm.getText())));
+                    } catch (IdentityOAuth2Exception e) {
+                        throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -3714,6 +3787,7 @@ public class OAuthServerConfiguration {
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
         private static final String TOKEN_TYPE_IMPL_CLASS = "TokenTypeImplClass";
+        private static final String PUBLIC_CLIENT_ALLOWED = "PublicClientAllowed";
         // Supported Client Authentication Methods
         private static final String CLIENT_AUTH_HANDLERS = "ClientAuthHandlers";
         private static final String CLIENT_AUTH_HANDLER_IMPL_CLASS = "ClientAuthHandler";
@@ -3796,6 +3870,8 @@ public class OAuthServerConfiguration {
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
     }
 
 }
