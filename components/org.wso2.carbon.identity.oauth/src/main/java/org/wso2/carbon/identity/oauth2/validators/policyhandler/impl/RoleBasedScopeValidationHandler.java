@@ -39,6 +39,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
+import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_DOMAIN;
+
 /**
  * RoleBasedScopeValidationHandler
  */
@@ -82,31 +85,33 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
     private List<String> getUserRoles(AuthenticatedUser authenticatedUser, String appId)
             throws ScopeValidationHandlerException {
 
+        List<String> roleIds = new ArrayList<>();
         // Get role id list of the user.
-        List<String> roleIdsOfUser;;
         try {
-            roleIdsOfUser = getRoleIdsOfUser(authenticatedUser.getUserId(), authenticatedUser.getTenantDomain());
+            List<String> roleIdsOfUser = getRoleIdsOfUser(authenticatedUser.getUserId(),
+                    authenticatedUser.getTenantDomain());
+            if (!roleIdsOfUser.isEmpty()) {
+                roleIds.addAll(roleIdsOfUser);
+            }
         } catch (UserIdNotFoundException e) {
             throw new ScopeValidationHandlerException("Error while resolving user id of user", e);
         }
         // Get groups of the user.
         List<String> groups = getUserGroups(authenticatedUser);
-        List<String> roleIdsOfGroups = null;
         if (groups.isEmpty()) {
-            roleIdsOfGroups = getRoleIdsOfGroups(groups, authenticatedUser.getTenantDomain());
+            List<String> roleIdsOfGroups = getRoleIdsOfGroups(groups, authenticatedUser.getTenantDomain());
+            if (!roleIdsOfGroups.isEmpty()) {
+                roleIds.addAll(roleIdsOfGroups);
+            }
         }
-        List<String> roleIdsOfIdGroups = null;
         if (authenticatedUser.isFederatedUser()) {
-            roleIdsOfIdGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser),
+            List<String> roleIdsOfIdGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser),
                     authenticatedUser.getTenantDomain());
+            if (!roleIdsOfIdGroups.isEmpty()) {
+                roleIds.addAll(roleIdsOfIdGroups);
+            }
         }
-        List<String> roleIds = null;
-        if (roleIdsOfUser != null && roleIdsOfGroups != null && roleIdsOfIdGroups != null) {
-            roleIds = Stream.concat(Stream.concat(roleIdsOfUser.stream(), roleIdsOfGroups.stream()),
-                            roleIdsOfIdGroups.stream())
-                    .collect(Collectors.toList());
-        }
-        if (roleIds != null && !roleIds.isEmpty()) {
+        if (!roleIds.isEmpty()) {
             return getFilteredRoleIds(roleIds, appId, authenticatedUser.getTenantDomain());
         }
         return new ArrayList<>();
@@ -188,7 +193,12 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                     ((AbstractUserStoreManager) userStoreManager).getGroupListOfUser(authenticatedUser.getUserId(),
                             null, null);
             for (Group group : groups) {
-                userGroups.add(group.getGroupName());
+                String groupName = group.getGroupName();
+                String groupDomainName = UserCoreUtil.extractDomainFromName(groupName);
+                if (!INTERNAL_DOMAIN.equalsIgnoreCase(groupDomainName) &&
+                        !APPLICATION_DOMAIN.equalsIgnoreCase(groupDomainName)) {
+                    userGroups.add(group.getGroupID());
+                }
             }
         } catch (UserIdNotFoundException | IdentityOAuth2Exception e) {
             throw new ScopeValidationHandlerException(e.getMessage(), e);
