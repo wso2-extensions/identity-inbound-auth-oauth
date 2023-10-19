@@ -79,7 +79,7 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
 
         try {
             accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .validateToken(accessTokenIdentifier, false);
+                    .getVerifiedAccessToken(accessTokenIdentifier, false);
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error in getting AccessTokenDO", e);
         }

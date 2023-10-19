@@ -22,17 +22,28 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 
 /**
- * Token validation Processor.
+ * The AccessTokenProvider interface defines the contract for classes that are responsible
+ * for verifying and providing access tokens. Implementing classes should offer methods
+ * to retrieve access tokens based on token identifiers, with verification of the token's
+ * validity, ensuring it is in an active or expired state.
  */
-public interface TokenValidationProcessor {
+public interface AccessTokenProvider {
 
     /**
-     * Validate token.
+     *  token.
      *
      * @param accessToken    access token
      * @param includeExpired include expired tokens
      * @return AccessTokenDO
      * @throws IdentityOAuth2Exception if an error occurred while validating the token
      */
-    AccessTokenDO validateToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
+    AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
 }
+
+/**
+ * Find access tokenDO from token identifier by chaining through all available token issuers.
+ *
+ * @param tokenIdentifier access token data object from the validation request.
+ * @return AccessTokenDO
+ * @throws IdentityOAuth2Exception
+ */

@@ -49,7 +49,7 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
-import org.wso2.carbon.identity.oauth.tokenprocessor.TokenValidationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -711,12 +711,12 @@ public class OAuth2ServiceComponent {
      */
     @Reference(
             name = "token.validation.processor",
-            service = TokenValidationProcessor.class,
+            service = AccessTokenProvider.class,
             cardinality = ReferenceCardinality.OPTIONAL,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetTokenValidationProcessor"
     )
-    protected void setTokenValidationProcessor(TokenValidationProcessor tokenValidationProcessor) {
+    protected void setTokenValidationProcessor(AccessTokenProvider tokenValidationProcessor) {
 
         if (log.isDebugEnabled()) {
             log.debug("Setting token validation processor.");
@@ -727,9 +727,9 @@ public class OAuth2ServiceComponent {
     /**
      * Unsets the token validation processor.
      *
-     * @param tokenValidationProcessor TokenValidationProcessor
+     * @param accessTokenProvider TokenValidationProcessor
      */
-    protected void unsetTokenValidationProcessor(TokenValidationProcessor tokenValidationProcessor) {
+    protected void unsetTokenValidationProcessor(AccessTokenProvider accessTokenProvider) {
 
         if (log.isDebugEnabled()) {
             log.debug("Unset token validation processor.");

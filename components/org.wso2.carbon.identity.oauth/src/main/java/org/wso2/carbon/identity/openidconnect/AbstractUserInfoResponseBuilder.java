@@ -85,7 +85,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         String accessToken;
         try {
             accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .validateToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                    .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             accessToken = accessTokenDO == null ? null : accessTokenDO.getAccessToken();
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -159,7 +159,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         AuthenticatedUser authenticatedUser;
         try {
             authenticatedUser = OAuth2Util.getAuthenticatedUser(OAuth2ServiceComponentHolder.getInstance()
-                    .getTokenValidationProcessor().validateToken(
+                    .getTokenValidationProcessor().getVerifiedAccessToken(
                             tokenResponse.getAuthorizationContextToken().getTokenString(), false));
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -206,7 +206,7 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         try {
             String accessToken = validationResponseDTO.getAuthorizationContextToken().getTokenString();
             AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .validateToken(accessToken, false);
+                    .getVerifiedAccessToken(accessToken, false);
             grantType = getGrantType(accessTokenDO);
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 // Get the Access Token details from the database/cache to check if the token is consented or not.

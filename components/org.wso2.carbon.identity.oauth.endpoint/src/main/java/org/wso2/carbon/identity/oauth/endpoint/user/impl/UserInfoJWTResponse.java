@@ -121,7 +121,7 @@ public class UserInfoJWTResponse extends AbstractUserInfoResponseBuilder {
         AccessTokenDO accessTokenDO;
         try {
             accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenValidationProcessor()
-                    .validateToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                    .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
         } catch (IdentityOAuth2Exception e) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token DO for the token " +

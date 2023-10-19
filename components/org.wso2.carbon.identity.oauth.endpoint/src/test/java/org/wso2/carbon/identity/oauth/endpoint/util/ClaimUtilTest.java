@@ -43,7 +43,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenValidationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultAccessTokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -321,7 +321,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
                 Mockito.mock(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
         when(oAuth2ServiceComponentHolderInstance.getTokenValidationProcessor())
-                .thenReturn(new DefaultTokenValidationProcessor());
+                .thenReturn(new DefaultAccessTokenProvider());
         Map<String, Object> claimsMap;
         try {
             claimsMap = ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);

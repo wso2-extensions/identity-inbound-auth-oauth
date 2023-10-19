@@ -25,10 +25,10 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 /**
  * Default token validation processor with token persistence.
  */
-public class DefaultTokenValidationProcessor implements TokenValidationProcessor {
+public class DefaultAccessTokenProvider implements AccessTokenProvider {
 
     @Override
-    public AccessTokenDO validateToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception {
+    public AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception {
 
         return OAuth2Util.findAccessToken(accessToken, includeExpired);
     }
