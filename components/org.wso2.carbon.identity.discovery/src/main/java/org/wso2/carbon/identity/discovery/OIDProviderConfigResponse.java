@@ -572,7 +572,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
-        configMap.put(DiscoveryConstants.WEB_FINGER_ENDPOINT, this.webFingerEndpoint);
+        configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT, this.webFingerEndpoint);
         return configMap;
     }
 }

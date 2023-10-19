@@ -362,5 +362,5 @@ public class DiscoveryConstants {
      * web_finger_endpoint
      * OPTIONAL. URL of the OpenID Connect token discovery endpoint
      */
-    public static final String WEB_FINGER_ENDPOINT = "web_finger_endpoint";
+    public static final String WEBFINGER_ENDPOINT = "WebFinger_endpoint";
 }
