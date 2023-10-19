@@ -4788,14 +4788,7 @@ public class OAuth2Util {
         if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-
-        if (request != null) {
-            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
-                return tenantDomainFromReq;
-            }
-        }
-        return IdentityTenantUtil.getTenantDomainFromContext();
+        return IdentityTenantUtil.resolveTenantDomain();
     }
 
     /**
