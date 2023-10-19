@@ -281,6 +281,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
 
         initSingleClaimTest(claimUri, claimValue);
+        setUpRequestObjectService();
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
         mockStatic(FrameworkUtils.class);

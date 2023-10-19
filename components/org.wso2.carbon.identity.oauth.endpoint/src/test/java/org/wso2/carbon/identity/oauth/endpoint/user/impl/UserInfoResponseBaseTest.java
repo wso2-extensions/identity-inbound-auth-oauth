@@ -16,7 +16,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -117,7 +116,6 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     private static final String JWT_TOKEN_TYPE = "JWT";
     private static final String SUBJECT_TYPE = "subject_type";
     private static final String PAIRWISE = "pairwise";
-    private static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
     private static final String SECTOR_IDENTIFIER_URI_VALUE = "https://mockhost.com/file_of_redirect_uris.json";
 
     @Mock
@@ -232,7 +230,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(ClaimUtil.getUserClaimsUsingTokenResponse(any(OAuth2TokenValidationResponseDTO.class))).thenReturn(claims);
     }
 
-    protected void prepareOAuth2Util() throws Exception {
+    protected void prepareOAuth2Util(boolean isPairwiseSub) throws Exception {
 
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn("mock_client_id");
@@ -244,7 +242,12 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(OAuth2Util.getEssentialClaims(anyString(), anyString())).thenReturn(userAttributesFromCache);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setCallbackUrl("https://mockhost.com?test=test");
+        if (isPairwiseSub) {
+            oAuthAppDO.setSubjectType(PAIRWISE);
+            oAuthAppDO.setSectorIdentifierURI(SECTOR_IDENTIFIER_URI_VALUE);
+        }
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
     }
 
     protected void prepareApplicationManagementService(boolean appendTenantDomain,
@@ -384,8 +387,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         spy(OAuth2Util.class);
 
-        prepareOAuth2Util();
-        prepareServiceProvider(isPairwiseSub);
+        prepareOAuth2Util(isPairwiseSub);
         // Create an accessTokenDO
         mockAccessTokenDOInOAuth2Util(authorizedUser);
 
@@ -395,23 +397,6 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         prepareRegistry(Collections.<String, List<String>>emptyMap());
         prepareAuthorizationGrantCache(false);
         prepareClaimUtil(inputClaims);
-    }
-
-    private void prepareServiceProvider(boolean isPairwiseSub) throws Exception {
-
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty[] spProperties = new ServiceProviderProperty[]{};
-        if (isPairwiseSub) {
-            ServiceProviderProperty subTypeProperty = new ServiceProviderProperty();
-            subTypeProperty.setName(SUBJECT_TYPE);
-            subTypeProperty.setValue(PAIRWISE);
-            ServiceProviderProperty sectorIdentifierProperty = new ServiceProviderProperty();
-            sectorIdentifierProperty.setName(SECTOR_IDENTIFIER_URI);
-            sectorIdentifierProperty.setValue(SECTOR_IDENTIFIER_URI_VALUE);
-            spProperties = new ServiceProviderProperty[]{subTypeProperty, sectorIdentifierProperty};
-        }
-        serviceProvider.setSpProperties(spProperties);
-        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(serviceProvider);
     }
 
     protected void updateAuthenticatedSubjectIdentifier(AuthenticatedUser user, boolean appendTenantDomain,
@@ -455,8 +440,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         spy(OAuth2Util.class);
 
-        prepareOAuth2Util();
-        prepareServiceProvider(false);
+        prepareOAuth2Util(false);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(AUTHORIZED_USER_FULL_QUALIFIED);
