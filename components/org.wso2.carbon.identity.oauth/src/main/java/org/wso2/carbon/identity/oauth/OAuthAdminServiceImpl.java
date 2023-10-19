@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
@@ -127,6 +128,12 @@ public class OAuthAdminServiceImpl {
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
     private static final String VALIDATE_SECOTR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
 
+    private static final String TOKEN_EP_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedTokenEndpointSigningAlgorithms.SupportedTokenEndpointSigningAlgorithm";
+    private static final String ID_TOKEN_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedIDTokenSigningAlgorithms.SupportedIDTokenSigningAlgorithm";
+    private static final String REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedRequestObjectSigningAlgorithms.SupportedRequestObjectSigningAlgorithm";
     boolean validateFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
             OAuthConstants.ENABLE_FAPI_VALIDATION));
 
@@ -362,16 +369,17 @@ public class OAuthAdminServiceImpl {
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
-                        if (StringUtils.isNotEmpty(application.getTokenEndpointAuthMethod()) && validateFAPIDCR) {
-                            filterAllowedFAPITokenAuthMethods(application.getTokenEndpointAuthMethod());
+                        String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
+                        if (StringUtils.isNotEmpty(tokenEndpointAuthMethod) && validateFAPIDCR) {
+                            filterAllowedFAPITokenAuthMethods(tokenEndpointAuthMethod);
                         }
-                        app.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
-                        if (StringUtils.isNotEmpty(application.getTokenEndpointAuthSignatureAlgorithm()) &&
-                                validateFAPIDCR) {
-                            filterAllowedFAPISignatureAlgorithms(application.getTokenEndpointAuthSignatureAlgorithm());
+                        app.setTokenEndpointAuthMethod(filterTokenEndpointAuthMethods(tokenEndpointAuthMethod));
+                        String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
+                        if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm) && validateFAPIDCR) {
+                            filterAllowedFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
                         }
-                        app.setTokenEndpointAuthSignatureAlgorithm(
-                                application.getTokenEndpointAuthSignatureAlgorithm());
+                        app.setTokenEndpointAuthSignatureAlgorithm(filterSignatureAlgorithms(
+                                tokenEndpointAuthSigningAlgorithm, TOKEN_EP_SIGNATURE_ALG_CONFIGURATION));
                         if (StringUtils.isNotEmpty(application.getSubjectType())) {
                             OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                                     application.getSubjectType());
@@ -398,15 +406,19 @@ public class OAuthAdminServiceImpl {
                                 }
                             }
                         }
-                        if (StringUtils.isNotEmpty(application.getIdTokenSignatureAlgorithm()) && validateFAPIDCR) {
-                            filterAllowedFAPISignatureAlgorithms(application.getIdTokenSignatureAlgorithm());
+                        String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
+                        if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm) && validateFAPIDCR) {
+                            filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                         }
-                        app.setIdTokenSignatureAlgorithm(application.getIdTokenSignatureAlgorithm());
-                        if (StringUtils.isNotEmpty(application.getRequestObjectSignatureAlgorithm())) {
+                        app.setIdTokenSignatureAlgorithm(filterSignatureAlgorithms(idTokenSignatureAlgorithm,
+                                ID_TOKEN_SIGNATURE_ALG_CONFIGURATION));
+                        String requestObjectSignatureAlgorithm = application.getRequestObjectSignatureAlgorithm();
+                        if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
                             if (validateFAPIDCR) {
-                                filterAllowedFAPISignatureAlgorithms(application.getRequestObjectSignatureAlgorithm());
+                                filterAllowedFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                             }
-                            app.setRequestObjectSignatureAlgorithm(application.getRequestObjectSignatureAlgorithm());
+                            app.setRequestObjectSignatureAlgorithm(filterSignatureAlgorithms(
+                                    requestObjectSignatureAlgorithm, REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION));
                         }
                         app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
                         app.setSubjectType(application.getSubjectType());
@@ -633,6 +645,7 @@ public class OAuthAdminServiceImpl {
 
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
+        OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo;
         try {
             oauthappdo = getOAuthApp(oauthConsumerKey);
@@ -709,14 +722,18 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthMethod()) && validateFAPIDCR) {
-                filterAllowedFAPITokenAuthMethods(consumerAppDTO.getTokenEndpointAuthMethod());
+            String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
+            if (StringUtils.isNotEmpty(tokenEndpointAuthMethod) && validateFAPIDCR) {
+                filterAllowedFAPITokenAuthMethods(tokenEndpointAuthMethod);
             }
-            oauthappdo.setTokenEndpointAuthMethod(consumerAppDTO.getTokenEndpointAuthMethod());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm()) && validateFAPIDCR) {
-                filterAllowedFAPISignatureAlgorithms(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+            oauthappdo.setTokenEndpointAuthMethod(filterTokenEndpointAuthMethods(tokenEndpointAuthMethod));
+            String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
+
+            if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm) && validateFAPIDCR) {
+                filterAllowedFAPISignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm);
             }
-            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm());
+            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(filterSignatureAlgorithms(
+                    tokenEndpointAuthSignatureAlgorithm, TOKEN_EP_SIGNATURE_ALG_CONFIGURATION));
             if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
                 OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                         consumerAppDTO.getSubjectType());
@@ -742,14 +759,18 @@ public class OAuthAdminServiceImpl {
             }
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getIdTokenSignatureAlgorithm()) && validateFAPIDCR) {
-                filterAllowedFAPISignatureAlgorithms(consumerAppDTO.getIdTokenSignatureAlgorithm());
+            String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
+            if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm) && validateFAPIDCR) {
+                filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
             }
-            oauthappdo.setIdTokenSignatureAlgorithm(consumerAppDTO.getIdTokenSignatureAlgorithm());
-            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectSignatureAlgorithm()) && validateFAPIDCR) {
-                filterAllowedFAPISignatureAlgorithms(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+            oauthappdo.setIdTokenSignatureAlgorithm(filterSignatureAlgorithms(idTokenSignatureAlgorithm,
+                    ID_TOKEN_SIGNATURE_ALG_CONFIGURATION));
+            String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
+            if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm) && validateFAPIDCR) {
+                filterAllowedFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
             }
-            oauthappdo.setRequestObjectSignatureAlgorithm(consumerAppDTO.getRequestObjectSignatureAlgorithm());
+            oauthappdo.setRequestObjectSignatureAlgorithm(filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
+                    REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
             oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
@@ -2359,5 +2380,25 @@ public class OAuthAdminServiceImpl {
             callBackURIList = Arrays.asList(redirectURI.split("\\|"));
         }
         return callBackURIList;
+    }
+
+    public String filterSignatureAlgorithms(String algorithm, String configName) throws IdentityOAuthClientException {
+
+        List<String> allowedSignatureAlgorithms = IdentityUtil.getPropertyAsList(configName);
+        if (!allowedSignatureAlgorithms.contains(algorithm)) {
+            String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+        return algorithm;
+    }
+
+    public String filterTokenEndpointAuthMethods(String authMethod) throws IdentityOAuthClientException {
+
+      List<String> authMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
+        if (!authMethods.contains(authMethod)) {
+            String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+        return authMethod;
     }
 }
