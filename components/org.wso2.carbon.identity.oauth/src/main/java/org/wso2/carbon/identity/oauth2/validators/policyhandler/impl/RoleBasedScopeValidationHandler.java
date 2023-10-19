@@ -37,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_DOMAIN;
@@ -105,10 +104,10 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             }
         }
         if (authenticatedUser.isFederatedUser()) {
-            List<String> roleIdsOfIdGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser),
+            List<String> roleIdsOfIdpGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser),
                     authenticatedUser.getTenantDomain());
-            if (!roleIdsOfIdGroups.isEmpty()) {
-                roleIds.addAll(roleIdsOfIdGroups);
+            if (!roleIdsOfIdpGroups.isEmpty()) {
+                roleIds.addAll(roleIdsOfIdpGroups);
             }
         }
         if (!roleIds.isEmpty()) {

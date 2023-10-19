@@ -57,7 +57,7 @@ public class OAuthComponentServiceHolder {
     private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
     private OAuthAdminServiceImpl oAuthAdminService;
     private List<ScopeValidator> scopeValidators = new ArrayList<>();
-    private List<ScopeValidationHandler> scopeValidatorPolicyHandlers = new ArrayList<>();
+    private List<ScopeValidationHandler> scopeValidationHandlers = new ArrayList<>();
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
@@ -106,43 +106,43 @@ public class OAuthComponentServiceHolder {
     }
 
     /**
-     * Get the list of scope validator policy handler implementations available.
+     * Get the list of scope validation handler implementations available.
      *
-     * @return ScopeValidatorPolicyHandler returns a list ot scope validator policy handler.
+     * @return ScopeValidationHandler returns a list ot scope validation policy handler.
      */
-    public List<ScopeValidationHandler> getScopeValidatorPolicyHandlers() {
+    public List<ScopeValidationHandler> getScopeValidationHandlers() {
 
-        return scopeValidatorPolicyHandlers;
+        return scopeValidationHandlers;
     }
 
     /**
-     * Add scope validator policy handler implementation.
+     * Add scope validation handler implementation.
      *
-     * @param scopeValidatorPolicyHandler Scope validator policy handler implementation.
+     * @param scopeValidationHandler Scope validation handler implementation.
      */
-    public void addScopeValidatorPolicyHandler(ScopeValidationHandler scopeValidatorPolicyHandler) {
+    public void addScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
 
-        scopeValidatorPolicyHandlers.add(scopeValidatorPolicyHandler);
+        scopeValidationHandlers.add(scopeValidationHandler);
     }
 
     /**
-     * Remove scope validator policy handler implementation.
+     * Remove scope validation policy implementation.
      *
-     * @param scopeValidatorPolicyHandler Scope validator policy handler implementation.
+     * @param scopeValidationHandler Scope validation policy implementation.
      */
-    public void removeScopeValidatorPolicyHandler(ScopeValidationHandler scopeValidatorPolicyHandler) {
+    public void removeScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
 
-        scopeValidatorPolicyHandlers.remove(scopeValidatorPolicyHandler);
+        scopeValidationHandlers.remove(scopeValidationHandler);
     }
 
     /**
-     * Set a list of scope validator policy handler implementations.
+     * Set a list of scope validation handler implementations.
      *
-     * @param scopeValidatorPolicyHandlers List of Scope validator policy handler implementation.
+     * @param scopeValidationHandlers List of Scope validation handler implementation.
      */
-    public void setScopeValidatorPolicyHandlers(List<ScopeValidationHandler> scopeValidatorPolicyHandlers) {
+    public void setScopeValidatorPolicyHandlers(List<ScopeValidationHandler> scopeValidationHandlers) {
 
-        this.scopeValidatorPolicyHandlers = scopeValidatorPolicyHandlers;
+        this.scopeValidationHandlers = scopeValidationHandlers;
     }
 
     private OAuthComponentServiceHolder() {

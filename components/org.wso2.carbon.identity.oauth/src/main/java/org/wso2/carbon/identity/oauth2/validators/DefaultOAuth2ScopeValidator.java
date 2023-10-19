@@ -99,7 +99,7 @@ public class DefaultOAuth2ScopeValidator {
         }
         List<AuthorizedScopes> authorizedScopesList  = getAuthorizedScopes(appId, tenantDomain);
         List<ScopeValidationHandler> scopeValidationHandlers =
-                OAuthComponentServiceHolder.getInstance().getScopeValidatorPolicyHandlers();
+                OAuthComponentServiceHolder.getInstance().getScopeValidationHandlers();
         Map<String, List<String>> validatedScopesByHandler = new HashMap<>();
         for (AuthorizedScopes authorizedScopes: authorizedScopesList) {
             String policyId = authorizedScopes.getPolicyId();

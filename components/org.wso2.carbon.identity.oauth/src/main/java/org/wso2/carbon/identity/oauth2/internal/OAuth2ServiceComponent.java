@@ -617,6 +617,29 @@ public class OAuth2ServiceComponent {
     }
 
     @Reference(
+            name = "scope.validator.handler",
+            service = ScopeValidationHandler.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "removeScopeValidationHandler"
+    )
+    protected void addScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Scope validation handler Service : " + scopeValidationHandler.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addScopeValidationHandler(scopeValidationHandler);
+    }
+
+    protected void removeScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Scope validator Service : " + scopeValidationHandler.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeScopeValidationHandler(scopeValidationHandler);
+    }
+
+    @Reference(
             name = "IdentityProviderManager",
             service = org.wso2.carbon.idp.mgt.IdpManager.class,
             cardinality = ReferenceCardinality.MANDATORY,
