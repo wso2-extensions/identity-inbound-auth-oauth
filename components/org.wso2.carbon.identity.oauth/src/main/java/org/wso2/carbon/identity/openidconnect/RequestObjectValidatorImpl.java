@@ -33,9 +33,11 @@ import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
@@ -59,6 +61,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String OIDC_ID_TOKEN_ISSUER_ID = "OAuth.OpenIDConnect.IDTokenIssuerID";
+    private static final int MILLISECONDS_PER_SECOND = 1000;
+    private static final int MILLISECONDS_PER_HOUR = 3600000;
     private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
 
     @Override
@@ -126,6 +130,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return false;
             }
         }
+
+        if (isFapiConformant(oAuth2Parameters.getClientId())) {
+            checkFapiMandatedParams(requestObject);
+            if (!isValidNbfExp(requestObject)) {
+                return false;
+            }
+        }
+
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
@@ -135,6 +147,17 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
         }
         return true;
+    }
+
+    private void checkFapiMandatedParams(RequestObject requestObject) throws RequestObjectException {
+
+        String[] mandatoryParams = {Constants.SCOPE, Constants.NONCE, Constants.REDIRECT_URI};
+        for (String param : mandatoryParams) {
+            if (!isParamPresent(requestObject, param)) {
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                        param + " is not present in the request object.");
+            }
+        }
     }
 
     protected boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
@@ -170,6 +193,68 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
             }
+        }
+        return true;
+    }
+
+    /**
+     * Validate the request object nbf claim and exp claim according to the FAPI specification.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">...</a>
+     *
+     * @param requestObject request object
+     * @return true if both claims are valid
+     * @throws RequestObjectException if nbf exp validation fails
+     */
+    protected boolean isValidNbfExp(RequestObject requestObject) throws RequestObjectException {
+
+        Date nbfTime = requestObject.getClaimsSet().getNotBeforeTime();
+        Date expirationTime = requestObject.getClaimsSet().getExpirationTime();
+
+        String errorMsg = null;
+        String errorLog = null;
+        if (nbfTime == null) {
+            errorMsg = "Request Object does not contain Not Before Time.";
+        } else if (expirationTime == null) {
+            errorMsg = "Request Object does not contain Expiration Time.";
+        } else {
+            long timeStampSkewMillis = OAuthServerConfiguration.getInstance()
+                    .getTimeStampSkewInSeconds() * MILLISECONDS_PER_SECOND;
+            long nbfTimeInMillis = nbfTime.getTime();
+            long expirationTimeInMillis = expirationTime.getTime();
+            long currentTimeInMillis = System.currentTimeMillis();
+            // nbf should be older than current time.
+            if ((currentTimeInMillis + timeStampSkewMillis) < nbfTimeInMillis) {
+                errorMsg = "Request Object is not valid yet.";
+                errorLog = String.format("Request Object is not valid yet." +
+                        ", Not Before Time(ms) : %d, TimeStamp Skew : %d, Current Time : %d" + ". Token Rejected.",
+                        nbfTimeInMillis, timeStampSkewMillis, currentTimeInMillis);
+            } else if ((currentTimeInMillis + timeStampSkewMillis) - MILLISECONDS_PER_HOUR > nbfTimeInMillis) {
+                // nbf should not be older than 1 hour from current time
+                errorMsg = "Request Object nbf claim is too old.";
+                errorLog = String.format("Request Object nbf claim is too old." +
+                        ", Not Before Time(ms) : %d, TimeStamp Skew : %d, Current Time : %d" + ". Token Rejected.",
+                        nbfTimeInMillis, timeStampSkewMillis, currentTimeInMillis);
+            } else if (expirationTimeInMillis > nbfTimeInMillis + MILLISECONDS_PER_HOUR) {
+                // exp time should not be older than 1 hour from nbf time
+                errorMsg = "Request Object expiry time is too far in the future than not before time.";
+                errorLog = String.format("Request Object expiry time is too far in the future than not before time." +
+                        ", Expiration Time(ms) : %d, Not Before Time(ms) : %d, Current Time : %d" + ". Token Rejected.",
+                        expirationTimeInMillis, nbfTimeInMillis, currentTimeInMillis);
+            }
+        }
+
+        if (StringUtils.isNotBlank(errorMsg)) {
+            errorLog = StringUtils.isEmpty(errorLog) ? errorMsg : errorLog;
+            logAndReturnFalse(errorLog);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .resultMessage(errorLog)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg);
         }
         return true;
     }
@@ -399,5 +484,18 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             log.debug(errorMessage);
         }
         return false;
+    }
+
+    private boolean isFapiConformant(String clientId) throws RequestObjectException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
+                    "clientId: " + clientId, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
+                    "provider for clientId: " + clientId, e);
+        }
     }
 }
