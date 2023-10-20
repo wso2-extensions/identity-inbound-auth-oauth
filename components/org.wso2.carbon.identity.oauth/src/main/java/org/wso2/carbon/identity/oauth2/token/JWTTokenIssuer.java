@@ -489,7 +489,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
         try {
-            jwtClaimsSetBuilder.claim(ENTITY_ID, authenticatedUser.getUserId());
+            /*
+             *  The entity_id is used to identify the principal subject for the issuing token. For user access tokens,
+             *  this is the user's unique ID. For application access tokens, this is the application's consumer key.
+             */
+            String entityId = isUserAccessTokenType(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType())
+                    ? authenticatedUser.getUserId() : oAuthAppDO.getOauthConsumerKey();
+            jwtClaimsSetBuilder.claim(ENTITY_ID, entityId);
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("User id not found for user: "
                     + authenticatedUser.getLoggableMaskedUserId(), e);
