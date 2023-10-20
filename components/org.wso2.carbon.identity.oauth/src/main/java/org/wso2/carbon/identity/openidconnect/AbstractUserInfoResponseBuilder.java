@@ -79,9 +79,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     private String getOIDCSubjectClaim(String clientId, String spTenantDomain, String subjectClaim)
             throws UserInfoEndpointException {
 
-        OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
             // Get subject identifier according to the configured subject type.
             return OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
