@@ -113,8 +113,8 @@ public class DefaultOAuth2ScopeValidator {
                     policyContext.setValidatedScopesByHandler(validatedScopesByHandler);
                     List<String> validatedScopes;
                     try {
-                        validatedScopes = scopeValidationHandler.validateScopes(authorizedScopes.getScopes(),
-                                requestedScopes, policyContext);
+                        validatedScopes = scopeValidationHandler.validateScopes(requestedScopes,
+                                authorizedScopes.getScopes(), policyContext);
                     } catch (ScopeValidationHandlerException e) {
                         throw new IdentityOAuth2Exception("Error while validating policies roles from " +
                                 "authorization service.", e);
@@ -125,12 +125,12 @@ public class DefaultOAuth2ScopeValidator {
         }
 
         // If "NoPolicy" exists, add all its scopes to the result
-        Set<String> scopes = new HashSet<>(validatedScopesByHandler.getOrDefault("NoPolicy",
+        Set<String> scopes = new HashSet<>(validatedScopesByHandler.getOrDefault("NoPolicyScopeValidationHandler",
                 Collections.emptyList()));
 
         // Separate "NoPolicy" and get the intersection of the rest of the scopes validated by other validators
         List<List<String>> otherHandlerScopes = new ArrayList<>(validatedScopesByHandler.values());
-        otherHandlerScopes.remove(validatedScopesByHandler.get("NoPolicy"));
+        otherHandlerScopes.remove(validatedScopesByHandler.get("NoPolicyScopeValidationHandler"));
 
         List<String> intersection = new ArrayList<>();
         if (!otherHandlerScopes.isEmpty()) {

@@ -31,7 +31,7 @@ public class M2MScopeValidationHandler implements ScopeValidationHandler {
     @Override
     public String getPolicyID() {
 
-        return null;
+        return "M2M";
     }
 
     @Override

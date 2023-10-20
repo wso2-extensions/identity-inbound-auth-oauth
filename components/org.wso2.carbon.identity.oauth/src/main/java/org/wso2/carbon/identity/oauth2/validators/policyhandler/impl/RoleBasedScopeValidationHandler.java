@@ -128,7 +128,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
         try {
             return OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getName)
+                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getId)
                     .collect(Collectors.toCollection(ArrayList::new));
         } catch (IdentityApplicationManagementException e) {
             throw new ScopeValidationHandlerException("Error while retrieving role id list of app : " + appId
