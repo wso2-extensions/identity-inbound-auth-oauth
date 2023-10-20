@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
@@ -61,8 +62,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
-        AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
-        String clientId = accessTokenDO.getConsumerKey();
+        String clientId;
+        Optional<AccessTokenDO> optionalAccessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
+        if (optionalAccessTokenDO.isPresent()) {
+            AccessTokenDO accessTokenDO = optionalAccessTokenDO.get();
+            clientId = accessTokenDO.getConsumerKey();
+        } else {
+            throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
+        }
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
@@ -259,15 +266,22 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     protected abstract String buildResponse(OAuth2TokenValidationResponseDTO tokenResponse,
                                             String spTenantDomain,
                                             Map<String, Object> filteredUserClaims) throws UserInfoEndpointException;
+
     private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
         String clientId = null;
         OAuthAppDO oAuthAppDO;
         try {
-            AccessTokenDO accessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
-            clientId = accessTokenDO.getConsumerKey();
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+
+            Optional<AccessTokenDO> optionalAccessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
+            if (optionalAccessTokenDO.isPresent()) {
+                AccessTokenDO accessTokenDO = optionalAccessTokenDO.get();
+                clientId = accessTokenDO.getConsumerKey();
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            } else {
+                throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
+            }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException(
                     "Error while retrieving OAuth app information for clientId: " + clientId);

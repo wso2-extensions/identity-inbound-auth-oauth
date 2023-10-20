@@ -4238,26 +4238,28 @@ public class OAuth2Util {
     }
 
     /**
-     * Return access token DO from OAuth2TokenValidationResponseDTO. This method validated the token against DB or
-     * in-memory.
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
      *
-     * @param tokenResponse OAuth2TokenValidationResponseDTO object.
-     * @return extracted access token DO.
-     * @throws UserInfoEndpointException if  error occurred while obtaining access token.
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
      */
-    public static AccessTokenDO getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
-        AccessTokenDO accessTokenDO = null;
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             try {
-                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
                         .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                return Optional.ofNullable(accessTokenDO);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
             }
+        } else {
+            return Optional.empty();
         }
-        return accessTokenDO;
     }
 
     /**
