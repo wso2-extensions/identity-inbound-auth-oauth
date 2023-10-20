@@ -270,6 +270,9 @@ public class DCRMUtils {
             if (code.equals(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI.toString())) {
                 error = DCRMConstants.ErrorCodes.INVALID_REDIRECT_URI;
             }
+            if (code.equals(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {
+                error = DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT;
+            }
 
             ErrorDTO errorDTO = new ErrorDTO();
             errorDTO.setError(error);

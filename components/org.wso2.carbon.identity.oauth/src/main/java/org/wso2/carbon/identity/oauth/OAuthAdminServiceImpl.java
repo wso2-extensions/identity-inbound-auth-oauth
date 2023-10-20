@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -125,7 +126,7 @@ public class OAuthAdminServiceImpl {
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
     private static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
-    private static final String VALIDATE_SECOTR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
+    private static final String VALIDATE_SECTOR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
 
     private static final String TOKEN_EP_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
             ".SupportedTokenEndpointSigningAlgorithms.SupportedTokenEndpointSigningAlgorithm";
@@ -379,7 +380,7 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setTokenEndpointAuthSignatureAlgorithm(filterSignatureAlgorithms(
                                 tokenEndpointAuthSigningAlgorithm, TOKEN_EP_SIGNATURE_ALG_CONFIGURATION));
-                        /*if (StringUtils.isNotEmpty(application.getSubjectType())) {
+                        if (StringUtils.isNotEmpty(application.getSubjectType())) {
                             OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                                     application.getSubjectType());
                             if (subjectType == null) {
@@ -404,7 +405,7 @@ public class OAuthAdminServiceImpl {
                                     app.setSectorIdentifierURI(application.getSectorIdentifierURI());
                                 }
                             }
-                        }*/
+                        }
                         String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm) && validateFAPIDCR) {
                             filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
@@ -733,7 +734,7 @@ public class OAuthAdminServiceImpl {
             }
             oauthappdo.setTokenEndpointAuthSignatureAlgorithm(filterSignatureAlgorithms(
                     tokenEndpointAuthSignatureAlgorithm, TOKEN_EP_SIGNATURE_ALG_CONFIGURATION));
-           /* if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
+            if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
                 OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                         consumerAppDTO.getSubjectType());
                 if (subjectType == null) {
@@ -755,7 +756,7 @@ public class OAuthAdminServiceImpl {
                         validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
                     }
                 }
-            }*/
+            }
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
@@ -2335,7 +2336,7 @@ public class OAuthAdminServiceImpl {
                     throw handleClientError(INVALID_REQUEST, "Invalid sector identifier URI");
                 }
                 //validate whether sectorIdentifierURI points to JSON file containing an array of redirect_uri values
-                String validateSectorIdentifierURI = IdentityUtil.getProperty(VALIDATE_SECOTR_IDENTIFIER);
+                String validateSectorIdentifierURI = IdentityUtil.getProperty(VALIDATE_SECTOR_IDENTIFIER);
                 if (StringUtils.isNotEmpty(validateSectorIdentifierURI) &&
                         Boolean.parseBoolean(validateSectorIdentifierURI)) {
                     try {
@@ -2381,22 +2382,39 @@ public class OAuthAdminServiceImpl {
         return callBackURIList;
     }
 
+    /**
+     * filter allowed signature algorithms
+     * @param algorithm algorithm to be validated
+     * @param configName configuration to read allowed algorithms
+     * @return allowed algorithm
+     * @throws IdentityOAuthClientException if the algorithm is not allowed
+     */
     public String filterSignatureAlgorithms(String algorithm, String configName) throws IdentityOAuthClientException {
 
         List<String> allowedSignatureAlgorithms = IdentityUtil.getPropertyAsList(configName);
-        if (!allowedSignatureAlgorithms.contains(algorithm)) {
-            String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
-            throw handleClientError(INVALID_REQUEST, msg);
+        if (!(allowedSignatureAlgorithms.size() == 0)) {
+            if (!allowedSignatureAlgorithms.contains(algorithm)) {
+                String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
+                throw handleClientError(INVALID_REQUEST, msg);
+            }
         }
         return algorithm;
     }
 
+    /**
+     * filter allowed token endpoint authentication methods
+     * @param authMethod   authentication method to be validated
+     * @return allowed authentication method
+     * @throws IdentityOAuthClientException if the token endpoint authentication method is not allowed
+     */
     public String filterTokenEndpointAuthMethods(String authMethod) throws IdentityOAuthClientException {
 
-      List<String> authMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
-        if (!authMethods.contains(authMethod)) {
-            String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
-            throw handleClientError(INVALID_REQUEST, msg);
+        List<String> authMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
+        if (!(authMethods.size() == 0)) {
+            if (!authMethods.contains(authMethod)) {
+                String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
+                throw handleClientError(INVALID_REQUEST, msg);
+            }
         }
         return authMethod;
     }
