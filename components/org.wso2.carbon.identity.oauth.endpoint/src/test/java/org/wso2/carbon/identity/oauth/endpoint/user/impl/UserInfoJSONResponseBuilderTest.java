@@ -281,6 +281,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
 
         initSingleClaimTest(claimUri, claimValue);
+        setUpRequestObjectService();
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
         mockStatic(FrameworkUtils.class);
@@ -314,12 +315,14 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void testSubjectClaim(Map<String, Object> inputClaims,
                                  Object authorizedUser,
                                  boolean appendTenantDomain,
-                                 boolean appendUserStoreDomain,
-                                 String expectedSubjectValue) throws Exception {
+                                 boolean appendUserStoreDomain, boolean isPairwiseSubject,
+                                 String expectedSubjectValue, String expectedPPID) throws Exception {
 
         try {
+            setUpRequestObjectService();
             AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
-            prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+            prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain,
+                    isPairwiseSubject);
             updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
 
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
@@ -333,7 +336,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
             Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
             assertSubjectClaimPresent(claimsInResponse);
-            assertEquals(claimsInResponse.get(sub), expectedSubjectValue);
+            assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -343,12 +346,15 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void testSubjectClaimWithAlteredApplicationConfigs(Map<String, Object> inputClaims,
                                                               Object authorizedUser,
                                                               boolean appendTenantDomain,
-                                                              boolean appendUserStoreDomain,
-                                                              String expectedSubjectValue) throws Exception {
+                                                              boolean appendUserStoreDomain, boolean isPairwiseSubject,
+                                                              String expectedSubjectValue, String expectedPPID)
+            throws Exception {
 
         try {
+            setUpRequestObjectService();
             AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
-            prepareForSubjectClaimTest(authzUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain);
+            prepareForSubjectClaimTest(authzUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain,
+                    isPairwiseSubject);
             authzUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
                     applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
                             IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
@@ -364,7 +370,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
             Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
             assertSubjectClaimPresent(claimsInResponse);
-            assertEquals(claimsInResponse.get(sub), expectedSubjectValue);
+            assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }

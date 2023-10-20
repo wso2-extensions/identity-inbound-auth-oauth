@@ -106,12 +106,13 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     public void testSubjectClaim(Map<String, Object> inputClaims,
                                  Object authorizedUser,
                                  boolean appendTenantDomain,
-                                 boolean appendUserStoreDomain,
-                                 String expectedSubjectValue) throws Exception {
+                                 boolean appendUserStoreDomain, boolean isPairwiseSubject,
+                                 String expectedSubjectValue, String expectedPPID) throws Exception {
 
         try {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
-            prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+            prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain,
+                    isPairwiseSubject);
             updateAuthenticatedSubjectIdentifier(authenticatedUser, appendTenantDomain, appendUserStoreDomain,
                     inputClaims);
 
@@ -138,7 +139,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             assertNotNull(jwt);
             assertNotNull(jwt.getJWTClaimsSet());
             assertNotNull(jwt.getJWTClaimsSet().getSubject());
-            assertEquals(jwt.getJWTClaimsSet().getSubject(), expectedSubjectValue);
+            assertEquals(jwt.getJWTClaimsSet().getSubject(), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
@@ -148,12 +149,14 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     public void testSubjectClaimWithAlteredApplicationConfigs(Map<String, Object> inputClaims,
                                                               Object authorizedUser,
                                                               boolean appendTenantDomain,
-                                                              boolean appendUserStoreDomain,
-                                                              String expectedSubjectValue) throws Exception {
+                                                              boolean appendUserStoreDomain, boolean isPairwiseSubject,
+                                                              String expectedSubjectValue, String expectedPPID)
+            throws Exception {
 
         try {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
-            prepareForSubjectClaimTest(authenticatedUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain);
+            prepareForSubjectClaimTest(authenticatedUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain,
+                    isPairwiseSubject);
             authenticatedUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
                     applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
                             IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
@@ -180,7 +183,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             assertNotNull(jwt);
             assertNotNull(jwt.getJWTClaimsSet());
             assertNotNull(jwt.getJWTClaimsSet().getSubject());
-            assertEquals(jwt.getJWTClaimsSet().getSubject(), expectedSubjectValue);
+            assertEquals(jwt.getJWTClaimsSet().getSubject(), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }
