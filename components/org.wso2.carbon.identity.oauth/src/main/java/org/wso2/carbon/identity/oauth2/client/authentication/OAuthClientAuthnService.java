@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -32,11 +33,14 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -48,6 +52,7 @@ public class OAuthClientAuthnService {
     private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
     private static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
+    private static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.
@@ -168,6 +173,11 @@ public class OAuthClientAuthnService {
                 List<String> configuredClientAuthMethods = getConfiguredClientAuthMethods(clientId);
                 List<OAuthClientAuthenticator> authenticators;
                 if (OAuth2Util.isFapiConformantApp(clientId)) {
+                    if (!isTLSCertPresentInRequest(request)) {
+                        setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No TLS certificate found in the request.",
+                                oAuthClientAuthnContext);
+                        return;
+                    }
                     authenticators = getClientAuthenticatorsForFapiApp(configuredClientAuthMethods);
                 } else {
                     authenticators = getClientAuthenticatorsForNonFapiApp(configuredClientAuthMethods);
@@ -409,5 +419,39 @@ public class OAuthClientAuthnService {
             }
         }
         return applicableClientAuthenticators;
+    }
+
+    /**
+     * Check whether a TLS certificate exists in the request.
+     *
+     * @param request  Http servlet request.
+     * @return   Whether a TLS certificate exists in the request.
+     * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
+     */
+    private boolean isTLSCertPresentInRequest(HttpServletRequest request) throws OAuthClientAuthnException {
+
+        X509Certificate certificate = null;
+        String headerName = Optional.ofNullable(IdentityUtil.getProperty(OAuthConstants.MTLS_AUTH_HEADER))
+                .orElse(CONFIG_NOT_FOUND);
+
+        String certificateInHeader = request.getHeader(headerName);
+        Object certObject = Optional.ofNullable(request.getAttribute(OAuthConstants.JAVAX_SERVLET_REQUEST_CERTIFICATE))
+                .orElse(null);
+
+        if (StringUtils.isNotBlank(certificateInHeader)) {
+            try {
+                certificate = OAuth2Util.parseCertificate(certificateInHeader);
+            } catch (CertificateException e) {
+                throw new OAuthClientAuthnException("Error occurred while extracting the certificate",
+                        OAuth2ErrorCodes.INVALID_REQUEST);
+            }
+        } else if (certObject instanceof X509Certificate) {
+            certificate = (X509Certificate) certObject;
+        } else if (certObject instanceof X509Certificate[] && ((X509Certificate[]) certObject).length > 0) {
+            List<X509Certificate> x509Certificates = Arrays.asList((X509Certificate[]) certObject);
+            certificate = x509Certificates.get(0);
+        }
+
+        return certificate != null;
     }
 }

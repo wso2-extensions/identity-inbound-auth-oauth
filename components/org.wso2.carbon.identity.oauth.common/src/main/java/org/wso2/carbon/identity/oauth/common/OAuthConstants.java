@@ -189,6 +189,10 @@ public final class OAuthConstants {
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+    public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
+    public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    public static final String END_CERT = "-----END CERTIFICATE-----";
+    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
 
     private OAuthConstants() {
 
