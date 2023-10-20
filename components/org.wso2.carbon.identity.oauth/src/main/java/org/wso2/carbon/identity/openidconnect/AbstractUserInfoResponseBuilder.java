@@ -82,18 +82,12 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
+            // Get subject identifier according to the configured subject type.
+            return OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
                     " of tenantDomain: " + spTenantDomain, e);
         }
-        try {
-            // Get subject identifier according to the configured subject type.
-            return OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
-                    " of tenantDomain: " + spTenantDomain, e);
-        }
-
     }
 
     private Map<String, Object> filterOIDCClaims(OAuth2TokenValidationResponseDTO tokenResponse,
