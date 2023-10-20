@@ -71,7 +71,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
-import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -380,7 +379,7 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setTokenEndpointAuthSignatureAlgorithm(filterSignatureAlgorithms(
                                 tokenEndpointAuthSigningAlgorithm, TOKEN_EP_SIGNATURE_ALG_CONFIGURATION));
-                        if (StringUtils.isNotEmpty(application.getSubjectType())) {
+                        /*if (StringUtils.isNotEmpty(application.getSubjectType())) {
                             OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                                     application.getSubjectType());
                             if (subjectType == null) {
@@ -405,7 +404,7 @@ public class OAuthAdminServiceImpl {
                                     app.setSectorIdentifierURI(application.getSectorIdentifierURI());
                                 }
                             }
-                        }
+                        }*/
                         String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm) && validateFAPIDCR) {
                             filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
@@ -734,7 +733,7 @@ public class OAuthAdminServiceImpl {
             }
             oauthappdo.setTokenEndpointAuthSignatureAlgorithm(filterSignatureAlgorithms(
                     tokenEndpointAuthSignatureAlgorithm, TOKEN_EP_SIGNATURE_ALG_CONFIGURATION));
-            if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
+           /* if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
                 OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                         consumerAppDTO.getSubjectType());
                 if (subjectType == null) {
@@ -756,7 +755,7 @@ public class OAuthAdminServiceImpl {
                         validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
                     }
                 }
-            }
+            }*/
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
