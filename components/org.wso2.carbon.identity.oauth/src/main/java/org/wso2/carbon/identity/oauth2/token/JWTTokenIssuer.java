@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.security.Key;
 import java.security.interfaces.RSAPrivateKey;
@@ -97,6 +98,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
+    private static final String ENABLE_PPID_FOR_ACCESS_TOKENS = "OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -476,6 +478,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+        if (checkPairwiseSubEnabledForAccessTokens()) {
+            // pairwise sub claim is returned only if pairwise subject identifier for access tokens is enabled.
+            sub = OIDCClaimUtil.getSubjectClaim(sub, oAuthAppDO);
+        }
 
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -841,5 +847,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = jwtClaimsSetBuilder.build();
         }
         return jwtClaimsSet;
+    }
+
+    /**
+     * Check whether pairwise subject identifier is enabled for access token response.
+     *
+     * @return true if pairwise subject identifier is enabled for access token response.
+     */
+    private boolean checkPairwiseSubEnabledForAccessTokens() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }
 }
