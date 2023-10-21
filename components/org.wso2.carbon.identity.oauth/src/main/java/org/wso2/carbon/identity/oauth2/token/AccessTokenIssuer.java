@@ -597,7 +597,6 @@ public class AccessTokenIssuer {
 
     private boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
-        boolean isScopeValidationOldBehaviourEnabled = OAuth2Util.isScopeValidationOldBehaviourEnabled();
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
@@ -679,7 +678,7 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
-            if (isScopeValidationOldBehaviourEnabled) {
+            if (OAuth2Util.isLegacyAuthzRuntime()) {
                 // Execute Internal SCOPE Validation.
                 JDBCPermissionBasedInternalScopeValidator scopeValidator =
                         new JDBCPermissionBasedInternalScopeValidator();
@@ -716,7 +715,7 @@ public class AccessTokenIssuer {
          Those scopes should not send to the other scopes validators. Thus remove the scopes from the tokReqMsgCtx.
          Will be added to the response after executing the other scope validators.
         */
-        if (isScopeValidationOldBehaviourEnabled) {
+        if (OAuth2Util.isLegacyAuthzRuntime()) {
             removeInternalScopes(tokReqMsgCtx);
 
             // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
@@ -741,7 +740,7 @@ public class AccessTokenIssuer {
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             // Add authorized internal scopes to the request for sending in the response.
-            if (isScopeValidationOldBehaviourEnabled) {
+            if (OAuth2Util.isLegacyAuthzRuntime()) {
                 addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             } else {
                 addAuthorizedScopes(tokReqMsgCtx, authorizedScopes);

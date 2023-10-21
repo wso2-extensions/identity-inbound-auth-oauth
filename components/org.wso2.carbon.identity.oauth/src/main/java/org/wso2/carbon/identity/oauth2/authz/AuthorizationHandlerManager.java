@@ -273,13 +273,12 @@ public class AuthorizationHandlerManager {
                                          ResponseTypeHandler authzHandler) throws IdentityOAuth2Exception,
             IdentityOAuth2UnauthorizedScopeException {
 
-        boolean isScopeValidationOldBehaviourEnabled = OAuth2Util.isScopeValidationOldBehaviourEnabled();
         // Get allowed scopes that are specified in the server level.
         List<String> requestedAllowedScopes = getAllowedScopesFromRequestedScopes(authzReqMsgCtx);
         // Remove the system level allowed scopes from requested scopes for further validation.
         removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         List<String> authorizedScopes = null;
-        if (isScopeValidationOldBehaviourEnabled) {
+        if (OAuth2Util.isLegacyAuthzRuntime()) {
             // If it is management app, we validate internal scopes in the requested scopes.
             String[] authorizedInternalScopes = new String[0];
             log.debug("Handling the internal scope validation.");
@@ -306,7 +305,7 @@ public class AuthorizationHandlerManager {
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
         boolean isValidatedScopesContainsInRequestedScopes = isValidatedScopesContainsInRequestedScopes(authzReqMsgCtx);
         if (isValid && isValidatedScopesContainsInRequestedScopes) {
-            if (isScopeValidationOldBehaviourEnabled) {
+            if (OAuth2Util.isLegacyAuthzRuntime()) {
                 // Add authorized internal scopes to the request for sending in the response.
                 addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
             } else {

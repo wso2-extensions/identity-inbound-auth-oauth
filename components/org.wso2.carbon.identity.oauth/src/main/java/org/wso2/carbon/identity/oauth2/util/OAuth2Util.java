@@ -63,6 +63,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -4961,8 +4962,8 @@ public class OAuth2Util {
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
 
-    public static boolean isScopeValidationOldBehaviourEnabled() {
+    public static boolean isLegacyAuthzRuntime() {
 
-        return true;
+        return CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME;
     }
 }
