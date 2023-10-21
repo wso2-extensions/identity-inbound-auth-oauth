@@ -69,6 +69,14 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
     }
 
+    /**
+     * Get the associated scopes for the roles.
+     *
+     * @param roles Roles.
+     * @param tenantDomain Tenant domain.
+     * @return List of associated scopes.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving scope list of roles.
+     */
     private List<String> getAssociatedScopesForRoles(List<String> roles, String tenantDomain)
             throws ScopeValidationHandlerException {
 
@@ -81,6 +89,14 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
     }
 
+    /**
+     * Get the user roles.
+     *
+     * @param authenticatedUser AuthenticatedUser.
+     * @param appId App id.
+     * @return User roles.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving user roles.
+     */
     private List<String> getUserRoles(AuthenticatedUser authenticatedUser, String appId)
             throws ScopeValidationHandlerException {
 
@@ -116,6 +132,15 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         return new ArrayList<>();
     }
 
+    /**
+     * Get the filtered role ids.
+     *
+     * @param roleId Role id list.
+     * @param appId App id.
+     * @param tenantDomain Tenant domain.
+     * @return Filtered role ids.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
+     */
     private List<String> getFilteredRoleIds(List<String> roleId, String appId, String tenantDomain)
             throws ScopeValidationHandlerException {
 
@@ -123,6 +148,14 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         return roleId.stream().distinct().filter(rolesAssociatedWithApp::contains).collect(Collectors.toList());
     }
 
+    /**
+     * Get the role ids associated with app.
+     *
+     * @param appId App id.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids associated with app.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of app.
+     */
     private List<String> getRoleIdsAssociatedWithApp(String appId, String tenantDomain)
             throws ScopeValidationHandlerException {
 
@@ -136,6 +169,14 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
     }
 
+    /**
+     * Get the role ids of user.
+     *
+     * @param userId User id.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids of user.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of user.
+     */
     private List<String> getRoleIdsOfUser(String userId, String tenantDomain) throws ScopeValidationHandlerException {
 
         try {
@@ -147,6 +188,14 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
     }
 
+    /**
+     * Get the role ids of groups.
+     *
+     * @param groups Groups.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids of groups.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of groups.
+     */
     private List<String> getRoleIdsOfGroups(List<String> groups, String tenantDomain)
             throws ScopeValidationHandlerException {
 
@@ -159,6 +208,14 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
     }
 
+    /**
+     * Get the role ids of idp groups
+     *
+     * @param groups Groups.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids of idp groups.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of idp groups.
+     */
     private List<String> getRoleIdsOfIdpGroups(List<String> groups, String tenantDomain)
             throws ScopeValidationHandlerException {
 

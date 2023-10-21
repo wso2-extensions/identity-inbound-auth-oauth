@@ -42,6 +42,13 @@ public class DefaultOAuth2ScopeValidator {
 
     private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
 
+    /**
+     * Validate scope.
+     *
+     * @param authzReqMessageContext AuthzReqMessageContext.
+     * @return List of scopes.
+     * @throws IdentityOAuth2Exception Error when performing the scope validation.
+     */
     public List<String> validateScope(OAuthAuthzReqMessageContext authzReqMessageContext)
             throws IdentityOAuth2Exception {
 
@@ -59,6 +66,13 @@ public class DefaultOAuth2ScopeValidator {
                 null, tenantDomain);
     }
 
+    /**
+     * Validate scope.
+     *
+     * @param tokenReqMessageContext tokenReqMessageContext.
+     * @return List of scopes.
+     * @throws IdentityOAuth2Exception Error when performing the scope validation.
+     */
     public List<String> validateScope(OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
@@ -77,9 +91,20 @@ public class DefaultOAuth2ScopeValidator {
                 tenantDomain);
     }
 
+    /**
+     * Get authorized scopes.
+     *
+     * @param requestedScopes   Requested scopes.
+     * @param authenticatedUser Authenticated user.
+     * @param appId             App ID.
+     * @param grantType         Grant type.
+     * @param tenantDomain      Tenant domain.
+     * @return Authorized scopes.
+     * @throws IdentityOAuth2Exception if any error occurs during getting authorized scopes.
+     */
     private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
                                              String appId, String grantType, String tenantDomain)
-            throws IdentityOAuth2Exception  {
+            throws IdentityOAuth2Exception {
 
         // Filter OIDC scopes and add to approved scopes list.
         if (LOG.isDebugEnabled()) {
@@ -97,13 +122,13 @@ public class DefaultOAuth2ScopeValidator {
         if (requestedScopes.contains(SYSTEM_SCOPE)) {
             requestedScopes.addAll(getInternalScopes(tenantDomain));
         }
-        List<AuthorizedScopes> authorizedScopesList  = getAuthorizedScopes(appId, tenantDomain);
+        List<AuthorizedScopes> authorizedScopesList = getAuthorizedScopes(appId, tenantDomain);
         List<ScopeValidationHandler> scopeValidationHandlers =
                 OAuthComponentServiceHolder.getInstance().getScopeValidationHandlers();
         Map<String, List<String>> validatedScopesByHandler = new HashMap<>();
-        for (AuthorizedScopes authorizedScopes: authorizedScopesList) {
+        for (AuthorizedScopes authorizedScopes : authorizedScopesList) {
             String policyId = authorizedScopes.getPolicyId();
-            ScopeValidationContext policyContext =  new ScopeValidationContext();
+            ScopeValidationContext policyContext = new ScopeValidationContext();
             policyContext.setAuthenticatedUser(authenticatedUser);
             policyContext.setAppId(appId);
             policyContext.setPolicyId(policyId);
@@ -145,6 +170,14 @@ public class DefaultOAuth2ScopeValidator {
         return approvedScopes;
     }
 
+    /**
+     * Get the authorized scopes for the given appId and tenant domain.
+     *
+     * @param appId        App id.
+     * @param tenantDomain Tenant domain.
+     * @return Authorized scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving authorized scopes for app.
+     */
     private List<AuthorizedScopes> getAuthorizedScopes(String appId, String tenantDomain)
             throws IdentityOAuth2Exception {
 
@@ -157,10 +190,17 @@ public class DefaultOAuth2ScopeValidator {
         }
     }
 
+    /**
+     * Get the internal scopes.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Internal scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving internal scopes for tenant domain.
+     */
     private List<String> getInternalScopes(String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
-            List<Scope> scopes =  OAuth2ServiceComponentHolder.getInstance()
+            List<Scope> scopes = OAuth2ServiceComponentHolder.getInstance()
                     .getApiResourceManager().getScopesByTenantDomain(tenantDomain, "name sw internal_");
             return scopes.stream().map(Scope::getName).collect(Collectors.toCollection(ArrayList::new));
         } catch (APIResourceMgtException e) {
@@ -169,12 +209,20 @@ public class DefaultOAuth2ScopeValidator {
         }
     }
 
+    /**
+     * Get the requested OIDC scopes
+     *
+     * @param tenantDomain    Tenant domain.
+     * @param requestedScopes Requested scopes.
+     * @return Requested OIDC scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving oidc scopes.
+     */
     private Set<String> getRequestedOIDCScopes(String tenantDomain, List<String> requestedScopes)
             throws IdentityOAuth2Exception {
 
         OAuthAdminServiceImpl oAuthAdminServiceImpl = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService();
         try {
-            List<String> oidcScopes =  oAuthAdminServiceImpl.getRegisteredOIDCScope(tenantDomain);
+            List<String> oidcScopes = oAuthAdminServiceImpl.getRegisteredOIDCScope(tenantDomain);
             return requestedScopes.stream().distinct().filter(oidcScopes::contains).collect(Collectors.toSet());
         } catch (IdentityOAuthAdminException e) {
             throw new IdentityOAuth2Exception("Error while retrieving oidc scopes for tenant domain : "
@@ -182,11 +230,26 @@ public class DefaultOAuth2ScopeValidator {
         }
     }
 
+    /**
+     * Remove OIDC scopes from the list.
+     *
+     * @param requestedScopes Requested scopes.
+     * @param oidcScopes      OIDC scopes.
+     * @return List of scopes.
+     */
     private List<String> removeOIDCScopes(List<String> requestedScopes, Set<String> oidcScopes) {
 
         return requestedScopes.stream().distinct().filter(s -> !oidcScopes.contains(s)).collect(Collectors.toList());
     }
 
+    /**
+     * Get the application resource id for the given client id
+     *
+     * @param clientId   Client Id.
+     * @param tenantName Tenant name.
+     * @return Application resource id.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving application resource id.
+     */
     private String getApplicationId(String clientId, String tenantName) throws IdentityOAuth2Exception {
 
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
@@ -198,6 +261,12 @@ public class DefaultOAuth2ScopeValidator {
         }
     }
 
+    /**
+     * Checks if the scopes list is empty
+     *
+     * @param scopes Scopes list
+     * @return true if scopes list is empty
+     */
     private boolean isScopesEmpty(String[] scopes) {
 
         return ArrayUtils.isEmpty(scopes);
