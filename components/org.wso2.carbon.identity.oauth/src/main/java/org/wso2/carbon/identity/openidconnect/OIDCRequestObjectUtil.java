@@ -45,7 +45,7 @@ public class OIDCRequestObjectUtil {
     private static final Log log = LogFactory.getLog(OIDCRequestObjectUtil.class);
     private static final String REQUEST = "request";
     private static final String REQUEST_URI = "request_uri";
-    private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
+    public static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static final String REQUEST_URI_PARAM_VALUE_BUILDER = "request_uri_param_value_builder";
 
     /**

@@ -69,6 +69,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
@@ -293,8 +294,11 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         Response response;
+        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
         try {
-            response = oAuth2TokenEndpoint.issueAccessToken(request, paramMap);
+            response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse, paramMap);
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
             response = invalidRequestExceptionMapper.toResponse(ire);
@@ -390,8 +394,12 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         Response response;
+        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
         try {
-            response = oAuth2TokenEndpoint.issueAccessToken(request, new MultivaluedHashMap<String, String>());
+            response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse,
+                    new MultivaluedHashMap<String, String>());
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
             response = invalidRequestExceptionMapper.toResponse(ire);
@@ -443,8 +451,12 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
         Response response;
+        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
         try {
-            response = oAuth2TokenEndpoint.issueAccessToken(request, new MultivaluedHashMap<String, String>());
+            response = oAuth2TokenEndpoint.issueAccessToken(request,  httpServletResponse,
+                    new MultivaluedHashMap<String, String>());
         } catch (InvalidRequestParentException ire) {
             InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
             response = invalidRequestExceptionMapper.toResponse(ire);
@@ -543,10 +555,15 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         Class<?> clazz = OAuth2TokenEndpoint.class;
         Object tokenEndpointObj = clazz.newInstance();
         Method getAccessToken = tokenEndpointObj.getClass().
-                getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class, HttpServletRequestWrapper.class);
+                getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class,
+                        HttpServletRequestWrapper.class, HttpServletResponseWrapper.class);
         getAccessToken.setAccessible(true);
+        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
         OAuth2AccessTokenRespDTO tokenRespDTO = (OAuth2AccessTokenRespDTO)
-                getAccessToken.invoke(tokenEndpointObj, oauthRequest, httpServletRequestWrapper);
+                getAccessToken.invoke(tokenEndpointObj, oauthRequest, httpServletRequestWrapper,
+                        new HttpServletResponseWrapper(httpServletResponse));
 
         assertNotNull(tokenRespDTO, "ResponseDTO is null");
         String[] paramsToCheck = additionalParameters.split(",");
