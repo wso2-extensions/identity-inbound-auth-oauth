@@ -961,6 +961,21 @@
             <Permission>/permission/admin/manage/identity/groupmgt/update</Permission>
         </Permissions>
     </Scope>
+    <Scope name="internal_guest_mgt_invite_add" displayName="Add Invitation">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/guestmgt/user/invite/add</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_guest_mgt_invite_list" displayName="List Invitation">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/guestmgt/user/invite/list</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_guest_mgt_invite_delete" displayName="Delete Invitation">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/guestmgt/user/invite/delete</Permission>
+        </Permissions>
+    </Scope>
     <Scope name="internal_secret_mgt_add" displayName="Add Secret">
         <Permissions>
             <Permission>/permission/admin/manage/identity/secretmgt/add</Permission>
