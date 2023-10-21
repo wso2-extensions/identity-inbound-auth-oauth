@@ -237,6 +237,6 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         if (OAuth2Util.isLegacyAuthzRuntime()) {
             return !Oauth2ScopeUtils.validateByApplicationScopeValidator(null, authzReqMessageContext);
         }
-        return true;
+        return false;
     }
 }

@@ -289,7 +289,6 @@ public class AuthorizationHandlerManager {
             // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
             authzReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
         } else {
-
             // Engage new scope validator
             authorizedScopes = getAuthorizedScopes(authzReqMsgCtx);
             removeAuthorizedScopesFromRequestedScopes(authzReqMsgCtx, authorizedScopes);

@@ -1044,7 +1044,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (OAuth2Util.isLegacyAuthzRuntime()) {
             return !Oauth2ScopeUtils.validateByApplicationScopeValidator(tokenReqMsgContext, null);
         }
-        return true;
+        return false;
     }
 
     /**
