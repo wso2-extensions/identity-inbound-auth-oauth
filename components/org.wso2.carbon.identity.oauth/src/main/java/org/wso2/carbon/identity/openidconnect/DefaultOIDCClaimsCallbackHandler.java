@@ -928,6 +928,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
         } else if (certObject instanceof X509Certificate) {
             certificate = (X509Certificate) certObject;
+        } else if (certObject instanceof X509Certificate[] && ((X509Certificate[]) certObject).length > 0) {
+            List<X509Certificate> x509Certificates = Arrays.asList((X509Certificate[]) certObject);
+            certificate = x509Certificates.get(0);
         }
         if (certificate != null) {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
