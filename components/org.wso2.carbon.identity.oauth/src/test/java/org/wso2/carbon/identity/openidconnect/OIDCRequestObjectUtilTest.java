@@ -147,6 +147,7 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
         when(OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
+        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);

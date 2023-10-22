@@ -46,10 +46,9 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.TestConstants;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -183,7 +182,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 {jsonWebEncryption7, true, true, true, false, true, "Unsigned FAPI Request Object without mandatory " +
                         "parameter Scopes."},
                 {jsonWebEncryption8, true, true, true, false, true, "Unsigned FAPI Request Object without mandatory " +
-                        "parameter Redirect URI."}
+                        "parameter Redirect URI."},
                 {jsonWebToken1, true, false, true, true, "Valid Request Object, signed not encrypted.", true},
                 {jsonWebToken2, false, false, true, true, "Valid Request Object, not signed not encrypted.", true},
                 {jsonWebToken3, false, false, true, false, "InValid Request Object, expired, not signed not " +
