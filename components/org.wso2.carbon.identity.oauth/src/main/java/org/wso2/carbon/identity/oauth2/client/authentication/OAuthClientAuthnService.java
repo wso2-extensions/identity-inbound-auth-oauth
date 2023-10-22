@@ -350,8 +350,8 @@ public class OAuthClientAuthnService {
         String clientId = null;
         for (OAuthClientAuthenticator oAuthClientAuthenticator : this.getClientAuthenticators()) {
             try {
-                /* A new OAuthClientAuthnContext is used each time as we just need to extract the Client ID and we do
-                not want to overwrite the original OAuthClientAuthnContext.  */
+                /* As we just need to extract the Client ID here to move forward, we do not want to add any parameters
+                   to the original OAuthClientAuthnContext. Therefore a temporary context is being used. */
                 OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
                 clientId = oAuthClientAuthenticator.getClientId(request, bodyContentMap, oAuthClientAuthnContext);
                 if (StringUtils.isNotBlank(clientId)) {
