@@ -2046,10 +2046,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         defaultClaims.put(NBF, System.currentTimeMillis() / MILLISECONDS_PER_SECOND);
         defaultClaims.put(EXP, System.currentTimeMillis() / MILLISECONDS_PER_SECOND + TIME_MARGIN_IN_SECONDS);
         defaultClaims.put(OAuthConstants.OAuth20Params.SCOPE, TestConstants.SCOPE_STRING);
+        defaultClaims.put(OAuthConstants.OAuth20Params.NONCE, "nonceInRequestObject");
 
         Map<String, Object> claims1 = new HashMap<>(defaultClaims);
         claims1.put(OAuthConstants.STATE, "stateInRequestObject");
-        claims1.put(OAuthConstants.OAuth20Params.NONCE, "nonceInRequestObject");
         claims1.put(OAuthConstants.OAuth20Params.PROMPT, "promptInRequestObject");
 
         return new Object[][]{

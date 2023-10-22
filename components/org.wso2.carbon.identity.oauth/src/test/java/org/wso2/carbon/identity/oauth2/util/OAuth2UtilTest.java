@@ -75,6 +75,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -2029,7 +2030,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(isTenantQualifiedURLsEnabled);
-        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(requestTenantDomain);
+        when(IdentityTenantUtil.resolveTenantDomain()).thenReturn(requestTenantDomain);
 
         boolean isInvalidClientExceptionThrown = false;
         try {
@@ -2580,5 +2581,55 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 assertEquals(e.getMessage(), expectedException);
             }
         }
+    }
+
+    @DataProvider(name = "clientAuthenticatorsDataProvider")
+    public Object[][] clientAuthenticatorsDataProvider() {
+
+        OAuthClientAuthenticator basicClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(basicClientAuthenticator.getName()).thenReturn("BasicAuthClientAuthenticator");
+        OAuthClientAuthenticator publicClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(publicClientAuthenticator.getName()).thenReturn("PublicClientAuthenticator");
+        OAuthClientAuthenticator mtlsClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(mtlsClientAuthenticator.getName()).thenReturn("MutualTLSClientAuthenticator");
+
+        List<OAuthClientAuthenticator> clientAuthenticatorsWithMTLS = new ArrayList<>();
+        clientAuthenticatorsWithMTLS.add(basicClientAuthenticator);
+        clientAuthenticatorsWithMTLS.add(mtlsClientAuthenticator);
+        clientAuthenticatorsWithMTLS.add(publicClientAuthenticator);
+        List<OAuthClientAuthenticator> clientAuthenticatorsWithoutMTLS = new ArrayList<>();
+        clientAuthenticatorsWithoutMTLS.add(basicClientAuthenticator);
+        clientAuthenticatorsWithoutMTLS.add(publicClientAuthenticator);
+
+        return new Object[][]{
+                {clientAuthenticatorsWithMTLS, true},
+                {clientAuthenticatorsWithoutMTLS, false}
+        };
+    }
+
+    @Test
+    public void testGetSupportedClientAuthMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = new ArrayList<>();
+        OAuthClientAuthenticator basicClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(basicClientAuthenticator.getSupportedClientAuthenticationMethods())
+                .thenReturn(Arrays.asList("client_secret_basic", "client_secret_post"));
+        clientAuthenticators.add(basicClientAuthenticator);
+        OAuthClientAuthenticator mtlsClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(mtlsClientAuthenticator.getSupportedClientAuthenticationMethods())
+                .thenReturn(Arrays.asList("tls_client_auth"));
+        clientAuthenticators.add(mtlsClientAuthenticator);
+        OAuthClientAuthenticator pkjwtClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(pkjwtClientAuthenticator.getSupportedClientAuthenticationMethods())
+                .thenReturn(Arrays.asList("private_key_jwt"));
+        clientAuthenticators.add(pkjwtClientAuthenticator);
+        mockStatic(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getAuthenticationHandlers()).thenReturn(clientAuthenticators);
+        List<String> supportedClientAuthMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
+        assertTrue(supportedClientAuthMethods.contains("client_secret_basic"));
+        assertTrue(supportedClientAuthMethods.contains("client_secret_post"));
+        assertTrue(supportedClientAuthMethods.contains("tls_client_auth"));
+        assertTrue(supportedClientAuthMethods.contains("private_key_jwt"));
+        assertEquals(supportedClientAuthMethods.size(), 4);
     }
 }

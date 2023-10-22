@@ -297,6 +297,23 @@ public final class OAuthUtil {
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
                                        String tokenBindingReference) {
 
+        clearOAuthCache(consumerKey, authorizedUser, scope, tokenBindingReference,
+                OAuthConstants.AuthorizedOrganization.NONE);
+    }
+
+
+    /**
+     * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
+     *
+     * @param consumerKey            Client id of the application the token issued to.
+     * @param authorizedUser         Authorized user.
+     * @param scope                  Scope list.
+     * @param tokenBindingReference  Token binding reference.
+     * @param authorizedOrganization Authorized organization.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
+                                       String tokenBindingReference, String authorizedOrganization) {
+
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
         String userId;
@@ -309,8 +326,8 @@ public final class OAuthUtil {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userId,
-                authenticatedIDP, tokenBindingReference), tenantDomain);
+        clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
+                authenticatedIDP, tokenBindingReference, authorizedOrganization), tenantDomain);
     }
 
 
@@ -542,6 +559,46 @@ public final class OAuthUtil {
                 oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(accessTokenDO, params);
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error while triggering listener for pre token revocation by system.", e);
+            }
+        }
+    }
+
+    /**
+     * This will be called before when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked pre user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     */
+    public static void invokePreRevocationBySystemListeners(String userUUID, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(userUUID, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for pre token revocation by system.", e);
+            }
+        }
+    }
+
+    /**
+     * This will be called after when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked post user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     */
+    public static void invokePostRevocationBySystemListeners(String userUUID, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(userUUID, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for post token revocation by system.", e);
             }
         }
     }

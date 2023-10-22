@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -118,6 +118,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -178,6 +179,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -355,6 +357,7 @@ public class OAuth2Util {
     private static final String SHA512_WITH_EC = "SHA512withEC";
     private static final String SHA256_WITH_PS = "SHA256withPS";
     private static final String PS256 = "PS256";
+    private static final String ES256 = "ES256";
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
@@ -837,6 +840,7 @@ public class OAuth2Util {
      * @param tokenBindingReference Token binding reference.
      * @return Cache key string combining the input parameters.
      */
+    @Deprecated
     public static String buildCacheKeyStringForTokenWithUserId(String clientId, String scope, String authorizedUserId,
                                                      String authenticatedIDP, String tokenBindingReference) {
 
@@ -848,6 +852,29 @@ public class OAuth2Util {
         return oauthCacheKey;
     }
 
+    /**
+     * Build the cache key string when storing token info in cache.
+     *
+     * @param clientId         ClientId of the App.
+     * @param scope            Scopes used.
+     * @param authorizedUserId   Authorised user.
+     * @param authenticatedIDP Authenticated IdP.
+     * @param tokenBindingReference Token binding reference.
+     * @return Cache key string combining the input parameters.
+     */
+    public static String buildCacheKeyStringForTokenWithUserIdOrgId(String clientId, String scope,
+                                                                    String authorizedUserId, String authenticatedIDP,
+                                                                    String tokenBindingReference,
+                                                                    String authorizedOrganization) {
+
+        String oauthCacheKey =
+                clientId + ":" + authorizedUserId + ":" + scope + ":" + authenticatedIDP + ":" + tokenBindingReference +
+                        ":" + authorizedOrganization;
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Building cache key: %s to access OAuthCache.", oauthCacheKey));
+        }
+        return oauthCacheKey;
+    }
     /**
      * Build the cache key string when storing token info in cache.
      *
@@ -2491,7 +2518,7 @@ public class OAuth2Util {
             return JWSAlgorithm.HS384;
         } else if (SHA512_WITH_HMAC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.HS512;
-        } else if (SHA256_WITH_EC.equals(signatureAlgorithm)) {
+        } else if (SHA256_WITH_EC.equals(signatureAlgorithm) || ES256.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES256;
         } else if (SHA384_WITH_EC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES384;
@@ -4558,8 +4585,8 @@ public class OAuth2Util {
     public static void validateRequestTenantDomain(String tenantDomainOfApp) throws InvalidOAuthClientException {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            // In tenant qualified URL mode we would always have the tenant domain in the context.
-            String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+
+            String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
                 if (log.isDebugEnabled()) {
@@ -4588,8 +4615,10 @@ public class OAuth2Util {
             String tenantDomainFromContext;
             if (contextTenantDomainFromTokenReqDTO.isPresent()) {
                 tenantDomainFromContext = contextTenantDomainFromTokenReqDTO.get();
+                if (StringUtils.isBlank(tenantDomainFromContext)) {
+                    tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+                }
 
-                // In tenant qualified URL mode we would always have the tenant domain in the context.
                 if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                     // This means the tenant domain sent in the request and app's tenant domain do not match.
                     throw new InvalidOAuthClientException("A valid client with the given client_id cannot be found in "
@@ -4762,14 +4791,7 @@ public class OAuth2Util {
         if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-
-        if (request != null) {
-            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
-                return tenantDomainFromReq;
-            }
-        }
-        return IdentityTenantUtil.getTenantDomainFromContext();
+        return IdentityTenantUtil.resolveTenantDomain();
     }
 
     /**
@@ -4963,5 +4985,23 @@ public class OAuth2Util {
         }
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static String[] getSupportedClientAuthMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
+            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            if (!supportedAuthMethods.isEmpty()) {
+                supportedClientAuthMethods.addAll(supportedAuthMethods);
+            }
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
     }
 }
