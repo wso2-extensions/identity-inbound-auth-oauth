@@ -110,6 +110,45 @@ public final class OAuthConstants {
     public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     public static final String SESSION_STATE = "session_state";
     public static final String STATE = "state";
+
+    public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
+    public static final String SUBJECT_TYPE = "subject_type";
+    /**
+     * Enum for OIDC supported subject types.
+     */
+    public enum SubjectType {
+
+        PUBLIC("public"),
+        PAIRWISE("pairwise");
+
+        private final String subjectType;
+
+        SubjectType(String subjectType) {
+        
+            this.subjectType = subjectType;
+        }
+
+        @Override
+        public String toString() {
+
+            return subjectType;
+        }
+
+        public String getValue() {
+
+            return subjectType;
+        }
+
+        public static SubjectType fromValue(String text) {
+
+            for (SubjectType subType : SubjectType.values()) {
+                if (String.valueOf(subType.subjectType).equals(text)) {
+                    return subType;
+                }
+            }
+            return null;
+        }
+    }
     public static final String AUTHZ_CODE = "AuthorizationCode";
 
     //Constants for reading EndpointConfig.properties

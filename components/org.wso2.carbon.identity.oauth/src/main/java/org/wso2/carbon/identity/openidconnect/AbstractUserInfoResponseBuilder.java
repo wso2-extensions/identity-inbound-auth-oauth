@@ -71,15 +71,30 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
         }
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
+
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
         Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
 
         // Handle subject claim.
         String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
+        subjectClaim = getOIDCSubjectClaim(clientId, spTenantDomain, subjectClaim);
         filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
 
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+    }
+
+    private String getOIDCSubjectClaim(String clientId, String spTenantDomain, String subjectClaim)
+            throws UserInfoEndpointException {
+
+        try {
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
+            // Get subject identifier according to the configured subject type.
+            return OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new UserInfoEndpointException("Error while getting subject claim for client_id: " + clientId +
+                    " of tenantDomain: " + spTenantDomain, e);
+        }
     }
 
     private Map<String, Object> filterOIDCClaims(OAuth2TokenValidationResponseDTO tokenResponse,
@@ -319,4 +334,5 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         }
         return new ArrayList<>();
     }
+
 }

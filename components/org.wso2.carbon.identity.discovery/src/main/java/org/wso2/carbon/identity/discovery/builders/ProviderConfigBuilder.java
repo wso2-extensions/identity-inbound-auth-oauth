@@ -140,12 +140,11 @@ public class ProviderConfigBuilder {
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
         }
-
         List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
                 .getSupportedTokenEndpointSigningAlgorithms();
         providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(
                 supportedTokenEndpointSigningAlgorithms.toArray(new String[0]));
-
+        providerConfig.setWebFingerEndpoint(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl());
         return providerConfig;
     }
 }
