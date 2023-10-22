@@ -5004,22 +5004,4 @@ public class OAuth2Util {
         }
         return supportedClientAuthMethods.toArray(new String[0]);
     }
-
-    /**
-     * Validate whether a TLS certificate is passed through the request.
-     *
-     * @param content     Certificate content.
-     * @return X.509 certificate after decoding the certificate content.
-     * @throws CertificateException
-     */
-    public static X509Certificate parseCertificate(String content) throws CertificateException {
-
-        byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(content
-                .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
-                .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
-        ));
-
-        return (X509Certificate) CertificateFactory.getInstance(Constants.X509)
-                .generateCertificate(new ByteArrayInputStream(decodedContent));
-    }
 }
