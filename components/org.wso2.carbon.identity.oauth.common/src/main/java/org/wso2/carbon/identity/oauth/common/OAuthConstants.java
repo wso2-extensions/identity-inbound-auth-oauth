@@ -190,6 +190,7 @@ public final class OAuthConstants {
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
 
+
     private OAuthConstants() {
 
     }
