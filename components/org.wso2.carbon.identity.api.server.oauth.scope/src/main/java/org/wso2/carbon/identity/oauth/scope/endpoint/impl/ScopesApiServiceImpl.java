@@ -291,8 +291,9 @@ public class ScopesApiServiceImpl extends ScopesApiService {
     private static URI buildURIForHeader(String scopeName) {
 
         URI location;
-        String context = getContext(SERVER_API_PATH_COMPONENT + scopeName);
-
+        String context = IdentityTenantUtil.isTenantQualifiedUrlsEnabled() ? SERVER_API_PATH_COMPONENT + scopeName :
+                String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT
+                        + scopeName;
         try {
             String url = ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
             location = URI.create(url);
@@ -369,24 +370,5 @@ public class ScopesApiServiceImpl extends ScopesApiService {
             LOG.error("Error while validating user authorization of user: " + authenticatedUser, e);
         }
         return false;
-    }
-
-    /**
-     * Builds the API context on whether the tenant qualified url is enabled or not. In tenant qualified mode the
-     * ServiceURLBuilder appends the tenant domain to the URI as a path param automatically. But
-     * in non tenant qualified mode we need to append the tenant domain to the path manually.
-     *
-     * @param endpoint Relative endpoint path.
-     * @return Context of the API.
-     */
-    private static String getContext(String endpoint) {
-
-        String context;
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            context = endpoint;
-        } else {
-            context = String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + endpoint;
-        }
-        return context;
     }
 }
