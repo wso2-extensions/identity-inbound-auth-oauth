@@ -48,7 +48,6 @@ public class OAuthClientAuthnService {
     private static final Log log = LogFactory.getLog(OAuthClientAuthnService.class);
     private static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
-    private static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
 
     /**
      * Retrieve OAuth2 client authenticators which are reigstered dynamically.
