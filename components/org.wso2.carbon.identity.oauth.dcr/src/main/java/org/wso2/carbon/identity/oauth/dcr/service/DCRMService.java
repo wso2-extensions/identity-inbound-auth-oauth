@@ -659,7 +659,7 @@ public class DCRMService {
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
             boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_FAPI_VALIDATION));
+                    OAuthConstants.ENABLE_DCR_FAPI_VALIDATION));
             if (enableFAPIDCR) {
                 // Add FAPI conformant application nad isThirdParty property to the service provider.
                 spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);

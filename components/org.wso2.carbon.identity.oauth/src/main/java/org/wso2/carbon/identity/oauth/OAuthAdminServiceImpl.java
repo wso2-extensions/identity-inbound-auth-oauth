@@ -121,7 +121,6 @@ public class OAuthAdminServiceImpl {
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final String IS_FAPI_VALIDATION_ENABLED = "OAuth.DCRM.EnableFAPIValidation";
     private static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
     private static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
@@ -134,8 +133,8 @@ public class OAuthAdminServiceImpl {
             ".SupportedIDTokenSigningAlgorithms.SupportedIDTokenSigningAlgorithm";
     private static final String REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
             ".SupportedRequestObjectSigningAlgorithms.SupportedRequestObjectSigningAlgorithm";
-    boolean validateFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-            OAuthConstants.ENABLE_FAPI_VALIDATION));
+    boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+            OAuthConstants.ENABLE_DCR_FAPI_VALIDATION));
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -346,7 +345,7 @@ public class OAuthAdminServiceImpl {
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
-                            if (validateFAPIDCR) {
+                            if (enforceFAPIDCR) {
                                 filterAllowedFAPIEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm());
                             }
                             app.setIdTokenEncryptionAlgorithm(
@@ -371,7 +370,7 @@ public class OAuthAdminServiceImpl {
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
                         String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
-                            if (validateFAPIDCR) {
+                            if (enforceFAPIDCR) {
                                 filterAllowedFAPITokenAuthMethods(tokenEndpointAuthMethod);
                             } else {
                                 filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
@@ -380,7 +379,7 @@ public class OAuthAdminServiceImpl {
                         }
                         String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
-                            if (validateFAPIDCR) {
+                            if (enforceFAPIDCR) {
                                 filterAllowedFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(tokenEndpointAuthSigningAlgorithm,
@@ -418,7 +417,7 @@ public class OAuthAdminServiceImpl {
                         }
                         String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
-                            if (validateFAPIDCR) {
+                            if (enforceFAPIDCR) {
                                 filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(idTokenSignatureAlgorithm,
@@ -428,7 +427,7 @@ public class OAuthAdminServiceImpl {
                         }
                         String requestObjectSignatureAlgorithm = application.getRequestObjectSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
-                            if (validateFAPIDCR) {
+                            if (enforceFAPIDCR) {
                                 filterAllowedFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
@@ -442,7 +441,7 @@ public class OAuthAdminServiceImpl {
 
                         String requestObjectEncryptionAlgorithm = application.getRequestObjectEncryptionAlgorithm();
                         if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionAlgorithm())) {
-                            if (validateFAPIDCR) {
+                            if (enforceFAPIDCR) {
                                 filterAllowedFAPIEncryptionAlgorithms(
                                         application.getRequestObjectEncryptionAlgorithm());
                             } else {
@@ -723,7 +722,7 @@ public class OAuthAdminServiceImpl {
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                if (validateFAPIDCR) {
+                if (enforceFAPIDCR) {
                     filterAllowedFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
                 }
                 oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
@@ -743,7 +742,7 @@ public class OAuthAdminServiceImpl {
 
             String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
             if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
-                if (validateFAPIDCR) {
+                if (enforceFAPIDCR) {
                     filterAllowedFAPITokenAuthMethods(tokenEndpointAuthMethod);
                 } else {
                     filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
@@ -753,7 +752,7 @@ public class OAuthAdminServiceImpl {
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
-                if (validateFAPIDCR) {
+                if (enforceFAPIDCR) {
                     filterAllowedFAPISignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm,
@@ -790,7 +789,7 @@ public class OAuthAdminServiceImpl {
 
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
             if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
-                if (validateFAPIDCR) {
+                if (enforceFAPIDCR) {
                     filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(idTokenSignatureAlgorithm, ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
@@ -800,7 +799,7 @@ public class OAuthAdminServiceImpl {
 
             String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
-                if (validateFAPIDCR) {
+                if (enforceFAPIDCR) {
                     filterAllowedFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
@@ -815,7 +814,7 @@ public class OAuthAdminServiceImpl {
 
             String requestObjectEncryptionAlgorithm = consumerAppDTO.getRequestObjectEncryptionAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
-                if (validateFAPIDCR) {
+                if (enforceFAPIDCR) {
                     filterAllowedFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
                 }
                 oauthappdo.setRequestObjectEncryptionAlgorithm(filterEncryptionAlgorithms(
@@ -2432,7 +2431,7 @@ public class OAuthAdminServiceImpl {
     public void filterSignatureAlgorithms(String algorithm, String configName) throws IdentityOAuthClientException {
 
         List<String> allowedSignatureAlgorithms = IdentityUtil.getPropertyAsList(configName);
-        if (!(allowedSignatureAlgorithms.size() == 0)) {
+        if (!(allowedSignatureAlgorithms.isEmpty())) {
             if (!allowedSignatureAlgorithms.contains(algorithm)) {
                 String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
                 throw handleClientError(INVALID_REQUEST, msg);
@@ -2448,7 +2447,7 @@ public class OAuthAdminServiceImpl {
     public void filterTokenEndpointAuthMethods(String authMethod) throws IdentityOAuthClientException {
 
         List<String> authMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
-        if (!(authMethods.size() == 0)) {
+        if (!(authMethods.isEmpty())) {
             if (!authMethods.contains(authMethod)) {
                 String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
                 throw handleClientError(INVALID_REQUEST, msg);
