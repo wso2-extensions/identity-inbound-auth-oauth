@@ -985,7 +985,7 @@ public class OAuthAppDAO {
             try (PreparedStatement prepStmt = connection
                     .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.REMOVE_APPLICATION)) {
                 prepStmt.setString(1, consumerKey);
-                prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+                prepStmt.setInt(2, PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
                 prepStmt.execute();
                 if (isOIDCAudienceEnabled()) {
                     String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();

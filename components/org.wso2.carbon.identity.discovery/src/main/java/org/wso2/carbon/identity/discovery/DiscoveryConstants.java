@@ -357,4 +357,10 @@ public class DiscoveryConstants {
      * as defined in OAuth 2.0 Device Grant [rfc8628]
      */
     public static final String DEVICE_AUTHORIZATION_ENDPOINT = "device_authorization_endpoint";
+
+    /**
+     * web_finger_endpoint
+     * OPTIONAL. URL of the OpenID Connect token discovery endpoint
+     */
+    public static final String WEBFINGER_ENDPOINT = "WebFinger_endpoint";
 }
