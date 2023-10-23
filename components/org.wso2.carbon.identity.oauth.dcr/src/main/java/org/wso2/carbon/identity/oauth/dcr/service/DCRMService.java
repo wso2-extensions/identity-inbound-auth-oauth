@@ -659,7 +659,7 @@ public class DCRMService {
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
             boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_DCR_FAPI_VALIDATION));
+                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
             if (enableFAPIDCR) {
                 // Add FAPI conformant application nad isThirdParty property to the service provider.
                 spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
@@ -972,17 +972,21 @@ public class DCRMService {
      */
     private void validateSSASignature(String softwareStatement) throws DCRMClientException, IdentityOAuth2Exception {
 
-        SignedJWT signedJWT = null;
-        try {
-            signedJWT = SignedJWT.parse(softwareStatement);
-        } catch (ParseException e) {
-            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
-                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
-        }
         String jwksURL = IdentityUtil.getProperty(SSA_VALIDATION_JWKS);
-        if (!JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL)) {
-            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
-                    DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+        if (StringUtils.isNotEmpty(jwksURL)) {
+            try {
+                SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
+                if (!JWTSignatureValidationUtils.validateUsingJWKSUri(signedJWT, jwksURL)) {
+                    throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                            DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage());
+                }
+            } catch (ParseException e) {
+                throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                        DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
+            }
+
+        } else {
+            log.debug("Skipping Software Statement signature validation as jwks_uri is not configured.");
         }
     }
 

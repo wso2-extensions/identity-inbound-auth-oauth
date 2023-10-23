@@ -774,7 +774,10 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void testValidateTokenAuthenticationWithValidAuthentication() throws Exception {
 
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
+        List<String> tokenEndPointAuthMethods = new ArrayList<>();
+        tokenEndPointAuthMethods.add("private_key_jwt");
+        tokenEndPointAuthMethods.add("tls_client_auth");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(tokenEndPointAuthMethods);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         invokeMethod(oAuthAdminService, "filterAllowedFAPITokenAuthMethods",
                 "tls_client_auth");
@@ -784,7 +787,10 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void testValidateTokenAuthenticationWithInvalidAuthentication() throws Exception {
 
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
+        List<String> tokenEndPointAuthMethods = new ArrayList<>();
+        tokenEndPointAuthMethods.add("private_key_jwt");
+        tokenEndPointAuthMethods.add("tls_client_auth");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(tokenEndPointAuthMethods);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
             invokeMethod(oAuthAdminService, "filterAllowedFAPITokenAuthMethods",
@@ -800,7 +806,10 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void testValidateSignatureAlgorithm() throws Exception {
 
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
+        List<String> validFAPISignatureAlgorithms = new ArrayList<>();
+        validFAPISignatureAlgorithms.add("PS256");
+        validFAPISignatureAlgorithms.add("ES256");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(validFAPISignatureAlgorithms);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         invokeMethod(oAuthAdminService, "filterAllowedFAPISignatureAlgorithms", "PS256");
     }
@@ -809,7 +818,10 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void testValidateSignatureAlgorithmWithInvalidValue() throws Exception {
 
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(new ArrayList<>());
+        List<String> validFAPISignatureAlgorithms = new ArrayList<>();
+        validFAPISignatureAlgorithms.add("PS256");
+        validFAPISignatureAlgorithms.add("ES256");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(validFAPISignatureAlgorithms);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
             invokeMethod(oAuthAdminService, "filterAllowedFAPISignatureAlgorithms", "PS256");
@@ -858,7 +870,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void testValidateRedirectURIForPPID (List<String> callBackURIs) throws Exception {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs);
+        invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs, "");
     }
 
     @Test(description = "Test validating multiple redirect URIs have the same host name when PPId is enabled",
@@ -867,7 +879,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs);
+            invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs, "");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
