@@ -109,12 +109,12 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
             OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(
                     oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
             if (StringUtils.isNotEmpty(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
-                if (encryptedJWT.getHeader().getAlgorithm().toString()
+                if (!encryptedJWT.getHeader().getAlgorithm().toString()
                         .equals(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
                     String errorMessage = "Invalid request object encryption algorithm.";
                     throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
                 }
-                if (encryptedJWT.getHeader().getEncryptionMethod().toString()
+                if (!encryptedJWT.getHeader().getEncryptionMethod().toString()
                         .equals(oAuthAppDO.getRequestObjectEncryptionMethod())) {
                     String errorMessage = "Invalid request object encryption method.";
                     throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
