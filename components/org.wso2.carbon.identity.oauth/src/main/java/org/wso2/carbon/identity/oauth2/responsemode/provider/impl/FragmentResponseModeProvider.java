@@ -52,7 +52,6 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             String accessToken = authorizationResponseDTO.getSuccessResponseDTO().getAccessToken();
             String tokenType = authorizationResponseDTO.getSuccessResponseDTO().getTokenType();
             long validityPeriod = authorizationResponseDTO.getSuccessResponseDTO().getValidityPeriod();
-            String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
             String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
             List<String> params = new ArrayList<>();
             if (accessToken != null) {
@@ -82,10 +81,6 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
 
             if (state != null) {
                 params.add(OAuthConstants.STATE + "=" + state);
-            }
-
-            if (scope != null) {
-                params.add(OAuthConstants.SCOPE + "=" + scope);
             }
 
             redirectUrl += "#" + String.join("&", params);

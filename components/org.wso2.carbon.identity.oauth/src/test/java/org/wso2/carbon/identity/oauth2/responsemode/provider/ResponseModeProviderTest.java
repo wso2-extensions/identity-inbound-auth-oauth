@@ -6,9 +6,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
 
-import java.util.Arrays;
-import java.util.HashSet;
-
 public class ResponseModeProviderTest {
 
     @DataProvider(name = "fragmentDataProvider")
@@ -18,11 +15,11 @@ public class ResponseModeProviderTest {
                 // AuthorizationResponseDTO, provided callback url, expected redirect url
                 {getAuthResponseDTO("https://www.google.com/redirects/redirect1", "code1"),
                         "https://www.google.com/redirects/redirect1",
-                        "https://www.google.com/redirects/redirect1#code=code1&scope=openid"},
+                        "https://www.google.com/redirects/redirect1#code=code1"},
                 {getAuthResponseDTO("https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
                         "code2"),
                         "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
-                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz#code=code2&scope=openid"},
+                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz#code=code2"},
 
         };
     }
@@ -49,11 +46,11 @@ public class ResponseModeProviderTest {
                 // AuthorizationResponseDTO, provided callback url, expected redirect url
                 {getAuthResponseDTO("https://www.google.com/redirects/redirect1", "code1"),
                         "https://www.google.com/redirects/redirect1",
-                        "https://www.google.com/redirects/redirect1?code=code1&scope=openid"},
+                        "https://www.google.com/redirects/redirect1?code=code1"},
                 {getAuthResponseDTO("https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
                         "code2"),
                         "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
-                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz&code=code2&scope=openid"},
+                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz&code=code2"},
 
         };
     }
@@ -83,7 +80,6 @@ public class ResponseModeProviderTest {
         authorizationResponseDTO.setRedirectUrl(redirectURI);
 
         authorizationResponseDTO.getSuccessResponseDTO().setAuthorizationCode(code);
-        authorizationResponseDTO.getSuccessResponseDTO().setScope(new HashSet<>(Arrays.asList("openid")));
 
         return authorizationResponseDTO;
     }
