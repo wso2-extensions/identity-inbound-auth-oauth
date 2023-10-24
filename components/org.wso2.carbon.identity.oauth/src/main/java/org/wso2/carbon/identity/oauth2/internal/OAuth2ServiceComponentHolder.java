@@ -104,7 +104,6 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
-
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
     private RoleManagementService roleManagementServiceV2;

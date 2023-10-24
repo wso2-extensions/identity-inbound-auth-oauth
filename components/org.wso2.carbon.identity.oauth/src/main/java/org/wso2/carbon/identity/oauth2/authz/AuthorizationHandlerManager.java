@@ -279,6 +279,7 @@ public class AuthorizationHandlerManager {
         // Remove the system level allowed scopes from requested scopes for further validation.
         removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         List<String> authorizedScopes = null;
+        // Switch the scope validators dynamically based on the authorization runtime.
         if (AuthzUtil.isLegacyAuthzRuntime()) {
             // If it is management app, we validate internal scopes in the requested scopes.
             String[] authorizedInternalScopes = new String[0];

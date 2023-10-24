@@ -679,6 +679,7 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
+            // Switch the scope validators dynamically based on the authorization runtime.
             if (AuthzUtil.isLegacyAuthzRuntime()) {
                 // Execute Internal SCOPE Validation.
                 JDBCPermissionBasedInternalScopeValidator scopeValidator =

@@ -1231,12 +1231,20 @@ public class OAuth2ServiceComponent {
     )
     protected void setAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Adding Authorized API Management Service: " + authorizedAPIManagementService.getClass()
+                    .getName());
+        }
         OAuth2ServiceComponentHolder.getInstance()
                 .setAuthorizedAPIManagementService(authorizedAPIManagementService);
     }
 
     protected void unsetAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Removing Authorized API Management Service: " + authorizedAPIManagementService.getClass()
+                    .getName());
+        }
         OAuth2ServiceComponentHolder.getInstance().setAuthorizedAPIManagementService(null);
     }
 
@@ -1248,9 +1256,17 @@ public class OAuth2ServiceComponent {
             unbind = "unsetAPIResourceManagerService"
     )
     protected void setAPIResourceManagerService(APIResourceManager apiResourceManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding API Resource Manager: " + apiResourceManager.getClass().getName());
+        }
         OAuth2ServiceComponentHolder.getInstance().setApiResourceManager(apiResourceManager);
     }
     protected void unsetAPIResourceManagerService(APIResourceManager apiResourceManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing API Resource Manager: " + apiResourceManager.getClass().getName());
+        }
         OAuth2ServiceComponentHolder.getInstance().setApiResourceManager(null);
     }
 
@@ -1267,6 +1283,9 @@ public class OAuth2ServiceComponent {
             unbind = "unsetRoleManagementServiceV2")
     protected void setRoleManagementServiceV2(RoleManagementService roleManagementService) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Adding Role Management  Service V2: " + roleManagementService.getClass().getName());
+        }
         OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(roleManagementService);
     }
 
@@ -1277,6 +1296,9 @@ public class OAuth2ServiceComponent {
      */
     protected void unsetRoleManagementServiceV2(RoleManagementService roleManagementService) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Removing Role Management  Service V2: " + roleManagementService.getClass().getName());
+        }
         OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(null);
     }
 
