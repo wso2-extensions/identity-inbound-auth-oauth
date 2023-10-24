@@ -25,7 +25,7 @@ import org.wso2.carbon.utils.CarbonUtils;
 /**
  * AppInfoCache is used to cache oauth application information.
  */
-public class AppInfoCache extends AuthenticationBaseCache<String, OAuthAppDO> {
+public class AppInfoCache extends AuthenticationBaseCache<AppInfoCacheKey, OAuthAppDO> {
 
     private static final String OAUTH_APP_INFO_CACHE_NAME = "AppInfoCache";
 
@@ -36,7 +36,7 @@ public class AppInfoCache extends AuthenticationBaseCache<String, OAuthAppDO> {
     }
 
     /**
-     * Returns AppInfoCache instance
+     * Returns AppInfoCache instance.
      *
      * @return instance of OAuthAppInfoCache
      */

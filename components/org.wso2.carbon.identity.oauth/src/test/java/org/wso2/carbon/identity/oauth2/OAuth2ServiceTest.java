@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -377,7 +378,7 @@ public class OAuth2ServiceTest extends PowerMockIdentityBaseTest {
         OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, "dummyGrantType", "dummyCallbackUrl",
                 "dummyTenantDomain", 1);
         oAuthAppDO.setState(appState);
-        AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+        AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(clientId, 1), oAuthAppDO);
         when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
         when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn("dummyCallbackUrI");
         when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code");

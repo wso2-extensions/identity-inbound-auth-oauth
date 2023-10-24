@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -360,7 +361,8 @@ public class OAuthAdminServiceImpl {
                                 application.getTlsClientCertificateBoundAccessTokens());
                     }
                     dao.addOAuthApplication(app);
-                    AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
+                    AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(
+                            app.getOauthConsumerKey(), IdentityTenantUtil.getTenantId(tenantDomain)), app);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
                                 " in tenant domain: " + tenantDomain);
@@ -651,7 +653,8 @@ public class OAuthAdminServiceImpl {
                     consumerAppDTO.getTlsClientCertificateBoundAccessTokens());
         }
         dao.updateConsumerApplication(oauthappdo);
-        AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
+        AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(
+                oauthappdo.getOauthConsumerKey(), IdentityTenantUtil.getLoginTenantId()), oauthappdo);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
@@ -946,7 +949,8 @@ public class OAuthAdminServiceImpl {
             properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, newState);
             properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REVOKE);
 
-            AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+            AppInfoCache.getInstance().clearCacheEntry(
+                    new AppInfoCacheKey(consumerKey, IdentityTenantUtil.getLoginTenantId()));
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
             handleInternalTokenRevocation(consumerKey, properties);
 
@@ -1014,7 +1018,8 @@ public class OAuthAdminServiceImpl {
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
-        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        AppInfoCache.getInstance().clearCacheEntry(
+                new AppInfoCacheKey(consumerKey, IdentityTenantUtil.getLoginTenantId()));
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
         handleInternalTokenRevocation(consumerKey, properties);
         if (LOG.isDebugEnabled()) {
@@ -1153,7 +1158,8 @@ public class OAuthAdminServiceImpl {
         }
         // Remove client credentials from cache.
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
-        AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+        AppInfoCache.getInstance().clearCacheEntry(
+                new AppInfoCacheKey(consumerKey, PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()));
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
         }
@@ -1933,7 +1939,8 @@ public class OAuthAdminServiceImpl {
 
     OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
-        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey);
+        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(
+                new AppInfoCacheKey(consumerKey, IdentityTenantUtil.getLoginTenantId()));
         if (oauthApp != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from AppInfoCache.");
@@ -1947,7 +1954,8 @@ public class OAuthAdminServiceImpl {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
             }
-            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp);
+            AppInfoCache.getInstance().addToCache(
+                    new AppInfoCacheKey(consumerKey, IdentityTenantUtil.getLoginTenantId()), oauthApp);
         }
 
         return oauthApp;

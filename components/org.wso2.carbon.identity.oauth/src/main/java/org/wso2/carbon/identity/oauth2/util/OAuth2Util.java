@@ -94,6 +94,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -221,7 +222,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth 2.0 implementation.
  */
 public class OAuth2Util {
 
@@ -746,7 +747,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Build the cache key string when storing Authz Code info in cache
+     * Build the cache key string when storing Authz Code info in cache.
      *
      * @param clientId  Client Id representing the client
      * @param authzCode Authorization Code issued to the client
@@ -758,7 +759,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Build the cache key string when storing token info in cache
+     * Build the cache key string when storing token info in cache.
      *
      * @param clientId
      * @param scope
@@ -1669,7 +1670,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Verifies if the PKCE code verifier is upto specification as per RFC 7636
+     * Verifies if the PKCE code verifier is upto specification as per RFC 7636.
      *
      * @param codeVerifier PKCE Code Verifier sent with the token request
      * @return
@@ -1684,7 +1685,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Verifies if the codeChallenge is upto specification as per RFC 7636
+     * Verifies if the codeChallenge is upto specification as per RFC 7636.
      *
      * @param codeChallenge
      * @param codeChallengeMethod
@@ -2200,7 +2201,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Returns oauth token issuer registered in the service provider app
+     * Returns oauth token issuer registered in the service provider app.
      *
      * @param clientId client id of the oauth app
      * @return oauth token issuer
@@ -2262,13 +2263,14 @@ public class OAuth2Util {
     public static OAuthAppDO getAppInformationByClientId(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        int tenantId = IdentityTenantUtil.getLoginTenantId();
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(new AppInfoCacheKey(clientId, tenantId));
         if (oAuthAppDO != null) {
             return oAuthAppDO;
         } else {
-            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getLoginTenantId());
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, tenantId);
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(clientId, tenantId), oAuthAppDO);
             }
             return oAuthAppDO;
         }
@@ -2286,11 +2288,12 @@ public class OAuth2Util {
     public static OAuthAppDO getAppInformationByClientId(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(new AppInfoCacheKey(clientId, tenantId));
         if (oAuthAppDO == null) {
-            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, tenantId);
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(clientId, tenantId), oAuthAppDO);
             }
         }
         return oAuthAppDO;
@@ -2308,7 +2311,15 @@ public class OAuth2Util {
     public static OAuthAppDO getAppInformationByClientIdOnly(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        /*
+         This method tries to retrieve multiple apps with the same client ID and doesn't consider tenant.
+         Hence, caching can only be performed when tenanted caching is enabled or app's tenant is known.
+         */
+        OAuthAppDO oAuthAppDO = null;
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(
+                    new AppInfoCacheKey(clientId, IdentityTenantUtil.getLoginTenantId()));
+        }
         if (oAuthAppDO == null) {
             OAuthAppDO[] appList = new OAuthAppDAO().getAppsForConsumerKey(clientId);
             if (appList == null || appList.length != 1) {
@@ -2319,8 +2330,10 @@ public class OAuth2Util {
                 throw new InvalidOAuthClientException(message);
             }
             oAuthAppDO = appList[0];
-            AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+            int appTenantId = IdentityTenantUtil.getTenantId(oAuthAppDO.getAppOwner().getTenantDomain());
+            AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(clientId, appTenantId), oAuthAppDO);
         }
+
         return oAuthAppDO;
     }
 
@@ -2335,20 +2348,29 @@ public class OAuth2Util {
     public static OAuthAppDO getAppInformationByAccessTokenDO(AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
+        /*
+         This method tries to retrieve an app with the accessTokenDO and doesn't consider tenant.
+         Hence, caching can only be performed when tenanted caching is enabled or app's tenant is known.
+         */
+        OAuthAppDO oAuthAppDO = null;
         String clientId = accessTokenDO.getConsumerKey();
-
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled()) {
+            oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(
+                    new AppInfoCacheKey(clientId, IdentityTenantUtil.getLoginTenantId()));
+        }
         if (oAuthAppDO == null) {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, accessTokenDO);
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                int appTenantId = IdentityTenantUtil.getTenantId(oAuthAppDO.getAppOwner().getTenantDomain());
+                AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(clientId, appTenantId), oAuthAppDO);
             }
         }
+
         return oAuthAppDO;
     }
 
     /**
-     * Get the tenant domain of an oauth application
+     * Get the tenant domain of an oauth application.
      *
      * @param oAuthAppDO
      * @return
@@ -2436,7 +2458,7 @@ public class OAuth2Util {
 
     /**
      * This method map signature algorithm define in identity.xml to nimbus
-     * signature algorithm
+     * signature algorithm.
      *
      * @param signatureAlgorithm name of the signature algorithm
      * @return mapped JWSAlgorithm name
@@ -2495,7 +2517,7 @@ public class OAuth2Util {
 
     /**
      * This method map signature algorithm define in identity.xml to nimbus
-     * signature algorithm
+     * signature algorithm.
      *
      * @param signatureAlgorithm name of the signature algorithm
      * @return mapped JWSAlgorithm
@@ -2583,7 +2605,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Validate Id token signature
+     * Validate Id token signature.
      *
      * @param idToken Id token
      * @return validation state
@@ -2634,7 +2656,7 @@ public class OAuth2Util {
     }
 
     /**
-     * This method maps signature algorithm define in identity.xml to digest algorithms to generate the at_hash
+     * This method maps signature algorithm define in identity.xml to digest algorithms to generate the at_hash.
      *
      * @param signatureAlgorithm
      * @return the mapped digest algorithm
@@ -2808,7 +2830,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt jwt using service provider's configured X509 certificate
+     * Encrypt jwt using service provider's configured X509 certificate.
      *
      * @param signedJwt           contains signed JWT body
      * @param encryptionAlgorithm JWT signing algorithm
@@ -2838,7 +2860,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Encrypt jwt using publickey fetched from jwks
+     * Encrypt jwt using publickey fetched from jwks.
      *
      * @param signedJwt           contains signed JWT body
      * @param encryptionAlgorithm JWT signing algorithm
@@ -2864,7 +2886,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get kid value from the jwk
+     * Get kid value from the jwk.
      *
      * @param encryptionJwk Encryption jwk
      * @return
@@ -2940,7 +2962,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get public certificate from JWK
+     * Get public certificate from JWK.
      *
      * @param jwk
      * @return
@@ -3066,7 +3088,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Generic Signing function
+     * Generic Signing function.
      *
      * @param jwtClaimsSet       contains JWT body
      * @param signatureAlgorithm JWT signing algorithm
@@ -3093,7 +3115,7 @@ public class OAuth2Util {
     }
 
     /**
-     * sign JWT token from RSA algorithm
+     * sign JWT token from RSA algorithm.
      *
      * @param jwtClaimsSet       contains JWT body
      * @param signatureAlgorithm JWT signing algorithm
@@ -3511,7 +3533,7 @@ public class OAuth2Util {
     }
 
     /**
-     * This method returns essential:true claims list from the request parameter of OIDC authorization request
+     * This method returns essential:true claims list from the request parameter of OIDC authorization request.
      *
      * @param claimRequestor                  claimrequestor is either id_token or  userinfo
      * @param requestedClaimsFromRequestParam claims defined in the value of the request parameter
@@ -3781,7 +3803,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the supported oauth grant types
+     * Get the supported oauth grant types.
      *
      * @return list of grant types
      */
@@ -3797,7 +3819,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the supported client authentication methods
+     * Get the supported client authentication methods.
      *
      * @return list of client authentication methods
      */
@@ -3835,7 +3857,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Get the supported request object signing algorithms
+     * Get the supported request object signing algorithms.
      *
      * @return list of algorithms
      */
@@ -3852,7 +3874,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the request object parameter is supported
+     * Check whether the request object parameter is supported.
      *
      * @return true if supported
      */
@@ -3862,7 +3884,7 @@ public class OAuth2Util {
     }
 
     /**
-     * Check whether the claims parameter is supported
+     * Check whether the claims parameter is supported.
      *
      * @return true if supported
      */

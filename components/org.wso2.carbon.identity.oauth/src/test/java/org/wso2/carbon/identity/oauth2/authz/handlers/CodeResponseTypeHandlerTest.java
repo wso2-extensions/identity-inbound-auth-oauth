@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -106,7 +107,7 @@ public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setApplicationName("testApp");
 
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.addToCache(TEST_CONSUMER_KEY, oAuthAppDO);
+        appInfoCache.addToCache(new AppInfoCacheKey(TEST_CONSUMER_KEY, TestConstants.TENANT_ID), oAuthAppDO);
 
         CodeResponseTypeHandler codeResponseTypeHandler = new CodeResponseTypeHandler();
         codeResponseTypeHandler.init();

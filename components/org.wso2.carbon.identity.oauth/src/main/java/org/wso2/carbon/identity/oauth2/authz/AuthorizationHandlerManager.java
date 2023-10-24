@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -607,18 +608,22 @@ public class AuthorizationHandlerManager {
 
     private OAuthAppDO getAppInformation(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(authzReqDTO.getConsumerKey());
+
+        int tenantId;
+        if (StringUtils.isNotEmpty(authzReqDTO.getTenantDomain())) {
+            tenantId = IdentityTenantUtil.getTenantId(authzReqDTO.getTenantDomain());
+        } else {
+            tenantId = IdentityTenantUtil.getLoginTenantId();
+        }
+
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(
+                new AppInfoCacheKey(authzReqDTO.getConsumerKey(), tenantId));
         if (oAuthAppDO != null) {
             return oAuthAppDO;
         } else {
-            String tenantDomain = authzReqDTO.getTenantDomain();
-            if (StringUtils.isNotEmpty(tenantDomain)) {
-                oAuthAppDO = new OAuthAppDAO().getAppInformation(
-                        authzReqDTO.getConsumerKey(), IdentityTenantUtil.getTenantId(tenantDomain));
-            } else {
-                oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey());
-            }
-            AppInfoCache.getInstance().addToCache(authzReqDTO.getConsumerKey(), oAuthAppDO);
+            oAuthAppDO = new OAuthAppDAO().getAppInformation(authzReqDTO.getConsumerKey(), tenantId);
+            AppInfoCache.getInstance().addToCache(
+                    new AppInfoCacheKey(authzReqDTO.getConsumerKey(), tenantId), oAuthAppDO);
             return oAuthAppDO;
         }
     }

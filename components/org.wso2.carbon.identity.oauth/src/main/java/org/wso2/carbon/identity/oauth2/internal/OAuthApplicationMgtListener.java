@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -454,7 +456,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
             dao.updateOAuthConsumerApp(serviceProvider, authenticationRequestConfigConfig.getInboundAuthKey());
-            AppInfoCache.getInstance().clearCacheEntry(authenticationRequestConfigConfig.getInboundAuthKey());
+            AppInfoCache.getInstance().clearCacheEntry(new AppInfoCacheKey(
+                    authenticationRequestConfigConfig.getInboundAuthKey(), IdentityTenantUtil.getLoginTenantId()));
         } catch (IdentityOAuthAdminException e) {
             throw new IdentityApplicationManagementException("Error occurred while updating oauth consumer app for "
                     + authenticationRequestConfigConfig.getInboundAuthKey(), e);
@@ -462,8 +465,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
-
-
 
         if (isNotEmpty(consumerKeys)) {
             Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
@@ -476,7 +477,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 authzCodeDOSet.addAll(OAuthTokenPersistenceFactory.getInstance()
                         .getAuthorizationCodeDAO().getAuthorizationCodeDOSetByConsumerKeyForOpenidScope(oauthKey));
                 // Remove client credential from AppInfoCache
-                appInfoCache.clearCacheEntry(oauthKey);
+                appInfoCache.clearCacheEntry(new AppInfoCacheKey(
+                        oauthKey, PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()));
                 OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
             }
 
