@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
@@ -78,7 +80,7 @@ import static org.testng.Assert.assertTrue;
  */
 @PrepareForTest({OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class, ServiceURLBuilder.class,
         IdentityTenantUtil.class, LoggerUtils.class, IdentityDatabaseUtil.class, IdentityUtil.class,
-        OIDCRequestObjectUtil.class})
+        OIDCRequestObjectUtil.class, OAuth2Util.class})
 public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -106,7 +108,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
     private static final String INACTIVE_APP_NAME = "inactiveApp";
     private static final String USERNAME = "user1";
     private static final String APP_REDIRECT_URL = "http://localhost:8080/redirect";
-    private static final String RESPONSE_TYPE = "code";
+    private static final String RESPONSE_TYPE_CODE = "code";
+    private static final String RESPONSE_TYPE_CODE_ID_TOKEN = "code id_token";
     private static final String REQUEST_URI_REF = "c0143cb3-7ae0-43a3-a023-b7218c7182df";
     private static final String REQUEST_URI = "urn:ietf:params:oauth:par:request_uri:c0143cb3-7ae0-43a3-a023" +
             "-b7218c7182df";
@@ -136,20 +139,20 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
     public Object[][] testParDataProvider() {
 
         Map<String, String[]> requestParams1 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
-                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams2 =
                 createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
-                        new String[]{APP_REDIRECT_URL, APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+                        new String[]{APP_REDIRECT_URL, APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams3 = createRequestParamsMap(new String[]{INACTIVE_CLIENT_ID_VALUE},
-                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams4 = createRequestParamsMap(new String[]{"invalidClientId"},
-                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams5 =
-                createRequestParamsMap(null, new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+                createRequestParamsMap(null, new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams6 =
                 createRequestParamsMap(new String[]{CLIENT_ID_VALUE}, new String[]{APP_REDIRECT_URL},
@@ -157,17 +160,52 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         Map<String, String[]> requestParams7 =
                 createRequestParamsMap(new String[]{CLIENT_ID_VALUE}, new String[]{"http://localhost:8080" +
-                                "/invalid-redirect"}, new String[]{RESPONSE_TYPE});
+                                "/invalid-redirect"}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams8 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
-                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE});
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
         requestParams8.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{"openid"});
         requestParams8.put(OAuthConstants.OAuth20Params.REQUEST, new String[]{"dummyRequest"});
+
+        Map<String, String[]> requestParams9 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
+        requestParams9.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.JWT});
+        requestParams9.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams9.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{OAuthConstants.OAUTH_PKCE_S256_CHALLENGE});
+
+        Map<String, String[]> requestParams10 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
+        requestParams10.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.QUERY_JWT});
+
+        Map<String, String[]> requestParams11 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE_ID_TOKEN});
+        requestParams11.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.QUERY_JWT});
+        requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{OAuthConstants.OAUTH_PKCE_S256_CHALLENGE});
+
+        Map<String, String[]> requestParams12 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
+        requestParams12.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.JWT});
+        requestParams12.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+
+        Map<String, String[]> requestParams13 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
+        requestParams13.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.JWT});
+        requestParams13.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams13.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{"Invalid-code-challenge-method"});
 
         MultivaluedMap<String, String> paramMap1 = new MultivaluedHashMap<>();
         paramMap1.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         paramMap1.add(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
-        paramMap1.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE);
+        paramMap1.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE);
 
         MultivaluedMap<String, String> paramMap2 = new MultivaluedHashMap<>();
         paramMap2.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
@@ -176,8 +214,12 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         MultivaluedMap<String, String> paramMap3 = new MultivaluedHashMap<>();
         paramMap3.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         paramMap3.add(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
-        paramMap3.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE);
+        paramMap3.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE);
         paramMap3.add(OAuthConstants.OAuth20Params.SCOPE, null);
+
+        MultivaluedMap<String, String> paramMap4 = new MultivaluedHashMap<>();
+        paramMap4.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
+        paramMap4.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE_ID_TOKEN);
 
         OAuthClientAuthnContext oAuthClientAuthnContext1 = new OAuthClientAuthnContext();
         oAuthClientAuthnContext1.setAuthenticated(true);
@@ -196,60 +238,77 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         return new Object[][]{
 
                 // Successful request
-                {requestParams1, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false},
+                {requestParams1, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false},
                 // Request with repeated redirect_uri parameter. Will return bad request error
                 {requestParams2, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with inactive client id. Will return unauthorized error
                 {requestParams3, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request from invalid client. Will return unauthorized error
                 {requestParams4, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request without client id. Will return bad request error
                 {requestParams5, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with unsupported response type. Will return bad request error
                 {requestParams6, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with invalid redirect uri. Will return bad request error
                 {requestParams7, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_CALLBACK, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_CALLBACK, false, false},
                 // Request with request uri provided. Will return bad request error
                 {requestParams1, paramMap2, oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with server error in client authentication context. Will return internal server error
                 {requestParams1, new MultivaluedHashMap<>(), oAuthClientAuthnContext2,
-                        HttpServletResponse.SC_INTERNAL_SERVER_ERROR, OAuth2ErrorCodes.SERVER_ERROR, false},
+                        HttpServletResponse.SC_INTERNAL_SERVER_ERROR, OAuth2ErrorCodes.SERVER_ERROR, false, false},
                 // Request with client error in client authentication context. Will return unauthorized error
                 {requestParams1, new MultivaluedHashMap<>(), oAuthClientAuthnContext3,
-                        HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT, false},
+                        HttpServletResponse.SC_UNAUTHORIZED, OAuth2ErrorCodes.INVALID_CLIENT, false, false},
                 // Request with other error in client authentication context. Will return bad request error
                 {requestParams1, new MultivaluedHashMap<>(), oAuthClientAuthnContext4,
-                        HttpServletResponse.SC_BAD_REQUEST, "", false},
+                        HttpServletResponse.SC_BAD_REQUEST, "", false, false},
                 // Request with no client authentication context. Will return bad request error
                 {requestParams1, new MultivaluedHashMap<>(), null,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request that returns OAuthSystemException. Will return internal server error
                 {requestParams1, paramMap1, oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_INTERNAL_SERVER_ERROR, OAuth2ErrorCodes.SERVER_ERROR, true},
+                        HttpServletResponse.SC_INTERNAL_SERVER_ERROR, OAuth2ErrorCodes.SERVER_ERROR, true, false},
                 // Request that contains form param with empty value. Will ignore the empty value and return success.
-                {requestParams1, paramMap3, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false},
+                {requestParams1, paramMap3, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false},
                 // Request with request object. Will return success.
-                {requestParams8, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false},
+                {requestParams8, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false},
+                // Successful FAPI request with response type code, response mode jwt.
+                {requestParams9, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, true},
+                // FAPI request with response type code, response mode query.jwt. Will return bad request error.
+                {requestParams10, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true},
+                // FAPI request with response type code id_token, response mode query.jwt. Will return success
+                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, true},
+                // FAPI request without code challenge. Will return bad request error.
+                {requestParams11, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true},
+                // FAPI request without code challenge method. Will return bad request error.
+                {requestParams12, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true},
+                // FAPI request with invalid code challenge method. Will return bad request error.
+                {requestParams13, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true}
         };
     }
 
     @Test(dataProvider = "testParDataProvider", groups = "testWithConnection")
     public void testPar(Object requestParamsObj, Object paramMapObj, Object oAuthClientAuthnContextObj,
-                        int expectedStatus, String expectedErrorCode, boolean testOAuthSystemException)
+                        int expectedStatus, String expectedErrorCode, boolean testOAuthSystemException,
+                        boolean isFAPITest)
             throws Exception {
 
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
         Map<String, String[]> requestParams = (Map<String, String[]>) requestParamsObj;
         OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oAuthClientAuthnContextObj;
 
-        mockOAuthServerConfiguration();
+        mockOAuthServerConfiguration(paramMap);
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
         mockStatic(IdentityDatabaseUtil.class);
@@ -276,7 +335,19 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         when(parAuthData.getExpiryTime()).thenReturn(EXPIRY_TIME);
 
         mockStatic(OIDCRequestObjectUtil.class);
-        when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
+        if (!isFAPITest && requestParams.containsKey(OAuthConstants.OAuth20Params.REQUEST)) {
+            RequestObject requestObject = new RequestObject();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+            jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, "code-challenge-string");
+            jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD, "S256");
+            requestObject.setClaimSet(jwtClaimsSetBuilder.build());
+            when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(requestObject);
+        } else {
+            when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
+        }
+
+        spy(OAuth2Util.class);
+        doReturn(isFAPITest).when(OAuth2Util.class, "isFapiConformantApp", any());
 
         Response response;
         response = oAuth2ParEndpoint.par(request, httpServletResponse, paramMap);
@@ -339,13 +410,13 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         return httpServletRequest;
     }
 
-    private void mockOAuthServerConfiguration() throws Exception {
+    private void mockOAuthServerConfiguration(MultivaluedMap<String, String> paramMap) throws Exception {
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
         when(oAuthServerConfiguration.getSupportedResponseTypeValidators()).thenReturn(
                 new HashMap<String, Class<? extends OAuthValidator<HttpServletRequest>>>() {{
-                    put("code", CodeValidator.class);
+                    put(paramMap.getFirst(OAuth.OAUTH_RESPONSE_TYPE), CodeValidator.class);
                 }});
 
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);

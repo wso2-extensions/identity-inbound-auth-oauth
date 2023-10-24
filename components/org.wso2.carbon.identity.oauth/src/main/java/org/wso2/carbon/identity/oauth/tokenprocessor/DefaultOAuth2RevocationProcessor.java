@@ -20,12 +20,15 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 
 /**
  * Handles oauth2 token revocation when persistence layer exists.
@@ -67,5 +70,12 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
     public boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) {
 
         return StringUtils.equals(GrantType.REFRESH_TOKEN.toString(), revokeRequestDTO.getTokenType());
+    }
+
+    @Override
+    public boolean revokeTokens(String username, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        return OAuthUtil.revokeTokens(username, userStoreManager);
     }
 }
