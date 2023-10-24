@@ -2007,8 +2007,8 @@ public class OAuthAdminServiceImpl {
     private String filterEncryptionMethod(String encryptionMethod, String configName)
             throws IdentityOAuthAdminException {
 
-        List<String> supportedIdTokenEncryptionMethods = IdentityUtil.getPropertyAsList(configName);
-        if (!supportedIdTokenEncryptionMethods.contains(encryptionMethod)) {
+        List<String> supportedEncryptionMethods = IdentityUtil.getPropertyAsList(configName);
+        if (!supportedEncryptionMethods.contains(encryptionMethod)) {
             String msg = String.format("'%s' Encryption Method is not allowed.", encryptionMethod);
             throw handleClientError(INVALID_REQUEST, msg);
         }
@@ -2025,8 +2025,8 @@ public class OAuthAdminServiceImpl {
     private String filterEncryptionAlgorithms(String algorithm, String configName)
             throws IdentityOAuthAdminException {
 
-        List<String> supportedIdTokenEncryptionAlgorithms = IdentityUtil.getPropertyAsList(configName);
-        if (!supportedIdTokenEncryptionAlgorithms.contains(algorithm)) {
+        List<String> supportedEncryptionAlgorithms = IdentityUtil.getPropertyAsList(configName);
+        if (!supportedEncryptionAlgorithms.contains(algorithm)) {
             String msg = String.format("'%s' Encryption Algorithm is not allowed.", algorithm);
             throw handleClientError(INVALID_REQUEST, msg);
         }
