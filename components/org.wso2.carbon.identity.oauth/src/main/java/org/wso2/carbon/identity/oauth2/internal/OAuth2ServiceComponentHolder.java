@@ -30,6 +30,8 @@ import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultAccessTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -104,7 +106,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
-
+    private AccessTokenProvider accessTokenProvider;
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
     private RoleManagementService roleManagementServiceV2;
@@ -719,6 +721,30 @@ public class OAuth2ServiceComponentHolder {
 
         oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
     }
+
+    /**
+     * Get access token provider.
+     *
+     * @return AccessTokenProvider
+     */
+    public AccessTokenProvider getAccessTokenProvider() {
+
+        if (accessTokenProvider == null) {
+            accessTokenProvider = new DefaultAccessTokenProvider();
+        }
+        return accessTokenProvider;
+    }
+
+    /**
+     * Set access token provider.
+     *
+     * @param accessTokenProvider AccessTokenProvider
+     */
+    public void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+
+        this.accessTokenProvider = accessTokenProvider;
+    }
+
 
     public AuthorizedAPIManagementService getAuthorizedAPIManagementService() {
 
