@@ -3,6 +3,7 @@ package org.wso2.carbon.identity.oauth2.util;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -284,5 +285,15 @@ public class AuthzUtil {
             cause = cause.getCause();
         }
         return false;
+    }
+
+    /**
+     * Check whether legacy authroization runtime is enabled.
+     *
+     * @return True if legacy authroization runtime is enabled.
+     */
+    public static boolean isLegacyAuthzRuntime() {
+
+        return CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME;
     }
 }

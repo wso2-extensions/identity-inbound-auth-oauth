@@ -55,6 +55,7 @@ public class Oauth2ScopeUtils {
     public static final String OAUTH_APP_DO_PROPERTY_NAME = "OAuthAppDO";
     private static final String OAUTH_ENABLE_SYSTEM_LEVEL_INTERNAL_SYSTEM_SCOPE_MANAGEMENT =
             "OAuth.EnableSystemLevelInternalSystemScopeManagement";
+    private static final String LEGACY_RBAC_SCOPE_VALIDATOR = "Role based scope validator";
 
     public static IdentityOAuth2ScopeServerException generateServerException(Oauth2ScopeConstants.ErrorMessages
                                                                                 error, String data)
@@ -260,7 +261,7 @@ public class Oauth2ScopeUtils {
         // Iterate through all available scope validators.
         for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
 
-            if (!OAuth2Util.isLegacyAuthzRuntime() && "Role based scope validator".equals(validator
+            if (!AuthzUtil.isLegacyAuthzRuntime() && LEGACY_RBAC_SCOPE_VALIDATOR.equals(validator
                     .getValidatorName())) {
                 return true;
             }

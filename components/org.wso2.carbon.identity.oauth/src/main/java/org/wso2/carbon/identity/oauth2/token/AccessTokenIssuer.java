@@ -66,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
@@ -678,7 +679,7 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
-            if (OAuth2Util.isLegacyAuthzRuntime()) {
+            if (AuthzUtil.isLegacyAuthzRuntime()) {
                 // Execute Internal SCOPE Validation.
                 JDBCPermissionBasedInternalScopeValidator scopeValidator =
                         new JDBCPermissionBasedInternalScopeValidator();
@@ -715,7 +716,7 @@ public class AccessTokenIssuer {
          Those scopes should not send to the other scopes validators. Thus remove the scopes from the tokReqMsgCtx.
          Will be added to the response after executing the other scope validators.
         */
-        if (OAuth2Util.isLegacyAuthzRuntime()) {
+        if (AuthzUtil.isLegacyAuthzRuntime()) {
             removeInternalScopes(tokReqMsgCtx);
 
             // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
@@ -740,7 +741,7 @@ public class AccessTokenIssuer {
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             // Add authorized internal scopes to the request for sending in the response.
-            if (OAuth2Util.isLegacyAuthzRuntime()) {
+            if (AuthzUtil.isLegacyAuthzRuntime()) {
                 addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
             } else {
                 addAuthorizedScopes(tokReqMsgCtx, authorizedScopes);

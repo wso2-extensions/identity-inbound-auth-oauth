@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
@@ -278,7 +279,7 @@ public class AuthorizationHandlerManager {
         // Remove the system level allowed scopes from requested scopes for further validation.
         removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         List<String> authorizedScopes = null;
-        if (OAuth2Util.isLegacyAuthzRuntime()) {
+        if (AuthzUtil.isLegacyAuthzRuntime()) {
             // If it is management app, we validate internal scopes in the requested scopes.
             String[] authorizedInternalScopes = new String[0];
             log.debug("Handling the internal scope validation.");
@@ -304,7 +305,7 @@ public class AuthorizationHandlerManager {
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
         boolean isValidatedScopesContainsInRequestedScopes = isValidatedScopesContainsInRequestedScopes(authzReqMsgCtx);
         if (isValid && isValidatedScopesContainsInRequestedScopes) {
-            if (OAuth2Util.isLegacyAuthzRuntime()) {
+            if (AuthzUtil.isLegacyAuthzRuntime()) {
                 // Add authorized internal scopes to the request for sending in the response.
                 addAuthorizedInternalScopes(authzReqMsgCtx, authzReqMsgCtx.getAuthorizedInternalScopes());
             } else {
