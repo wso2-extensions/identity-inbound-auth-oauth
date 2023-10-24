@@ -20,7 +20,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandlerException;
-import org.wso2.carbon.identity.role.v2.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;

@@ -259,6 +259,11 @@ public class Oauth2ScopeUtils {
                 .getOAuth2ScopeValidators();
         // Iterate through all available scope validators.
         for (OAuth2ScopeValidator validator : oAuth2ScopeValidators) {
+
+            if (!OAuth2Util.isLegacyAuthzRuntime() && "Role based scope validator".equals(validator
+                    .getValidatorName())) {
+                return true;
+            }
             // Validate the scopes from the validator only if it's configured in the OAuth app.
             if (validator != null && appScopeValidators.contains(validator.getValidatorName())) {
                 if (log.isDebugEnabled()) {
