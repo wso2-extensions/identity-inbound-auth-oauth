@@ -29,7 +29,7 @@ public class NoPolicyScopeValidationHandler implements ScopeValidationHandler {
     @Override
     public String getPolicyID() {
 
-        return "NoPolicy";
+        return "NO POLICY";
     }
 
     @Override

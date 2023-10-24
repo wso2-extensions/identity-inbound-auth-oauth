@@ -113,7 +113,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         }
         // Get groups of the user.
         List<String> groups = getUserGroups(authenticatedUser);
-        if (groups.isEmpty()) {
+        if (!groups.isEmpty()) {
             List<String> roleIdsOfGroups = getRoleIdsOfGroups(groups, authenticatedUser.getTenantDomain());
             if (!roleIdsOfGroups.isEmpty()) {
                 roleIds.addAll(roleIdsOfGroups);
