@@ -30,6 +30,8 @@ import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultAccessTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -104,6 +106,7 @@ public class OAuth2ServiceComponentHolder {
     private boolean isOrganizationManagementEnabled = false;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
+    private AccessTokenProvider accessTokenProvider;
 
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
@@ -720,6 +723,7 @@ public class OAuth2ServiceComponentHolder {
         oAuthAuthorizationRequestBuilders.remove(oAuthAuthorizationRequestBuilder);
     }
 
+  
     public AuthorizedAPIManagementService getAuthorizedAPIManagementService() {
 
         return authorizedAPIManagementService;
@@ -736,6 +740,7 @@ public class OAuth2ServiceComponentHolder {
      * @return APIResourceManager.
      */
     public APIResourceManager getApiResourceManager() {
+      
         return apiResourceManager;
     }
     /**
@@ -744,6 +749,7 @@ public class OAuth2ServiceComponentHolder {
      * @param apiResourceManager APIResourceManager.
      */
     public void setApiResourceManager(APIResourceManager apiResourceManager) {
+      
         this.apiResourceManager = apiResourceManager;
     }
 
@@ -765,5 +771,28 @@ public class OAuth2ServiceComponentHolder {
     public void setRoleManagementServiceV2(RoleManagementService roleManagementServiceV2) {
 
         this.roleManagementServiceV2 = roleManagementServiceV2;
+    }
+  
+    /**
+     * Get access token provider.
+     *
+     * @return AccessTokenProvider
+     */
+    public AccessTokenProvider getAccessTokenProvider() {
+
+        if (accessTokenProvider == null) {
+            accessTokenProvider = new DefaultAccessTokenProvider();
+        }
+        return accessTokenProvider;
+    }
+
+    /**
+     * Set access token provider.
+     *
+     * @param accessTokenProvider AccessTokenProvider
+     */
+    public void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+
+        this.accessTokenProvider = accessTokenProvider;
     }
 }
