@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -120,7 +121,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                     addCnfClaimToOIDCDialect(tokenReqMessageContext, userClaimsInOIDCDialect);
                 }
             } catch (IdentityOAuth2ClientException e) {
-                throw new IdentityOAuth2Exception("Could not find an existing app for clientId: " + clientId, e);
+                throw new IdentityOAuth2ClientException(e.getErrorCode(), e.getMessage());
             } catch (IdentityOAuth2Exception e) {
                 throw new IdentityOAuth2Exception("Error while obtaining the service provider for client_id: " +
                         clientId, e);
@@ -900,11 +901,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      *
      * @param tokenReqMessageContext       Token request message context.
      * @param userClaimsInOIDCDialect      Map of the user claims in the OIDC dialect.
-     * @throws IdentityOAuth2Exception     An exception is thrown if the cert could not be obtained from the request.
+     * @throws IdentityOAuth2ClientException  An exception is thrown if the cert could not be obtained from the request.
      */
     private void addCnfClaimToOIDCDialect(OAuthTokenReqMessageContext tokenReqMessageContext,
                                           Map<String, Object> userClaimsInOIDCDialect)
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2ClientException {
         
         Base64URL certThumbprint;
         X509Certificate certificate = null;
@@ -923,7 +924,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 try {
                     certificate = OAuth2Util.parseCertificate(certHeader.get().getValue()[0]);
                 } catch (CertificateException e) {
-                    throw new IdentityOAuth2Exception("Error occurred while extracting the certificate", e);
+                    throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Error occurred while extracting the certificate", e);
                 }
             }
         } else if (certObject instanceof X509Certificate) {
@@ -932,9 +934,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             List<X509Certificate> x509Certificates = Arrays.asList((X509Certificate[]) certObject);
             certificate = x509Certificates.get(0);
         }
+
         if (certificate != null) {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
             userClaimsInOIDCDialect.put(CNF_CLAIM, Collections.singletonMap("x5t#S256", certThumbprint));
+        } else {
+            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "TLS certificate not found in the request.");
         }
     }
 
