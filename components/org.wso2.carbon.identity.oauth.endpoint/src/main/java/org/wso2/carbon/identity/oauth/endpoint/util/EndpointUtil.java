@@ -134,6 +134,7 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import javax.ws.rs.core.MultivaluedMap;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -1973,5 +1974,15 @@ public class EndpointUtil {
             throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST)
                     .description("Invalid response mode provided.");
         }
+    }
+
+    /**
+     * Cast HttpServletResponse and return as HttpServletResponseWrapper .
+     *
+     * @return HttpServletResponseWrapper Class.
+     */
+    public static HttpServletResponseWrapper getHttpServletResponseWrapper (HttpServletResponse response) {
+
+        return (HttpServletResponseWrapper) response;
     }
 }

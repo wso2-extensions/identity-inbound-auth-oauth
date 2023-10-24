@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -243,6 +244,7 @@ public class OAuth2ParEndpoint {
             if (isFapiConformant(oAuthAuthzRequest.getClientId())) {
                 EndpointUtil.validateFAPIAllowedResponseTypeAndMode(oauthParams.get(RESPONSE_TYPE),
                         oauthParams.get(RESPONSE_MODE));
+                validatePKCEParameters(oauthParams);
             }
         } catch (OAuthProblemException e) {
             throw new ParClientException(e.getError(), e.getDescription(), e);
@@ -331,12 +333,42 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private boolean isFapiConformant(String clientId) throws ParClientException {
+    private boolean isFapiConformant(String clientId) throws ParCoreException {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (IdentityOAuth2ClientException e) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
+                    "clientId: " + clientId, e);
         } catch (IdentityOAuth2Exception e) {
-            throw new ParClientException(e.getMessage(), e.getErrorCode());
+            throw new ParCoreException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
+                    "provider for clientId: " + clientId, e);
+        }
+    }
+
+
+    /**
+     * Validate PKCE parameters for PAR requests.
+     * According to FAPI(5.2.2-18), PAR requests require to use PKCE (RFC7636) with S256 as the code challenge method.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">...</a>
+     *
+     * @param paramMap parameter map
+     * @throws ParClientException if PKCE validation fails
+     */
+    private void validatePKCEParameters(Map<String, String> paramMap) throws ParClientException {
+
+        String codeChallenge = paramMap.get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
+        String codeChallengeMethod = paramMap.get(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+
+        if (StringUtils.isEmpty(codeChallenge)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Mandatory parameter code_challenge, not found in the request.");
+        }
+        if (StringUtils.isEmpty(codeChallengeMethod)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Mandatory parameter code_challenge_method, not found in the request.");
+        } else if (!OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(codeChallengeMethod)) {
+            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method.");
         }
     }
 }

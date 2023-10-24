@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -171,6 +172,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(serviceProvider.isSaasApp()).thenReturn(isSaas);
         when(serviceProvider.getLocalAndOutBoundAuthenticationConfig())
                 .thenReturn(localAndOutboundAuthenticationConfig);
+        when(serviceProvider.getSpProperties()).thenReturn(new ServiceProviderProperty[0]);
         when(FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
                 .thenReturn("randomUserwso2.com");
 
@@ -230,6 +232,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
             when(serviceProvider.isSaasApp()).thenReturn(isSaas);
             when(serviceProvider.getLocalAndOutBoundAuthenticationConfig())
                     .thenReturn(localAndOutboundAuthenticationConfig);
+            when(serviceProvider.getSpProperties()).thenReturn(new ServiceProviderProperty[0]);
         }
         when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
 

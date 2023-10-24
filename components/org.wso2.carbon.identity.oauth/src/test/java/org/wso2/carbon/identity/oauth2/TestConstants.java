@@ -85,4 +85,7 @@ public class TestConstants {
 
     public static final String SAML_ISSUER = "travelocity.com";
     public static final String IDP_ENTITY_ID_ALIAS = "wso2.is.com";
+
+    public static final String FAPI_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
 }

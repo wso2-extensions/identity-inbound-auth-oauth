@@ -118,6 +118,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.config.SpOAuth2ExpiryTimeConfiguration;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -178,6 +179,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -355,6 +357,7 @@ public class OAuth2Util {
     private static final String SHA512_WITH_EC = "SHA512withEC";
     private static final String SHA256_WITH_PS = "SHA256withPS";
     private static final String PS256 = "PS256";
+    private static final String ES256 = "ES256";
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
@@ -2515,7 +2518,7 @@ public class OAuth2Util {
             return JWSAlgorithm.HS384;
         } else if (SHA512_WITH_HMAC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.HS512;
-        } else if (SHA256_WITH_EC.equals(signatureAlgorithm)) {
+        } else if (SHA256_WITH_EC.equals(signatureAlgorithm) || ES256.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES256;
         } else if (SHA384_WITH_EC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES384;
@@ -4219,10 +4222,10 @@ public class OAuth2Util {
             throws UserInfoEndpointException {
 
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
-            AccessTokenDO accessTokenDO = null;
+            AccessTokenDO accessTokenDO;
             try {
-                accessTokenDO = OAuth2Util.findAccessToken(
-                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
             }
@@ -4232,6 +4235,31 @@ public class OAuth2Util {
             }
         }
         return null;
+    }
+
+    /**
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
+     *
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
+     */
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+            try {
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                return Optional.ofNullable(accessTokenDO);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**
@@ -4788,14 +4816,7 @@ public class OAuth2Util {
         if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
             return MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-
-        if (request != null) {
-            String tenantDomainFromReq = request.getParameter(FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
-            if (StringUtils.isNotBlank(tenantDomainFromReq)) {
-                return tenantDomainFromReq;
-            }
-        }
-        return IdentityTenantUtil.getTenantDomainFromContext();
+        return IdentityTenantUtil.resolveTenantDomain();
     }
 
     /**
@@ -4989,6 +5010,24 @@ public class OAuth2Util {
         }
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static String[] getSupportedClientAuthMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
+            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            if (!supportedAuthMethods.isEmpty()) {
+                supportedClientAuthMethods.addAll(supportedAuthMethods);
+            }
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
     }
 
     /**

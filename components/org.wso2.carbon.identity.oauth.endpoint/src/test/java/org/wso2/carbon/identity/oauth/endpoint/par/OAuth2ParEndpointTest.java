@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -170,6 +171,9 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
         requestParams9.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
                 new String[]{OAuthConstants.ResponseModes.JWT});
+        requestParams9.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams9.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{OAuthConstants.OAUTH_PKCE_S256_CHALLENGE});
 
         Map<String, String[]> requestParams10 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
@@ -180,6 +184,23 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE_ID_TOKEN});
         requestParams11.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
                 new String[]{OAuthConstants.ResponseModes.QUERY_JWT});
+        requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{OAuthConstants.OAUTH_PKCE_S256_CHALLENGE});
+
+        Map<String, String[]> requestParams12 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
+        requestParams12.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.JWT});
+        requestParams12.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+
+        Map<String, String[]> requestParams13 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
+                new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
+        requestParams13.put(OAuthConstants.OAuth20Params.RESPONSE_MODE,
+                new String[]{OAuthConstants.ResponseModes.JWT});
+        requestParams13.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
+        requestParams13.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
+                new String[]{"Invalid-code-challenge-method"});
 
         MultivaluedMap<String, String> paramMap1 = new MultivaluedHashMap<>();
         paramMap1.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
@@ -257,15 +278,23 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 // Request that contains form param with empty value. Will ignore the empty value and return success.
                 {requestParams1, paramMap3, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false},
                 // Request with request object. Will return success.
-                {requestParams8, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false,
-                        false},
+                {requestParams8, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false},
                 // Successful FAPI request with response type code, response mode jwt.
                 {requestParams9, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, true},
                 // FAPI request with response type code, response mode query.jwt. Will return bad request error.
                 {requestParams10, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
                         OAuth2ErrorCodes.INVALID_REQUEST, false, true},
                 // FAPI request with response type code id_token, response mode query.jwt. Will return success
-                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, true}
+                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, true},
+                // FAPI request without code challenge. Will return bad request error.
+                {requestParams11, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true},
+                // FAPI request without code challenge method. Will return bad request error.
+                {requestParams12, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true},
+                // FAPI request with invalid code challenge method. Will return bad request error.
+                {requestParams13, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true}
         };
     }
 
@@ -306,7 +335,16 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         when(parAuthData.getExpiryTime()).thenReturn(EXPIRY_TIME);
 
         mockStatic(OIDCRequestObjectUtil.class);
-        when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
+        if (!isFAPITest && requestParams.containsKey(OAuthConstants.OAuth20Params.REQUEST)) {
+            RequestObject requestObject = new RequestObject();
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+            jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, "code-challenge-string");
+            jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD, "S256");
+            requestObject.setClaimSet(jwtClaimsSetBuilder.build());
+            when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(requestObject);
+        } else {
+            when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
+        }
 
         spy(OAuth2Util.class);
         doReturn(isFAPITest).when(OAuth2Util.class, "isFapiConformantApp", any());

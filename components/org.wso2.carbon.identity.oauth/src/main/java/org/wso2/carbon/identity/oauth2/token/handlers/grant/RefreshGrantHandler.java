@@ -63,6 +63,7 @@ import java.util.stream.Stream;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId;
 
 /**
  * Grant Type handler for Grant Type refresh_token which is used to get a new access token.
@@ -291,8 +292,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                         + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
             }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
-            String cacheKeyString = buildCacheKeyStringForTokenWithUserId(clientId, scope, userId,
-                    authenticatedIDP, oldAccessToken.getTokenBindingReference());
+            String accessingOrganization = OAuthConstants.AuthorizedOrganization.NONE;
+            if (!StringUtils.isEmpty(oldAccessToken.getAuthorizedUser().getAccessingOrganization())) {
+                accessingOrganization = oldAccessToken.getAuthorizedUser().getAccessingOrganization();
+            }
+            String cacheKeyString = buildCacheKeyStringForTokenWithUserIdOrgId(clientId, scope, userId,
+                    authenticatedIDP, oldAccessToken.getTokenBindingReference(), accessingOrganization);
             OAuthCacheKey oauthCacheKey = new OAuthCacheKey(cacheKeyString);
             OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenBean.getAuthzUser().getTenantDomain());
 

@@ -32,6 +32,7 @@ import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -57,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
@@ -313,6 +315,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -3247,6 +3250,17 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)) != null) {
+                try {
+                    parseSupportedTokenEndpointSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                            getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)));
+                } catch (ServerConfigurationException e) {
+                    log.error("Error while parsing supported token endpoint signing algorithms.", e);
+                }
+            }
+
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
             oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
@@ -3568,6 +3582,40 @@ public class OAuthServerConfiguration {
         this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
     }
 
+    public List<String> getSupportedTokenEndpointSigningAlgorithms() {
+
+        return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    /**
+     * Parse supported signing algorithms and add them to the supportedTokenEndpointSigningAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseSupportedTokenEndpointSigningAlgorithms(OMElement algorithms)
+            throws ServerConfigurationException {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG);
+        if (iterator != null) {
+            while (iterator.hasNext()) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    try {
+                        supportedTokenEndpointSigningAlgorithms.add(String.valueOf(
+                                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm.getText())));
+                    } catch (IdentityOAuth2Exception e) {
+                        throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -3822,6 +3870,8 @@ public class OAuthServerConfiguration {
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
     }
 
 }
