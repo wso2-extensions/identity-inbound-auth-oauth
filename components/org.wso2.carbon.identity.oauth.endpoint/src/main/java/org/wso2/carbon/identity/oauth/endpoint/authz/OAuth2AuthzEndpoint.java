@@ -17,6 +17,9 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.nimbusds.jwt.SignedJWT;
@@ -39,6 +42,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
@@ -46,6 +50,7 @@ import org.wso2.carbon.identity.application.authentication.framework.config.mode
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
@@ -53,6 +58,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.Claim;
@@ -85,6 +92,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -132,6 +141,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -176,7 +186,6 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -253,6 +262,9 @@ public class OAuth2AuthzEndpoint {
     private static ScopeMetadataService scopeMetadataService;
 
     private static DeviceAuthService deviceAuthService;
+    private static final String AUTH_SERVICE_RESPONSE = "authServiceResponse";
+    private static final String IS_API_BASED_AUTH_HANDLED = "isApiBasedAuthHandled";
+    private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
 
     public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
 
@@ -279,7 +291,7 @@ public class OAuth2AuthzEndpoint {
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
-    @Produces("text/html")
+    @Produces({"text/html", "application/json"})
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException {
 
@@ -314,17 +326,24 @@ public class OAuth2AuthzEndpoint {
                 FrameworkUtils.startTenantFlow(tenantDomain);
             }
 
+            Response oauthResponse;
             if (isPassthroughToFramework(oAuthMessage)) {
-                return handleAuthFlowThroughFramework(oAuthMessage);
+                oauthResponse = handleAuthFlowThroughFramework(oAuthMessage);
             } else if (isInitialRequestFromClient(oAuthMessage)) {
-                return handleInitialAuthorizationRequest(oAuthMessage);
+                oauthResponse = handleInitialAuthorizationRequest(oAuthMessage);
             } else if (isAuthenticationResponseFromFramework(oAuthMessage)) {
-                return handleAuthenticationResponse(oAuthMessage);
+                oauthResponse = handleAuthenticationResponse(oAuthMessage);
             } else if (isConsentResponseFromUser(oAuthMessage)) {
-                return handleResponseFromConsent(oAuthMessage);
+                oauthResponse = handleResponseFromConsent(oAuthMessage);
             } else {
-                return handleInvalidRequest(oAuthMessage);
+                oauthResponse = handleInvalidRequest(oAuthMessage);
             }
+
+            if (isApiBasedAuthenticationFlow(oAuthMessage)) {
+                oauthResponse = handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
+            }
+
+            return oauthResponse;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleOAuthProblemException(oAuthMessage, e);
@@ -338,6 +357,7 @@ public class OAuth2AuthzEndpoint {
             }
         }
     }
+
 
 
     private void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
@@ -354,7 +374,7 @@ public class OAuth2AuthzEndpoint {
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
-    @Produces("text/html")
+    @Produces({"text/html", "application/json"})
     public Response authorizePost(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                   MultivaluedMap paramMap)
             throws URISyntaxException, InvalidRequestParentException {
@@ -1559,9 +1579,7 @@ public class OAuth2AuthzEndpoint {
         AuthenticatedUser loggedInUser = getLoggedInUser(oAuthMessage);
         String clientId = oauth2Params.getClientId();
 
-        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
-
-        if (!isConsentSkipped(serviceProvider)) {
+        if (!isConsentSkipped(oauth2Params)) {
             boolean approvedAlways = OAuthConstants.Consent.APPROVE_ALWAYS.equals(consent);
             if (approvedAlways) {
                 OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
@@ -2171,6 +2189,7 @@ public class OAuth2AuthzEndpoint {
         }
         sessionDataCacheEntryNew.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
+        oAuthMessage.setSessionDataCacheEntry(sessionDataCacheEntryNew);
     }
 
     private String analyzePromptParameter(OAuthMessage oAuthMessage, OAuth2Parameters params, String prompt) {
@@ -2890,6 +2909,9 @@ public class OAuth2AuthzEndpoint {
 
     private OAuth2Parameters getOauth2Params(OAuthMessage oAuthMessage) {
 
+        if (oAuthMessage.getSessionDataCacheEntry() == null) {
+            return null;
+        }
         return oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
     }
 
@@ -2904,9 +2926,7 @@ public class OAuth2AuthzEndpoint {
                                          authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException {
 
-        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
-
-        if (isConsentSkipped(serviceProvider)) {
+        if (isConsentSkipped(oauth2Params)) {
             sessionState.setAddSessionState(true);
             return handleUserConsent(oAuthMessage, APPROVE, sessionState, oauth2Params, authorizationResponseDTO);
         } else if (hasUserApproved) {
@@ -3003,13 +3023,17 @@ public class OAuth2AuthzEndpoint {
     /**
      * Consent page can be skipped by setting OpenIDConnect configuration or by setting SP property.
      *
-     * @param serviceProvider Service provider related to this request.
+     * @param oauth2Params oauth2 params related to this request.
      * @return A boolean stating whether consent page is skipped or not.
      */
-    private boolean isConsentSkipped(ServiceProvider serviceProvider) {
+    private boolean isConsentSkipped(OAuth2Parameters oauth2Params) throws OAuthSystemException {
 
+        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
+        boolean isApiBasedAuthenticationFlow = isApiBasedAuthenticationFlow(oauth2Params);
+
+        // Consent handling is skipped for API based authentication flow.
         return getOAuthServerConfiguration().getOpenIDConnectSkipeUserConsentConfig()
-                || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider);
+                || FrameworkUtils.isConsentPageSkippedForSP(serviceProvider) || isApiBasedAuthenticationFlow;
     }
 
     private boolean isConsentFromUserRequired(String preConsentQueryParams) {
@@ -3393,7 +3417,6 @@ public class OAuth2AuthzEndpoint {
                                                    AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
-        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
         sessionState.setAddSessionState(true);
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -3404,7 +3427,7 @@ public class OAuth2AuthzEndpoint {
                     .inputParam(OAuthConstants.LogConstants.InputKeys.PROMPT, oauth2Params.getPrompt())
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
         }
-        if (isConsentSkipped(serviceProvider)) {
+        if (isConsentSkipped(oauth2Params)) {
             if (diagnosticLogBuilder != null) {
                 // diagnosticLogBuilder will be null only if diagnostic logs are disabled.
                 diagnosticLogBuilder.configParam("skip consent", "true")
@@ -3745,14 +3768,23 @@ public class OAuth2AuthzEndpoint {
             String sessionDataKey =
                     (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);
 
-            CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
 
             CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(oAuthMessage.getRequest());
             requestWrapper.setParameter(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
             requestWrapper.setParameter(FrameworkConstants.RequestParams.TYPE, type);
 
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
-            commonAuthenticationHandler.doGet(requestWrapper, responseWrapper);
+
+            if (isApiBasedAuthenticationFlow(oAuthMessage)) {
+                AuthenticationService authenticationService = new AuthenticationService();
+                AuthServiceResponse authServiceResponse = authenticationService.
+                        handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
+                // This is done to provide a way to propagate the auth service response to needed places.
+                attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
+            } else {
+                CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
+                commonAuthenticationHandler.doGet(requestWrapper, responseWrapper);
+            }
 
             Object attribute = oAuthMessage.getRequest().getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
             if (attribute != null) {
@@ -3772,7 +3804,7 @@ public class OAuth2AuthzEndpoint {
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
                 return authorize(requestWrapper, oAuthMessage.getResponse());
             }
-        } catch (ServletException | IOException | URLBuilderException e) {
+        } catch (ServletException | IOException | URLBuilderException | AuthServiceException e) {
             log.error("Error occurred while sending request to authentication framework.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -4262,5 +4294,87 @@ public class OAuth2AuthzEndpoint {
             throw new InvalidRequestException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
                     "provider for clientId: " + clientId, e);
         }
+    }
+
+    private boolean isApiBasedAuthenticationFlow(OAuthMessage oAuthMessage) {
+
+        OAuth2Parameters oAuth2Parameters = getOauth2Params(oAuthMessage);
+        if (oAuth2Parameters != null) {
+            return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
+        }
+
+        return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
+                oAuthMessage.getRequest().getParameter(RESPONSE_MODE));
+    }
+
+    private boolean isApiBasedAuthenticationFlow(OAuth2Parameters oAuth2Parameters) {
+
+        if (oAuth2Parameters == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("OAuth2Parameters is null. Returning false for isApiBasedAuthenticationFlow check.");
+            }
+            return false;
+        }
+        return OAuthConstants.ResponseModes.DIRECT.equals(oAuth2Parameters.getResponseMode());
+    }
+
+    private void attachAuthServiceResponseToRequest(HttpServletRequest request,
+                                                    AuthServiceResponse authServiceResponse) {
+
+        request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
+    }
+
+    private Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse) {
+
+        // API based auth response transformation has already been handled no need for further handling.
+        if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(IS_API_BASED_AUTH_HANDLED))) {
+            return oauthResponse;
+        }
+        try {
+            Object attribute = oAuthMessage.getRequest().getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
+            if (attribute == AuthenticatorFlowStatus.INCOMPLETE) {
+                AuthServiceResponse authServiceResponse = (AuthServiceResponse) oAuthMessage.getRequest()
+                        .getAttribute(AUTH_SERVICE_RESPONSE);
+
+                AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+                String jsonString = objectMapper.writeValueAsString(authResponse);
+                return Response.ok().entity(jsonString).build();
+
+            } else {
+                String location = oauthResponse.getMetadata().get("Location").get(0).toString();
+                if (StringUtils.isNotBlank(location)) {
+                    Map<String, String> queryParams = getQueryParamsFromUrl(location);
+                    String jsonPayload = new Gson().toJson(queryParams);
+                    return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                }
+            }
+        } catch (AuthServiceException | JsonProcessingException | UnsupportedEncodingException | URISyntaxException e) {
+            log.error("Error while handling API based response.", e);
+            Map<String, String> params = new HashMap<>();
+            params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
+            params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Server error occurred while performing authorization.");
+            String jsonString = new Gson().toJson(params);
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).entity(jsonString).build();
+        }
+
+        // Returning the original response as it hasn't been handled as an API based authentication response.
+        return oauthResponse;
+    }
+
+    private Map<String, String> getQueryParamsFromUrl(String url) throws UnsupportedEncodingException,
+            URISyntaxException {
+
+        Map<String, String> queryParams = new HashMap<>();
+        URI uri = new URI(url);
+        String query = uri.getQuery();
+        String[] pairs = query.split("&");
+        for (String pair : pairs) {
+            int idx = pair.indexOf("=");
+            queryParams.put(URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8.toString()),
+                    URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8.toString()));
+        }
+        return queryParams;
     }
 }
