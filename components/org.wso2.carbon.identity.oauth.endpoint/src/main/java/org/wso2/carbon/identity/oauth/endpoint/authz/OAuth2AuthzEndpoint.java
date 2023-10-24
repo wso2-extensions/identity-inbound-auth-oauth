@@ -538,7 +538,6 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setState(oauth2Params.getState());
         authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
         authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
-        authorizationResponseDTO.getSuccessResponseDTO().setScope(oauth2Params.getScopes());
 
         return authorizationResponseDTO;
     }
@@ -1706,7 +1705,7 @@ public class OAuth2AuthzEndpoint {
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
-            setScopes(authzRespDTO, builder);
+            setScopes(authzRespDTO, builder, authorizationResponseDTO);
         }
         if (isIdTokenExists(authzRespDTO)) {
             setIdToken(authzRespDTO, builder, authorizationResponseDTO);
@@ -1889,12 +1888,15 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void setScopes(OAuth2AuthorizeRespDTO authzRespDTO,
-                           OAuthASResponse.OAuthAuthorizationResponseBuilder builder) {
+                           OAuthASResponse.OAuthAuthorizationResponseBuilder builder, AuthorizationResponseDTO
+                                   authorizationResponseDTO) {
 
         String[] scopes = authzRespDTO.getScope();
         if (scopes != null && scopes.length > 0) {
             String scopeString =  StringUtils.join(scopes, " ");
             builder.setScope(scopeString.trim());
+            Set<String> scopesSet = new HashSet<>(Arrays.asList(scopes));
+            authorizationResponseDTO.getSuccessResponseDTO().setScope(scopesSet);
         }
     }
 
