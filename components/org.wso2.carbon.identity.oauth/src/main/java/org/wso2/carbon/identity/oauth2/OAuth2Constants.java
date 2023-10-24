@@ -33,6 +33,7 @@ public class OAuth2Constants {
 
     }
     public static final String GROUPS = "groups";
+    public static final String ENTITY_ID = "entity_id";
 
 
     /**

@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -116,6 +117,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
     private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
+    private static final String DUMMY_USER_ID = "DUMMY_USER_ID";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
 
@@ -168,11 +170,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
         OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         reqMessageContext.setScope(requestScopes);
-
+        reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("DUMMY_USERNAME");
         authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        authenticatedUser.setUserId(DUMMY_USER_ID);
         reqMessageContext.setAuthorizedUser(authenticatedUser);
 
         OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
@@ -204,11 +207,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.setApprovedScope(requestScopes);
-
+        authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("DUMMY_USERNAME");
         authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        authenticatedUser.setUserId(DUMMY_USER_ID);
         authorizeReqDTO.setUser(authenticatedUser);
         authorizeReqDTO.setConsumerKey(DUMMY_CONSUMER_KEY);
 
@@ -264,6 +268,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authenticatedUser.setUserName("DUMMY_USERNAME");
         authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        authenticatedUser.setUserId(DUMMY_USER_ID);
 
         final String authenticatedSubjectIdentifier = authenticatedUser.toString();
         authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedSubjectIdentifier);
@@ -272,7 +277,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authorizeReqDTO.setTenantDomain("super.wso2");
         authorizeReqDTO.setUser(authenticatedUser);
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
-        authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
@@ -283,7 +288,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         cal.setTime(new Date()); // sets calendar time/date
         cal.add(Calendar.HOUR_OF_DAY, 1); // adds one hour
         tokenReqMessageContext.addProperty(EXPIRY_TIME_JWT, cal.getTime());
-        tokenReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+        tokenReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
 
         return new Object[][]{
                 {
@@ -326,6 +331,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuthAppDO appDO = spy(new OAuthAppDO());
         appDO.setSubjectType("pairwise");
         appDO.setSectorIdentifierURI(DUMMY_SECTOR_IDENTIFIER);
+        appDO.setOauthConsumerKey(DUMMY_CLIENT_ID);
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
         mockStatic(OAuth2Util.class);
@@ -380,7 +386,13 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             assertEquals(new Duration(jwtClaimSet.getIssueTime().getTime(), jwtClaimSet.getExpirationTime().getTime())
                     .getMillis(), expectedExpiry);
         }
-
+        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
+        if (tokenReqMessageContext != null) {
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
+        }
+        if (authzReqMessageContext != null) {
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
+        }
     }
 
     @Test(dataProvider = "createJWTClaimSetDataProvider")

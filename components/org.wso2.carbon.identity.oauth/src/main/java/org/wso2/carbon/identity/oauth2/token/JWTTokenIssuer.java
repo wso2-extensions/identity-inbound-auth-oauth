@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -95,8 +96,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String TOKEN_BINDING_TYPE = "binding_type";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String CNF = "cnf";
-    private static final String ENTITY_ID = "entity_id";
-
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
@@ -494,14 +493,20 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
+        String userType = getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext);
         try {
             /*
-             *  The entity_id is used to identify the principal subject for the issuing token. For user access tokens,
-             *  this is the user's unique ID. For application access tokens, this is the application's consumer key.
+             * The entity_id is used to identify the principal subject for the issuing token. For user access
+             * tokens, this is the user's unique ID. For application access tokens, this is the application's
+             * consumer key.
              */
-            String entityId = isUserAccessTokenType(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType())
-                    ? authenticatedUser.getUserId() : oAuthAppDO.getOauthConsumerKey();
-            jwtClaimsSetBuilder.claim(ENTITY_ID, entityId);
+            if (OAuthConstants.UserType.APPLICATION_USER.equals(userType)) {
+                jwtClaimsSetBuilder.claim(OAuth2Constants.ENTITY_ID, authenticatedUser.getUserId());
+            } else if (OAuthConstants.UserType.APPLICATION.equals(userType)) {
+                jwtClaimsSetBuilder.claim(OAuth2Constants.ENTITY_ID, oAuthAppDO.getOauthConsumerKey());
+            } else {
+                throw new IdentityOAuth2Exception("Invalid user type: " + userType);
+            }
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("User id not found for user: "
                     + authenticatedUser.getLoggableMaskedUserId(), e);
