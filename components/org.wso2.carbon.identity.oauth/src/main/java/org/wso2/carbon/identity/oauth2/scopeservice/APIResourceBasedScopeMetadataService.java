@@ -31,7 +31,10 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class DefaultScopeMetadataService implements ScopeMetadataService {
+/**
+ * Default implementation of ScopeMetadataService.
+ */
+public class APIResourceBasedScopeMetadataService implements ScopeMetadataService {
 
     @Override
     public List<OAuth2Resource> getMetadata(List<String> permissions) throws IdentityOAuth2ScopeServerException {

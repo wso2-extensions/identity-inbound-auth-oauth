@@ -70,7 +70,7 @@ import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeReq
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
-import org.wso2.carbon.identity.oauth2.scopeservice.DefaultScopeMetadataService;
+import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
@@ -334,7 +334,7 @@ public class OAuth2ServiceComponent {
             // Registering OAuth2ScopeService under ScopeService interface.
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
             // Registering DefaultScopeMetadataService under ScopeService interface.
-            bundleContext.registerService(ScopeMetadataService.class, new DefaultScopeMetadataService(), null);
+            bundleContext.registerService(ScopeMetadataService.class, new APIResourceBasedScopeMetadataService(), null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
