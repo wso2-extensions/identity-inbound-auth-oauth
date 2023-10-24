@@ -79,12 +79,12 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.M2MScopeValidationHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.NoPolicyScopeValidationHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.impl.RoleBasedScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.M2MScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.NoPolicyScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.RoleBasedScopeValidationHandler;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;

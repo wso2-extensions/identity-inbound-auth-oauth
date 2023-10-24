@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.validators.policyhandler;
+package org.wso2.carbon.identity.oauth2.validators.validationhandler;
 
 /**
  * ScopeValidatorPolicyHandlerException

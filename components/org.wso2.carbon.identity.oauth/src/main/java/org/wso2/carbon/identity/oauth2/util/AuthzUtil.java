@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.validators.policyhandler.impl;
+package org.wso2.carbon.identity.oauth2.util;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -7,19 +7,11 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
-import org.wso2.carbon.identity.application.common.model.RoleV2;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationContext;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandlerException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -42,63 +34,21 @@ import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_DOMAIN;
 
 /**
- * RoleBasedScopeValidationHandler
+ * AuthzUtil
  */
-public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
+public class AuthzUtil {
 
-    private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
-
-    @Override
-    public boolean canHandle(ScopeValidationContext scopeValidationContext) {
-
-        return getPolicyID().equals(scopeValidationContext.getPolicyId())
-                && !OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType());
-    }
-
-    @Override
-    public List<String> validateScopes(List<String> requestedScopes, List<String> appAuthorizedScopes,
-                                       ScopeValidationContext scopeValidationContext)
-            throws ScopeValidationHandlerException {
-
-        List<String> userRoles = getUserRoles(scopeValidationContext.getAuthenticatedUser(),
-                scopeValidationContext.getAppId());
-        List<String> associatedScopes = getAssociatedScopesForRoles(userRoles,
-                scopeValidationContext.getAuthenticatedUser().getTenantDomain());
-        List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
-                .collect(Collectors.toList());
-        return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
-    }
-
-    /**
-     * Get the associated scopes for the roles.
-     *
-     * @param roles Roles.
-     * @param tenantDomain Tenant domain.
-     * @return List of associated scopes.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving scope list of roles.
-     */
-    private List<String> getAssociatedScopesForRoles(List<String> roles, String tenantDomain)
-            throws ScopeValidationHandlerException {
-
-        try {
-            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
-                    .getPermissionListOfRoles(roles, tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving scope list of roles : "
-                    + StringUtils.join(roles, ",") + "tenant domain : " + tenantDomain, e);
-        }
-    }
+    private static final Log LOG = LogFactory.getLog(AuthzUtil.class);
 
     /**
      * Get the user roles.
      *
      * @param authenticatedUser AuthenticatedUser.
-     * @param appId App id.
      * @return User roles.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving user roles.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving user roles.
      */
-    private List<String> getUserRoles(AuthenticatedUser authenticatedUser, String appId)
-            throws ScopeValidationHandlerException {
+    public static List<String> getUserRoles(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
 
         List<String> roleIds = new ArrayList<>();
         // Get role id list of the user.
@@ -109,7 +59,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 roleIds.addAll(roleIdsOfUser);
             }
         } catch (UserIdNotFoundException e) {
-            throw new ScopeValidationHandlerException("Error while resolving user id of user", e);
+            throw new IdentityOAuth2Exception("Error while resolving user id of user", e);
         }
         // Get groups of the user.
         List<String> groups = getUserGroups(authenticatedUser);
@@ -126,46 +76,26 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 roleIds.addAll(roleIdsOfIdpGroups);
             }
         }
-        if (!roleIds.isEmpty()) {
-            return getFilteredRoleIds(roleIds, appId, authenticatedUser.getTenantDomain());
-        }
-        return new ArrayList<>();
+        return roleIds;
     }
 
     /**
-     * Get the filtered role ids.
+     * Get the associated scopes for the roles.
      *
-     * @param roleId Role id list.
-     * @param appId App id.
+     * @param roles Roles.
      * @param tenantDomain Tenant domain.
-     * @return Filtered role ids.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
+     * @return List of associated scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving scope list of roles.
      */
-    private List<String> getFilteredRoleIds(List<String> roleId, String appId, String tenantDomain)
-            throws ScopeValidationHandlerException {
-
-        List<String> rolesAssociatedWithApp = getRoleIdsAssociatedWithApp(appId, tenantDomain);
-        return roleId.stream().distinct().filter(rolesAssociatedWithApp::contains).collect(Collectors.toList());
-    }
-
-    /**
-     * Get the role ids associated with app.
-     *
-     * @param appId App id.
-     * @param tenantDomain Tenant domain.
-     * @return Role ids associated with app.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of app.
-     */
-    private List<String> getRoleIdsAssociatedWithApp(String appId, String tenantDomain)
-            throws ScopeValidationHandlerException {
+    public static List<String> getAssociatedScopesForRoles(List<String> roles, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
         try {
-            return OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getId)
-                    .collect(Collectors.toCollection(ArrayList::new));
-        } catch (IdentityApplicationManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving role id list of app : " + appId
-                    + "tenant domain : " + tenantDomain, e);
+            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
+                    .getPermissionListOfRoles(roles, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving scope list of roles : "
+                    + StringUtils.join(roles, ",") + "tenant domain : " + tenantDomain, e);
         }
     }
 
@@ -175,36 +105,16 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @param userId User id.
      * @param tenantDomain Tenant domain.
      * @return Role ids of user.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of user.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
      */
-    private List<String> getRoleIdsOfUser(String userId, String tenantDomain) throws ScopeValidationHandlerException {
+    private static List<String> getRoleIdsOfUser(String userId, String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
                     .getRoleIdListOfUser(userId, tenantDomain);
         } catch (IdentityRoleManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving role id list of user : " + userId
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of user : " + userId
                     + "tenant domain : " + tenantDomain, e);
-        }
-    }
-
-    /**
-     * Get the role ids of groups.
-     *
-     * @param groups Groups.
-     * @param tenantDomain Tenant domain.
-     * @return Role ids of groups.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of groups.
-     */
-    private List<String> getRoleIdsOfGroups(List<String> groups, String tenantDomain)
-            throws ScopeValidationHandlerException {
-
-        try {
-            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
-                    .getRoleIdListOfGroups(groups, tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving role id list of groups : "
-                    + StringUtils.join(groups, ",") + "tenant domain : " + tenantDomain, e);
         }
     }
 
@@ -214,16 +124,16 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @param groups Groups.
      * @param tenantDomain Tenant domain.
      * @return Role ids of idp groups.
-     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of idp groups.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of idp groups.
      */
-    private List<String> getRoleIdsOfIdpGroups(List<String> groups, String tenantDomain)
-            throws ScopeValidationHandlerException {
+    private static List<String> getRoleIdsOfIdpGroups(List<String> groups, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
                     .getRoleIdListOfIdpGroups(groups, tenantDomain);
         } catch (IdentityRoleManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving role id list of groups : "
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of groups : "
                     + StringUtils.join(groups, ",") + "tenant domain : " + tenantDomain, e);
         }
     }
@@ -234,8 +144,8 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @param authenticatedUser  Authenticated user.
      * @return - Groups of the user.
      */
-    private List<String> getUserGroups(AuthenticatedUser authenticatedUser)
-            throws ScopeValidationHandlerException {
+    private static List<String> getUserGroups(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Started group fetching for scope validation.");
@@ -257,12 +167,12 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 }
             }
         } catch (UserIdNotFoundException | IdentityOAuth2Exception e) {
-            throw new ScopeValidationHandlerException(e.getMessage(), e);
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
         } catch (UserStoreException e) {
             if (isDoGetGroupListOfUserNotImplemented(e)) {
                 return userGroups;
             }
-            throw new ScopeValidationHandlerException(e.getMessage(), e);
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
         }
         if (LOG.isDebugEnabled()) {
             LOG.debug("Completed group fetching for scope validation.");
@@ -276,8 +186,8 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @param authenticatedUser  Authenticated user.
      * @return - Groups of the user.
      */
-    private List<String> getUserIdpGroups(AuthenticatedUser authenticatedUser)
-            throws ScopeValidationHandlerException {
+    private static List<String> getUserIdpGroups(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Started group fetching for scope validation.");
@@ -324,15 +234,35 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @param idpName      Identity provider name.
      * @param tenantDomain Tenant domain.
      * @return Identity Provider object.
-     * @throws ScopeValidationHandlerException Exception thrown when getting the identity provider.
+     * @throws IdentityOAuth2Exception Exception thrown when getting the identity provider.
      */
-    private IdentityProvider getIdentityProvider(String idpName, String tenantDomain)
-            throws ScopeValidationHandlerException {
+    private static IdentityProvider getIdentityProvider(String idpName, String tenantDomain)
+            throws IdentityOAuth2Exception {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getIdpManager().getIdPByName(idpName, tenantDomain);
         } catch (IdentityProviderManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving idp by idp name : " + idpName, e);
+            throw new IdentityOAuth2Exception("Error while retrieving idp by idp name : " + idpName, e);
+        }
+    }
+
+    /**
+     * Get the role ids of groups.
+     *
+     * @param groups Groups.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids of groups.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of groups.
+     */
+    private static List<String> getRoleIdsOfGroups(List<String> groups, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
+                    .getRoleIdListOfGroups(groups, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of groups : "
+                    + StringUtils.join(groups, ",") + "tenant domain : " + tenantDomain, e);
         }
     }
 
@@ -344,7 +274,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @return true if the UserStoreException was caused by the doGetGroupListOfUser method not being implemented,
      * false otherwise.
      */
-    private boolean isDoGetGroupListOfUserNotImplemented(UserStoreException e) {
+    private static boolean isDoGetGroupListOfUserNotImplemented(UserStoreException e) {
 
         Throwable cause = e.getCause();
         while (cause != null) {
@@ -354,17 +284,5 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             cause = cause.getCause();
         }
         return false;
-    }
-
-    @Override
-    public String getPolicyID() {
-
-        return "RBAC";
-    }
-
-    @Override
-    public String getName() {
-
-        return "RoleBasedScopeValidationHandler";
     }
 }

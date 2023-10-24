@@ -1,0 +1,108 @@
+package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.RoleV2;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
+import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * RoleBasedScopeValidationHandler
+ */
+public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
+
+    private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
+
+    @Override
+    public boolean canHandle(ScopeValidationContext scopeValidationContext) {
+
+        return getPolicyID().equals(scopeValidationContext.getPolicyId())
+                && !OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType());
+    }
+
+    @Override
+    public List<String> validateScopes(List<String> requestedScopes, List<String> appAuthorizedScopes,
+                                       ScopeValidationContext scopeValidationContext)
+            throws ScopeValidationHandlerException {
+
+        try {
+            List<String> userRoles = AuthzUtil.getUserRoles(scopeValidationContext.getAuthenticatedUser());
+            if (userRoles.isEmpty()) {
+                return new ArrayList<>();
+            }
+            List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
+                    scopeValidationContext.getAuthenticatedUser().getTenantDomain());
+            if (filteredRoleIds.isEmpty()) {
+                return new ArrayList<>();
+            }
+            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds,
+                    scopeValidationContext.getAuthenticatedUser().getTenantDomain());
+            List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
+                    .collect(Collectors.toList());
+            return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
+        } catch (IdentityOAuth2Exception e) {
+            throw new ScopeValidationHandlerException("Error while validation scope with RBAC Scope Validation " +
+                    "handler", e);
+        }
+    }
+
+    /**
+     * Get the filtered role ids.
+     *
+     * @param roleId Role id list.
+     * @param appId App id.
+     * @param tenantDomain Tenant domain.
+     * @return Filtered role ids.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
+     */
+    private List<String> getFilteredRoleIds(List<String> roleId, String appId, String tenantDomain)
+            throws ScopeValidationHandlerException {
+
+        List<String> rolesAssociatedWithApp = getRoleIdsAssociatedWithApp(appId, tenantDomain);
+        return roleId.stream().distinct().filter(rolesAssociatedWithApp::contains).collect(Collectors.toList());
+    }
+
+    /**
+     * Get the role ids associated with app.
+     *
+     * @param appId App id.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids associated with app.
+     * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of app.
+     */
+    private List<String> getRoleIdsAssociatedWithApp(String appId, String tenantDomain)
+            throws ScopeValidationHandlerException {
+
+        try {
+            return OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getId)
+                    .collect(Collectors.toCollection(ArrayList::new));
+        } catch (IdentityApplicationManagementException e) {
+            throw new ScopeValidationHandlerException("Error while retrieving role id list of app : " + appId
+                    + "tenant domain : " + tenantDomain, e);
+        }
+    }
+
+    @Override
+    public String getPolicyID() {
+
+        return "RBAC";
+    }
+
+    @Override
+    public String getName() {
+
+        return "RoleBasedScopeValidationHandler";
+    }
+}

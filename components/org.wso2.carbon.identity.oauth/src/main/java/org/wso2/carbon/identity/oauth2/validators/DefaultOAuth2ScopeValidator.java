@@ -17,9 +17,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationContext;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandlerException;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +41,8 @@ public class DefaultOAuth2ScopeValidator {
     public static final String CLIENT_TYPE = "oauth2";
 
     private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
+
+    private static final String NO_POLICY_HANDLER = "NoPolicyScopeValidationHandler";
 
     /**
      * Validate scope.
@@ -153,13 +155,14 @@ public class DefaultOAuth2ScopeValidator {
             }
         }
 
-        // If "NoPolicy" exists, add all its scopes to the result
-        Set<String> scopes = new HashSet<>(validatedScopesByHandler.getOrDefault("NoPolicyScopeValidationHandler",
+        // If "NoPolicyScopeValidationHandler" exists, add all its scopes to the result
+        Set<String> scopes = new HashSet<>(validatedScopesByHandler.getOrDefault(NO_POLICY_HANDLER,
                 Collections.emptyList()));
 
-        // Separate "NoPolicy" and get the intersection of the rest of the scopes validated by other validators
+        // Separate "NoPolicyScopeValidationHandler" and get the intersection of the rest of the scopes validated
+        // by other validators
         List<List<String>> otherHandlerScopes = new ArrayList<>(validatedScopesByHandler.values());
-        otherHandlerScopes.remove(validatedScopesByHandler.get("NoPolicyScopeValidationHandler"));
+        otherHandlerScopes.remove(validatedScopesByHandler.get(NO_POLICY_HANDLER));
 
         List<String> intersection = new ArrayList<>();
         if (!otherHandlerScopes.isEmpty()) {

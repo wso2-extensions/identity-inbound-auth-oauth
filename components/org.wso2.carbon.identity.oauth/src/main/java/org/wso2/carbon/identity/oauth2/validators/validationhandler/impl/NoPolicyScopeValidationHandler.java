@@ -1,8 +1,8 @@
-package org.wso2.carbon.identity.oauth2.validators.policyhandler.impl;
+package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationContext;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandler;
-import org.wso2.carbon.identity.oauth2.validators.policyhandler.ScopeValidationHandlerException;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
 
 import java.util.List;
 import java.util.stream.Collectors;
