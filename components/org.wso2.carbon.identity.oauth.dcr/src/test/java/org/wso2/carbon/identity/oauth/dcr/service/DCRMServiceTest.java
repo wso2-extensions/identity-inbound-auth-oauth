@@ -94,6 +94,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
+    private final String dummyJwskUri = "http://localhost.com/jwks";
 
     @Mock
     private OAuthConsumerAppDTO dto;
@@ -286,6 +287,12 @@ public class DCRMServiceTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+            ServiceProvider serviceProvider = new ServiceProvider();
+            serviceProvider.setJwksUri("dummyJwksUri");
+            when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(serviceProvider);
+            when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
+                    .thenReturn(new ServiceProvider());
             Application application = dcrmService.getApplication(dummyConsumerKey);
 
             assertEquals(application.getClientId(), dummyConsumerKey);

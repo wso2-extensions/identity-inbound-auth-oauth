@@ -18,13 +18,13 @@ package org.wso2.carbon.identity.oauth.scope.endpoint.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.cxf.jaxrs.impl.UriInfoImpl;
-import org.apache.cxf.message.Message;
-import org.apache.cxf.phase.PhaseInterceptorChain;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.scope.endpoint.ScopesApiService;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
@@ -38,11 +38,9 @@ import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Set;
 
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TENANT_NAME_FROM_CONTEXT;
 import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.SERVER_API_PATH_COMPONENT;
@@ -292,23 +290,15 @@ public class ScopesApiServiceImpl extends ScopesApiService {
      */
     private static URI buildURIForHeader(String scopeName) {
 
-        String tenantQualifiedRelativePath =
-                String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT;
-        String url = IdentityUtil.getEndpointURIPath(tenantQualifiedRelativePath + scopeName, false, true);
-
-        URI location = URI.create(url);
-        if (!location.isAbsolute()) {
-            Message currentMessage = PhaseInterceptorChain.getCurrentMessage();
-            if (currentMessage != null) {
-                UriInfo ui = new UriInfoImpl(currentMessage.getExchange().getInMessage(), null);
-                try {
-                    return new URI(ui.getBaseUri().getScheme(), ui.getBaseUri().getAuthority(), url, null, null);
-                } catch (URISyntaxException e) {
-                    LOG.error("Server encountered an error while building the location URL with scheme: " +
-                            ui.getBaseUri().getScheme() + ", authority: " + ui.getBaseUri().getAuthority() +
-                            ", url: " + url, e);
-                }
-            }
+        URI location;
+        String context = IdentityTenantUtil.isTenantQualifiedUrlsEnabled() ? SERVER_API_PATH_COMPONENT + scopeName :
+                String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + SERVER_API_PATH_COMPONENT
+                        + scopeName;
+        try {
+            String url = ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
+            location = URI.create(url);
+        } catch (URLBuilderException e) {
+            throw new RuntimeException("Error occurred while building URL in tenant qualified mode.", e);
         }
         return location;
     }

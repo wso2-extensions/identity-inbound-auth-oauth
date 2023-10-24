@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -708,6 +709,39 @@ public class OAuth2ServiceComponent {
     }
 
     /**
+     * Sets the access token provider.
+     *
+     * @param accessTokenProvider AccessTokenProvider
+     */
+    @Reference(
+            name = "access.token.provider",
+            service = AccessTokenProvider.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccessTokenProvider"
+    )
+    protected void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting access token provider.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(accessTokenProvider);
+    }
+
+    /**
+     * Unsets the access token provider.
+     *
+     * @param accessTokenProvider AccessTokenProvider
+     */
+    protected void unsetAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset access token provider.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(null);
+    }
+
+    /**
      * Sets the refresh token grant processor.
      *
      * @param refreshTokenGrantProcessor RefreshTokenGrantProcessor
@@ -838,7 +872,7 @@ public class OAuth2ServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("Unset Oauth2 revocation processor.");
         }
-        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(null);
     }
 
     @Reference(
