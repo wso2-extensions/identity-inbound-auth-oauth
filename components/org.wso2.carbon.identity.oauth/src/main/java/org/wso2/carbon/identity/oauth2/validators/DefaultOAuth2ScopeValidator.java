@@ -62,8 +62,10 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
-        return getAuthorizedScopes(requestedScopes, authzReqMessageContext.getAuthorizationReqDTO().getUser(), appId,
-                null, tenantDomain);
+        List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
+                        .getAuthorizationReqDTO().getUser(), appId, null, tenantDomain);
+        removeRegisteredScopes(authzReqMessageContext);
+        return authorizedScopes;
     }
 
     /**
@@ -87,8 +89,10 @@ public class DefaultOAuth2ScopeValidator {
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
-        return getAuthorizedScopes(requestedScopes, tokenReqMessageContext.getAuthorizedUser(), appId, grantType,
-                tenantDomain);
+        List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
+                        .getAuthorizedUser(), appId, grantType, tenantDomain);
+        removeRegisteredScopes(tokenReqMessageContext);
+        return authorizedScopes;
     }
 
     /**
@@ -207,6 +211,71 @@ public class DefaultOAuth2ScopeValidator {
             throw new IdentityOAuth2Exception("Error while retrieving internal scopes for tenant domain : "
                     + tenantDomain, e);
         }
+    }
+
+    /**
+     * Get the registered scopes.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Registered scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving internal scopes for tenant domain.
+     */
+    private List<String> getRegisteredScopes(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            List<Scope> scopes = OAuth2ServiceComponentHolder.getInstance()
+                    .getApiResourceManager().getScopesByTenantDomain(tenantDomain, null);
+            return scopes.stream().map(Scope::getName).collect(Collectors.toCollection(ArrayList::new));
+        } catch (APIResourceMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving internal scopes for tenant domain : "
+                    + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Remove registered scopes.
+     *
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext
+     * @throws IdentityOAuth2Exception Error while remove registered scopes.
+     */
+    private void removeRegisteredScopes(OAuthAuthzReqMessageContext authzReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        if (authzReqMessageContext.getAuthorizationReqDTO().getScopes() == null) {
+            return;
+        }
+        List<String> registeredScopes = getRegisteredScopes(authzReqMessageContext.getAuthorizationReqDTO()
+                .getTenantDomain());
+        List<String> scopes = new ArrayList<>();
+        for (String scope : authzReqMessageContext.getAuthorizationReqDTO().getScopes()) {
+            if (!registeredScopes.contains(scope)) {
+                scopes.add(scope);
+            }
+        }
+        authzReqMessageContext.getAuthorizationReqDTO().setScopes(scopes.toArray(new String[0]));
+    }
+
+    /**
+     * Remove registered scopes.
+     *
+     * @param tokenReqMessageContext OAuthTokenReqMessageContext
+     * @throws IdentityOAuth2Exception Error while remove registered scopes.
+     */
+    private void removeRegisteredScopes(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        if (tokenReqMessageContext.getScope() == null) {
+            return;
+        }
+        List<String> registeredScopes = getRegisteredScopes(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                .getTenantDomain());
+        List<String> scopes = new ArrayList<>();
+        for (String scope : tokenReqMessageContext.getScope()) {
+            if (!registeredScopes.contains(scope)) {
+                scopes.add(scope);
+            }
+        }
+        tokenReqMessageContext.setScope(scopes.toArray(new String[0]));
     }
 
     /**
