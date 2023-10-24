@@ -152,18 +152,18 @@ public class DefaultOAuth2ScopeValidator {
         Map<String, List<String>> validatedScopesByHandler = new HashMap<>();
         for (AuthorizedScopes authorizedScopes : authorizedScopesList) {
             String policyId = authorizedScopes.getPolicyId();
-            ScopeValidationContext policyContext = new ScopeValidationContext();
-            policyContext.setAuthenticatedUser(authenticatedUser);
-            policyContext.setAppId(appId);
-            policyContext.setPolicyId(policyId);
-            policyContext.setGrantType(grantType);
+            ScopeValidationContext scopeValidationContext = new ScopeValidationContext();
+            scopeValidationContext.setAuthenticatedUser(authenticatedUser);
+            scopeValidationContext.setAppId(appId);
+            scopeValidationContext.setPolicyId(policyId);
+            scopeValidationContext.setGrantType(grantType);
             for (ScopeValidationHandler scopeValidationHandler : scopeValidationHandlers) {
-                if (scopeValidationHandler.canHandle(policyContext)) {
-                    policyContext.setValidatedScopesByHandler(validatedScopesByHandler);
+                if (scopeValidationHandler.canHandle(scopeValidationContext)) {
+                    scopeValidationContext.setValidatedScopesByHandler(validatedScopesByHandler);
                     List<String> validatedScopes;
                     try {
                         validatedScopes = scopeValidationHandler.validateScopes(requestedScopes,
-                                authorizedScopes.getScopes(), policyContext);
+                                authorizedScopes.getScopes(), scopeValidationContext);
                     } catch (ScopeValidationHandlerException e) {
                         throw new IdentityOAuth2Exception("Error while validating policies roles from " +
                                 "authorization service.", e);

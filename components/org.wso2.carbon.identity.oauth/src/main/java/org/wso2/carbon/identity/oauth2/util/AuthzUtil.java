@@ -29,8 +29,10 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.IdPGroup;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -71,14 +73,9 @@ public class AuthzUtil {
 
         List<String> roleIds = new ArrayList<>();
         // Get role id list of the user.
-        try {
-            List<String> roleIdsOfUser = getRoleIdsOfUser(authenticatedUser.getUserId(),
-                    authenticatedUser.getTenantDomain());
-            if (!roleIdsOfUser.isEmpty()) {
-                roleIds.addAll(roleIdsOfUser);
-            }
-        } catch (UserIdNotFoundException e) {
-            throw new IdentityOAuth2Exception("Error while resolving user id of user", e);
+        List<String> roleIdsOfUser = getRoleIdsOfUser(authenticatedUser);
+        if (!roleIdsOfUser.isEmpty()) {
+            roleIds.addAll(roleIdsOfUser);
         }
         // Get groups of the user.
         List<String> groups = getUserGroups(authenticatedUser);
@@ -121,12 +118,48 @@ public class AuthzUtil {
     /**
      * Get the role ids of user.
      *
+     * @param authenticatedUser AuthenticatedUser.
+     * @return Role ids of user.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
+     */
+    private static List<String> getRoleIdsOfUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+
+        String tenantDomain = authenticatedUser.getTenantDomain();
+        if (authenticatedUser.getAccessingOrganization() != null) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+            } catch (OrganizationManagementException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        String userId;
+        try {
+            userId = authenticatedUser.getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Error while resolving user id of user" , e);
+        }
+        if (userId == null) {
+            throw new IdentityOAuth2Exception("user not found");
+        }
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
+                    .getRoleIdListOfUser(userId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of user : " + userId
+                    + "tenant domain : " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Get the role ids of user.
+     *
      * @param userId User id.
      * @param tenantDomain Tenant domain.
      * @return Role ids of user.
      * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
      */
-    private static List<String> getRoleIdsOfUser(String userId, String tenantDomain) throws IdentityOAuth2Exception {
+    private static List<String> getRoleIdsOfUser2(String userId, String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
@@ -208,9 +241,8 @@ public class AuthzUtil {
     private static List<String> getUserIdpGroups(AuthenticatedUser authenticatedUser)
             throws IdentityOAuth2Exception {
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Started group fetching for scope validation.");
-        }
+        LOG.debug("Started group fetching for scope validation.");
+
         String idpName = authenticatedUser.getFederatedIdPName();
         String tenantDomain = authenticatedUser.getTenantDomain();
         IdentityProvider federatedIdP = getIdentityProvider(idpName, tenantDomain);
@@ -306,9 +338,9 @@ public class AuthzUtil {
     }
 
     /**
-     * Check whether legacy authroization runtime is enabled.
+     * Check whether legacy authorization runtime is enabled.
      *
-     * @return True if legacy authroization runtime is enabled.
+     * @return True if legacy authorization runtime is enabled.
      */
     public static boolean isLegacyAuthzRuntime() {
 
