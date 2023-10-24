@@ -131,7 +131,9 @@ public class ApiAuthnHandler {
                 params.add(param);
             }
             authenticatorMetadata.setParams(params);
-            authenticatorMetadata.setAdditionalData(getAdditionalData(authenticatorData.getAdditionalData()));
+            if (authenticatorData.getAdditionalData() != null) {
+                authenticatorMetadata.setAdditionalData(getAdditionalData(authenticatorData.getAdditionalData()));
+            }
         }
         return authenticatorMetadata;
     }
