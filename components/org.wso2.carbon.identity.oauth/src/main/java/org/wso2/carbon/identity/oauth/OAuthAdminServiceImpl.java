@@ -335,7 +335,7 @@ public class OAuthAdminServiceImpl {
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
                             if (enforceFAPIDCR) {
-                                filterAllowedFAPIEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm());
+                                validateFAPIEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm());
                             }
                             app.setIdTokenEncryptionAlgorithm(
                                     filterEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm(),
@@ -362,7 +362,7 @@ public class OAuthAdminServiceImpl {
                         String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
                             if (enforceFAPIDCR) {
-                                filterAllowedFAPITokenAuthMethods(tokenEndpointAuthMethod);
+                                validateFAPITokenAuthMethods(tokenEndpointAuthMethod);
                             } else {
                                 filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
                             }
@@ -371,23 +371,20 @@ public class OAuthAdminServiceImpl {
                         String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
                             if (enforceFAPIDCR) {
-                                filterAllowedFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
+                                validateFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(tokenEndpointAuthSigningAlgorithm,
                                       OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
                             }
                             app.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSigningAlgorithm);
                         }
-
                         if (StringUtils.isNotEmpty(application.getSubjectType())) {
                             OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                                     application.getSubjectType());
                             if (subjectType == null) {
-                                throw handleClientError(INVALID_REQUEST, "Invalid subject type");
+                                application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
                             }
-                            if (OAuthConstants.SubjectType.PAIRWISE.equals(OIDCClaimUtil.getDefaultSubjectType()) ||
-                                    OAuthConstants.SubjectType.PAIRWISE.getValue()
-                                            .equals(application.getSubjectType())) {
+                            if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(application.getSubjectType())) {
                                 List<String> callBackURIList = new ArrayList<>();
                                 // Need to split the redirect uris for validating the host names since it is combined
                                 // into one regular expression.
@@ -397,16 +394,19 @@ public class OAuthAdminServiceImpl {
                                 } else {
                                     callBackURIList.add(application.getCallbackUrl());
                                 }
-                                validateRedirectURIForPPID(callBackURIList, application.getSectorIdentifierURI());
-                                validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
-                                app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                                if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
+                                    validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
+                                    app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                                } else {
+                                    validateRedirectURIForPPID(callBackURIList);
+                                }
                             }
                             app.setSubjectType(application.getSubjectType());
                         }
                         String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
                             if (enforceFAPIDCR) {
-                                filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
+                                validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(idTokenSignatureAlgorithm,
                                        OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
@@ -416,7 +416,7 @@ public class OAuthAdminServiceImpl {
                         String requestObjectSignatureAlgorithm = application.getRequestObjectSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
                             if (enforceFAPIDCR) {
-                                filterAllowedFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
+                                validateFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
                                         OAuthConstants.REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION);
@@ -430,7 +430,7 @@ public class OAuthAdminServiceImpl {
                         String requestObjectEncryptionAlgorithm = application.getRequestObjectEncryptionAlgorithm();
                         if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionAlgorithm())) {
                             if (enforceFAPIDCR) {
-                                filterAllowedFAPIEncryptionAlgorithms(
+                                validateFAPIEncryptionAlgorithms(
                                         application.getRequestObjectEncryptionAlgorithm());
                             } else {
                                 filterEncryptionAlgorithms(application.getRequestObjectEncryptionAlgorithm(),
@@ -715,7 +715,7 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
                 if (enforceFAPIDCR) {
-                    filterAllowedFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
+                    validateFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
                 }
                 oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
                         consumerAppDTO.getIdTokenEncryptionAlgorithm(), OAuthConstants.ID_TOKEN_ENCRYPTION_ALGORITHM));
@@ -735,7 +735,7 @@ public class OAuthAdminServiceImpl {
             String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
             if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
                 if (enforceFAPIDCR) {
-                    filterAllowedFAPITokenAuthMethods(tokenEndpointAuthMethod);
+                    validateFAPITokenAuthMethods(tokenEndpointAuthMethod);
                 } else {
                     filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
                 }
@@ -745,7 +745,7 @@ public class OAuthAdminServiceImpl {
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
                 if (enforceFAPIDCR) {
-                    filterAllowedFAPISignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm);
+                    validateFAPISignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm,
                             OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
@@ -757,20 +757,23 @@ public class OAuthAdminServiceImpl {
                 OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                         consumerAppDTO.getSubjectType());
                 if (subjectType == null) {
-                    throw handleClientError(INVALID_REQUEST, "Invalid subject type: ");
+                    consumerAppDTO.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
                 }
-                if (OAuthConstants.SubjectType.PAIRWISE.equals(OIDCClaimUtil.getDefaultSubjectType()) ||
-                        OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
+                if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
                     List<String> callBackURIList = new ArrayList<>();
                     // Need to split the redirect uris for validating the host names since it is combined
                     // into one regular expression.
                     if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                        callBackURIList = getRedirectURIList(consumerAppDTO);;
+                        callBackURIList = getRedirectURIList(consumerAppDTO);
+                        ;
                     } else {
                         callBackURIList.add(consumerAppDTO.getCallbackUrl());
                     }
-                    validateRedirectURIForPPID(callBackURIList, consumerAppDTO.getSectorIdentifierURI());
-                    validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                    if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                        validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                    } else {
+                        validateRedirectURIForPPID(callBackURIList);
+                    }
                 }
                 oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             }
@@ -779,7 +782,7 @@ public class OAuthAdminServiceImpl {
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
             if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
                 if (enforceFAPIDCR) {
-                    filterAllowedFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
+                    validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(idTokenSignatureAlgorithm,
                             OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
@@ -790,7 +793,7 @@ public class OAuthAdminServiceImpl {
             String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
                 if (enforceFAPIDCR) {
-                    filterAllowedFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
+                    validateFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
                             OAuthConstants.REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION);
@@ -805,7 +808,7 @@ public class OAuthAdminServiceImpl {
             String requestObjectEncryptionAlgorithm = consumerAppDTO.getRequestObjectEncryptionAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
                 if (enforceFAPIDCR) {
-                    filterAllowedFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
+                    validateFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
                 }
                 oauthappdo.setRequestObjectEncryptionAlgorithm(filterEncryptionAlgorithms(
                         requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM));
@@ -2279,7 +2282,7 @@ public class OAuthAdminServiceImpl {
      * @param authenticationMethod authentication methid used to authenticate to the token endpoint
      * @throws IdentityOAuthClientException
      */
-    private void filterAllowedFAPITokenAuthMethods(String authenticationMethod) throws IdentityOAuthClientException {
+    private void validateFAPITokenAuthMethods(String authenticationMethod) throws IdentityOAuthClientException {
 
         List<String> allowedAuthMethods = IdentityUtil.getPropertyAsList(
                 OAuthConstants.FAPI_CLIENT_AUTH_METHOD_CONFIGURATION);
@@ -2294,7 +2297,7 @@ public class OAuthAdminServiceImpl {
      * @param signatureAlgorithm signature algorithm used to sign the assertions.
      * @throws IdentityOAuthClientException
      */
-    private void filterAllowedFAPISignatureAlgorithms(String signatureAlgorithm)
+    private void validateFAPISignatureAlgorithms(String signatureAlgorithm)
             throws IdentityOAuthClientException {
 
         List<String> allowedSignatureAlgorithms = IdentityUtil
@@ -2310,7 +2313,7 @@ public class OAuthAdminServiceImpl {
      * @param encryptionAlgorithm
      * @throws IdentityOAuthClientException
      */
-    private void filterAllowedFAPIEncryptionAlgorithms(String encryptionAlgorithm)
+    private void validateFAPIEncryptionAlgorithms(String encryptionAlgorithm)
             throws IdentityOAuthClientException {
 
         if (encryptionAlgorithm.equals(OAuthConstants.RESTRICTED_ENCRYPTION_ALGORITHM)) {
@@ -2326,18 +2329,16 @@ public class OAuthAdminServiceImpl {
      * @param redirectURIs list of callback urls sent in the request
      * @throws IdentityOAuthClientException
      */
-    private void validateRedirectURIForPPID(List<String> redirectURIs, String sectorIdentifierURI)
+    private void validateRedirectURIForPPID(List<String> redirectURIs)
             throws IdentityOAuthClientException {
 
-        if (StringUtils.isEmpty(sectorIdentifierURI)) {
-            if (redirectURIs.size() > 1) {
-                String hostname = URI.create(redirectURIs.get(0)).getHost();
-                for (String redirectURI : redirectURIs) {
-                    URI uri = URI.create(redirectURI);
-                    if (!uri.getHost().equals(hostname)) {
-                        throw handleClientError(INVALID_REQUEST,
-                                "Sector identifier URI is needed for PPID calculation");
-                    }
+        if (redirectURIs.size() > 1) {
+            String hostname = URI.create(redirectURIs.get(0)).getHost();
+            for (String redirectURI : redirectURIs) {
+                URI uri = URI.create(redirectURI);
+                if (!uri.getHost().equals(hostname)) {
+                    throw handleClientError(INVALID_REQUEST,
+                            "Sector identifier URI is needed for PPID calculation");
                 }
             }
         }
@@ -2355,15 +2356,12 @@ public class OAuthAdminServiceImpl {
     private void validateSectorIdentifierURI(String sectorIdentifierURI, List<String> redirectURIs) throws
             IdentityOAuthClientException {
 
-        if (StringUtils.isBlank(sectorIdentifierURI)) {
-            return;
-        }
         URI uri = URI.create(sectorIdentifierURI);
         String scheme = uri.getScheme();
         if (StringUtils.isBlank(scheme) || !scheme.equals(String.valueOf(HttpsURL.DEFAULT_SCHEME))) {
             throw handleClientError(INVALID_REQUEST, "Invalid sector identifier URI");
         }
-        //validate whether sectorIdentifierURI points to JSON file containing an array of redirect_uri values
+        // Validate whether sectorIdentifierURI points to JSON file containing an array of redirect_uri values.
         String validateSectorIdentifierURI = IdentityUtil.getProperty(
                 OAuthConstants.VALIDATE_SECTOR_IDENTIFIER);
         if (StringUtils.isNotEmpty(validateSectorIdentifierURI) &&
@@ -2399,8 +2397,7 @@ public class OAuthAdminServiceImpl {
         List<String> callBackURIList = new ArrayList<>();
         // Need to split the redirect uris for validating the host names since it is combined
         // into one regular expression.
-        if (application.getCallbackUrl().startsWith(
-                OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+        if (application.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             String redirectURI = application.getCallbackUrl();
             redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1,
                     redirectURI.indexOf(")"));
@@ -2411,34 +2408,32 @@ public class OAuthAdminServiceImpl {
 
     /**
      * filter allowed signature algorithms
-     * @param algorithm algorithm to be validated
+     *
+     * @param algorithm  algorithm to be validated
      * @param configName configuration to read allowed algorithms
      * @throws IdentityOAuthClientException if the algorithm is not allowed
      */
     public void filterSignatureAlgorithms(String algorithm, String configName) throws IdentityOAuthClientException {
 
         List<String> allowedSignatureAlgorithms = IdentityUtil.getPropertyAsList(configName);
-        if (!(allowedSignatureAlgorithms.isEmpty())) {
-            if (!allowedSignatureAlgorithms.contains(algorithm)) {
-                String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
-                throw handleClientError(INVALID_REQUEST, msg);
-            }
+        if (!allowedSignatureAlgorithms.contains(algorithm)) {
+            String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
+            throw handleClientError(INVALID_REQUEST, msg);
         }
     }
 
     /**
      * filter allowed token endpoint authentication methods
-     * @param authMethod   authentication method to be validated
+     *
+     * @param authMethod authentication method to be validated
      * @throws IdentityOAuthClientException if the token endpoint authentication method is not allowed
      */
     public void filterTokenEndpointAuthMethods(String authMethod) throws IdentityOAuthClientException {
 
         List<String> authMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
-        if (!(authMethods.isEmpty())) {
-            if (!authMethods.contains(authMethod)) {
-                String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
-                throw handleClientError(INVALID_REQUEST, msg);
-            }
+        if (!authMethods.contains(authMethod)) {
+            String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
+            throw handleClientError(INVALID_REQUEST, msg);
         }
     }
 }

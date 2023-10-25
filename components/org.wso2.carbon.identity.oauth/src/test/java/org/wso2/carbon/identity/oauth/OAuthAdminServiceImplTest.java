@@ -779,7 +779,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         tokenEndPointAuthMethods.add("tls_client_auth");
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(tokenEndPointAuthMethods);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "filterAllowedFAPITokenAuthMethods",
+        invokeMethod(oAuthAdminService, "validateFAPITokenAuthMethods",
                 "tls_client_auth");
     }
 
@@ -793,7 +793,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(tokenEndPointAuthMethods);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "filterAllowedFAPITokenAuthMethods",
+            invokeMethod(oAuthAdminService, "validateFAPITokenAuthMethods",
                     "invalid_auth");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
@@ -811,7 +811,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         validFAPISignatureAlgorithms.add("ES256");
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(validFAPISignatureAlgorithms);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "filterAllowedFAPISignatureAlgorithms", "PS256");
+        invokeMethod(oAuthAdminService, "validateFAPISignatureAlgorithms", "PS256");
     }
 
     @Test(description = "Test validating signature algorithm with invalid value")
@@ -824,7 +824,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(validFAPISignatureAlgorithms);
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "filterAllowedFAPISignatureAlgorithms", "PS256");
+            invokeMethod(oAuthAdminService, "validateFAPISignatureAlgorithms", "PS256");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
@@ -837,8 +837,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "filterAllowedFAPIEncryptionAlgorithms",
-                    "RSA1_5");
+            invokeMethod(oAuthAdminService, "validateFAPIEncryptionAlgorithms", "RSA1_5");
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
@@ -870,7 +869,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     private void testValidateRedirectURIForPPID (List<String> callBackURIs) throws Exception {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
-        invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs, "");
+        invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs);
     }
 
     @Test(description = "Test validating multiple redirect URIs have the same host name when PPId is enabled",
@@ -879,7 +878,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
         try {
-            invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs, "");
+            invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs);
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
