@@ -181,7 +181,7 @@ public class OAuthClientAuthnService {
                             "the application.", oAuthClientAuthnContext);
                     return;
                 }
-                authenticators.forEach(oAuthClientAuthenticator -> {
+                applicableAuthenticators.forEach(oAuthClientAuthenticator -> {
                     executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
                 });
             } catch (IdentityOAuth2ClientException e) {
