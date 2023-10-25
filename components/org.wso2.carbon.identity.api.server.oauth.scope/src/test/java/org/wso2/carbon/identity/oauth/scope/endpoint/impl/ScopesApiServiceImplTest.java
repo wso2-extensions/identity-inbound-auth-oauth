@@ -25,6 +25,9 @@ import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeToUpdateDTO;
@@ -48,13 +51,15 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.reset;
 import static org.powermock.api.mockito.PowerMockito.doNothing;
 import static org.powermock.api.mockito.PowerMockito.doThrow;
+import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
+import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.SERVER_API_PATH_COMPONENT;
 
 @PowerMockIgnore("javax.*")
-@PrepareForTest({ScopeUtils.class, OAuth2ScopeService.class})
+@PrepareForTest({ScopeUtils.class, OAuth2ScopeService.class, ServiceURLBuilder.class})
 public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
     private ScopesApiServiceImpl scopesApiService = new ScopesApiServiceImpl();
@@ -337,6 +342,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
         ScopeDTO scopeDTO = new ScopeDTO();
         scopeDTO.setDescription("some description");
         scopeDTO.setBindings(Collections.<String>emptyList());
+        mockServiceURLBuilder(SERVER_API_PATH_COMPONENT + scopeDTO.getName());
         if (Response.Status.OK.equals(expectation)) {
             when(oAuth2ScopeService.registerScope(any(Scope.class))).thenReturn(any(Scope.class));
             assertEquals(scopesApiService.registerScope(scopeDTO).getStatus(), Response.Status.CREATED.getStatusCode(),
@@ -457,6 +463,18 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
                 any(String.class), any(String.class), any(String.class), any(boolean.class)).thenCallRealMethod();
         when(ScopeUtils.class, "getErrorDTO", any(String.class), any(String.class),
                 any(String.class)).thenCallRealMethod();
+    }
+
+    private void mockServiceURLBuilder(String url) throws URLBuilderException {
+
+        mockStatic(ServiceURLBuilder.class);
+        ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
+        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
+        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
+
+        ServiceURL serviceURL = mock(ServiceURL.class);
+        when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
+        when(serviceURLBuilder.build()).thenReturn(serviceURL);
     }
 
 }

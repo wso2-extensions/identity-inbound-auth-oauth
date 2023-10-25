@@ -110,6 +110,7 @@ public final class OAuthConstants {
     public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     public static final String SESSION_STATE = "session_state";
     public static final String STATE = "state";
+    public static final String AUTHENTICATOR_IDP_SPLITTER = ":";
 
     public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
     public static final String SUBJECT_TYPE = "subject_type";
@@ -731,6 +732,7 @@ public final class OAuthConstants {
         public static final String QUERY_JWT = "query.jwt";
         public static final String FRAGMENT_JWT = "fragment.jwt";
         public static final String FORM_POST_JWT = "form_post.jwt";
+        public static final String DIRECT = "direct"; // Used for API based authentication.
     }
 
 }

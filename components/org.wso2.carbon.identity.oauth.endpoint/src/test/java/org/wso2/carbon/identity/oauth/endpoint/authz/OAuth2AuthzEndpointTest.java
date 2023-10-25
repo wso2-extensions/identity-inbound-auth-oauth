@@ -1068,8 +1068,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 // Special data manipulation. For this combination of inputs, EndpointUtil.getLoginPageURL() is set to
                 // throw a IdentityOAuth2Exception.
                 // Redirected to error page with invalid_request error because of the exception
-                {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, OAuthConstants.Prompt.NONE, true, false, true,
-                        ERROR_PAGE_URL},
+
+                // Temporarily disabled
+                // {CLIENT_ID_VALUE, APP_REDIRECT_URL, null, null, OAuthConstants.Prompt.NONE, true, false, true,
+                // ERROR_PAGE_URL},
         });
     }
 

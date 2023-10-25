@@ -54,7 +54,11 @@ public class DefaultResponseModeProvider extends AbstractResponseModeProvider {
         if (responseType == null) {
             responseMode =  QUERY_RESPONSE_MODE;
         } else {
-            if (hasIDTokenOrTokenInResponseType(responseType)) {
+            if (OAuthConstants.ResponseModes.DIRECT.equals(authorizationResponseDTO.getResponseMode())) {
+                /*Sending the response back in query mode as the standard mode for API based authentication
+                 in order for the proceeding flow to process the response and build actual response.*/
+                responseMode = QUERY_RESPONSE_MODE;
+            } else if (hasIDTokenOrTokenInResponseType(responseType)) {
                 responseMode =  FRAGMENT_RESPONSE_MODE;
             } else {
                 responseMode =  QUERY_RESPONSE_MODE;
