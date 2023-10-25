@@ -415,10 +415,10 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 when accessed organization is different from the user's resident organization. */
                 if (authenticatedUser.getAccessingOrganization() != null && !authenticatedUser
                         .getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization())) {
-                    Optional<String> optionalUserId = OrganizationSharedUserUtil
+                    Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
                             .getUserIdOfAssociatedUserByOrgId(userId, organizationId);
-                    if (optionalUserId.isPresent()) {
-                        userId = optionalUserId.get();
+                    if (optionalOrganizationUserId.isPresent()) {
+                        userId = optionalOrganizationUserId.get();
                     }
                 }
                 List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
