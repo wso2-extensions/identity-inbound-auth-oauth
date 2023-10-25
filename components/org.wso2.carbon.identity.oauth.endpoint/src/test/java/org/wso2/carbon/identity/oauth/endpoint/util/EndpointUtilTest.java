@@ -103,6 +103,7 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
@@ -208,6 +209,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
     private static final String REQUESTED_OIDC_SCOPES_KEY = "requested_oidc_scopes=";
     private static final String REQUESTED_OIDC_SCOPES_VALUES = "openid+profile";
     private static final String EXTERNAL_CONSENTED_APP_NAME = "testApp";
+    private static final String REDIRECT = "redirect";
     private static final String EXTERNAL_CONSENT_URL = "https://localhost:9443/consent";
     private String username;
     private String password;
@@ -646,7 +648,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
         when(mockedOAuthResponse.getLocationUri()).thenReturn("http://localhost:8080/location");
-        when(mockedHttpServletRequest.getParameter(anyString())).thenReturn("http://localhost:8080/location");
+        when(mockedHttpServletRequest.getParameter(contains(REDIRECT))).thenReturn("http://localhost:8080/location");
 
         String url = EndpointUtil.getErrorPageURL(mockedHttpServletRequest, "invalid request",
                 "invalid request object", "invalid request", "test", parameters);
@@ -934,5 +936,26 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Object[] newArray = Arrays.copyOf(originalArray, originalArray.length + 1);
         newArray[originalArray.length] = value;
         return newArray;
+    }
+
+    @DataProvider(name = "provideResponseTypeAndMode")
+    public Object[][] provideResponseTypeAndMode() {
+
+        return new Object[][]{
+                {"code", "form_post", false},
+                {"code", "jwt", true},
+                {"code id_token", null, true},
+                {"code token", "jwt", false}
+        };
+    }
+
+    @Test(dataProvider = "provideResponseTypeAndMode")
+    public void testValidateFAPIAllowedResponseMode(String responseType, String responseMode, boolean shouldPass) {
+
+        try {
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(responseType, responseMode);
+        } catch (OAuthProblemException e) {
+            Assert.assertFalse(shouldPass, "Expected exception not thrown");
+        }
     }
 }

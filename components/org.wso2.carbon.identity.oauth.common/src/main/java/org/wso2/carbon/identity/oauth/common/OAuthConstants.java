@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -110,6 +110,46 @@ public final class OAuthConstants {
     public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
     public static final String SESSION_STATE = "session_state";
     public static final String STATE = "state";
+    public static final String AUTHENTICATOR_IDP_SPLITTER = ":";
+
+    public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
+    public static final String SUBJECT_TYPE = "subject_type";
+    /**
+     * Enum for OIDC supported subject types.
+     */
+    public enum SubjectType {
+
+        PUBLIC("public"),
+        PAIRWISE("pairwise");
+
+        private final String subjectType;
+
+        SubjectType(String subjectType) {
+        
+            this.subjectType = subjectType;
+        }
+
+        @Override
+        public String toString() {
+
+            return subjectType;
+        }
+
+        public String getValue() {
+
+            return subjectType;
+        }
+
+        public static SubjectType fromValue(String text) {
+
+            for (SubjectType subType : SubjectType.values()) {
+                if (String.valueOf(subType.subjectType).equals(text)) {
+                    return subType;
+                }
+            }
+            return null;
+        }
+    }
     public static final String AUTHZ_CODE = "AuthorizationCode";
 
     //Constants for reading EndpointConfig.properties
@@ -187,6 +227,9 @@ public final class OAuthConstants {
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+    public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
+    public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+
 
     private OAuthConstants() {
 
@@ -264,6 +307,7 @@ public final class OAuthConstants {
         public static final String REQUEST_URI = "request_uri";
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
+        public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
 
         private OAuth20Params() {
@@ -423,6 +467,7 @@ public final class OAuthConstants {
             public static final String INVALID_REQUEST_URI = "par.invalid.request.uri";
             public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
             public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
+            public static final String INVALID_RESPONSE_TYPE_FOR_QUERY_JWT = "invalid.response.type.for.query.jwt";
 
             private AuthorizationResponsei18nKey() {
 
@@ -481,6 +526,7 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String S_HASH = "s_hash";
         public static final String SESSION_ID_CLAIM = "sid";
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
@@ -517,6 +563,17 @@ public final class OAuthConstants {
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
+        public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
+        public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
+        public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
+        public static final String REQUEST_OBJECT_SIGNATURE_ALGORITHM = "requestObjectSigningAlg";
+        public static final String TLS_SUBJECT_DN = "tlsClientAuthSubjectDn";
+        public static final String IS_PUSH_AUTH = "requirePushAuthorizationRequest";
+        public static final String IS_CERTIFICATE_BOUND_ACCESS_TOKEN = "tlsClientCertificateBoundAccessToken";
+        public static final String SUBJECT_TYPE = "subjectType";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
+        public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
 
         private OIDCConfigProperties() {
 
@@ -554,6 +611,14 @@ public final class OAuthConstants {
      * Define token binding constants.
      */
     public static class TokenBindings {
+
+        public static final String NONE = "NONE";
+    }
+
+    /**
+     * Define authorized organization default value.
+     */
+    public static class AuthorizedOrganization {
 
         public static final String NONE = "NONE";
     }
@@ -667,6 +732,7 @@ public final class OAuthConstants {
         public static final String QUERY_JWT = "query.jwt";
         public static final String FRAGMENT_JWT = "fragment.jwt";
         public static final String FORM_POST_JWT = "form_post.jwt";
+        public static final String DIRECT = "direct"; // Used for API based authentication.
     }
 
 }

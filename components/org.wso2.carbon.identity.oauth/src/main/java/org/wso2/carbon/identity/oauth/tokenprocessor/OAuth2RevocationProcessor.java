@@ -23,6 +23,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.user.core.UserStoreException;
+import org.wso2.carbon.user.core.UserStoreManager;
 
 /**
  * Abstraction layer between OAuth2Service and persistence layer to handle
@@ -76,6 +78,18 @@ public interface OAuth2RevocationProcessor {
      *
      * @param revokeRequestDTO Metadata containing revoke token request.
      * @return boolean whether it is a refresh token request or not
+     * @throws IdentityOAuth2Exception If an error occurs while checking the token type.
      */
-    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO);
+    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuth2Exception;
+
+    /**
+     * Handle indirect token revocation for internal user events.
+     *
+     * @param username User on which the event occurred.
+     * @param userStoreManager User store manager.
+     * @return true if revocation is successful. Else return false.
+     * @throws UserStoreException
+     */
+    boolean revokeTokens(String username, UserStoreManager userStoreManager)
+            throws UserStoreException;
 }

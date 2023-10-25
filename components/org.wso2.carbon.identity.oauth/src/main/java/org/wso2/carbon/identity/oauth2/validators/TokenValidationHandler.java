@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -61,6 +62,7 @@ public class TokenValidationHandler {
     AuthorizationContextTokenGenerator tokenGenerator = null;
     private static final Log log = LogFactory.getLog(TokenValidationHandler.class);
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    private AccessTokenProvider tokenValidationProcessor;
     private static final String BEARER_TOKEN_TYPE = "Bearer";
     private static final String BEARER_TOKEN_TYPE_JWT = "jwt";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
@@ -118,6 +120,7 @@ public class TokenValidationHandler {
                 log.error(errorMsg, e);
             }
         }
+        tokenValidationProcessor = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider();
     }
 
     public static TokenValidationHandler getInstance() {
@@ -175,7 +178,8 @@ public class TokenValidationHandler {
         }
 
         try {
-            accessTokenDO = OAuth2Util.findAccessToken(requestDTO.getAccessToken().getIdentifier(), false);
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                    .getVerifiedAccessToken(requestDTO.getAccessToken().getIdentifier(), false);
         } catch (IllegalArgumentException e) {
             // Access token not found in the system.
             return buildClientAppErrorResponse(e.getMessage());
@@ -272,7 +276,8 @@ public class TokenValidationHandler {
         // Adding the AccessTokenDO as a context property for further use
         AccessTokenDO accessTokenDO;
         try {
-            accessTokenDO = OAuth2Util.findAccessToken(oAuth2Token.getIdentifier(), true);
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                    .getVerifiedAccessToken(oAuth2Token.getIdentifier(), true);
             if (accessTokenDO != null) {
                 messageContext.addProperty(OAuthConstants.ACCESS_TOKEN_DO, accessTokenDO);
             }
@@ -495,12 +500,13 @@ public class TokenValidationHandler {
         } else {
             try {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-                accessTokenDO = OAuth2Util.findAccessToken(validationRequest.getAccessToken().getIdentifier(),
-                        false);
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                        .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
-                        !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain())) {
+                        !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
+                        StringUtils.isEmpty(accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
                 }
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();

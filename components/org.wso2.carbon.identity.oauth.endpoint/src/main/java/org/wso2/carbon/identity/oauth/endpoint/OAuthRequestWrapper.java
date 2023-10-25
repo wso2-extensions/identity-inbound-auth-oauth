@@ -22,6 +22,7 @@ import org.apache.commons.collections.CollectionUtils;
 
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
 
     private Map<String, List<String>> form;
     private Enumeration<String> parameterNames;
+
+    private boolean isInternalRequest = false;
 
     @Deprecated
     public OAuthRequestWrapper(HttpServletRequest request, MultivaluedMap<String, String> form) {
@@ -66,7 +69,7 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
     public String getParameter(String name) {
 
         String value = super.getParameter(name);
-        if (value == null) {
+        if (value == null || isInternalRequest) {
             if (CollectionUtils.isNotEmpty(form.get(name))) {
                 value = form.get(name).get(0);
             }
@@ -78,5 +81,30 @@ public class OAuthRequestWrapper extends HttpServletRequestWrapper {
     public Enumeration<String> getParameterNames() {
 
         return parameterNames;
+    }
+
+    /**
+     * Set whether the request is internal or not.
+     * If the request is internal, the request parameters
+     * in the wrapper will get priority over the servlet request.
+     *
+     * @param internalRequest Whether the request is internal or not.
+     */
+    public void setInternalRequest(boolean internalRequest) {
+
+        isInternalRequest = internalRequest;
+    }
+
+    @Override
+    public Map<String, String[]> getParameterMap() {
+
+        Map<String, String[]> parameterMap = new HashMap<>(super.getParameterMap());
+
+        // Add form data to parameterMap.
+        for (Map.Entry<String, List<String>> entry : form.entrySet()) {
+            parameterMap.put(entry.getKey(), entry.getValue().toArray(new String[0]));
+        }
+
+        return parameterMap;
     }
 }
