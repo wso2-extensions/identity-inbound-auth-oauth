@@ -64,7 +64,7 @@ public class OIDCClaimUtil {
     private static final Log log = LogFactory.getLog(OIDCClaimUtil.class);
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
     private static final String SEND_ONLY_SP_MAPPED_ROLES = "SPRoleManagement.ReturnOnlyMappedLocalRoles";
-    private static final String DEFAULT_SUBJECT_TYPE = "OAuth.OpenIDConnect.DefaultSubjectType";
+    public static final String DEFAULT_SUBJECT_TYPE = "OAuth.OpenIDConnect.DefaultSubjectType";
 
     private OIDCClaimUtil() {
     }

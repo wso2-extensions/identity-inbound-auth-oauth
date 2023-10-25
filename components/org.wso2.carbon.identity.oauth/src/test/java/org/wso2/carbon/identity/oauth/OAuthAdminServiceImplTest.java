@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.lang.StringUtils;
@@ -71,6 +73,7 @@ import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -125,6 +128,9 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
     AbstractUserStoreManager mockAbstractUserStoreManager;
     @Mock
     OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
+
+    @Mock
+    ObjectMapper objectMapper;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -762,5 +768,206 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         Mockito.when(mockTenant.getAssociatedOrganizationUUID()).thenReturn(null);
         Mockito.when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
         Mockito.when(userRealm.getUserStoreManager()).thenReturn(mockAbstractUserStoreManager);
+    }
+
+    @Test(description = "Test validating invalid token auth methods")
+    private void testValidateTokenAuthenticationWithValidAuthentication() throws Exception {
+
+        mockStatic(IdentityUtil.class);
+        List<String> tokenEndPointAuthMethods = new ArrayList<>();
+        tokenEndPointAuthMethods.add("private_key_jwt");
+        tokenEndPointAuthMethods.add("tls_client_auth");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(tokenEndPointAuthMethods);
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        invokeMethod(oAuthAdminService, "validateFAPITokenAuthMethods",
+                "tls_client_auth");
+    }
+
+    @Test(description = "Test validating invalid token auth methods")
+    private void testValidateTokenAuthenticationWithInvalidAuthentication() throws Exception {
+
+        mockStatic(IdentityUtil.class);
+        List<String> tokenEndPointAuthMethods = new ArrayList<>();
+        tokenEndPointAuthMethods.add("private_key_jwt");
+        tokenEndPointAuthMethods.add("tls_client_auth");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(tokenEndPointAuthMethods);
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        try {
+            invokeMethod(oAuthAdminService, "validateFAPITokenAuthMethods",
+                    "invalid_auth");
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Test validating signature algorithm")
+    private void testValidateSignatureAlgorithm() throws Exception {
+
+        mockStatic(IdentityUtil.class);
+        List<String> validFAPISignatureAlgorithms = new ArrayList<>();
+        validFAPISignatureAlgorithms.add("PS256");
+        validFAPISignatureAlgorithms.add("ES256");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(validFAPISignatureAlgorithms);
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        invokeMethod(oAuthAdminService, "validateFAPISignatureAlgorithms", "PS256");
+    }
+
+    @Test(description = "Test validating signature algorithm with invalid value")
+    private void testValidateSignatureAlgorithmWithInvalidValue() throws Exception {
+
+        mockStatic(IdentityUtil.class);
+        List<String> validFAPISignatureAlgorithms = new ArrayList<>();
+        validFAPISignatureAlgorithms.add("PS256");
+        validFAPISignatureAlgorithms.add("ES256");
+        when(IdentityUtil.getPropertyAsList(anyString())).thenReturn(validFAPISignatureAlgorithms);
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        try {
+            invokeMethod(oAuthAdminService, "validateFAPISignatureAlgorithms", "PS256");
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Test validating encryption algorithm with invalid value")
+    private void testValidateEncryptionAlgorithm() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        try {
+            invokeMethod(oAuthAdminService, "validateFAPIEncryptionAlgorithms", "RSA1_5");
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @DataProvider(name = "validCallbackURIDataProvider")
+    public Object[][] getValidCallBackURIs() {
+
+        List<String> callBackURI = new ArrayList<>();
+        callBackURI.add("https://localhost:8080/callback");
+        callBackURI.add("https://localhost:8080/callback1");
+        callBackURI.add("https://localhost:8080/callback2");
+        return new Object[][]{{callBackURI}};
+    }
+
+    @DataProvider(name = "invalidHostNameDataProvider")
+    public Object[][] getInvalidCallBackURIs() {
+
+        List<String> callBackURI = new ArrayList<>();
+        callBackURI.add("https://localhost:8080/callback");
+        callBackURI.add("https://abc:8080/callback1");
+        callBackURI.add("https://localhost:8080/callback2");
+        return new Object[][]{ {callBackURI}};
+    }
+    @Test(description = "Test validating multiple redirect URIs have the same host name when PPId is enabled",
+            dataProvider = "validCallbackURIDataProvider")
+    private void testValidateRedirectURIForPPID (List<String> callBackURIs) throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs);
+    }
+
+    @Test(description = "Test validating multiple redirect URIs have the same host name when PPId is enabled",
+            dataProvider = "invalidHostNameDataProvider")
+    private void testValidateRedirectURIForPPIDWithDifferentHosts(List<String> callBackURIs) throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        try {
+            invokeMethod(oAuthAdminService, "validateRedirectURIForPPID", callBackURIs);
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Test validating schem of sectorIdentifierUri")
+    private void testValidateSectorIdentifierUriInvalidScheme() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        List<String> callBackURI = new ArrayList<>();
+        callBackURI.add("https://localhost:8080/callback");
+
+        try {
+            invokeMethod(oAuthAdminService, "validateSectorIdentifierURI",
+                    "http://localhost:8080/callback", callBackURI);
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Test validating all callBackURIs are present in sectorIdentifierURI array retrieved")
+    private void testValidateSectorIdentifierUri() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        List<String> callBackURI = new ArrayList<>();
+        callBackURI.add("https://localhost:8080/callback");
+        callBackURI.add("https://localhost:8080/callback/a");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(anyString())).thenReturn("true");
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode arrNode = mapper.createArrayNode();
+        arrNode.add("https://localhost:8080/callback");
+        arrNode.add("https://localhost:8080/callback/a");
+        arrNode.add("https://localhost:8080/callback/b");
+        whenNew(ObjectMapper.class).withNoArguments().thenReturn(objectMapper);
+        String sectorIdentifierUri = "https://localhost:8080/sectors";
+        when(objectMapper.readTree(URI.create(sectorIdentifierUri).toURL())).thenReturn(arrNode);
+
+        invokeMethod(oAuthAdminService, "validateSectorIdentifierURI", sectorIdentifierUri,
+                callBackURI);
+
+    }
+
+    @Test(description = "Test validating error if all callBackURIs are not present in " +
+            "sectorIdentifierURI array retrieved")
+    private void testValidateSectorIdentifierUriWithoutMatchingURLs() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+        List<String> callBackURI = new ArrayList<>();
+        callBackURI.add("https://localhost:8080/callback");
+        callBackURI.add("https://localhost:8080/callback/a");
+
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(anyString())).thenReturn("true");
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayNode arrNode = mapper.createArrayNode();
+        arrNode.add("https://localhost:8080/callback");
+        arrNode.add("https://localhost:8080/callback/b");
+        whenNew(ObjectMapper.class).withNoArguments().thenReturn(objectMapper);
+        String sectorIdentifierUri = "https://localhost:8080/sectors";
+        when(objectMapper.readTree(URI.create(sectorIdentifierUri).toURL())).thenReturn(arrNode);
+        try {
+            invokeMethod(oAuthAdminService, "validateSectorIdentifierURI", sectorIdentifierUri,
+                    callBackURI);
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof IdentityOAuthClientException);
+            Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
+                    Error.INVALID_REQUEST.getErrorCode());
+        }
+    }
+
+    @Test(description = "Test obtaining url list from regex")
+    private void testGetRedirectURIList() throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+
+        String callbackURls = "regexp=(http://TestApp.com|http://TestApp.com/a)";
+        OAuthConsumerAppDTO appDTO = new OAuthConsumerAppDTO();
+        appDTO.setCallbackUrl(callbackURls);
+        List<String> redirectURIList = invokeMethod(oAuthAdminService, "getRedirectURIList", appDTO);
+
+        Assert.assertEquals(redirectURIList.size(), 2);
+        Assert.assertTrue(redirectURIList.contains("http://TestApp.com"));
+        Assert.assertTrue(redirectURIList.contains("http://TestApp.com/a"));
+
     }
 }
