@@ -1008,7 +1008,7 @@ public class AccessTokenIssuer {
         }
         List<String> scopes = new ArrayList<>();
         for (String scope : tokReqMsgCtx.getScope()) {
-            if (!authorizedScopes.contains(scope)) {
+            if (!authorizedScopes.contains(scope) && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }

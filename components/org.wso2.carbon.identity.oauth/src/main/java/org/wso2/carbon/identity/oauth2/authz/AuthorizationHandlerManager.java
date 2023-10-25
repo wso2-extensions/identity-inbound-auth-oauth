@@ -420,7 +420,7 @@ public class AuthorizationHandlerManager {
         }
         List<String> scopes = new ArrayList<>();
         for (String scope : authzReqMsgCtx.getAuthorizationReqDTO().getScopes()) {
-            if (!authorizedScopes.contains(scope)) {
+            if (!authorizedScopes.contains(scope) && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }
