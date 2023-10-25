@@ -107,7 +107,8 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 throw new IdentityEventException(errorMsg);
             }
 
-        } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_EVENT.equals(event.getEventName())) {
+        } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
+            IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_V2_EVENT.equals(event.getEventName())) {
 
             Object userIdList = event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
@@ -119,7 +120,9 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName())) {
+                IdentityEventConstants.Event.PRE_DELETE_ROLE_V2_EVENT.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_UPDATE_PERMISSIONS_FOR_ROLE_V2_EVENT.equals(event.getEventName())) {
 
             String roleId = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.ROLE_ID);
