@@ -263,7 +263,8 @@ public class Oauth2ScopeUtils {
 
             if (!AuthzUtil.isLegacyAuthzRuntime() && LEGACY_RBAC_SCOPE_VALIDATOR.equals(validator
                     .getValidatorName())) {
-                return true;
+                appScopeValidators.remove(validator.getValidatorName());
+                continue;
             }
             // Validate the scopes from the validator only if it's configured in the OAuth app.
             if (validator != null && appScopeValidators.contains(validator.getValidatorName())) {
