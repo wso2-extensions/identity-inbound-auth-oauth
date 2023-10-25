@@ -233,7 +233,6 @@ public final class OAuthConstants {
     public static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
     public static final String VALIDATE_SECTOR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
-
     public static final String TOKEN_EP_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
             ".SupportedTokenEndpointSigningAlgorithms.SupportedTokenEndpointSigningAlgorithm";
     public static final String ID_TOKEN_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
@@ -254,6 +253,7 @@ public final class OAuthConstants {
     public static final String PRIVATE_KEY_JWT = "private_key_jwt";
     public static final String TLS_CLIENT_AUTH = "tls_client_auth";
     public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
+
     private OAuthConstants() {
 
     }

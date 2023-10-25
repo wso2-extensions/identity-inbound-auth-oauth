@@ -955,7 +955,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         }
     }
 
-    @Test(description = "Test obtaining ur list from regex")
+    @Test(description = "Test obtaining url list from regex")
     private void testGetRedirectURIList() throws Exception {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();

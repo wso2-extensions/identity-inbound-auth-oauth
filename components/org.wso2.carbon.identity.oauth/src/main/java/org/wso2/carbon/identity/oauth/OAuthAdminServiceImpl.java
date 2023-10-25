@@ -765,19 +765,18 @@ public class OAuthAdminServiceImpl {
                     // into one regular expression.
                     if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
                         callBackURIList = getRedirectURIList(consumerAppDTO);
-                        ;
                     } else {
                         callBackURIList.add(consumerAppDTO.getCallbackUrl());
                     }
                     if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
                         validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                        oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
                     } else {
                         validateRedirectURIForPPID(callBackURIList);
                     }
                 }
                 oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
             }
-            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
 
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
             if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
