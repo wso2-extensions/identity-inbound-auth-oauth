@@ -218,8 +218,19 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), 0);
     }
 
-    @Test
-    public void testAuthenticateForFapiApplicationsWithValidAuthMethod() throws Exception {
+    @DataProvider(name = "testDataForAuthMethodConfiguredInApp")
+    public Object[][] testDataForAuthMethodConfiguredInApp() {
+
+        return new Object[][]{
+                // Authentication method configured for FAPI conformant application.
+                {true},
+                // Authentication method configured for non-FAPI application.
+                {false}
+        };
+    }
+
+    @Test(dataProvider = "testDataForAuthMethodConfiguredInApp")
+    public void testAuthenticateWhenAuthMethodConfiguredInApp(boolean isFapiApp) throws Exception {
 
         HashMap<String, List> bodyParams = new HashMap<String, List>();
         bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
@@ -228,7 +239,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         ServiceProvider serviceProvider = new ServiceProvider();
         ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
         fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue("true");
+        fapiAppSpProperty.setValue(String.valueOf(isFapiApp));
         serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
