@@ -35,7 +35,7 @@ public class M2MScopeValidationHandler implements ScopeValidationHandler {
     public boolean canHandle(ScopeValidationContext scopeValidationContext) {
 
         return OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType()) &&
-                getPolicyID().equals("RBAC");
+                scopeValidationContext.getPolicyId().equals("RBAC");
     }
 
     @Override
