@@ -79,7 +79,7 @@ public class AuthzUtil {
                 }
             }
             // Handler federated user scenario.
-            return getFederatedRoles(authenticatedUser, appId);
+            return getFederatedUserRoles(authenticatedUser, appId);
         }
         return getRoles(getUserId(authenticatedUser), authenticatedUser.getTenantDomain());
     }
@@ -109,7 +109,7 @@ public class AuthzUtil {
      * @return Federated role ids of user.
      * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
      */
-    private static List<String> getFederatedRoles(AuthenticatedUser authenticatedUser, String appId)
+    private static List<String> getFederatedUserRoles(AuthenticatedUser authenticatedUser, String appId)
             throws IdentityOAuth2Exception {
 
         String tenantDomain = authenticatedUser.getTenantDomain();
