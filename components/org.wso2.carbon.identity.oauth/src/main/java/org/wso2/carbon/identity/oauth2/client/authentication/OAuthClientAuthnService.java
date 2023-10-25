@@ -166,15 +166,17 @@ public class OAuthClientAuthnService {
             }
             try {
                 List<OAuthClientAuthenticator> configuredClientAuthMethods = getConfiguredClientAuthMethods(clientId);
-                List<OAuthClientAuthenticator> authenticators = configuredClientAuthMethods;
+                List<OAuthClientAuthenticator> applicableAuthenticators;
                 if (OAuth2Util.isFapiConformantApp(clientId)) {
-                    authenticators = validateAndGetClientAuthenticatorsForFapi(configuredClientAuthMethods);
+                    applicableAuthenticators = filterClientAuthenticatorsForFapi(configuredClientAuthMethods);
                 } else {
                     if (configuredClientAuthMethods.isEmpty()) {
-                        authenticators = this.getClientAuthenticators();
+                        applicableAuthenticators = this.getClientAuthenticators();
+                    } else {
+                        applicableAuthenticators = configuredClientAuthMethods;
                     }
                 }
-                if (authenticators.isEmpty()) {
+                if (applicableAuthenticators.isEmpty()) {
                     setErrorToContext(OAuth2ErrorCodes.INVALID_REQUEST, "No valid authenticators found for " +
                             "the application.", oAuthClientAuthnContext);
                     return;
@@ -371,7 +373,7 @@ public class OAuthClientAuthnService {
      * @param configuredAuthenticators  List of client authenticators configured for the application.
      * @return   List of applicable client authentication methods for the application.
      */
-    private List<OAuthClientAuthenticator> validateAndGetClientAuthenticatorsForFapi(
+    private List<OAuthClientAuthenticator> filterClientAuthenticatorsForFapi(
                 List<OAuthClientAuthenticator> configuredAuthenticators) {
 
         List<String> fapiAllowedAuthMethods = IdentityUtil.getPropertyAsList(FAPI_CLIENT_AUTH_METHOD_CONFIGURATION);
@@ -379,14 +381,15 @@ public class OAuthClientAuthnService {
             return getApplicableClientAuthenticators(fapiAllowedAuthMethods);
         }
 
+        List<OAuthClientAuthenticator> filteredAuthenticators = new ArrayList<>();
         for (OAuthClientAuthenticator authenticator : configuredAuthenticators) {
-            if (!fapiAllowedAuthMethods.stream().anyMatch(authenticator
+            if (fapiAllowedAuthMethods.stream().anyMatch(authenticator
                     .getSupportedClientAuthenticationMethods()::contains)) {
-                return Collections.emptyList();
+                filteredAuthenticators.add(authenticator);
             }
         }
 
-        return configuredAuthenticators;
+        return filteredAuthenticators;
     }
 
     /**
