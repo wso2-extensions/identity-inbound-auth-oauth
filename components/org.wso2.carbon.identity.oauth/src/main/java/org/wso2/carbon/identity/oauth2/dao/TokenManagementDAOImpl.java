@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -213,7 +214,12 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                         user.setAccessingOrganization(authorizedOrganization);
                         user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
-                        user.setTenantDomain(getAppTenantDomain());
+                        /* Setting user's tenant domain as app residing tenant domain is not required once console is
+                            registered in each tenant. */
+                        String appResideOrg = getAppTenantDomain();
+                        if (StringUtils.isNotEmpty(appResideOrg)) {
+                            user.setTenantDomain(appResideOrg);
+                        }
                     }
                     validationDataDO.setAuthorizedUser(user);
 

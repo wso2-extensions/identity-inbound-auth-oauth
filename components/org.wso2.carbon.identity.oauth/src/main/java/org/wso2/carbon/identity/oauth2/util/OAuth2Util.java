@@ -4222,10 +4222,10 @@ public class OAuth2Util {
             throws UserInfoEndpointException {
 
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
-            AccessTokenDO accessTokenDO = null;
+            AccessTokenDO accessTokenDO;
             try {
-                accessTokenDO = OAuth2Util.findAccessToken(
-                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
             }
@@ -4235,6 +4235,31 @@ public class OAuth2Util {
             }
         }
         return null;
+    }
+
+    /**
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
+     *
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
+     */
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+            try {
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                return Optional.ofNullable(accessTokenDO);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**
