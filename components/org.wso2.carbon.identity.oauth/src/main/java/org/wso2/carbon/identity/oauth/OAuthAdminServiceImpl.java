@@ -2357,8 +2357,8 @@ public class OAuthAdminServiceImpl {
 
         URI uri = URI.create(sectorIdentifierURI);
         String scheme = uri.getScheme();
-        if (StringUtils.isBlank(scheme) || !scheme.equals(String.valueOf(HttpsURL.DEFAULT_SCHEME))) {
-            throw handleClientError(INVALID_REQUEST, "Invalid sector identifier URI");
+        if (!StringUtils.equals(scheme, String.valueOf(HttpsURL.DEFAULT_SCHEME))) {
+            throw handleClientError(INVALID_REQUEST, "Invalid scheme for sector identifier URI");
         }
         // Validate whether sectorIdentifierURI points to JSON file containing an array of redirect_uri values.
         String validateSectorIdentifierURI = IdentityUtil.getProperty(
