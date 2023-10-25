@@ -2366,10 +2366,7 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST, "Invalid scheme for sector identifier URI");
         }
         // Validate whether sectorIdentifierURI points to JSON file containing an array of redirect_uri values.
-        String validateSectorIdentifierURI = IdentityUtil.getProperty(
-                OAuthConstants.VALIDATE_SECTOR_IDENTIFIER);
-        if (StringUtils.isNotEmpty(validateSectorIdentifierURI) &&
-                Boolean.parseBoolean(validateSectorIdentifierURI)) {
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.VALIDATE_SECTOR_IDENTIFIER))) {
             try {
                 List<String> fetchedRedirectURI = new ArrayList<>();
                 ObjectMapper mapper = new ObjectMapper();
