@@ -26,15 +26,13 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
-import org.wso2.carbon.identity.application.common.model.IdPGroup;
-import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
-import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.NotImplementedException;
@@ -45,12 +43,11 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
+import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.ORGANIZATION;
 import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
 import static org.wso2.carbon.user.core.UserCoreConstants.INTERNAL_DOMAIN;
 
@@ -68,31 +65,108 @@ public class AuthzUtil {
      * @return User roles.
      * @throws IdentityOAuth2Exception if an error occurs while retrieving user roles.
      */
-    public static List<String> getUserRoles(AuthenticatedUser authenticatedUser)
+    public static List<String> getUserRoles(AuthenticatedUser authenticatedUser, String appId)
             throws IdentityOAuth2Exception {
 
-        List<String> roleIds = new ArrayList<>();
-        // Get role id list of the user.
-        List<String> roleIdsOfUser = getRoleIdsOfUser(authenticatedUser);
-        if (!roleIdsOfUser.isEmpty()) {
-            roleIds.addAll(roleIdsOfUser);
-        }
-        // Get groups of the user.
-        List<String> groups = getUserGroups(authenticatedUser);
-        if (!groups.isEmpty()) {
-            List<String> roleIdsOfGroups = getRoleIdsOfGroups(groups, authenticatedUser.getTenantDomain());
-            if (!roleIdsOfGroups.isEmpty()) {
-                roleIds.addAll(roleIdsOfGroups);
-            }
-        }
         if (authenticatedUser.isFederatedUser()) {
-            List<String> roleIdsOfIdpGroups = getRoleIdsOfIdpGroups(getUserIdpGroups(authenticatedUser),
-                    authenticatedUser.getTenantDomain());
-            if (!roleIdsOfIdpGroups.isEmpty()) {
-                roleIds.addAll(roleIdsOfIdpGroups);
+            if (StringUtils.isNotBlank(authenticatedUser.getAccessingOrganization())) {
+                if (!authenticatedUser.getAccessingOrganization()
+                        .equals(authenticatedUser.getUserResidentOrganization())) {
+                    // Handle switching organization scenario.
+                    String accessingTenantDomain = getAccessingTenantDomain(authenticatedUser);
+                    String accessingUserId = getAccessingUserId(authenticatedUser);
+                    return getRoles(accessingUserId, accessingTenantDomain);
+                }
             }
+            // Handler federated user scenario.
+            return getFederatedRoles(authenticatedUser, appId);
+        }
+        return getRoles(getUserId(authenticatedUser), authenticatedUser.getTenantDomain());
+    }
+
+    /**
+     * Get the role ids.
+     *
+     * @param userId User ID.
+     * @param tenantDomain Tenant domain.
+     * @return Role ids of user.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
+     */
+    private static List<String> getRoles(String userId, String tenantDomain) throws IdentityOAuth2Exception {
+
+        List<String> roleIds = new ArrayList<>(getRoleIdsOfUser(userId, tenantDomain));
+        List<String> groups = getUserGroups(userId, tenantDomain);
+        if (!groups.isEmpty()) {
+            roleIds.addAll(getRoleIdsOfGroups(groups, tenantDomain));
         }
         return roleIds;
+    }
+
+    /**
+     * Get the federated role ids.
+     *
+     * @param authenticatedUser Authenticated user.
+     * @return Federated role ids of user.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
+     */
+    private static List<String> getFederatedRoles(AuthenticatedUser authenticatedUser, String appId)
+            throws IdentityOAuth2Exception {
+
+        String tenantDomain = authenticatedUser.getTenantDomain();
+        String roleNamesString = null;
+        Map<ClaimMapping, String> claimMappingStringMap = authenticatedUser.getUserAttributes();
+        if (claimMappingStringMap == null) {
+            return new ArrayList<>();
+        }
+        for (Map.Entry<ClaimMapping, String> entry : claimMappingStringMap.entrySet()) {
+            if (FrameworkConstants.LOCAL_ROLE_CLAIM_URI.equals(entry.getKey().getLocalClaim().getClaimUri())) {
+                roleNamesString = entry.getValue();
+                break;
+            }
+        }
+        List<String> roleNames = null;
+        if (StringUtils.isNotBlank(roleNamesString)) {
+            roleNames =  Arrays.asList(roleNamesString.split(FrameworkUtils.getMultiAttributeSeparator()));
+        }
+        if (roleNames == null || roleNames.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String allowedAppAudience = getApplicationAllowedAudience(appId, tenantDomain);
+        if (ORGANIZATION.equalsIgnoreCase(allowedAppAudience)) {
+
+            return getRoleIdsFromNames(roleNames, ORGANIZATION, getOrganizationId(tenantDomain), tenantDomain);
+        }
+        return getRoleIdsFromNames(roleNames, APPLICATION, appId, tenantDomain);
+    }
+
+    /**
+     * Get accessing tenant domain of authenticated user.
+     *
+     * @param authenticatedUser Authenticated user.
+     * @return Accessing tenant domain.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving accessing tenant domain.
+     */
+    private static String getAccessingTenantDomain(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+        try {
+            return OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving accessing tenant domain", e);
+        }
+    }
+
+    /**
+     * Get accessing user id of authenticated user.
+     *
+     * @param authenticatedUser Authenticated user.
+     * @return Accessing tenant domain.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving accessing user id.
+     */
+    private static String getAccessingUserId(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+
+        // TODO: resolve accessing user id.
+        return getUserId(authenticatedUser);
     }
 
     /**
@@ -118,86 +192,109 @@ public class AuthzUtil {
     /**
      * Get the role ids of user.
      *
-     * @param authenticatedUser AuthenticatedUser.
+     * @param userId User ID.
+     * @param tenantDomain Tenant domain.
      * @return Role ids of user.
      * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
      */
-    private static List<String> getRoleIdsOfUser(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+    private static List<String> getRoleIdsOfUser(String userId, String tenantDomain) throws IdentityOAuth2Exception {
 
-        String tenantDomain = authenticatedUser.getTenantDomain();
-        if (authenticatedUser.getAccessingOrganization() != null) {
-            try {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-            } catch (OrganizationManagementException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        String userId;
         try {
-            userId = authenticatedUser.getUserId();
+            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
+                    .getRoleIdListOfUser(userId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving role id list of user : " + userId
+                    + "tenant domain : " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Get user id of the user
+     *
+     * @param authenticatedUser Authenticated user.
+     * @return User id.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving user id of user.
+     */
+    private static String getUserId(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+
+        try {
+            return authenticatedUser.getUserId();
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("Error while resolving user id of user" , e);
         }
-        if (userId == null) {
-            throw new IdentityOAuth2Exception("user not found");
-        }
+    }
+
+    /**
+     * Get organization id
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Organization Id.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving org id.
+     */
+    private static String getOrganizationId(String tenantDomain) throws IdentityOAuth2Exception {
+
         try {
-            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
-                    .getRoleIdListOfUser(userId, tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role id list of user : " + userId
-                    + "tenant domain : " + tenantDomain, e);
+            return OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving org id of tenant : " + tenantDomain , e);
         }
     }
 
     /**
-     * Get the role ids of user.
+     * Get application allowed audience.
      *
-     * @param userId User id.
+     * @param appId App id.
      * @param tenantDomain Tenant domain.
-     * @return Role ids of user.
-     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
+     * @return Allowed audience of app.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving allowed audience of app.
      */
-    private static List<String> getRoleIdsOfUser2(String userId, String tenantDomain) throws IdentityOAuth2Exception {
-
-        try {
-            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
-                    .getRoleIdListOfUser(userId, tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role id list of user : " + userId
-                    + "tenant domain : " + tenantDomain, e);
-        }
-    }
-
-    /**
-     * Get the role ids of idp groups
-     *
-     * @param groups Groups.
-     * @param tenantDomain Tenant domain.
-     * @return Role ids of idp groups.
-     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of idp groups.
-     */
-    private static List<String> getRoleIdsOfIdpGroups(List<String> groups, String tenantDomain)
+    private static String getApplicationAllowedAudience(String appId, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         try {
-            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
-                    .getRoleIdListOfIdpGroups(groups, tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role id list of groups : "
-                    + StringUtils.join(groups, ",") + "tenant domain : " + tenantDomain, e);
+            return OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getAllowedAudienceForRoleAssociation(appId, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving allowed audience of app : " + appId , e);
         }
+    }
+
+    /**
+     * Get the role ids from role names.
+     *
+     * @param roleNames Role names.
+     * @param tenantDomain Tenant domain.
+     * @param roleAudience Role audience.
+     * @param roleAudienceId Role audience id.
+     * @return Role ids of idp groups.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of idp groups.
+     */
+    private static List<String> getRoleIdsFromNames(List<String> roleNames, String roleAudience, String roleAudienceId,
+                                                    String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        List<String> roleIds = new ArrayList<>();
+        try {
+            for (String roleName: roleNames) {
+                roleIds.add(OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
+                        .getRoleIdByName(roleName, roleAudience, roleAudienceId, tenantDomain));
+            }
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving role ids of  list of role anme : "
+                    + StringUtils.join(roleNames, ",") + "tenant domain : " + tenantDomain, e);
+        }
+        return roleIds;
     }
 
     /**
      * Get the groups of the authenticated user.
      *
-     * @param authenticatedUser  Authenticated user.
+     * @param userId User id.
+     * @param tenantDomain Tenant domain.
      * @return - Groups of the user.
      */
-    private static List<String> getUserGroups(AuthenticatedUser authenticatedUser)
-            throws IdentityOAuth2Exception {
+    private static List<String> getUserGroups(String userId, String tenantDomain) throws IdentityOAuth2Exception {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("Started group fetching for scope validation.");
@@ -205,10 +302,10 @@ public class AuthzUtil {
         List<String> userGroups = new ArrayList<>();
         RealmService realmService = UserCoreUtil.getRealmService();
         try {
-            int tenantId = OAuth2Util.getTenantId(authenticatedUser.getTenantDomain());
+            int tenantId = OAuth2Util.getTenantId(tenantDomain);
             UserStoreManager userStoreManager = realmService.getTenantUserRealm(tenantId).getUserStoreManager();
             List<Group> groups =
-                    ((AbstractUserStoreManager) userStoreManager).getGroupListOfUser(authenticatedUser.getUserId(),
+                    ((AbstractUserStoreManager) userStoreManager).getGroupListOfUser(userId,
                             null, null);
             for (Group group : groups) {
                 String groupName = group.getGroupName();
@@ -218,7 +315,7 @@ public class AuthzUtil {
                     userGroups.add(group.getGroupID());
                 }
             }
-        } catch (UserIdNotFoundException | IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);
         } catch (UserStoreException e) {
             if (isDoGetGroupListOfUserNotImplemented(e)) {
@@ -230,71 +327,6 @@ public class AuthzUtil {
             LOG.debug("Completed group fetching for scope validation.");
         }
         return userGroups;
-    }
-
-    /**
-     * Get the groups of the authenticated user.
-     *
-     * @param authenticatedUser  Authenticated user.
-     * @return - Groups of the user.
-     */
-    private static List<String> getUserIdpGroups(AuthenticatedUser authenticatedUser)
-            throws IdentityOAuth2Exception {
-
-        LOG.debug("Started group fetching for scope validation.");
-
-        String idpName = authenticatedUser.getFederatedIdPName();
-        String tenantDomain = authenticatedUser.getTenantDomain();
-        IdentityProvider federatedIdP = getIdentityProvider(idpName, tenantDomain);
-        List<IdPGroup> idpGroups  = new ArrayList<>(Arrays.asList(federatedIdP.getIdPGroupConfig()));
-        // Convert idPGroups into a map for quick lookup
-        Map<String, String> groupNameToIdMap = new HashMap<>();
-        for (IdPGroup group : idpGroups) {
-            groupNameToIdMap.put(group.getIdpGroupName(), group.getIdpGroupId());
-        }
-        if (federatedIdP != null) {
-            String idpGroupsClaimUri = Arrays.stream(federatedIdP.getClaimConfig().getClaimMappings())
-                    .filter(claimMapping -> claimMapping.getLocalClaim().getClaimUri()
-                            .equals(FrameworkConstants.GROUPS_CLAIM))
-                    .map(claimMapping -> claimMapping.getRemoteClaim().getClaimUri())
-                    .findFirst()
-                    .orElse(null);
-            // If there is no group claim mapping, no need to proceed.
-            if (idpGroupsClaimUri == null) {
-                return new ArrayList<>();
-            }
-            Map<ClaimMapping, String> userAttributes = authenticatedUser.getUserAttributes();
-            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
-                ClaimMapping claimMapping = entry.getKey();
-                if (idpGroupsClaimUri.equals(claimMapping.getRemoteClaim().getClaimUri())) {
-                    String idPGroupsClaim = entry.getValue();
-                    if (StringUtils.isNotBlank(idPGroupsClaim)) {
-                        List<String> groupNames = new ArrayList<>(Arrays.asList(idPGroupsClaim
-                                .split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()))));
-                        return groupNames.stream().map(groupNameToIdMap::get).collect(Collectors.toList());
-                    }
-                }
-            }
-        }
-        return new ArrayList<>();
-    }
-
-    /**
-     * Get the Identity Provider object for the given identity provider name.
-     *
-     * @param idpName      Identity provider name.
-     * @param tenantDomain Tenant domain.
-     * @return Identity Provider object.
-     * @throws IdentityOAuth2Exception Exception thrown when getting the identity provider.
-     */
-    private static IdentityProvider getIdentityProvider(String idpName, String tenantDomain)
-            throws IdentityOAuth2Exception {
-
-        try {
-            return OAuth2ServiceComponentHolder.getInstance().getIdpManager().getIdPByName(idpName, tenantDomain);
-        } catch (IdentityProviderManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving idp by idp name : " + idpName, e);
-        }
     }
 
     /**

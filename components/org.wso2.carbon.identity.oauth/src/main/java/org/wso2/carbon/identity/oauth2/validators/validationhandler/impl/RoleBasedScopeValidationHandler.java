@@ -55,7 +55,8 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             throws ScopeValidationHandlerException {
 
         try {
-            List<String> userRoles = AuthzUtil.getUserRoles(scopeValidationContext.getAuthenticatedUser());
+            List<String> userRoles = AuthzUtil.getUserRoles(scopeValidationContext.getAuthenticatedUser(),
+                    scopeValidationContext.getAppId());
             if (userRoles.isEmpty()) {
                 return new ArrayList<>();
             }
