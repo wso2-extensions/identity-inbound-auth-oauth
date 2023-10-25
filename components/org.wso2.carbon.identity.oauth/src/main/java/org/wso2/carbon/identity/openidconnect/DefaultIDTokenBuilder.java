@@ -317,18 +317,20 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     private String getIDToken(String clientId, String spTenantDomain, JWTClaimsSet jwtClaimsSet, OAuthAppDO oAuthAppDO,
                               String signingTenantDomain) throws IdentityOAuth2Exception {
 
+        JWSAlgorithm applicationSignatureAlgorithm = signatureAlgorithm;
+        // Use the registered signature algorithm for the application if one exists.
+        if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+            applicationSignatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                    oAuthAppDO.getIdTokenSignatureAlgorithm());
+        }
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
             checkIfPublicCertConfiguredForEncryption(clientId, spTenantDomain);
             setupEncryptionAlgorithms(oAuthAppDO, clientId);
-            return OAuth2Util.encryptJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain,
+            return OAuth2Util.encryptJWT(jwtClaimsSet, applicationSignatureAlgorithm, signingTenantDomain,
                     encryptionAlgorithm, encryptionMethod, spTenantDomain,
                     clientId).serialize();
         } else {
-            if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
-                signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
-                        oAuthAppDO.getIdTokenSignatureAlgorithm());
-            }
-            return OAuth2Util.signJWT(jwtClaimsSet, signatureAlgorithm, signingTenantDomain).serialize();
+            return OAuth2Util.signJWT(jwtClaimsSet, applicationSignatureAlgorithm, signingTenantDomain).serialize();
         }
     }
 

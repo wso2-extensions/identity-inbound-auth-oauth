@@ -162,9 +162,8 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
 
     protected static JWSAlgorithm getJWTSignatureAlgorithm() throws OAuthSystemException {
 
-        String sigAlg;
         JWSAlgorithm signatureAlgorithm = new JWSAlgorithm(JWSAlgorithm.NONE.getName());
-        sigAlg = OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm();
+        String sigAlg = OAuthServerConfiguration.getInstance().getIdTokenSignatureAlgorithm();
         if (isNotBlank(sigAlg)) {
             try {
                 signatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(sigAlg);
