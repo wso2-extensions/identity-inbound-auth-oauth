@@ -410,7 +410,11 @@ public class JDBCPermissionBasedInternalScopeValidator {
                     userId = authenticatedUser.getUserName();
                 } else {
                     userId = authenticatedUser.getUserId();
-                    // Retrieve the user ID of the shared user if a user association exists.
+                }
+                /* Retrieve the user ID of the shared user if a user association exists. This logic should be executed
+                when accessed organization is different from the user's resident organization. */
+                if (authenticatedUser.getAccessingOrganization() != null && !authenticatedUser
+                        .getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization())) {
                     Optional<String> optionalUserId = OrganizationSharedUserUtil
                             .getUserIdOfAssociatedUserByOrgId(userId, organizationId);
                     if (optionalUserId.isPresent()) {
