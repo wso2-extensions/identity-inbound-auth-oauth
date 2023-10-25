@@ -558,6 +558,10 @@ public class AccessTokenIssuer {
             cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO);
         }
 
+        if (GrantType.PASSWORD.toString().equals(grantType)) {
+            addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
+        }
+
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
@@ -1092,6 +1096,21 @@ public class AccessTokenIssuer {
         authorizationGrantCacheEntry.setValidityPeriod(
                 TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+    }
+
+    private void addUserAttributesAgainstAccessTokenForPasswordGrant(OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                           OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getAuthorizedUser() != null) {
+            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    new AuthorizationGrantCacheEntry(tokReqMsgCtx.getAuthorizedUser().getUserAttributes());
+            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+        }
     }
 
     private void clearCacheEntryAgainstAuthorizationCode(String authorizationCode) {
