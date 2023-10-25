@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.AuthorizationManager;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -62,6 +63,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -408,6 +410,12 @@ public class JDBCPermissionBasedInternalScopeValidator {
                     userId = authenticatedUser.getUserName();
                 } else {
                     userId = authenticatedUser.getUserId();
+                    // Retrieve the user ID of the shared user if a user association exists.
+                    Optional<String> optionalUserId = OrganizationSharedUserUtil
+                            .getUserIdOfAssociatedUserByOrgId(userId, organizationId);
+                    if (optionalUserId.isPresent()) {
+                        userId = optionalUserId.get();
+                    }
                 }
                 List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
                         .getUserOrganizationPermissions(userId, organizationId);
