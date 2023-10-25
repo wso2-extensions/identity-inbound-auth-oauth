@@ -378,31 +378,34 @@ public class OAuthAdminServiceImpl {
                             }
                             app.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSigningAlgorithm);
                         }
-                        if (StringUtils.isNotEmpty(application.getSubjectType())) {
-                            OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
-                                    application.getSubjectType());
-                            if (subjectType == null) {
-                                application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
-                            }
-                            if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(application.getSubjectType())) {
-                                List<String> callBackURIList = new ArrayList<>();
-                                // Need to split the redirect uris for validating the host names since it is combined
-                                // into one regular expression.
-                                if (application.getCallbackUrl().startsWith(
-                                        OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                                    callBackURIList = getRedirectURIList(application);
-                                } else {
-                                    callBackURIList.add(application.getCallbackUrl());
-                                }
-                                if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
-                                    validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
-                                    app.setSectorIdentifierURI(application.getSectorIdentifierURI());
-                                } else {
-                                    validateRedirectURIForPPID(callBackURIList);
-                                }
-                            }
-                            app.setSubjectType(application.getSubjectType());
+                        if (StringUtils.isEmpty(application.getSubjectType())) {
+                            // Set default subject type.
+                            application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
                         }
+                        OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
+                                application.getSubjectType());
+                        if (subjectType == null) {
+                            application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+                        }
+                        if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(application.getSubjectType())) {
+                            List<String> callBackURIList = new ArrayList<>();
+                            // Need to split the redirect uris for validating the host names since it is combined
+                            // into one regular expression.
+                            if (application.getCallbackUrl().startsWith(
+                                    OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                                callBackURIList = getRedirectURIList(application);
+                            } else {
+                                callBackURIList.add(application.getCallbackUrl());
+                            }
+                            if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
+                                validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
+                                app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                            } else {
+                                validateRedirectURIForPPID(callBackURIList);
+                            }
+                        }
+                        app.setSubjectType(application.getSubjectType());
+
                         String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
                             if (enforceFAPIDCR) {
@@ -753,30 +756,32 @@ public class OAuthAdminServiceImpl {
                 oauthappdo.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSignatureAlgorithm);
             }
 
-            if (StringUtils.isNotEmpty(consumerAppDTO.getSubjectType())) {
-                OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
-                        consumerAppDTO.getSubjectType());
-                if (subjectType == null) {
-                    consumerAppDTO.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
-                }
-                if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
-                    List<String> callBackURIList = new ArrayList<>();
-                    // Need to split the redirect uris for validating the host names since it is combined
-                    // into one regular expression.
-                    if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                        callBackURIList = getRedirectURIList(consumerAppDTO);
-                    } else {
-                        callBackURIList.add(consumerAppDTO.getCallbackUrl());
-                    }
-                    if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
-                        validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
-                        oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
-                    } else {
-                        validateRedirectURIForPPID(callBackURIList);
-                    }
-                }
-                oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
+            if (StringUtils.isEmpty(consumerAppDTO.getSubjectType())) {
+                // Set default subject type if not set.
+                oauthappdo.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
             }
+            OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
+                    consumerAppDTO.getSubjectType());
+            if (subjectType == null) {
+                consumerAppDTO.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+            }
+            if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
+                List<String> callBackURIList = new ArrayList<>();
+                // Need to split the redirect uris for validating the host names since it is combined
+                // into one regular expression.
+                if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                    callBackURIList = getRedirectURIList(consumerAppDTO);
+                } else {
+                    callBackURIList.add(consumerAppDTO.getCallbackUrl());
+                }
+                if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                    validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                    oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+                } else {
+                    validateRedirectURIForPPID(callBackURIList);
+                }
+            }
+            oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
 
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
             if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
