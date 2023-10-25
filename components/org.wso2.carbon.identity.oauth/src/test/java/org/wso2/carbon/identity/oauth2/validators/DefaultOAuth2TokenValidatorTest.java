@@ -29,11 +29,13 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -58,7 +60,12 @@ public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
 
         //todo - match the dependencies in the originating repo
         mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(true);
+        when(IdentityTenantUtil.isTenantedSessionsEnabled()).thenReturn(true);
+        when(IdentityTenantUtil.getTenantDomainFromContext()).thenReturn(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
@@ -109,7 +116,8 @@ public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
             AuthenticatedUser user = new AuthenticatedUser();
             user.setTenantDomain("carbon");
             authApp.setUser(user);
-            AppInfoCache.getInstance().addToCache("consumer-key", authApp);
+            AppInfoCache.getInstance().addToCache(
+                    new AppInfoCacheKey("consumer-key", MultitenantConstants.SUPER_TENANT_ID), authApp);
         }
         Assert.assertTrue(defaultOAuth2TokenValidator
                 .validateScope(oAuth2TokenValidationMessageContext), "Access token validated");

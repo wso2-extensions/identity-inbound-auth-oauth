@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -229,7 +230,8 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setTokenType("Default");
         oAuthAppDO.setApplicationName("testApp");
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
+        appInfoCache.addToCache(
+                new AppInfoCacheKey("testConsumerKey", MultitenantConstants.SUPER_TENANT_ID), oAuthAppDO);
         oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
         when(OAuth2Util.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
 

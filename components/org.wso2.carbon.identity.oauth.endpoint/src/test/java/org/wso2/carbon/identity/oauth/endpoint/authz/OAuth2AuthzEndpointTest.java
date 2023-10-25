@@ -1874,6 +1874,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
         try (Connection connection = getConnection()) {
             mockStatic(IdentityDatabaseUtil.class);
@@ -1966,6 +1967,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
         IdentityEventService eventServiceMock = mock(IdentityEventService.class);

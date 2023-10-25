@@ -59,6 +59,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -270,9 +271,10 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         }
         mockStatic(LoggerUtils.class);
         when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        when(IdentityTenantUtil.getTenantDomain(-1234)).thenReturn("carbon.super");
-        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID)).thenReturn(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
     }
@@ -290,7 +292,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setOauthConsumerSecret(clientSecret);
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(appDO);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
@@ -426,14 +429,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the cache result
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn((OAuthAppDO) cacheResult);
+        when(appInfoCache.getValueFromCache(new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID)))
+                .thenReturn((OAuthAppDO) cacheResult);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
         // Mock the DB result
         OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId, -1234)).thenReturn(appDO);
+        when(oAuthAppDAO.getAppInformation(clientId, MultitenantConstants.SUPER_TENANT_ID)).thenReturn(appDO);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
@@ -451,14 +455,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the cache result
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn((OAuthAppDO) cacheResult);
+        when(appInfoCache.getValueFromCache(new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID)))
+                .thenReturn((OAuthAppDO) cacheResult);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
         // Mock the DB result
         OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId, -1234)).thenReturn(appDO);
+        when(oAuthAppDAO.getAppInformation(clientId, MultitenantConstants.SUPER_TENANT_ID)).thenReturn(appDO);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
         TokenPersistenceProcessor hashingProcessor = mock(HashingPersistenceProcessor.class);
@@ -479,7 +484,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the cache result.
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
@@ -562,14 +568,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
         // Mock the cache result
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
         // Mock the DB result
         OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        when(oAuthAppDAO.getAppInformation(clientId, -1234)).thenReturn(appDO);
+        when(oAuthAppDAO.getAppInformation(clientId, MultitenantConstants.SUPER_TENANT_ID)).thenReturn(appDO);
         PowerMockito.whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
 
         when(oauthServerConfigurationMock.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
@@ -2108,7 +2115,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setTokenType(tokenType);
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(appDO);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
@@ -2122,7 +2130,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetOAuthTokenIssuerForOAuthAppWithException() {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).
+        when(appInfoCache.getValueFromCache(new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).
                 thenAnswer (i -> {
                     throw new IdentityOAuth2Exception("IdentityOAuth2Exception");
                 });
@@ -2148,7 +2156,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setOauthConsumerSecret(clientSecret);
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
@@ -2167,10 +2176,15 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setOauthConsumerKey(clientId);
         appDO.setOauthConsumerSecret(clientSecret);
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        appDO.setAppOwner(user);
         appDOs[0] = appDO;
 
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(false);
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
@@ -2192,7 +2206,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDOs[1] = appDO;
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
@@ -2215,12 +2230,16 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setOauthConsumerKey(clientId);
         appDO.setOauthConsumerSecret(clientSecret);
-
+        AuthenticatedUser user = new AuthenticatedUser();
+        user.setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        appDO.setAppOwner(user);
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey(clientId);
 
+        when(IdentityTenantUtil.isTenantQualifiedUrlsEnabled()).thenReturn(false);
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
@@ -2259,7 +2278,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setOauthConsumerSecret(clientSecret);
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(appDO);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
@@ -2271,7 +2291,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetClientSecretWithException() throws Exception {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
 
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
@@ -2298,7 +2319,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setOauthConsumerSecret(clientSecret);
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(null);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(null);
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
 
@@ -2435,7 +2457,8 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         appDO.setUser(user);
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+        when(appInfoCache.getValueFromCache(
+                new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).thenReturn(appDO);
         mockStatic(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
     }
@@ -2444,7 +2467,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public void testGetServiceProviderWithIdentityInvalidOAuthClientException() {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(appInfoCache.getValueFromCache(clientId)).
+        when(appInfoCache.getValueFromCache(new AppInfoCacheKey(clientId, MultitenantConstants.SUPER_TENANT_ID))).
                 thenAnswer (i -> {
                      throw new InvalidOAuthClientException("InvalidOAuthClientException");
                  });

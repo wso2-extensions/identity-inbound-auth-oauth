@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -319,7 +320,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
         mockRealmService();
         OAuthAppDO entry = getOAuthAppDO(algorithm);
-        AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
+        AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(CLIENT_ID, TestConstants.TENANT_ID), entry);
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         EncryptedJWT encryptedJWT = decryptToken(idToken);
@@ -347,7 +348,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         oAuth2AuthorizeRespDTO.setAccessToken(ACCESS_TOKEN);
 
         OAuthAppDO entry = getOAuthAppDO(algorithm);
-        AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
+        AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(CLIENT_ID, TestConstants.TENANT_ID), entry);
 
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
@@ -377,7 +378,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
 
         mockRealmService();
         OAuthAppDO entry = getOAuthAppDO(algorithm);
-        AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
+        AppInfoCache.getInstance().addToCache(new AppInfoCacheKey(CLIENT_ID, TestConstants.TENANT_ID), entry);
 
         try {
             defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);

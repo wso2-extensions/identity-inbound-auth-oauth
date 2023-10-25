@@ -66,6 +66,7 @@ public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
         authenticatedUser.setUserName("testUser");
         authenticatedUser.setTenantDomain("carbon.super");
         authenticatedUser.setUserStoreDomain("PRIMARY");
+        authenticatedUser.setUserId("test.id");
         authorizationReqDTO.setUser(authenticatedUser);
         authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.TOKEN);
         authAuthzReqMessageContext
@@ -107,7 +108,7 @@ public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setApplicationName("testApp");
 
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.addToCache(new AppInfoCacheKey(TEST_CONSUMER_KEY, TestConstants.TENANT_ID), oAuthAppDO);
+        appInfoCache.addToCache(new AppInfoCacheKey(TEST_CONSUMER_KEY, -1234), oAuthAppDO);
 
         CodeResponseTypeHandler codeResponseTypeHandler = new CodeResponseTypeHandler();
         codeResponseTypeHandler.init();

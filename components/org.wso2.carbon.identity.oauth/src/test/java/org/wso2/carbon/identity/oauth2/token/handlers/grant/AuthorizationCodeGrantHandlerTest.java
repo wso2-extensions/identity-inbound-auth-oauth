@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -126,7 +127,7 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
-        doNothing().when(appInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
+        doNothing().when(appInfoCache).addToCache(any(AppInfoCacheKey.class), any(OAuthAppDO.class));
 
 
         assertEquals(authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx), expectedResult);
@@ -198,7 +199,7 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
 
         AppInfoCache appInfoCache = mock(AppInfoCache.class);
         when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
-        doNothing().when(appInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
+        doNothing().when(appInfoCache).addToCache(any(AppInfoCacheKey.class), any(OAuthAppDO.class));
 
         spy(OAuth2Util.class);
         doReturn(pkceValid).when(OAuth2Util.class, "validatePKCE", anyString(), anyString(), anyString(),
