@@ -4389,11 +4389,8 @@ public class OAuth2AuthzEndpoint {
             throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
         }
         if (oAuthAppDO.isRequirePushedAuthorizationRequests()) {
-            Optional<Object> isPARMandated = Optional.ofNullable(oAuthMessage.getRequest()
-                    .getAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST));
-
-            if (isPARMandated.isPresent() &&
-                    Boolean.FALSE.equals(Boolean.parseBoolean(isPARMandated.get().toString()))) {
+            if (!Boolean.TRUE.equals(oAuthMessage.getRequest()
+                    .getAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST))) {
                 throw new InvalidRequestException("PAR request is mandatory for the application.",
                         OAuth2ErrorCodes.INVALID_REQUEST,
                         OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
