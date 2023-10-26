@@ -54,7 +54,8 @@ public class DCRMConstants {
         ERROR_CODE_UNEXPECTED("Unexpected error"),
         TENANT_DOMAIN_MISMATCH("NOT_FOUND_60001", "Tenant domain in request does not match with the application " +
                 "tenant domain for consumer key: %s"),
-        FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s");
+        FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s"),
+        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement");
 
         private final String message;
         private final String errorCode;

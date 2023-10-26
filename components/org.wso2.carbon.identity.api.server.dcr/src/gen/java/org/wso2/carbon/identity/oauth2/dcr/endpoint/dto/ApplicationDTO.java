@@ -48,6 +48,7 @@ public class ApplicationDTO  {
   private String subjectType = null;
   private String requestObjectEncryptionAlgorithm = null;
   private String requestObjectEncryptionMethod = null;
+  private String softwareStatement = null;
 
   
   /**
@@ -262,6 +263,16 @@ public class ApplicationDTO  {
 
   public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
     this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("software_statement")
+  public String getSoftwareStatement() {
+    return softwareStatement;
+  }
+
+  public void setSoftwareStatement(String softwareStatement) {
+    this.softwareStatement = softwareStatement;
   }
 
   @Override
