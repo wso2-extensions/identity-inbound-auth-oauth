@@ -2468,9 +2468,6 @@ public class OAuth2AuthzEndpoint {
                                     .OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT, e.getErrorCode(), e.getErrorMessage(),
                             null, params);
                 }
-            } catch (InvalidRequestException e) {
-                return EndpointUtil.getErrorPageURL(oAuthMessage.getRequest(), e.getErrorCode(),
-                        e.getErrorCode(), e.getErrorMessage(), null, params);
             }
         }
 
