@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
@@ -82,6 +83,10 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.M2MScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.NoPolicyScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.impl.RoleBasedScopeValidationHandler;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
@@ -90,6 +95,7 @@ import org.wso2.carbon.identity.organization.management.role.management.service.
 import org.wso2.carbon.identity.organization.management.service.OrganizationManagementInitialize;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
@@ -334,8 +340,14 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(OAuth2ScopeService.class.getName(), oAuth2ScopeService, null);
             // Registering OAuth2ScopeService under ScopeService interface.
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
+
             // Registering DefaultScopeMetadataService under ScopeService interface.
             bundleContext.registerService(ScopeMetadataService.class, new APIResourceBasedScopeMetadataService(), null);
+
+            bundleContext.registerService(ScopeValidationHandler.class, new RoleBasedScopeValidationHandler(), null);
+            bundleContext.registerService(ScopeValidationHandler.class, new NoPolicyScopeValidationHandler(), null);
+            bundleContext.registerService(ScopeValidationHandler.class, new M2MScopeValidationHandler(), null);
+
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -609,6 +621,29 @@ public class OAuth2ServiceComponent {
             log.debug("Removing the Scope validator Service : " + scopeValidator.getName());
         }
         OAuthComponentServiceHolder.getInstance().removeScopeValidator(scopeValidator);
+    }
+
+    @Reference(
+            name = "scope.validator.handler",
+            service = ScopeValidationHandler.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "removeScopeValidationHandler"
+    )
+    protected void addScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding the Scope validation handler Service : " + scopeValidationHandler.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().addScopeValidationHandler(scopeValidationHandler);
+    }
+
+    protected void removeScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing the Scope validator Service : " + scopeValidationHandler.getName());
+        }
+        OAuthComponentServiceHolder.getInstance().removeScopeValidationHandler(scopeValidationHandler);
     }
 
     @Reference(
@@ -1227,31 +1262,83 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setRealmService(null);
     }
 
-    /**
-     * Set API Resource manager service.
-     *
-     * @param apiResourceManager API Resource Manager.
-     */
+    @Reference(
+            name = "identity.authorized.api.management.component",
+            service = AuthorizedAPIManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAuthorizedAPIManagementService"
+    )
+    protected void setAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Adding Authorized API Management Service: " + authorizedAPIManagementService.getClass()
+                    .getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance()
+                .setAuthorizedAPIManagementService(authorizedAPIManagementService);
+    }
+
+    protected void unsetAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing Authorized API Management Service: " + authorizedAPIManagementService.getClass()
+                    .getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizedAPIManagementService(null);
+    }
+
     @Reference(
             name = "api.resource.mgt.service.component",
             service = APIResourceManager.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetAPIResourceManager")
-    protected void setAPIResourceManager(APIResourceManager apiResourceManager) {
+            unbind = "unsetAPIResourceManagerService"
+    )
+    protected void setAPIResourceManagerService(APIResourceManager apiResourceManager) {
 
-        OAuth2ServiceComponentHolder.getInstance().setAPIResourceManager(apiResourceManager);
-        log.debug("Set the API Resource Manager into OAuth2Service bundle.");
+        if (log.isDebugEnabled()) {
+            log.debug("Adding API Resource Manager: " + apiResourceManager.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().setApiResourceManager(apiResourceManager);
+    }
+    protected void unsetAPIResourceManagerService(APIResourceManager apiResourceManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing API Resource Manager: " + apiResourceManager.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().setApiResourceManager(null);
     }
 
     /**
-     * Unset API Resource manager service.
+     * Set role management service V2 implementation.
      *
-     * @param apiResourceManager API Resource Manager.
+     * @param roleManagementService RoleManagementServiceV2.
      */
-    protected void unsetAPIResourceManager(APIResourceManager apiResourceManager) {
+    @Reference(
+            name = "org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService",
+            service = org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleManagementServiceV2")
+    protected void setRoleManagementServiceV2(RoleManagementService roleManagementService) {
 
-        OAuth2ServiceComponentHolder.getInstance().setAPIResourceManager(null);
-        log.debug("Unset the API Resource Manager into OAuth2Service bundle.");
+        if (log.isDebugEnabled()) {
+            log.debug("Adding Role Management  Service V2: " + roleManagementService.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(roleManagementService);
+    }
+
+    /**
+     * Unset role management service V2 implementation.
+     *
+     * @param roleManagementService RoleManagementServiceV2
+     */
+    protected void unsetRoleManagementServiceV2(RoleManagementService roleManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Removing Role Management  Service V2: " + roleManagementService.getClass().getName());
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(null);
     }
 }

@@ -48,6 +48,17 @@ public class Application implements Serializable {
     private boolean isRequestObjectSignatureValidationEnabled;
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
+    private String softwareStatement = null;
+
+    public String getSoftwareStatement() {
+
+        return softwareStatement;
+    }
+
+    public void setSoftwareStatement(String softwareStatement) {
+
+        this.softwareStatement = softwareStatement;
+    }
 
     public String getClientName() {
 
