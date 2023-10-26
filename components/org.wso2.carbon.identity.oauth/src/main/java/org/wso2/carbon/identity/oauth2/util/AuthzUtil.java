@@ -43,6 +43,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -205,6 +206,24 @@ public class AuthzUtil {
             throw new IdentityOAuth2Exception("Error while retrieving scope list of roles : "
                     + StringUtils.join(roles, ",") + "tenant domain : " + tenantDomain, e);
         }
+    }
+
+    /**
+     * Check whether user has the request permissions.
+     * This is added to be used in basic authentication flow.
+     *
+     * @param requestedPermissions Requested scopes.
+     * @param authenticatedUser    Authenticated user.
+     * @return True if user has the requested permissions.
+     * @throws IdentityOAuth2Exception if an error occurs while checking user authorization.
+     */
+    public static boolean isUserAuthorized(AuthenticatedUser authenticatedUser, List<String> requestedPermissions)
+            throws IdentityOAuth2Exception {
+
+        // Application id is not required for basic authentication flow.
+        List<String> roleIds = getUserRoles(authenticatedUser, null);
+        List<String> permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
+        return new HashSet<>(permissions).containsAll(requestedPermissions);
     }
 
     /**
