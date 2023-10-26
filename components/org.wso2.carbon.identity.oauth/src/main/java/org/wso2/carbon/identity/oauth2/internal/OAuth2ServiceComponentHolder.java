@@ -18,10 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
@@ -48,6 +50,7 @@ import org.wso2.carbon.identity.organization.management.role.management.service.
 import org.wso2.carbon.identity.organization.management.service.OrganizationManagementInitialize;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -104,6 +107,9 @@ public class OAuth2ServiceComponentHolder {
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
     private AccessTokenProvider accessTokenProvider;
+    private AuthorizedAPIManagementService authorizedAPIManagementService;
+    private APIResourceManager apiResourceManager;
+    private RoleManagementService roleManagementServiceV2;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -737,5 +743,53 @@ public class OAuth2ServiceComponentHolder {
     public void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
 
         this.accessTokenProvider = accessTokenProvider;
+    }
+
+
+    public AuthorizedAPIManagementService getAuthorizedAPIManagementService() {
+
+        return authorizedAPIManagementService;
+    }
+
+    public void setAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        this.authorizedAPIManagementService = authorizedAPIManagementService;
+    }
+
+    /**
+     * Get APIResourceManager osgi service.
+     *
+     * @return APIResourceManager.
+     */
+    public APIResourceManager getApiResourceManager() {
+        return apiResourceManager;
+    }
+    /**
+     * Set APIResourceManager osgi service.
+     *
+     * @param apiResourceManager APIResourceManager.
+     */
+    public void setApiResourceManager(APIResourceManager apiResourceManager) {
+        this.apiResourceManager = apiResourceManager;
+    }
+
+    /**
+     * Get {@link RoleManagementService}.
+     *
+     * @return Instance of {@link RoleManagementService}.
+     */
+    public RoleManagementService getRoleManagementServiceV2() {
+
+        return roleManagementServiceV2;
+    }
+
+    /**
+     * Set {@link RoleManagementService}.
+     *
+     * @param roleManagementServiceV2 Instance of {@link RoleManagementService}.
+     */
+    public void setRoleManagementServiceV2(RoleManagementService roleManagementServiceV2) {
+
+        this.roleManagementServiceV2 = roleManagementServiceV2;
     }
 }
