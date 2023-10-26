@@ -210,6 +210,7 @@ public class AuthzUtil {
 
     /**
      * Check whether user has the request permissions.
+     * This is added to be used in basic authentication flow.
      *
      * @param requestedPermissions Requested scopes.
      * @param authenticatedUser    Authenticated user.
@@ -219,6 +220,7 @@ public class AuthzUtil {
     public static boolean isUserAuthorized(AuthenticatedUser authenticatedUser, List<String> requestedPermissions)
             throws IdentityOAuth2Exception {
 
+        // Application id is not required for basic authentication flow.
         List<String> roleIds = getUserRoles(authenticatedUser, null);
         List<String> permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
         return new HashSet<>(permissions).containsAll(requestedPermissions);
