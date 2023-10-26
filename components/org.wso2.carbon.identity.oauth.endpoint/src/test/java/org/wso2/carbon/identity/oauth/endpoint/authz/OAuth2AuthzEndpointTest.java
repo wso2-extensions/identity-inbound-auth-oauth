@@ -1212,7 +1212,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         }
     }
 
-    @Test(description = "Test redirection with error when reuqest_uri is not sent when " +
+    @Test(description = "Test redirection with error when request_uri is not sent when " +
             "PAR is mandated in the application")
     public void testErrorWhenPARMandated() throws Exception {
 
