@@ -83,6 +83,9 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
             LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
+        if (canHandle) {
+            request.setAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST, true);
+        }
         return canHandle;
     }
 
