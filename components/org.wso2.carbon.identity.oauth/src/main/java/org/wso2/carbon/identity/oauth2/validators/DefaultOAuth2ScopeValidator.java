@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -50,6 +51,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 
 /**
  * Default oauth2 scope validator which validate application authorized scopes.
@@ -112,6 +114,9 @@ public class DefaultOAuth2ScopeValidator {
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
                         .getAuthorizedUser(), appId, grantType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) && authorizedScopes.contains(SYSTEM_SCOPE)) {
+            authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
+        }
         return authorizedScopes;
     }
 
