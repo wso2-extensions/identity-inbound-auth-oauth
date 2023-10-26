@@ -47,9 +47,9 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -705,36 +705,36 @@ public class OAuth2ServiceComponent {
     }
 
     /**
-     * Sets the access token provider.
+     * Sets the token provider.
      *
-     * @param accessTokenProvider AccessTokenProvider
+     * @param tokenProvider TokenProvider
      */
     @Reference(
-            name = "access.token.provider",
-            service = AccessTokenProvider.class,
+            name = "token.provider",
+            service = TokenProvider.class,
             cardinality = ReferenceCardinality.OPTIONAL,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetAccessTokenProvider"
+            unbind = "unsetTokenProvider"
     )
-    protected void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+    protected void setTokenProvider(TokenProvider tokenProvider) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting access token provider.");
+            log.debug("Setting token provider.");
         }
-        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(accessTokenProvider);
+        OAuth2ServiceComponentHolder.getInstance().setTokenProvider(tokenProvider);
     }
 
     /**
-     * Unsets the access token provider.
+     * Unsets the token provider.
      *
-     * @param accessTokenProvider AccessTokenProvider
+     * @param tokenProvider TokenProvider
      */
-    protected void unsetAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+    protected void unsetTokenProvider(TokenProvider tokenProvider) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unset access token provider.");
+            log.debug("Unset token provider.");
         }
-        OAuth2ServiceComponentHolder.getInstance().setAccessTokenProvider(null);
+        OAuth2ServiceComponentHolder.getInstance().setTokenProvider(null);
     }
 
     /**
