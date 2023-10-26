@@ -145,6 +145,7 @@ public class DefaultOAuth2ScopeValidator {
         requestedScopes = removeOIDCScopes(requestedScopes, requestedOIDCScopes);
         if (requestedScopes.contains(SYSTEM_SCOPE)) {
             requestedScopes.addAll(getInternalScopes(tenantDomain));
+            requestedScopes.addAll(getConsoleScopes(tenantDomain));
         }
         List<AuthorizedScopes> authorizedScopesList = getAuthorizedScopes(appId, tenantDomain);
         List<ScopeValidationHandler> scopeValidationHandlers =
@@ -230,6 +231,25 @@ public class DefaultOAuth2ScopeValidator {
             return scopes.stream().map(Scope::getName).collect(Collectors.toCollection(ArrayList::new));
         } catch (APIResourceMgtException e) {
             throw new IdentityOAuth2Exception("Error while retrieving internal scopes for tenant domain : "
+                    + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Get the Console scopes.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Console scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving console scopes for tenant domain.
+     */
+    private List<String> getConsoleScopes(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            List<Scope> scopes = OAuth2ServiceComponentHolder.getInstance()
+                    .getApiResourceManager().getScopesByTenantDomain(tenantDomain, "name sw console:");
+            return scopes.stream().map(Scope::getName).collect(Collectors.toCollection(ArrayList::new));
+        } catch (APIResourceMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving console scopes for tenant domain : "
                     + tenantDomain, e);
         }
     }

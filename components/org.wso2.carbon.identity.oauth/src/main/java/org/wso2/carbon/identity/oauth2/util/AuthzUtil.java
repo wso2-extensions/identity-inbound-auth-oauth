@@ -73,15 +73,33 @@ public class AuthzUtil {
                 if (!authenticatedUser.getAccessingOrganization()
                         .equals(authenticatedUser.getUserResidentOrganization())) {
                     // Handle switching organization scenario.
-                    String accessingTenantDomain = getAccessingTenantDomain(authenticatedUser);
-                    String accessingUserId = getAccessingUserId(authenticatedUser);
-                    return getRoles(accessingUserId, accessingTenantDomain);
+                    return getSwitchUserRoles(authenticatedUser);
                 }
             }
             // Handler federated user scenario.
             return getFederatedUserRoles(authenticatedUser, appId);
         }
+        if (StringUtils.isNotBlank(authenticatedUser.getAccessingOrganization())) {
+            if (!authenticatedUser.getAccessingOrganization()
+                    .equals(authenticatedUser.getUserResidentOrganization())) {
+                return getSwitchUserRoles(authenticatedUser);
+            }
+        }
         return getRoles(getUserId(authenticatedUser), authenticatedUser.getTenantDomain());
+    }
+
+    /**
+     * Get switching user roles.
+     *
+     * @param authenticatedUser Authenticated User.
+     * @return Switching user roles.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of switching user.
+     */
+    private static List<String> getSwitchUserRoles(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+
+        String accessingTenantDomain = getAccessingTenantDomain(authenticatedUser);
+        String accessingUserId = getAccessingUserId(authenticatedUser);
+        return getRoles(accessingUserId, accessingTenantDomain);
     }
 
     /**
