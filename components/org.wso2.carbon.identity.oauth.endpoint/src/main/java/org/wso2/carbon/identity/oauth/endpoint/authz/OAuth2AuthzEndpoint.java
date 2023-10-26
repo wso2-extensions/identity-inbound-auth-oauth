@@ -2045,6 +2045,20 @@ public class OAuth2AuthzEndpoint {
         if (redirectURI != null) {
             return redirectURI;
         }
+        // Check whether PAR should be mandated in  the request.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(params.getClientId(), params.getTenantDomain());
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
+        }
+        if (oAuthAppDO.isRequirePushedAuthorizationRequests()) {
+            if (!Boolean.parseBoolean(oauthRequest.getParam(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST))) {
+                throw new InvalidRequestException("PAR request is mandatory for the application.",
+                        OAuth2ErrorCodes.INVALID_REQUEST,
+                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
+            }
+        }
 
         String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
         params.setPrompt(prompt);
@@ -2536,11 +2550,6 @@ public class OAuth2AuthzEndpoint {
 
         validateRequestObjectParams(oauthRequest);
         String requestObjValue = null;
-        // Check whether the application mandates PAR request.
-        if (isPARMandated(parameters.getClientId(), parameters.getTenantDomain()) && !isRequestUri(oauthRequest)) {
-            throw new InvalidRequestException("PAR request is mandatory for the application.",
-                    OAuth2ErrorCodes.INVALID_REQUEST, "Request URI is mandatory.");
-        }
         if (isRequestUri(oauthRequest)) {
             requestObjValue = oauthRequest.getParam(REQUEST_URI);
         } else if (isRequestParameter(oauthRequest)) {
@@ -4384,16 +4393,5 @@ public class OAuth2AuthzEndpoint {
                     URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8.toString()));
         }
         return queryParams;
-    }
-
-    private boolean isPARMandated(String clientId, String tenantDomain) throws  InvalidRequestException {
-
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
-        }
-        return oAuthAppDO.isRequirePushedAuthorizationRequests();
     }
 }
