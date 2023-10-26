@@ -33,6 +33,8 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -104,6 +106,20 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         EncryptedJWT encryptedJWT;
         try {
             encryptedJWT = EncryptedJWT.parse(requestObject);
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(
+                    oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
+            if (StringUtils.isNotEmpty(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
+                if (!encryptedJWT.getHeader().getAlgorithm().toString()
+                        .equals(oAuthAppDO.getRequestObjectEncryptionAlgorithm())) {
+                    String errorMessage = "Invalid request object encryption algorithm.";
+                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
+                }
+                if (!encryptedJWT.getHeader().getEncryptionMethod().toString()
+                        .equals(oAuthAppDO.getRequestObjectEncryptionMethod())) {
+                    String errorMessage = "Invalid request object encryption method.";
+                    throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMessage);
+                }
+            }
             RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
             RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
             encryptedJWT.decrypt(decrypter);
@@ -118,7 +134,7 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
                 return new PlainJWT((JWTClaimsSet) encryptedJWT.getJWTClaimsSet()).serialize();
             }
 
-        } catch (JOSEException | IdentityOAuth2Exception | ParseException e) {
+        } catch (JOSEException | IdentityOAuth2Exception | ParseException | InvalidOAuthClientException e) {
             String errorMessage = "Failed to decrypt Request Object";
             if (log.isDebugEnabled()) {
                 log.debug(errorMessage + " from " + requestObject, e);

@@ -93,6 +93,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -1166,6 +1167,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         oAuthAppDO.setPkceSupportPlain(supportPlainPkce);
         when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
         when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
+        when(OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(oAuthAppDO);
+
         if (StringUtils.equals(expectedLocation, LOGIN_PAGE_URL) ||
                 StringUtils.equals(expectedLocation, ERROR_PAGE_URL)) {
             CommonAuthenticationHandler handler = mock(CommonAuthenticationHandler.class);
@@ -1206,6 +1209,88 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         if (checkErrorCode) {
             assertTrue(location.contains(OAuth2ErrorCodes.INVALID_REQUEST), "Expected error code not found in URL");
+        }
+    }
+
+    @Test(description = "Test redirection with error when request_uri is not sent when " +
+            "PAR is mandated in the application")
+    public void testErrorWhenPARMandated() throws Exception {
+
+        Map<String, String[]> requestParams = new HashMap();
+        Map<String, Object> requestAttributes = new HashMap();
+
+        requestParams.put(CLIENT_ID, new String[]{CLIENT_ID_VALUE});
+
+        // No consent data is saved in the cache yet and client doesn't send cache key
+        requestParams.put(OAuthConstants.SESSION_DATA_KEY_CONSENT, new String[]{null});
+        requestParams.put(FrameworkConstants.RequestParams.TO_COMMONAUTH, new String[]{"false"});
+        requestParams.put(REDIRECT_URI, new String[]{APP_REDIRECT_URL});
+        requestParams.put(OAuth.OAUTH_RESPONSE_TYPE, new String[]{ResponseType.TOKEN.toString()});
+
+        requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.INCOMPLETE);
+        // No authentication data is saved in the cache yet and client doesn't send cache key
+        requestAttributes.put(FrameworkConstants.SESSION_DATA_KEY, null);
+
+
+        mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+
+        mockOAuthServerConfiguration();
+
+        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
+        responseTypeValidators.put(ResponseType.CODE.toString(), CodeValidator.class);
+        responseTypeValidators.put(ResponseType.TOKEN.toString(), TokenValidator.class);
+
+        when(oAuthServerConfiguration.getSupportedResponseTypeValidators()).thenReturn(responseTypeValidators);
+
+        spy(FrameworkUtils.class);
+        doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
+        doNothing().when(FrameworkUtils.class, "endTenantFlow");
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
+
+        mockStatic(IdentityDatabaseUtil.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+
+        mockEndpointUtil(false);
+        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+        when(oAuth2Service.isPKCESupportEnabled()).thenReturn(false);
+
+
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.validatePKCECodeChallenge(anyString(), anyString())).thenCallRealMethod();
+        when(OAuth2Util.validatePKCECodeVerifier(anyString())).thenCallRealMethod();
+        mockStatic(OAuth2Util.OAuthURL.class);
+        when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+
+
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setRequirePushedAuthorizationRequests(true);
+        when(OAuth2Util.getAppInformationByClientId(any())).thenReturn(oAuthAppDO);
+
+        OAuth2ClientValidationResponseDTO validationResponseDTO = new OAuth2ClientValidationResponseDTO();
+        validationResponseDTO.setValidClient(true);
+        validationResponseDTO.setCallbackURL(APP_REDIRECT_URL);
+        when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
+
+        when(oAuth2Service.validateClientInfo(any())).thenReturn(validationResponseDTO);
+        when(OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(oAuthAppDO);
+
+        mockServiceURLBuilder();
+
+        Response response;
+        try {
+            response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+        } catch (InvalidRequestParentException ire) {
+            assertTrue(ire instanceof InvalidRequestException);
+            assertEquals(ire.getMessage(), "PAR request is mandatory for the application.");
         }
     }
 
@@ -2096,8 +2181,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         OAuthAppDO appDO = new OAuthAppDO();
         appDO.setRequestObjectSignatureValidationEnabled(false);
+        appDO.setRequirePushedAuthorizationRequests(false);
         spy(OAuth2Util.class);
         doReturn(appDO).when(OAuth2Util.class, "getAppInformationByClientId", oAuth2Parameters.getClientId());
+        doReturn(appDO).when(OAuth2Util.class, "getAppInformationByClientId",
+                oAuth2Parameters.getClientId(), oAuth2Parameters.getTenantDomain());
         doReturn(true).when(OAuth2Util.class, "isFapiConformantApp", any());
         mockEndpointUtil(false);
         when(oAuth2Service.isPKCESupportEnabled()).thenReturn(false);
@@ -2120,7 +2208,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                     "Request Object is mandatory for FAPI Conformant Applications.", testName);
         }
     }
-
     private static KeyStore getKeyStoreFromFile(String keystoreName, String password, String home) throws Exception {
 
         Path tenantKeystorePath = Paths.get(home, "repository", "resources", "security", keystoreName);

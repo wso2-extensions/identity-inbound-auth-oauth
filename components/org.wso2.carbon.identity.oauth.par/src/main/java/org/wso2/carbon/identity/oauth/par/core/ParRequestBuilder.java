@@ -60,6 +60,7 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
             throw new ParAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR,
                     "Error occurred while retrieving params from PAR request", e);
         }
+        request.setAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST, true);
         return new OAuthParRequestWrapper(request, params);
     }
 
