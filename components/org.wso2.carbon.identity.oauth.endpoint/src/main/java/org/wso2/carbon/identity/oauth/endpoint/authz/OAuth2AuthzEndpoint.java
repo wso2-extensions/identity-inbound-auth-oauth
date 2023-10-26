@@ -2046,20 +2046,7 @@ public class OAuth2AuthzEndpoint {
             return redirectURI;
         }
         // Check whether PAR should be mandated in  the request.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(params.getClientId(), params.getTenantDomain());
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
-        }
-        if (oAuthAppDO.isRequirePushedAuthorizationRequests()) {
-            if (!Boolean.parseBoolean(oauthRequest.getParam(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST))) {
-                throw new InvalidRequestException("PAR request is mandatory for the application.",
-                        OAuth2ErrorCodes.INVALID_REQUEST,
-                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
-            }
-        }
-
+        checkPARMandatory(params, oAuthMessage);
         String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
         params.setPrompt(prompt);
 
@@ -4390,5 +4377,27 @@ public class OAuth2AuthzEndpoint {
                     URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8.toString()));
         }
         return queryParams;
+    }
+
+    private void checkPARMandatory(OAuth2Parameters params, OAuthMessage oAuthMessage)
+            throws InvalidRequestException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(params.getClientId(), params.getTenantDomain());
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
+        }
+        if (oAuthAppDO.isRequirePushedAuthorizationRequests()) {
+            Optional<Object> isPARMandated = Optional.ofNullable(oAuthMessage.getRequest()
+                    .getAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST));
+
+            if (isPARMandated.isPresent() &&
+                    Boolean.FALSE.equals(Boolean.parseBoolean(isPARMandated.get().toString()))) {
+                throw new InvalidRequestException("PAR request is mandatory for the application.",
+                        OAuth2ErrorCodes.INVALID_REQUEST,
+                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
+            }
+        }
     }
 }
