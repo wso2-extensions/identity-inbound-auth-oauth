@@ -341,7 +341,7 @@ public class OAuth2ServiceComponent {
             // Registering OAuth2ScopeService under ScopeService interface.
             bundleContext.registerService(ScopeMetadataService.class, oAuth2ScopeService, null);
 
-            // Registering DefaultScopeMetadataService under ScopeService interface.
+            // Registering API Resource based scope metadata service under ScopeService interface.
             bundleContext.registerService(ScopeMetadataService.class, new APIResourceBasedScopeMetadataService(), null);
 
             bundleContext.registerService(ScopeValidationHandler.class, new RoleBasedScopeValidationHandler(), null);
@@ -350,7 +350,6 @@ public class OAuth2ServiceComponent {
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
-
         } catch (Throwable e) {
             String errMsg = "Error while activating OAuth2ServiceComponent.";
             log.error(errMsg, e);

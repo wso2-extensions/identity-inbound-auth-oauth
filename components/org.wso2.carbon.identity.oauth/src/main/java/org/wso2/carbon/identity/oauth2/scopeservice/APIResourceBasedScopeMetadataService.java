@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Default implementation of ScopeMetadataService.
+ * API Resource based scope metadata service implementation.
  */
 public class APIResourceBasedScopeMetadataService implements ScopeMetadataService {
 
@@ -46,7 +46,7 @@ public class APIResourceBasedScopeMetadataService implements ScopeMetadataServic
 
         List<APIResource> apiMetadataList;
         try {
-            apiMetadataList = OAuth2ServiceComponentHolder.getInstance().getAPIResourceManager()
+            apiMetadataList = OAuth2ServiceComponentHolder.getInstance().getApiResourceManager()
                     .getScopeMetadata(permissions, tenantDomain);
         } catch (APIResourceMgtException e) {
             throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
