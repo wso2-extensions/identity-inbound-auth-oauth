@@ -34,11 +34,13 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -84,6 +86,11 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
+        if (isAccessingChildOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser())) {
+            String orgId = authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization();
+            String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
+            appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
+        }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
                         .getAuthorizationReqDTO().getUser(), appId, null, tenantDomain);
         removeRegisteredScopes(authzReqMessageContext);
@@ -110,6 +117,11 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
+        if (isAccessingChildOrganization(tokenReqMessageContext.getAuthorizedUser())) {
+            String orgId = tokenReqMessageContext.getAuthorizedUser().getAccessingOrganization();
+            String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
+            appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
+        }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
                         .getAuthorizedUser(), appId, grantType, tenantDomain);
@@ -385,6 +397,23 @@ public class DefaultOAuth2ScopeValidator {
     private boolean isScopesEmpty(String[] scopes) {
 
         return ArrayUtils.isEmpty(scopes);
+    }
+
+    private boolean isAccessingChildOrganization(AuthenticatedUser authenticatedUser) {
+
+        return authenticatedUser.getAccessingOrganization() != null &&
+                !authenticatedUser.getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization());
+    }
+
+    private String resolveOrgIdByTenantDomain(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occured while resolving organization for tenant domain: "
+                    + tenantDomain, e);
+        }
     }
 
 }

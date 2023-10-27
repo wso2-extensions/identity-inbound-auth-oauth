@@ -1639,6 +1639,9 @@ public class SQLQueries {
             "INSERT INTO IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES (TOKEN_ATTR_NAME, TOKEN_ATTR_VALUE, TOKEN_ID) " +
                     "VALUES (?, ?, ?)";
 
+    public static final String GET_SHARED_APP_ID = "SELECT SHARED_APP_ID FROM SP_SHARED_APP WHERE " +
+            "OWNER_ORG_ID = ? AND MAIN_APP_ID = ? AND SHARED_ORG_ID = ? ";
+
     private SQLQueries() {
 
     }

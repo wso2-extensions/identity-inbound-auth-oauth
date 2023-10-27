@@ -64,25 +64,15 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             }
             String tenantDomain = scopeValidationContext.getAuthenticatedUser().getTenantDomain();
             String accessingOrganization = scopeValidationContext.getAuthenticatedUser().getAccessingOrganization();
-            String userResidentOrganization = scopeValidationContext.getAuthenticatedUser()
-                    .getUserResidentOrganization();
             if (StringUtils.isNotEmpty(accessingOrganization)) {
                 tenantDomain = resolveTenantDomainByOrgId(accessingOrganization);
             }
-
-            List<String> filteredRoleIds;
-            if (accessingOrganization != null && !accessingOrganization.equals(userResidentOrganization)) {
-                filteredRoleIds = userRoles;
-            } else {
-                filteredRoleIds =
-                        getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(), tenantDomain);
-            }
-
+            List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
+                    tenantDomain);
             if (filteredRoleIds.isEmpty()) {
                 return new ArrayList<>();
             }
-            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds,
-                    tenantDomain);
+            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds, tenantDomain);
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
             return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
