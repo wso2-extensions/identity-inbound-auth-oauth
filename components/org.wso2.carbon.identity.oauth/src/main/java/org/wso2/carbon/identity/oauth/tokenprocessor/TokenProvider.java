@@ -54,6 +54,6 @@ public interface TokenProvider {
      * is not found either in ACTIVE or EXPIRED states.
      * @throws IdentityOAuth2Exception If there is an error during the access token retrieval or verification process.
      */
-    RefreshTokenValidationDataDO getVerifiedRefreshToken(String consumerKey, String refreshToken)
+    RefreshTokenValidationDataDO getVerifiedRefreshToken(String refreshToken, String consumerKey)
             throws IdentityOAuth2Exception;
 }
