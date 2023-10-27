@@ -257,7 +257,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(null))
                 .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
-
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
         jwtTokenIssuer.createJWTClaimSet(null, null, null);
     }
