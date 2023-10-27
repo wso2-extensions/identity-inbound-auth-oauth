@@ -112,6 +112,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         String accessToken = tokenRespDTO.getAccessToken();
+        JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
@@ -120,6 +121,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         } catch (InvalidOAuthClientException e) {
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
+        }
+        // Retrieve application id token signature algorithm
+        if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+            idTokenSignatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                    oAuthAppDO.getIdTokenSignatureAlgorithm());
         }
 
         long idTokenValidityInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
@@ -224,7 +230,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
 
-        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt));
+        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt),
+                idTokenSignatureAlgorithm);
     }
 
     @Override
@@ -235,6 +242,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
         String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
@@ -243,6 +251,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         } catch (InvalidOAuthClientException e) {
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
+        }
+        // Retrieve application id token signature algorithm
+        if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+            idTokenSignatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                    oAuthAppDO.getIdTokenSignatureAlgorithm());
         }
 
         // Get subject from Authenticated Subject Identifier
@@ -311,11 +324,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
-                getSigningTenantDomain(authzReqMessageContext));
+                getSigningTenantDomain(authzReqMessageContext), idTokenSignatureAlgorithm);
     }
 
     private String getIDToken(String clientId, String spTenantDomain, JWTClaimsSet jwtClaimsSet, OAuthAppDO oAuthAppDO,
-                              String signingTenantDomain) throws IdentityOAuth2Exception {
+                              String signingTenantDomain, JWSAlgorithm signatureAlgorithm)
+            throws IdentityOAuth2Exception {
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
             checkIfPublicCertConfiguredForEncryption(clientId, spTenantDomain);

@@ -5012,7 +5012,7 @@ public class OAuth2Util {
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
-
+  
     /**
      * Retrieve the list of client authentication methods supported by the server.
      *

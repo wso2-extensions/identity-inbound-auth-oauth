@@ -18,8 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
-import com.hazelcast.com.fasterxml.jackson.annotation.JsonIgnore;
-import com.hazelcast.com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.io.Serializable;
 import java.util.Map;

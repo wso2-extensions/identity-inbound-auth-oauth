@@ -159,6 +159,10 @@ public class DCRMUtils {
                 status = Response.Status.UNAUTHORIZED;
             } else if (errorCode.startsWith(FORBIDDEN_STATUS)) {
                 status = Response.Status.FORBIDDEN;
+            } else if (errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA) ||
+                    errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {
+                status = Response.Status.BAD_REQUEST;
+                isStatusOnly = false;
             }
         }
         throw buildDCRMEndpointException(status, errorCode, dcrmException.getMessage(), isStatusOnly);
@@ -229,6 +233,7 @@ public class DCRMUtils {
         applicationDTO.setRequestObjectEncryptionMethod(application.getRequestObjectEncryptionMethod());
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
+        applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
         return applicationDTO;
     }
 
@@ -264,6 +269,9 @@ public class DCRMUtils {
             String error = DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA;
             if (code.equals(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI.toString())) {
                 error = DCRMConstants.ErrorCodes.INVALID_REDIRECT_URI;
+            }
+            if (code.equals(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {
+                error = DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT;
             }
 
             ErrorDTO errorDTO = new ErrorDTO();

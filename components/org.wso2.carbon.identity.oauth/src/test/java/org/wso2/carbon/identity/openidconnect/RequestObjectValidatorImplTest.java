@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -71,6 +72,7 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWE;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWT;
@@ -156,6 +158,8 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims4);
         String jsonWebEncryption8 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims5);
+        String jsonWebToken5 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "RSA265", privateKey, 0,
+                claims1);
         return new Object[][]{
                 {jsonWebToken1, true, false, true, true, false, "Valid Request Object, signed not encrypted."},
                 {jsonWebToken2, false, false, true, true, false, "Valid Request Object, not xsigned not encrypted."},
@@ -178,7 +182,17 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                 {jsonWebEncryption7, true, true, true, false, true, "Unsigned FAPI Request Object without mandatory " +
                         "parameter Scopes."},
                 {jsonWebEncryption8, true, true, true, false, true, "Unsigned FAPI Request Object without mandatory " +
-                        "parameter Redirect URI."}
+                        "parameter Redirect URI."},
+                {jsonWebToken1, true, false, true, true, "Valid Request Object, signed not encrypted.", true},
+                {jsonWebToken2, false, false, true, true, "Valid Request Object, not signed not encrypted.", true},
+                {jsonWebToken3, false, false, true, false, "InValid Request Object, expired, not signed not " +
+                        "encrypted.", true},
+                {jsonWebToken4, true, false, true, false, "InValid Request Object, expired, signed not encrypted.",
+                        true},
+                {jsonWebEncryption1, false, true, true, true, "Valid Request Object, signed and encrypted.", true},
+                {jsonWebEncryption2, true, true, true, true, "Valid Request Object, signed and encrypted.", true},
+                {jsonWebToken5, true, false, true, true, "Request Object signature verification failed. " +
+                        "Invalid signature algorithm.", false}
         };
     }
 
@@ -189,7 +203,8 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                                        boolean validSignature,
                                        boolean validRequestObj,
                                        boolean isFAPITest,
-                                       String errorMsg) throws Exception {
+                                       String errorMsg,
+                                       boolean validAlgorithm) throws Exception {
 
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
@@ -239,6 +254,10 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
         property.setValue(SOME_SERVER_URL);
         when(IdentityApplicationManagementUtil.getProperty(config.getProperties(), "IdPEntityId"))
                 .thenReturn(property);
+        OAuthAppDO appDO = spy(new OAuthAppDO());
+        appDO.setRequestObjectSignatureAlgorithm("RS256");
+        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+
         RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
 
         Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
@@ -255,6 +274,10 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
             }
             Assert.assertEquals(isValidSignature, validSignature,
                     errorMsg + "Request Object Signature Validation failed.");
+        }
+        if (isSigned && !validAlgorithm) {
+            Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
+                    validSignature, errorMsg);
         }
 
         boolean validObject;

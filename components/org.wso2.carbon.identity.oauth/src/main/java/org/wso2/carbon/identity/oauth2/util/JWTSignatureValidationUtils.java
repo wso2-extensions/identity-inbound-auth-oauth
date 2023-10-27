@@ -134,7 +134,7 @@ public class JWTSignatureValidationUtils {
      * @return boolean value depending on the success of the validation.
      * @throws IdentityOAuth2Exception
      */
-    private static boolean validateUsingJWKSUri(SignedJWT signedJWT, String jwksUri) throws IdentityOAuth2Exception {
+    public static boolean validateUsingJWKSUri(SignedJWT signedJWT, String jwksUri) throws IdentityOAuth2Exception {
 
         JWKSBasedJWTValidator jwksBasedJWTValidator = new JWKSBasedJWTValidator();
         return jwksBasedJWTValidator.validateSignature(signedJWT.getParsedString(), jwksUri, signedJWT.getHeader

@@ -2045,7 +2045,8 @@ public class OAuth2AuthzEndpoint {
         if (redirectURI != null) {
             return redirectURI;
         }
-
+        // Check whether PAR should be mandated in  the request.
+        checkPARMandatory(params, oAuthMessage);
         String prompt = oauthRequest.getParam(OAuthConstants.OAuth20Params.PROMPT);
         params.setPrompt(prompt);
 
@@ -4376,5 +4377,24 @@ public class OAuth2AuthzEndpoint {
                     URLDecoder.decode(pair.substring(idx + 1), StandardCharsets.UTF_8.toString()));
         }
         return queryParams;
+    }
+
+    private void checkPARMandatory(OAuth2Parameters params, OAuthMessage oAuthMessage)
+            throws InvalidRequestException {
+
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(params.getClientId(), params.getTenantDomain());
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new InvalidRequestException(e.getMessage(), e.getErrorCode());
+        }
+        if (oAuthAppDO.isRequirePushedAuthorizationRequests()) {
+            if (!Boolean.TRUE.equals(oAuthMessage.getRequest()
+                    .getAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST))) {
+                throw new InvalidRequestException("PAR request is mandatory for the application.",
+                        OAuth2ErrorCodes.INVALID_REQUEST,
+                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
+            }
+        }
     }
 }

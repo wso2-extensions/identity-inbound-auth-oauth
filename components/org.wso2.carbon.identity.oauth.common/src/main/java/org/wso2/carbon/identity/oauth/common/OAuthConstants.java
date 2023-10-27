@@ -228,8 +228,33 @@ public final class OAuthConstants {
     public static final String ORG_ID = "org_id";
     public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
-    public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+    public static final String ENABLE_DCR_FAPI_ENFORCEMENT = "OAuth.DCRM.EnableFAPIEnforcement";
+    public static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
+    public static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
+    public static final String VALIDATE_SECTOR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
+    public static final String TOKEN_EP_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedTokenEndpointSigningAlgorithms.SupportedTokenEndpointSigningAlgorithm";
+    public static final String ID_TOKEN_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedIDTokenSigningAlgorithms.SupportedIDTokenSigningAlgorithm";
+    public static final String REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedRequestObjectSigningAlgorithms.SupportedRequestObjectSigningAlgorithm";
+    public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "OAuth.OpenIDConnect." +
+            "SupportedIDTokenEncryptionAlgorithms.SupportedIDTokenEncryptionAlgorithm";
+    public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "OAuth.OpenIDConnect." +
+            "SupportedRequestObjectEncryptionAlgorithms.SupportedRequestObjectEncryptionAlgorithm";
+    public static final String ID_TOKEN_ENCRYPTION_METHOD = "OAuth.OpenIDConnect.SupportedIDTokenEncryptionMethods." +
+            "SupportedIDTokenEncryptionMethod";
+    public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "OAuth.OpenIDConnect." +
+            "SupportedRequestObjectEncryptionMethods.SupportedRequestObjectEncryptionMethod";
+    public static final String IS_PUSH_AUTHORIZATION_REQUEST = "isPushAuthorizationRequest";
 
+
+    public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+    public static final String PRIVATE_KEY_JWT = "private_key_jwt";
+    public static final String TLS_CLIENT_AUTH = "tls_client_auth";
+    public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
 
     private OAuthConstants() {
 
@@ -601,6 +626,8 @@ public final class OAuthConstants {
         public static final String SHA1 = "SHA-1";
         public static final String KID_HASHING_ALGORITHM = SHA256;
         public static final String PREVIOUS_KID_HASHING_ALGORITHM = SHA1;
+        public static final String PS256 = "PS256";
+        public static final String ES256 = "ES256";
 
         private SignatureAlgorithms() {
 
