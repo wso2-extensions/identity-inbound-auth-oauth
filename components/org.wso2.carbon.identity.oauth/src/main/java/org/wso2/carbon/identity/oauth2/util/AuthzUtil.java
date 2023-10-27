@@ -29,8 +29,10 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -46,6 +48,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.ORGANIZATION;
@@ -184,8 +187,15 @@ public class AuthzUtil {
      */
     private static String getAccessingUserId(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
 
-        // TODO: resolve accessing user id.
-        return getUserId(authenticatedUser);
+        String associatedUserId = getUserId(authenticatedUser);
+        try {
+            Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
+                    .getUserIdOfAssociatedUserByOrgId(associatedUserId, authenticatedUser.getAccessingOrganization());
+            return optionalOrganizationUserId.orElseThrow(() ->
+                    new IdentityOAuth2ClientException("User is not allowed to access the organization"));
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving shared user ID" , e);
+        }
     }
 
     /**
