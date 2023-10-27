@@ -38,7 +38,7 @@ public class DefaultTokenProvider implements TokenProvider {
     }
 
     @Override
-    public RefreshTokenValidationDataDO getVerifiedRefreshToken(String consumerKey, String refreshToken)
+    public RefreshTokenValidationDataDO getVerifiedRefreshToken(String refreshToken, String consumerKey)
             throws IdentityOAuth2Exception {
 
         return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().validateRefreshToken(consumerKey,
