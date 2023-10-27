@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
@@ -256,6 +257,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(null))
                 .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
         jwtTokenIssuer.createJWTClaimSet(null, null, null);
@@ -339,6 +341,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getOIDCAudience(anyString(), anyObject())).thenReturn(Collections.singletonList
                 (DUMMY_CLIENT_ID));
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
         when(oAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
@@ -385,6 +388,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             assertEquals(new Duration(jwtClaimSet.getIssueTime().getTime(), jwtClaimSet.getExpirationTime().getTime())
                     .getMillis(), expectedExpiry);
         }
+        assertNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
+        // The entity_id claim is a mandatory claim in the JWT when token persistence is disabled.
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(false);
         jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
@@ -398,6 +403,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         if (authzReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
         }
+        // Enabling persistence back for the rest of the test cases.
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
     }
 
@@ -413,6 +419,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
             when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
+            when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME,
                     Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
@@ -698,6 +705,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
     }
 
     static class DummyTestJWTAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
