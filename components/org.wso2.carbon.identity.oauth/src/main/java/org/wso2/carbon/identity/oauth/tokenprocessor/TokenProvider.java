@@ -20,14 +20,14 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 
 /**
- * The AccessTokenProvider interface defines the contract for classes that are responsible
- * for verifying and providing access tokens. Implementing classes should offer methods
- * to retrieve access tokens based on token data objects, with the option to include expired
- * tokens in the verification process and handle potential exceptions.
+ * The TokenProvider interface defines the contract for classes that are responsible
+ * for verifying and providing access tokens and refresh tokens. Implementing classes should offer methods
+ * to retrieve access tokens and refresh token based on token data objects.
  */
-public interface AccessTokenProvider {
+public interface TokenProvider {
 
     /**
      * Retrieves and verifies an access token based on the provided access token data object,
@@ -43,4 +43,17 @@ public interface AccessTokenProvider {
      * @throws IdentityOAuth2Exception If there is an error during the access token retrieval or verification process.
      */
     AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired) throws IdentityOAuth2Exception;
+
+
+    /**
+     * Retrieves and verifies a refresh token.
+     *
+     * @param refreshToken The access token data object to retrieve and verify.
+     * @param consumerKey  Consumer key
+     * @return The RefreshTokenValidationDataDO if the token is valid (ACTIVE or EXPIRED), or null if the token
+     * is not found either in ACTIVE or EXPIRED states.
+     * @throws IdentityOAuth2Exception If there is an error during the access token retrieval or verification process.
+     */
+    RefreshTokenValidationDataDO getVerifiedRefreshToken(String refreshToken, String consumerKey)
+            throws IdentityOAuth2Exception;
 }

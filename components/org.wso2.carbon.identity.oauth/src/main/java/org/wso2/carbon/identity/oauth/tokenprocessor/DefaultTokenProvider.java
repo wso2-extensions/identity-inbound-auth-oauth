@@ -19,19 +19,29 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 /**
- * Default implementation of AccessTokenProvider for scenarios with token persistence enabled.
+ * Default implementation of TokenProvider for scenarios with token persistence enabled.
  * Verifies access tokens by querying the database, including optional inclusion of expired tokens.
  */
-public class DefaultAccessTokenProvider implements AccessTokenProvider {
+public class DefaultTokenProvider implements TokenProvider {
 
     @Override
     public AccessTokenDO getVerifiedAccessToken(String accessToken, boolean includeExpired)
             throws IdentityOAuth2Exception {
 
         return OAuth2Util.findAccessToken(accessToken, includeExpired);
+    }
+
+    @Override
+    public RefreshTokenValidationDataDO getVerifiedRefreshToken(String refreshToken, String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().validateRefreshToken(consumerKey,
+                refreshToken);
     }
 }
