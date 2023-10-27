@@ -89,6 +89,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String subjectType;
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
+    private boolean isFAPIConformant;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -459,5 +460,13 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
 
         this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+    }
+
+    public boolean isFAPIConformant() {
+        return isFAPIConformant;
+    }
+
+    public void setFAPIConformant(boolean fapiConformant) {
+        isFAPIConformant = fapiConformant;
     }
 }

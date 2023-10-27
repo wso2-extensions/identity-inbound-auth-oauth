@@ -619,6 +619,17 @@ public class DCRMService {
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
+
+        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
+        if (enableFAPI) {
+            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
+            if (enableFAPIDCR) {
+                // Add FAPI conformant application nad isThirdParty property to the service provider.
+                oAuthConsumerApp.setFAPIConformant(true);
+            }
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
@@ -656,15 +667,6 @@ public class DCRMService {
         sp.setManagementApp(isManagementApp);
 
         Map<String, Object> spProperties = new HashMap<>();
-        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
-        if (enableFAPI) {
-            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
-            if (enableFAPIDCR) {
-                // Add FAPI conformant application nad isThirdParty property to the service provider.
-                spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
-            }
-        }
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
         addSPProperties(spProperties, sp);
 

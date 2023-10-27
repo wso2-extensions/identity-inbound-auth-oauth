@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -129,7 +128,6 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
@@ -2513,19 +2511,24 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "FAPI status data provider")
     public void testIsFapiConformantApp(boolean isFapiConformant) throws Exception {
 
-        setCache();
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue(String.valueOf(isFapiConformant));
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
-        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
-        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(anyString())).thenReturn("true");
-        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
-                .thenReturn(serviceProvider);
-        Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+        mockStatic(OAuth2Util.class);
+        //mockStatic(IdentityUtil.class);
+        if (isFapiConformant) {
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setFAPIConformant(true);
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
+            when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
+            //when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
+            boolean isFAPI = OAuth2Util.isFapi(clientId);
+            Assert.assertEquals(isFAPI, isFapiConformant);
+        } else {
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setFAPIConformant(false);
+            when(OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(oAuthAppDO);
+            when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
+            //when(IdentityUtil.getProperty(any())).thenReturn("true");
+            Assert.assertEquals(OAuth2Util.isFapi(clientId), isFapiConformant);
+        }
     }
 
     @DataProvider(name = "extractCredentialDataProvider")

@@ -226,7 +226,6 @@ public final class OAuthConstants {
 
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
-    public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String ENABLE_DCR_FAPI_ENFORCEMENT = "OAuth.DCRM.EnableFAPIEnforcement";
     public static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
@@ -599,6 +598,7 @@ public final class OAuthConstants {
         public static final String SUBJECT_TYPE = "subjectType";
         public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
         public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
+        public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
 
         private OIDCConfigProperties() {
 
