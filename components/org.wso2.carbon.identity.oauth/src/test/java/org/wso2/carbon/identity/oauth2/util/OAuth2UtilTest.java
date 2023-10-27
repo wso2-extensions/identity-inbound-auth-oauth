@@ -118,10 +118,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.api.mockito.PowerMockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -2511,23 +2508,23 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "FAPI status data provider")
     public void testIsFapiConformantApp(boolean isFapiConformant) throws Exception {
 
-        mockStatic(OAuth2Util.class);
-        //mockStatic(IdentityUtil.class);
+        spy(OAuth2Util.class);
+        mockStatic(IdentityUtil.class);
         if (isFapiConformant) {
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setFAPIConformant(true);
-            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
+            doReturn(oAuthAppDO).when(OAuth2Util.class, "getAppInformationByClientId", anyString(), anyString());
+            when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
             when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
-            //when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
-            boolean isFAPI = OAuth2Util.isFapi(clientId);
-            Assert.assertEquals(isFAPI, isFapiConformant);
+            when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
+            Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
         } else {
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setFAPIConformant(false);
-            when(OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(oAuthAppDO);
+            doReturn(oAuthAppDO).when(OAuth2Util.class, "getAppInformationByClientId", anyString(), anyString());
             when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
-            //when(IdentityUtil.getProperty(any())).thenReturn("true");
-            Assert.assertEquals(OAuth2Util.isFapi(clientId), isFapiConformant);
+            when(IdentityUtil.getProperty(any())).thenReturn("true");
+            Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
         }
     }
 

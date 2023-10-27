@@ -4953,17 +4953,11 @@ public class OAuth2Util {
     public static boolean isFapiConformantApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
+            return false;
+        }
         String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
-        return oAuthAppDO.isFAPIConformant();
-    }
-
-    public static boolean isFapi(String clientID) throws IdentityOAuth2Exception, InvalidOAuthClientException {
-
-
-        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientID, tenantDomain);
         return oAuthAppDO.isFAPIConformant();
     }
 
