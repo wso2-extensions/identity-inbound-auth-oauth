@@ -1856,7 +1856,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Method sendRequestToFramework =
                 authzEndpointObject.getClass().getDeclaredMethod("handleAuthFlowThroughFramework",
-                        OAuthMessage.class, String.class);
+                        OAuthMessage.class, String.class, String.class);
         sendRequestToFramework.setAccessible(true);
 
         when(oAuthMessage.getRequest()).thenReturn(httpServletRequest);
@@ -1880,7 +1880,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         Method sendRequestToFramework2 =
                 authzEndpointObject.getClass().getDeclaredMethod("handleAuthFlowThroughFramework",
-                        OAuthMessage.class, String.class);
+                        OAuthMessage.class, String.class, String.class);
         sendRequestToFramework2.setAccessible(true);
         try {
             response = (Response) sendRequestToFramework.invoke(authzEndpointObject, oAuthMessage, "type");
