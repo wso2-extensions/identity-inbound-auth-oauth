@@ -1369,7 +1369,7 @@ public class OAuth2AuthzEndpoint {
         String type = getRequestProtocolType(oAuthMessage);
 
         if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
-            return handleAuthFlowThroughFramework(oAuthMessage, type);
+            return handleAuthFlowThroughFramework(oAuthMessage, type, redirectURL);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
@@ -3752,8 +3752,8 @@ public class OAuth2AuthzEndpoint {
      * @throws InvalidRequestParentException
      * @Param type OAuthMessage
      */
-    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type) throws URISyntaxException,
-            InvalidRequestParentException {
+    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type, String redirectUrl)
+            throws URISyntaxException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
