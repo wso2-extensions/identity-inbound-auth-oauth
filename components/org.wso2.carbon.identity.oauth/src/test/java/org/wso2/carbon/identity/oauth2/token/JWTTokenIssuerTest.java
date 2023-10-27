@@ -257,7 +257,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getAppInformationByClientId(null))
                 .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
-        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
         jwtTokenIssuer.createJWTClaimSet(null, null, null);
     }
@@ -386,6 +385,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             assertEquals(new Duration(jwtClaimSet.getIssueTime().getTime(), jwtClaimSet.getExpirationTime().getTime())
                     .getMillis(), expectedExpiry);
         }
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(false);
+        jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
+                (OAuthAuthzReqMessageContext) authzReqMessageContext,
+                (OAuthTokenReqMessageContext) tokenReqMessageContext,
+                DUMMY_CLIENT_ID
+        );
         assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
         if (tokenReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
@@ -393,6 +398,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         if (authzReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
         }
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
     }
 
     @Test(dataProvider = "createJWTClaimSetDataProvider")
