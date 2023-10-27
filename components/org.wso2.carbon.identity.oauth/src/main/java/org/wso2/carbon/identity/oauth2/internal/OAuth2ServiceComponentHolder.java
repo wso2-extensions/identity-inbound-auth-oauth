@@ -745,7 +745,6 @@ public class OAuth2ServiceComponentHolder {
         this.accessTokenProvider = accessTokenProvider;
     }
 
-
     public AuthorizedAPIManagementService getAuthorizedAPIManagementService() {
 
         return authorizedAPIManagementService;
@@ -770,6 +769,7 @@ public class OAuth2ServiceComponentHolder {
      * @param apiResourceManager APIResourceManager.
      */
     public void setApiResourceManager(APIResourceManager apiResourceManager) {
+
         this.apiResourceManager = apiResourceManager;
     }
 

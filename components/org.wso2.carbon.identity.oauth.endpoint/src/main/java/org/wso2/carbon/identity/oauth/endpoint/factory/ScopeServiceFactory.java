@@ -21,9 +21,11 @@ package org.wso2.carbon.identity.oauth.endpoint.factory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
+import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 
 import java.util.List;
@@ -46,33 +48,46 @@ public class ScopeServiceFactory extends AbstractFactoryBean<ScopeMetadataServic
     @Override
     protected ScopeMetadataService createInstance() throws Exception {
 
-        if (this.scopeMetadataService == null) {
+        if (this.scopeMetadataService != null) {
+            return this.scopeMetadataService;
+        }
+        // Get the OSGi services registered for ScopeService interface.
+        List<Object> scopeServices = PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiServices(ScopeMetadataService.class, null);
+        if (scopeServices == null || scopeServices.isEmpty()) {
+            throw new IdentityOAuth2ServerException("No ScopeService implementation found.");
+        }
 
-            // Get the OSGi service registered for ScopeService interface.
-            List<Object> scopeServices = PrivilegedCarbonContext
-                    .getThreadLocalCarbonContext().getOSGiServices(ScopeMetadataService.class, null);
-
-            if (scopeServices == null || scopeServices.isEmpty()) {
-                throw new IdentityOAuth2ServerException("No ScopeService implementation found.");
-            }
-
-            if (scopeServices.size() > 1) {
-                log.debug("More than one ScopeService implementations found. Returning the first one which is not" +
-                        " OAuth2ScopeService.");
-                for (Object scopeService : scopeServices) {
-                    if (scopeService instanceof OAuth2ScopeService) {
-                        continue;
-                    }
-                    if (log.isDebugEnabled()) {
-                        log.debug("Returning the ScopeService: " + scopeService.getClass().getName());
-                    }
-                    this.scopeMetadataService = (ScopeMetadataService) scopeService;
+        ScopeMetadataService selectedService = null;
+        if (scopeServices.size() <= 2) {
+            for (Object scopeService : scopeServices) {
+                if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME && scopeService instanceof OAuth2ScopeService) {
+                    selectedService = (ScopeMetadataService) scopeService;
+                    break;
+                } else if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
+                        scopeService instanceof APIResourceBasedScopeMetadataService) {
+                    selectedService = (ScopeMetadataService) scopeService;
+                    break;
                 }
-            } else {
-                this.scopeMetadataService = (ScopeMetadataService) scopeServices.get(0);
+            }
+        } else {
+            for (Object scopeService : scopeServices) {
+                if (scopeService instanceof OAuth2ScopeService ||
+                        scopeService instanceof APIResourceBasedScopeMetadataService) {
+                    continue;
+                }
+                selectedService = (ScopeMetadataService) scopeService;
+                break;
             }
         }
+
+        if (selectedService == null) {
+            throw new IdentityOAuth2ServerException("Suitable ScopeService implementation not found.");
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Returning the ScopeService: " + selectedService.getClass().getName());
+        }
+        this.scopeMetadataService = selectedService;
         return this.scopeMetadataService;
     }
-
 }
