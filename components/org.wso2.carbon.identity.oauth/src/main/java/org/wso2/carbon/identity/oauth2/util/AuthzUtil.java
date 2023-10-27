@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.ORGANIZATION;
 import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
@@ -210,8 +211,14 @@ public class AuthzUtil {
             throws IdentityOAuth2Exception {
 
         try {
-            return OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
+            List<String> permissionListOfRoles = OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2()
                     .getPermissionListOfRoles(roles, tenantDomain);
+            if (permissionListOfRoles == null) {
+                permissionListOfRoles = new ArrayList<>();
+            }
+            // Every user should get internal_login permission.
+            permissionListOfRoles.add(INTERNAL_LOGIN_SCOPE);
+            return permissionListOfRoles;
         } catch (IdentityRoleManagementException e) {
             throw new IdentityOAuth2Exception("Error while retrieving scope list of roles : "
                     + StringUtils.join(roles, ",") + "tenant domain : " + tenantDomain, e);
