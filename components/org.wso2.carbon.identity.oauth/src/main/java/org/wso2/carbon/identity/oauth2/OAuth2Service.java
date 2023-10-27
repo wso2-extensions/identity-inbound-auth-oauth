@@ -557,7 +557,7 @@ public class OAuth2Service extends AbstractAdmin {
                 }
                 if (refreshTokenFirst) {
                     refreshTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
-                            .getVerifiedRefreshToken(revokeRequestDTO.getToken(), revokeRequestDTO.getConsumerKey());
+                            .getVerifiedRefreshToken(revokeRequestDTO.getConsumerKey(), revokeRequestDTO.getToken());
                     if (refreshTokenDO == null ||
                             StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState()) ||
                             !(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE
@@ -573,8 +573,8 @@ public class OAuth2Service extends AbstractAdmin {
                             .getVerifiedAccessToken(revokeRequestDTO.getToken(), true);
                     if (accessTokenDO == null) {
                         refreshTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
-                                .getVerifiedRefreshToken(revokeRequestDTO.getToken(),
-                                        revokeRequestDTO.getConsumerKey());
+                                .getVerifiedRefreshToken(revokeRequestDTO.getConsumerKey(),
+                                        revokeRequestDTO.getToken());
                         if (refreshTokenDO == null ||
                                 StringUtils.isEmpty(refreshTokenDO.getRefreshTokenState()) ||
                                 !(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE
