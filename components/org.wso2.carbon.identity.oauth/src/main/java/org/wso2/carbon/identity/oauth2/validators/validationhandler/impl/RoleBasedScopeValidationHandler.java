@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -30,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,13 +62,27 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             if (userRoles.isEmpty()) {
                 return new ArrayList<>();
             }
-            List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
-                    scopeValidationContext.getAuthenticatedUser().getTenantDomain());
+            String tenantDomain = scopeValidationContext.getAuthenticatedUser().getTenantDomain();
+            String accessingOrganization = scopeValidationContext.getAuthenticatedUser().getAccessingOrganization();
+            String userResidentOrganization = scopeValidationContext.getAuthenticatedUser()
+                    .getUserResidentOrganization();
+            if (StringUtils.isNotEmpty(accessingOrganization)) {
+                tenantDomain = resolveTenantDomainByOrgId(accessingOrganization);
+            }
+
+            List<String> filteredRoleIds;
+            if (accessingOrganization != null && !accessingOrganization.equals(userResidentOrganization)) {
+                filteredRoleIds = userRoles;
+            } else {
+                filteredRoleIds =
+                        getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(), tenantDomain);
+            }
+
             if (filteredRoleIds.isEmpty()) {
                 return new ArrayList<>();
             }
             List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds,
-                    scopeValidationContext.getAuthenticatedUser().getTenantDomain());
+                    tenantDomain);
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
             return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
@@ -123,5 +139,16 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
     public String getName() {
 
         return "RoleBasedScopeValidationHandler";
+    }
+
+    private String resolveTenantDomainByOrgId(String organizationId) throws ScopeValidationHandlerException {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new ScopeValidationHandlerException("Error while resolving the tenant domain of the org ID: " +
+                    organizationId, e);
+        }
     }
 }
