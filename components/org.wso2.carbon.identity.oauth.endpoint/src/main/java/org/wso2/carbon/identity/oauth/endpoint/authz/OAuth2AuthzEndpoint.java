@@ -4341,19 +4341,14 @@ public class OAuth2AuthzEndpoint {
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
                 String jsonString = objectMapper.writeValueAsString(authResponse);
-                oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return Response.ok().entity(jsonString).build();
 
             } else {
-                List<Object> locationHeader = oauthResponse.getMetadata().get("Location");
-                if (CollectionUtils.isNotEmpty(locationHeader)) {
-                    String location = locationHeader.get(0).toString();
-                    if (StringUtils.isNotBlank(location)) {
-                        Map<String, String> queryParams = getQueryParamsFromUrl(location);
-                        String jsonPayload = new Gson().toJson(queryParams);
-                        oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                        return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
-                    }
+                String location = oauthResponse.getMetadata().get("Location").get(0).toString();
+                if (StringUtils.isNotBlank(location)) {
+                    Map<String, String> queryParams = getQueryParamsFromUrl(location);
+                    String jsonPayload = new Gson().toJson(queryParams);
+                    return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
                 }
             }
         } catch (AuthServiceException | JsonProcessingException | UnsupportedEncodingException | URISyntaxException e) {
@@ -4362,7 +4357,6 @@ public class OAuth2AuthzEndpoint {
             params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
             params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Server error occurred while performing authorization.");
             String jsonString = new Gson().toJson(params);
-            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).entity(jsonString).build();
         }
 
