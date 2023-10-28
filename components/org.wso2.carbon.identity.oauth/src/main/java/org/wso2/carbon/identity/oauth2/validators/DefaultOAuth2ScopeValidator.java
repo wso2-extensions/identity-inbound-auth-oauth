@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
@@ -86,7 +87,8 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
-        if (isAccessingChildOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser())) {
+        // When user is not accessing the resident organization, resolve the application id from the shared app table.
+        if (!AuthzUtil.isUserAccessingResidentOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser())) {
             String orgId = authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
@@ -117,7 +119,8 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
-        if (isAccessingChildOrganization(tokenReqMessageContext.getAuthorizedUser())) {
+        // When user is not accessing the resident organization, resolve the application id from the shared app table.
+        if (!AuthzUtil.isUserAccessingResidentOrganization(tokenReqMessageContext.getAuthorizedUser())) {
             String orgId = tokenReqMessageContext.getAuthorizedUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
@@ -397,12 +400,6 @@ public class DefaultOAuth2ScopeValidator {
     private boolean isScopesEmpty(String[] scopes) {
 
         return ArrayUtils.isEmpty(scopes);
-    }
-
-    private boolean isAccessingChildOrganization(AuthenticatedUser authenticatedUser) {
-
-        return authenticatedUser.getAccessingOrganization() != null &&
-                !authenticatedUser.getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization());
     }
 
     private String resolveOrgIdByTenantDomain(String tenantDomain) throws IdentityOAuth2Exception {

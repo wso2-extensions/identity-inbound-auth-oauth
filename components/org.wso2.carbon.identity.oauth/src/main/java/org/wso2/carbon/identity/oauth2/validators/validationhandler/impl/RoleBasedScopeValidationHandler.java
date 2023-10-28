@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -63,9 +62,10 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 return new ArrayList<>();
             }
             String tenantDomain = scopeValidationContext.getAuthenticatedUser().getTenantDomain();
-            String accessingOrganization = scopeValidationContext.getAuthenticatedUser().getAccessingOrganization();
-            if (StringUtils.isNotEmpty(accessingOrganization)) {
-                tenantDomain = resolveTenantDomainByOrgId(accessingOrganization);
+            // When user is not accessing the resident organization, resolve the tenant domain of the accessing org.
+            if (!AuthzUtil.isUserAccessingResidentOrganization(scopeValidationContext.getAuthenticatedUser())) {
+                tenantDomain = resolveTenantDomainByOrgId(scopeValidationContext.getAuthenticatedUser()
+                        .getAccessingOrganization());
             }
             List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
                     tenantDomain);
