@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_SCOPE;
 
 /**
  * Default oauth2 scope validator which validate application authorized scopes.
@@ -133,6 +134,7 @@ public class DefaultOAuth2ScopeValidator {
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
+            authorizedScopes.remove(OPENID_SCOPE);
         }
         return authorizedScopes;
     }
