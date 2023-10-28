@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -142,7 +141,7 @@ public class AuthzUtil {
             return new ArrayList<>();
         }
         for (Map.Entry<ClaimMapping, String> entry : claimMappingStringMap.entrySet()) {
-            if (FrameworkConstants.LOCAL_ROLE_CLAIM_URI.equals(entry.getKey().getLocalClaim().getClaimUri())) {
+            if ("roles".equals(entry.getKey().getLocalClaim().getClaimUri())) {
                 roleNamesString = entry.getValue();
                 break;
             }

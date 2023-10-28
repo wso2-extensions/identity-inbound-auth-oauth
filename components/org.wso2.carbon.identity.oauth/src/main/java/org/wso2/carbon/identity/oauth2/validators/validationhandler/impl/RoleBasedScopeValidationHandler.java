@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -111,7 +112,9 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
         try {
             return OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getId)
+                    .getAssociatedRolesOfApplication(appId,
+                            PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
+                    .stream().map(RoleV2::getId)
                     .collect(Collectors.toCollection(ArrayList::new));
         } catch (IdentityApplicationManagementException e) {
             throw new ScopeValidationHandlerException("Error while retrieving role id list of app : " + appId
