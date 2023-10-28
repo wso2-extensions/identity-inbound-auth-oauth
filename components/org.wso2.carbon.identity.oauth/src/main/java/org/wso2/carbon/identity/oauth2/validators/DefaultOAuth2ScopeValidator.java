@@ -95,6 +95,7 @@ public class DefaultOAuth2ScopeValidator {
         }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
                         .getAuthorizationReqDTO().getUser(), appId, null, tenantDomain);
+        handleInternalLoginScope(requestedScopes, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         return authorizedScopes;
     }
@@ -129,7 +130,8 @@ public class DefaultOAuth2ScopeValidator {
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
                         .getAuthorizedUser(), appId, grantType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) && authorizedScopes.contains(SYSTEM_SCOPE)) {
+        handleInternalLoginScope(requestedScopes, authorizedScopes);
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
         }
         return authorizedScopes;
@@ -410,6 +412,20 @@ public class DefaultOAuth2ScopeValidator {
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2Exception("Error occured while resolving organization for tenant domain: "
                     + tenantDomain, e);
+        }
+    }
+
+    /**
+     * This is to persist the previous behaviour with the "internal_login" scope.
+     *
+     * @param requestedScopes requested scopes.
+     * @param authorizedScopes authorized scopes.
+     */
+    private static void handleInternalLoginScope(List<String> requestedScopes, List<String> authorizedScopes) {
+
+        if ((requestedScopes.contains(SYSTEM_SCOPE) || requestedScopes.contains(INTERNAL_LOGIN_SCOPE))
+                && !authorizedScopes.contains(INTERNAL_LOGIN_SCOPE)) {
+            authorizedScopes.add(INTERNAL_LOGIN_SCOPE);
         }
     }
 
