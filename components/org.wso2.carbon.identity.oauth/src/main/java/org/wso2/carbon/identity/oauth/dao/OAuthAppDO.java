@@ -463,10 +463,12 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     }
 
     public boolean isFAPIConformant() {
+
         return isFAPIConformant;
     }
 
     public void setFAPIConformant(boolean fapiConformant) {
+
         isFAPIConformant = fapiConformant;
     }
 }

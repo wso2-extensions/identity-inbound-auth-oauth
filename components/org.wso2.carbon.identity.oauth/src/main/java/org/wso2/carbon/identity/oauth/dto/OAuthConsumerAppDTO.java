@@ -429,11 +429,14 @@ public class OAuthConsumerAppDTO {
 
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
     }
+
     public boolean isFAPIConformant() {
+
         return isFAPIConformant;
     }
 
     public void setFAPIConformant(boolean fapiConformant) {
+
         isFAPIConformant = fapiConformant;
     }
 }

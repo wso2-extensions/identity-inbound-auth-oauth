@@ -4948,7 +4948,7 @@ public class OAuth2Util {
      *
      * @param clientId       Client ID of the application.
      * @return Whether the application should be FAPI conformant.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception InvalidOAuthClientException
      */
     public static boolean isFapiConformantApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {

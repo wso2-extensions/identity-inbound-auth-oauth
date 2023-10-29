@@ -619,13 +619,12 @@ public class DCRMService {
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
-
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
             boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
                     OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
             if (enableFAPIDCR) {
-                // Add FAPI conformant application nad isThirdParty property to the service provider.
+                // Add FAPI conformant property to Oauth application.
                 oAuthConsumerApp.setFAPIConformant(true);
             }
         }

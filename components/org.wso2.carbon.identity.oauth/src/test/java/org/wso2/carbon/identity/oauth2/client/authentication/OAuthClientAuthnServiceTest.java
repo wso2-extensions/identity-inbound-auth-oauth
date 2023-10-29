@@ -197,15 +197,9 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
         PowerMockito.mockStatic(OAuth2Util.class);
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
-        /*ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue("true");
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});*/
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
         oAuthAppDO.setFAPIConformant(true);
-        //PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
         PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(oAuthAppDO);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
@@ -235,14 +229,9 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
         PowerMockito.mockStatic(OAuth2Util.class);
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
-        /*ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue(String.valueOf(isFapiApp));
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});*/
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
-        //PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        oAuthAppDO.setFAPIConformant(isFapiApp);
         PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(oAuthAppDO);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
