@@ -34,6 +34,7 @@ public class Oauth2ScopeConstants {
     public static final String SCOPE_TYPE_OIDC = "OIDC";
     public static final String CONSOLE_SCOPE_PREFIX = "console:";
     public static final String INTERNAL_SCOPE_PREFIX = "internal_";
+    public static final String INTERNAL_ORG_SCOPE_PREFIX = "internal_org_";
     public static final String CORRELATION_ID_MDC = "Correlation-ID";
 
     /**
