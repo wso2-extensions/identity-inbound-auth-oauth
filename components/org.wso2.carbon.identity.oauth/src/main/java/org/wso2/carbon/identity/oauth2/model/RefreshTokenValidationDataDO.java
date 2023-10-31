@@ -49,6 +49,7 @@ public class RefreshTokenValidationDataDO {
 
     private long accessTokenValidityInMillis;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
+    private boolean isConsented;
 
     public String getAccessToken() {
         return accessToken;
@@ -149,5 +150,15 @@ public class RefreshTokenValidationDataDO {
             AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
 
         this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
+    }
+
+    public boolean isConsented() {
+
+        return isConsented;
+    }
+
+    public void setConsented(boolean consented) {
+
+        isConsented = consented;
     }
 }

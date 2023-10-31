@@ -113,6 +113,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -240,7 +241,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static final String OIDC_ROLE_CLAIM_URI = "roles";
+    public static final String OIDC_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -4222,7 +4223,7 @@ public class OAuth2Util {
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             AccessTokenDO accessTokenDO;
             try {
-                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
@@ -4249,7 +4250,7 @@ public class OAuth2Util {
 
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
             try {
-                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
                 return Optional.ofNullable(accessTokenDO);
             } catch (IdentityOAuth2Exception e) {
@@ -5021,5 +5022,18 @@ public class OAuth2Util {
             }
         }
         return supportedClientAuthMethods.toArray(new String[0]);
+    }
+
+    /**
+     * Check if token persistence is enabled.
+     *
+     * @return True if token persistence is enabled.
+     */
+    public static boolean isTokenPersistenceEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE));
+        }
+        return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
     }
 }
