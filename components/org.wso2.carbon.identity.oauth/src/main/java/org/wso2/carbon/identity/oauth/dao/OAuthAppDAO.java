@@ -1691,6 +1691,10 @@ public class OAuthAppDAO {
         if (isCertificateBoundAccessToken != null) {
             oauthApp.setTlsClientCertificateBoundAccessTokens(Boolean.parseBoolean(isCertificateBoundAccessToken));
         }
+        String isFAPI = getFirstPropertyValue(spOIDCProperties, IS_FAPI_CONFORMANT_APP);
+        if (isFAPI != null) {
+            oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
