@@ -447,8 +447,6 @@ public class OAuthAdminServiceImpl {
                                     OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
-                        app.setTlsClientCertificateBoundAccessTokens(
-                                application.getTlsClientCertificateBoundAccessTokens());
                     }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
@@ -823,8 +821,6 @@ public class OAuthAdminServiceImpl {
                         OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
             }
             oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
-            oauthappdo.setTlsClientCertificateBoundAccessTokens(
-                    consumerAppDTO.getTlsClientCertificateBoundAccessTokens());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);

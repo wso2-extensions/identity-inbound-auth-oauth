@@ -318,7 +318,12 @@ public class DCRMService {
             }
             appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
             appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
-            appDTO.setTlsClientCertificateBoundAccessTokens(updateRequest.isTlsClientCertificateBoundAccessTokens());
+            if (updateRequest.isTlsClientCertificateBoundAccessTokens()) {
+                if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING))) {
+                    appDTO.setTokenBindingType(OAuthConstants.TokenBindings.CERTIFICATE_BASED_TOKEN_BINDER);
+                    appDTO.setTokenBindingValidationEnabled(true);
+                }
+            }
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
@@ -504,7 +509,9 @@ public class DCRMService {
         application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
         application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
-        application.setTlsClientCertificateBoundAccessTokens(createdApp.getTlsClientCertificateBoundAccessTokens());
+        if (OAuthConstants.TokenBindings.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
+            application.setTlsClientCertificateBoundAccessTokens(true);
+        }
         return application;
     }
 
@@ -614,8 +621,12 @@ public class DCRMService {
         oAuthConsumerApp.setRequestObjectSignatureValidationEnabled(registrationRequest.isRequireSignedRequestObject());
         oAuthConsumerApp.setRequirePushedAuthorizationRequests(
                 registrationRequest.isRequirePushedAuthorizationRequests());
-        oAuthConsumerApp.setTlsClientCertificateBoundAccessTokens(
-                registrationRequest.isTlsClientCertificateBoundAccessTokens());
+        if (registrationRequest.isTlsClientCertificateBoundAccessTokens()) {
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING))) {
+                oAuthConsumerApp.setTokenBindingType(OAuthConstants.TokenBindings.CERTIFICATE_BASED_TOKEN_BINDER);
+                oAuthConsumerApp.setTokenBindingValidationEnabled(true);
+            }
+        }
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
