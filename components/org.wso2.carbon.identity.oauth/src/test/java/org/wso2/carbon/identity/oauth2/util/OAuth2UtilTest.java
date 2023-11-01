@@ -2517,7 +2517,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         mockStatic(IdentityUtil.class);
         if (isFapiConformant) {
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
-            oAuthAppDO.setFAPIConformant(true);
+            oAuthAppDO.setFapiConformanceEnabled(true);
             doReturn(oAuthAppDO).when(OAuth2Util.class, "getAppInformationByClientId", anyString(), anyString());
             when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
             when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
@@ -2525,7 +2525,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
             Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
         } else {
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
-            oAuthAppDO.setFAPIConformant(false);
+            oAuthAppDO.setFapiConformanceEnabled(false);
             doReturn(oAuthAppDO).when(OAuth2Util.class, "getAppInformationByClientId", anyString(), anyString());
             when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
             when(IdentityUtil.getProperty(any())).thenReturn("true");

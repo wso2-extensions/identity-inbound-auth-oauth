@@ -625,7 +625,7 @@ public class DCRMService {
                     OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
             if (enableFAPIDCR) {
                 // Add FAPI conformant property to Oauth application.
-                oAuthConsumerApp.setFAPIConformant(true);
+                oAuthConsumerApp.setFapiConformanceEnabled(true);
             }
         }
 

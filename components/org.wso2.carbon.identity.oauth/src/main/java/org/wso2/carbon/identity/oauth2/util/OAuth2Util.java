@@ -4959,7 +4959,7 @@ public class OAuth2Util {
         }
         String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
-        return oAuthAppDO.isFAPIConformant();
+        return oAuthAppDO.isFapiConformanceEnabled();
     }
 
     /**

@@ -1537,7 +1537,7 @@ public class OAuthAppDAO {
                     SUBJECT_TYPE, consumerAppDO.getSubjectType());
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFAPIConformant()));
+                    IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
             prepStmtAddOIDCProperty.executeBatch();
         }

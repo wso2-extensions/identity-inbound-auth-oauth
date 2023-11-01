@@ -401,6 +401,7 @@
                     <xs:element minOccurs="0" name="backChannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="bypassClientCredentials" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="fapiConformanceEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="frontchannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionAlgorithm" nillable="true" type="xs:string"/>
@@ -408,7 +409,6 @@
                     <xs:element minOccurs="0" name="idTokenEncryptionMethod" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="idTokenSignatureAlgorithm" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="isFAPIConformant" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="jwksURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>

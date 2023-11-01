@@ -199,7 +199,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
-        oAuthAppDO.setFAPIConformant(true);
+        oAuthAppDO.setFapiConformanceEnabled(true);
         PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(oAuthAppDO);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
@@ -231,7 +231,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
-        oAuthAppDO.setFAPIConformant(isFapiApp);
+        oAuthAppDO.setFapiConformanceEnabled(isFapiApp);
         PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(oAuthAppDO);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
