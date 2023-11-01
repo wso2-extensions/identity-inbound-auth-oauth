@@ -40,6 +40,7 @@
         </jaxrs:serviceBeans>
         <jaxrs:inInterceptors>
             <ref bean="oauthClientAuthnBean"/>
+            <ref bean="clientAttestationBean"/>
         </jaxrs:inInterceptors>
         <jaxrs:providers>
             <bean class="org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper"/>
@@ -48,6 +49,9 @@
 
     <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy">
         <property name="oAuthClientAuthnService" ref="oAuthClientAuthnFactoryBean"/>
+    </bean>
+    <bean id="clientAttestationBean" class="org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy">
+        <property name="clientAttestationService" ref="clientAttestationServiceFactoryBean"/>
     </bean>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint">
         <property name="openIDConnectClaimFilter" ref="openIDConnectClaimFilterFactoryBean"/>
@@ -64,6 +68,7 @@
         <property name="oidProviderResponseBuilder" ref="oidcProviderResponseBuilderBean"/>
     </bean>
     <bean id="oAuthClientAuthnFactoryBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnServiceFactory"/>
+    <bean id="clientAttestationServiceFactoryBean" class="org.wso2.carbon.identity.client.attestation.filter.ClientAttestationServiceFactory"/>
     <bean id="endpointUtilBean" class="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil">
         <property name="oAuth2Service" ref="oAuth2ServiceFactoryBean"/>
         <property name="oAuth2ScopeService" ref="oAuth2ScopeServiceFactoryBean"/>

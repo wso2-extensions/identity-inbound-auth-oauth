@@ -61,6 +61,7 @@
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>components/org.wso2.carbon.identity.oauth.ciba</module>
+        <module>components/org.wso2.carbon.identity.client.attestation.filter</module>
         <module>features/org.wso2.carbon.identity.oauth.common.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>
@@ -260,6 +261,12 @@
                 <version>${carbon.identity.organization.management.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.client.attestation.mgt</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
+
             <!--SAML Common Util dependency-->
             <dependency>
                 <groupId>org.wso2.carbon.identity.saml.common</groupId>
@@ -432,6 +439,11 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.client.attestation.filter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
