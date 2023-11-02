@@ -22,6 +22,7 @@ import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -238,6 +239,20 @@ public class IntrospectionResponseBuilder {
 
         if (StringUtils.isNotBlank(bindingReference)) {
             parameters.put(IntrospectionResponse.BINDING_REFERENCE, bindingReference);
+        }
+        return this;
+    }
+
+    /**
+     * Set cnf value to be bound to the access token.
+     *
+     * @param cnfBindingValue Thumbprint of the TLS certificate passed in the request.
+     * @return IntrospectionResponseBuilder.
+     */
+    public IntrospectionResponseBuilder setCnfBindingValue(String cnfBindingValue) {
+
+        if (StringUtils.isNotBlank(cnfBindingValue)) {
+            parameters.put(IntrospectionResponse.CNF, Collections.singletonMap("x5t#S256", cnfBindingValue));
         }
         return this;
     }

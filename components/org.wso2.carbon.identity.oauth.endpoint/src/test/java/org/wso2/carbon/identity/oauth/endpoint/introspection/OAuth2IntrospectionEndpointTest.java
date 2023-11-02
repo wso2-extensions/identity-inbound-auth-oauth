@@ -16,14 +16,18 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -37,7 +41,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 
 @PrepareForTest({PrivilegedCarbonContext.class, LoggerUtils.class, IdentityTenantUtil.class,
-        OAuthServerConfiguration.class, TokenPersistenceProcessor.class})
+        OAuthServerConfiguration.class, TokenPersistenceProcessor.class, IdentityUtil.class})
 public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -97,14 +101,27 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
         mockedIntrospectionResponse.setTokenType(expectedTokenType);
 
         when(mockedIntrospectionResponse.getTokenType()).thenReturn(expectedTokenType);
+        when(mockedIntrospectionResponse.getBindingType())
+                .thenReturn(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        when(mockedIntrospectionResponse.getBindingReference())
+                .thenReturn("test_reference_value");
+        when(mockedIntrospectionResponse.getCnfBindingValue())
+                .thenReturn("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)).thenReturn("true");
 
         Response response = oAuth2IntrospectionEndpoint.introspect(token, tokenTypeHint, requiredClaims);
 
-        HashMap<String, String> map = new Gson().fromJson((String) response.getEntity(), new TypeToken<HashMap<String,
-                String>>() {
+        HashMap<String, Object> map = new Gson().fromJson((String) response.getEntity(), new TypeToken<HashMap<String,
+                Object>>() {
         }.getType());
 
         assertEquals(map.get("token_type"), expectedTokenType);
+        assertEquals(map.get("binding_type"), OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        assertEquals(map.get("binding_ref"), "test_reference_value");
+        assertEquals(((Map<String, String>) map.get("cnf")).get("x5t#S256"),
+                "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+
 
     }
 

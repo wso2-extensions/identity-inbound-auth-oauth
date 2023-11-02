@@ -37,6 +37,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -47,6 +48,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -93,7 +95,8 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
                 OAuth2Util.class,
                 JWTTokenIssuer.class,
                 IdentityTenantUtil.class,
-                OIDCClaimUtil.class
+                OIDCClaimUtil.class,
+                IdentityUtil.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -179,6 +182,14 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authenticatedUser.setUserId(DUMMY_USER_ID);
         reqMessageContext.setAuthorizedUser(authenticatedUser);
 
+        TokenBinding tokenBinding = new TokenBinding();
+        tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        tokenBinding.setBindingReference("test_binding_reference");
+        tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+        reqMessageContext.setTokenBinding(tokenBinding);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)).thenReturn("true");
+
         OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
                 new DummyTestJWTAccessTokenClaimProvider());
         OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
@@ -196,6 +207,11 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                 "Custom claim injected by the claim provider not found.");
         assertEquals(plainJWT.getJWTClaimsSet().getClaim(TOKEN_FLOW_CUSTOM_CLAIM), TOKEN_FLOW_CUSTOM_CLAIM_VALUE,
                 "Custom claim value injected by claim provider value mismatch.");
+        assertEquals(plainJWT.getJWTClaimsSet().getClaim("binding_type"),
+                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        assertEquals(plainJWT.getJWTClaimsSet().getClaim("binding_ref"), "test_binding_reference");
+        assertEquals(((Map<String, String>) plainJWT.getJWTClaimsSet().getClaim("cnf")).get("x5t#S256"),
+                "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
     }
 
     /**
