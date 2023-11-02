@@ -29,13 +29,13 @@ import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -337,7 +337,7 @@ public class OAuth2ParEndpoint {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
-        } catch (IdentityOAuth2ClientException e) {
+        } catch (InvalidOAuthClientException e) {
             throw new ParClientException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
                     "clientId: " + clientId, e);
         } catch (IdentityOAuth2Exception e) {

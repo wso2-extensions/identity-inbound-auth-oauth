@@ -29,10 +29,8 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -199,14 +197,9 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
         PowerMockito.mockStatic(OAuth2Util.class);
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue("true");
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
-        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        oAuthAppDO.setFapiConformanceEnabled(true);
         PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(oAuthAppDO);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
@@ -236,14 +229,9 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
         PowerMockito.mockStatic(OAuth2Util.class);
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(OAuthConstants.IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue(String.valueOf(isFapiApp));
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
-        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        oAuthAppDO.setFapiConformanceEnabled(isFapiApp);
         PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
                 .thenReturn(oAuthAppDO);
         PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
