@@ -114,6 +114,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final long DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME = 3600L;
 
     private static final String USER_ACCESS_TOKEN_GRANT_TYPE = "userAccessTokenGrantType";
+    private static final String USER_ACCESS_GRANT_TYPE = "userAccessGrantType";
+
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
@@ -277,6 +279,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         authorizeReqDTO.setTenantDomain("super.wso2");
         authorizeReqDTO.setUser(authenticatedUser);
+        authorizeReqDTO.setResponseType(USER_ACCESS_GRANT_TYPE);
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
 
@@ -389,19 +392,28 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                     .getMillis(), expectedExpiry);
         }
         assertNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
-        // The entity_id claim is a mandatory claim in the JWT when token persistence is disabled.
+        assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
+        // The entity_id claim and is_consented are mandatory claims in the JWT when token persistence is disabled.
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(false);
+        when(OAuth2Util.getGrantType(anyString())).thenCallRealMethod();
+        PowerMockito.doReturn(false).when(OIDCClaimUtil.class, "isConsentBasedClaimFilteringApplicable",
+                APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
+        PowerMockito.doReturn(true).when(OIDCClaimUtil.class, "isConsentBasedClaimFilteringApplicable",
+                USER_ACCESS_GRANT_TYPE);
         jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
                 (OAuthTokenReqMessageContext) tokenReqMessageContext,
                 DUMMY_CLIENT_ID
         );
         assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
+        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
         if (tokenReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), false);
         }
         if (authzReqMessageContext != null) {
             assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), true);
         }
         // Enabling persistence back for the rest of the test cases.
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);

@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
@@ -493,8 +494,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
-        setEntityIdClaim(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext, authenticatedUser,
-                oAuthAppDO);
+        setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
+                authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
@@ -872,11 +873,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @param oAuthAppDO                 OAuthAppDO
      * @throws IdentityOAuth2Exception If an error occurs while setting entity_id claim.
      */
-    private void setEntityIdClaim(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                  OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-                                  OAuthTokenReqMessageContext tokenReqMessageContext,
-                                  AuthenticatedUser authenticatedUser,
-                                  OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+    protected void setClaimsForNonPersistence(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                              OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                              OAuthTokenReqMessageContext tokenReqMessageContext,
+                                              AuthenticatedUser authenticatedUser,
+                                              OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
 
         if (!OAuth2Util.isTokenPersistenceEnabled()) {
             try {
@@ -896,6 +897,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user: "
                         + authenticatedUser.getLoggableMaskedUserId(), e);
+            }
+            String grantType;
+            if (tokenReqMessageContext != null) {
+                grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+            } else {
+                OAuth2AuthorizeReqDTO authorizationReqDTO = authAuthzReqMessageContext.getAuthorizationReqDTO();
+                grantType = OAuth2Util.getGrantType(authorizationReqDTO.getResponseType());
+            }
+            // when no persistence of tokens, there is no existing token to check the consented value for.
+            if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
+                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, true);
+            } else {
+                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, false);
             }
         }
     }

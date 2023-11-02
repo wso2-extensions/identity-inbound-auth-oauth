@@ -5043,4 +5043,16 @@ public class OAuth2Util {
         }
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
     }
+
+    public static String getGrantType(String responseType) {
+
+        String grantType;
+        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
+            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
+            grantType = OAuthConstants.GrantTypes.IMPLICIT;
+        } else {
+            grantType = responseType;
+        }
+        return grantType;
+    }
 }

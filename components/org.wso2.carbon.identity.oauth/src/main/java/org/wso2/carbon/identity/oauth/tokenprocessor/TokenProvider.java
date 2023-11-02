@@ -48,7 +48,7 @@ public interface TokenProvider {
     /**
      * Retrieves and verifies a refresh token.
      *
-     * @param refreshToken The access token data object to retrieve and verify.
+     * @param refreshToken The refresh token data object to retrieve and verify.
      * @param consumerKey  Consumer key
      * @return The RefreshTokenValidationDataDO if the token is valid (ACTIVE or EXPIRED), or null if the token
      * is not found either in ACTIVE or EXPIRED states.
