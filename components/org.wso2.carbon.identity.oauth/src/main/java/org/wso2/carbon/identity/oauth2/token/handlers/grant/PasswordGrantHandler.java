@@ -115,8 +115,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String SESSION_DATA_KEY = "sessionDataKey";
     private static final String TYPE = "type";
     private static final String AUTHENTICATED_USER = "authenticatedUser";
-    private static final String HANDLE_PASSWORD_GRANT_THROUGH_AUTH_FRAMEWORK =
-            "handlePasswordGrantThroughAuthFramework";
+    private static final String ENABLE_PASSWORD_FLOW_ENHANCEMENTS = "enablePasswordFlowEnhancements";
 
 
     @Override
@@ -370,7 +369,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             Optional<AuthenticatedUser> authenticatedUser;
             ServiceProviderProperty[] spProps = serviceProvider.getSpProperties();
             if (spProps != null && Arrays.stream(spProps)
-                    .anyMatch(property -> HANDLE_PASSWORD_GRANT_THROUGH_AUTH_FRAMEWORK.equals(property.getName())
+                    .anyMatch(property -> ENABLE_PASSWORD_FLOW_ENHANCEMENTS.equals(property.getName())
                             && Boolean.parseBoolean(property.getValue()))) {
                 authenticatedUser = authenticateUserAtFramework(tokenReq, serviceProvider);
             } else {
