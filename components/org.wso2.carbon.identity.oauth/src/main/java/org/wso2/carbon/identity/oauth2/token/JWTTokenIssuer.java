@@ -898,18 +898,20 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 throw new IdentityOAuth2Exception("User id not found for user: "
                         + authenticatedUser.getLoggableMaskedUserId(), e);
             }
-            String grantType;
-            if (tokenReqMessageContext != null) {
-                grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
-            } else {
-                OAuth2AuthorizeReqDTO authorizationReqDTO = authAuthzReqMessageContext.getAuthorizationReqDTO();
-                grantType = OAuth2Util.getGrantType(authorizationReqDTO.getResponseType());
-            }
-            // when no persistence of tokens, there is no existing token to check the consented value for.
-            if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, true);
-            } else {
-                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, false);
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                String grantType;
+                if (tokenReqMessageContext != null) {
+                    grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+                } else {
+                    OAuth2AuthorizeReqDTO authorizationReqDTO = authAuthzReqMessageContext.getAuthorizationReqDTO();
+                    grantType = OAuth2Util.getGrantType(authorizationReqDTO.getResponseType());
+                }
+                // when no persistence of tokens, there is no existing token to check the consented value for.
+                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
+                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, true);
+                } else {
+                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, false);
+                }
             }
         }
     }

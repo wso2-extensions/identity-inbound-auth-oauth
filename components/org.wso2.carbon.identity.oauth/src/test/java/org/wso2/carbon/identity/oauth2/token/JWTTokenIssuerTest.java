@@ -394,6 +394,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
         assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
         // The entity_id claim and is_consented are mandatory claims in the JWT when token persistence is disabled.
+        OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(true);
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(false);
         when(OAuth2Util.getGrantType(anyString())).thenCallRealMethod();
         PowerMockito.doReturn(false).when(OIDCClaimUtil.class, "isConsentBasedClaimFilteringApplicable",
