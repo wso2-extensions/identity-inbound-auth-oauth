@@ -34,11 +34,14 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,6 +55,7 @@ import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_SCOPE;
 
 /**
  * Default oauth2 scope validator which validate application authorized scopes.
@@ -84,8 +88,15 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
+        // When user is not accessing the resident organization, resolve the application id from the shared app table.
+        if (!AuthzUtil.isUserAccessingResidentOrganization(authzReqMessageContext.getAuthorizationReqDTO().getUser())) {
+            String orgId = authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization();
+            String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
+            appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
+        }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
                         .getAuthorizationReqDTO().getUser(), appId, null, tenantDomain);
+        handleInternalLoginScope(requestedScopes, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         return authorizedScopes;
     }
@@ -110,12 +121,20 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
+        // When user is not accessing the resident organization, resolve the application id from the shared app table.
+        if (!AuthzUtil.isUserAccessingResidentOrganization(tokenReqMessageContext.getAuthorizedUser())) {
+            String orgId = tokenReqMessageContext.getAuthorizedUser().getAccessingOrganization();
+            String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
+            appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
+        }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
                         .getAuthorizedUser(), appId, grantType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) && authorizedScopes.contains(SYSTEM_SCOPE)) {
+        handleInternalLoginScope(requestedScopes, authorizedScopes);
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
+            authorizedScopes.remove(OPENID_SCOPE);
         }
         return authorizedScopes;
     }
@@ -385,6 +404,31 @@ public class DefaultOAuth2ScopeValidator {
     private boolean isScopesEmpty(String[] scopes) {
 
         return ArrayUtils.isEmpty(scopes);
+    }
+
+    private String resolveOrgIdByTenantDomain(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occured while resolving organization for tenant domain: "
+                    + tenantDomain, e);
+        }
+    }
+
+    /**
+     * This is to persist the previous behaviour with the "internal_login" scope.
+     *
+     * @param requestedScopes requested scopes.
+     * @param authorizedScopes authorized scopes.
+     */
+    private static void handleInternalLoginScope(List<String> requestedScopes, List<String> authorizedScopes) {
+
+        if ((requestedScopes.contains(SYSTEM_SCOPE) || requestedScopes.contains(INTERNAL_LOGIN_SCOPE))
+                && !authorizedScopes.contains(INTERNAL_LOGIN_SCOPE)) {
+            authorizedScopes.add(INTERNAL_LOGIN_SCOPE);
+        }
     }
 
 }

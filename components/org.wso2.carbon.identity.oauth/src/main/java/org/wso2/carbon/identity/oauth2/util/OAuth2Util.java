@@ -76,7 +76,6 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -196,7 +195,6 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -243,7 +241,7 @@ public class OAuth2Util {
     private static final String OPENID_CONNECT_AUDIENCES = "Audiences";
     private static final String DOT_SEPARATER = ".";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
-    private static final String OIDC_ROLE_CLAIM_URI = "roles";
+    public static final String OIDC_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -4951,22 +4949,17 @@ public class OAuth2Util {
      *
      * @param clientId       Client ID of the application.
      * @return Whether the application should be FAPI conformant.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception InvalidOAuthClientException
      */
-    public static boolean isFapiConformantApp(String clientId) throws IdentityOAuth2Exception {
+    public static boolean isFapiConformantApp(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        boolean enableFAPIValidation = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
-        if (!enableFAPIValidation) {
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
             return false;
         }
-        ServiceProvider serviceProvider = getServiceProvider(clientId);
-        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-            if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
-                return Boolean.parseBoolean(serviceProviderProperty.getValue());
-            }
-        }
-        return false;
+        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        return oAuthAppDO.isFapiConformanceEnabled();
     }
 
     /**

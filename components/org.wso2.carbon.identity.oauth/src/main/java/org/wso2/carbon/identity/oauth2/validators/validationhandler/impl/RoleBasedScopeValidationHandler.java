@@ -25,6 +25,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
@@ -63,26 +64,29 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 return new ArrayList<>();
             }
             String tenantDomain = scopeValidationContext.getAuthenticatedUser().getTenantDomain();
-            String accessingOrganization = scopeValidationContext.getAuthenticatedUser().getAccessingOrganization();
-            String userResidentOrganization = scopeValidationContext.getAuthenticatedUser()
-                    .getUserResidentOrganization();
-            if (StringUtils.isNotEmpty(accessingOrganization)) {
-                tenantDomain = resolveTenantDomainByOrgId(accessingOrganization);
+            // When user is not accessing the resident organization, resolve the tenant domain of the accessing org.
+            if (!AuthzUtil.isUserAccessingResidentOrganization(scopeValidationContext.getAuthenticatedUser())) {
+                tenantDomain = resolveTenantDomainByOrgId(scopeValidationContext.getAuthenticatedUser()
+                        .getAccessingOrganization());
             }
-
-            List<String> filteredRoleIds;
-            if (accessingOrganization != null && !accessingOrganization.equals(userResidentOrganization)) {
-                filteredRoleIds = userRoles;
-            } else {
-                filteredRoleIds =
-                        getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(), tenantDomain);
-            }
-
+            List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
+                    tenantDomain);
             if (filteredRoleIds.isEmpty()) {
                 return new ArrayList<>();
             }
-            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds,
-                    tenantDomain);
+            List<String> associatedScopes = AuthzUtil.getAssociatedScopesForRoles(filteredRoleIds, tenantDomain);
+            /*
+            TODO: Refactor this to drop internal_ scopes when getting associated scopes for roles.
+            When user is not accessing the resident organization, retain only the internal_org_ scopes
+            from system scopes.
+            */
+            if (StringUtils.isNotBlank(scopeValidationContext.getAuthenticatedUser().getAccessingOrganization())) {
+                List<String> internalOrgScopes = associatedScopes.stream()
+                        .filter(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX))
+                        .collect(Collectors.toList());
+                associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX));
+                associatedScopes.addAll(internalOrgScopes);
+            }
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
             return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());

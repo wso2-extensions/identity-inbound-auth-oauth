@@ -449,6 +449,7 @@ public class OAuthAdminServiceImpl {
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
                         app.setTlsClientCertificateBoundAccessTokens(
                                 application.getTlsClientCertificateBoundAccessTokens());
+                        app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                     }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);

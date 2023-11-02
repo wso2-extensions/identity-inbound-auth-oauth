@@ -344,7 +344,7 @@ definitions:
         type: string
       id_token_encrypted_response_enc:
         type: string
-      authorization_signed_response_alg:
+      software_statement:
         type: string
       request_object_signing_alg:
         type: string
@@ -422,7 +422,7 @@ definitions:
         type: string
       id_token_encrypted_response_enc:
         type: string
-      authorization_signed_response_alg:
+      software_statement:
         type: string
       request_object_signing_alg:
         type: string

@@ -558,7 +558,6 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setState(oauth2Params.getState());
         authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
         authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
-        authorizationResponseDTO.getSuccessResponseDTO().setScope(oauth2Params.getScopes());
 
         return authorizationResponseDTO;
     }
@@ -1369,7 +1368,7 @@ public class OAuth2AuthzEndpoint {
         String type = getRequestProtocolType(oAuthMessage);
 
         if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
-            return handleAuthFlowThroughFramework(oAuthMessage, type);
+            return handleAuthFlowThroughFramework(oAuthMessage, type, redirectURL);
         } else {
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
         }
@@ -1724,7 +1723,7 @@ public class OAuth2AuthzEndpoint {
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
-            setScopes(authzRespDTO, builder);
+            setScopes(authzRespDTO, builder, authorizationResponseDTO);
         }
         if (isIdTokenExists(authzRespDTO)) {
             setIdToken(authzRespDTO, builder, authorizationResponseDTO);
@@ -1907,12 +1906,15 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void setScopes(OAuth2AuthorizeRespDTO authzRespDTO,
-                           OAuthASResponse.OAuthAuthorizationResponseBuilder builder) {
+                           OAuthASResponse.OAuthAuthorizationResponseBuilder builder, AuthorizationResponseDTO
+                                   authorizationResponseDTO) {
 
         String[] scopes = authzRespDTO.getScope();
         if (scopes != null && scopes.length > 0) {
             String scopeString =  StringUtils.join(scopes, " ");
             builder.setScope(scopeString.trim());
+            Set<String> scopesSet = new HashSet<>(Arrays.asList(scopes));
+            authorizationResponseDTO.getSuccessResponseDTO().setScope(scopesSet);
         }
     }
 
@@ -3752,8 +3754,8 @@ public class OAuth2AuthzEndpoint {
      * @throws InvalidRequestParentException
      * @Param type OAuthMessage
      */
-    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type) throws URISyntaxException,
-            InvalidRequestParentException {
+    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type, String redirectUrl)
+            throws URISyntaxException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -4288,7 +4290,7 @@ public class OAuth2AuthzEndpoint {
 
         try {
             return OAuth2Util.isFapiConformantApp(clientId);
-        } catch (IdentityOAuth2ClientException e) {
+        } catch (InvalidOAuthClientException e) {
             throw new InvalidRequestException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
                     "clientId: " + clientId, e);
         } catch (IdentityOAuth2Exception e) {
@@ -4341,14 +4343,19 @@ public class OAuth2AuthzEndpoint {
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
                 String jsonString = objectMapper.writeValueAsString(authResponse);
+                oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return Response.ok().entity(jsonString).build();
 
             } else {
-                String location = oauthResponse.getMetadata().get("Location").get(0).toString();
-                if (StringUtils.isNotBlank(location)) {
-                    Map<String, String> queryParams = getQueryParamsFromUrl(location);
-                    String jsonPayload = new Gson().toJson(queryParams);
-                    return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                List<Object> locationHeader = oauthResponse.getMetadata().get("Location");
+                if (CollectionUtils.isNotEmpty(locationHeader)) {
+                    String location = locationHeader.get(0).toString();
+                    if (StringUtils.isNotBlank(location)) {
+                        Map<String, String> queryParams = getQueryParamsFromUrl(location);
+                        String jsonPayload = new Gson().toJson(queryParams);
+                        oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+                        return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                    }
                 }
             }
         } catch (AuthServiceException | JsonProcessingException | UnsupportedEncodingException | URISyntaxException e) {
@@ -4357,6 +4364,7 @@ public class OAuth2AuthzEndpoint {
             params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
             params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Server error occurred while performing authorization.");
             String jsonString = new Gson().toJson(params);
+            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).entity(jsonString).build();
         }
 
