@@ -32,7 +32,7 @@ public class SuccessResponseDTO {
     private String tokenType;
     private long validityPeriod;
     private String formPostBody;
-    private Set<String> scope;
+    private Set<String> scope = null;
 
     public String getAuthorizationCode() {
 
@@ -65,6 +65,10 @@ public class SuccessResponseDTO {
     }
 
     public String getScope() {
+
+        if (scope == null) {
+            return null;
+        }
         return StringUtils.join(scope, "+").trim();
     }
 
