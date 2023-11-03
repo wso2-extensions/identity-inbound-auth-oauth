@@ -196,6 +196,15 @@ public class OAuth2ServiceComponent {
 
     protected void activate(ComponentContext context) {
 
+        // Check if server compliant with the client ID tenant unification.
+        if (!OAuth2Util.isCompliantWithClientIDTenantUnification()) {
+            String msg = "The unique key constraint in the IDN_OAUTH_CONSUMER_APPS table is not compatible with the " +
+                    "server configs on tenant qualified URLs and/ or tenanted sessions. Hence the service cannot be " +
+                    "started.";
+            log.error(msg);
+            throw new RuntimeException(msg);
+        }
+
         try {
             if (OAuth2ServiceComponentHolder.getInstance().getScopeClaimMappingDAO() == null) {
                 OAuth2ServiceComponentHolder.getInstance()

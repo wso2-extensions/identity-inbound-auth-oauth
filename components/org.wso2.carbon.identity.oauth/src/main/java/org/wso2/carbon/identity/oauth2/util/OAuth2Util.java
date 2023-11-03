@@ -222,7 +222,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth 2.0 implementation.
  */
 public class OAuth2Util {
 
@@ -5042,5 +5042,19 @@ public class OAuth2Util {
             return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE));
         }
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
+
+    /**
+     * Utility method to check if server compatible with client ID tenant unification.
+     *
+     * @return true if compliant.
+     */
+    public static boolean isCompliantWithClientIDTenantUnification() {
+
+        if (new OAuthAppDAO().isClientIDTenantUniqueKeyExistsInConsumerAppsTable()) {
+            return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() &&
+                    IdentityTenantUtil.isTenantedSessionsEnabled();
+        }
+        return true;
     }
 }
