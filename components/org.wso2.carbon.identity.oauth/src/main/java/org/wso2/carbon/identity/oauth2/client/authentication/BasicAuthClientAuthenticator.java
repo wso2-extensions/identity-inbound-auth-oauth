@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -52,6 +53,8 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     private static final int CREDENTIAL_LENGTH = 2;
     private static final String CLIENT_SECRET_BASIC = "client_secret_basic";
     private static final String CLIENT_SECRET_POST = "client_secret_post";
+    private static final String CLIENT_SECRET_BASIC_DISPLAY_NAME = "Client Secret Basic";
+    private static final String CLIENT_SECRET_POST_DISPLAY_NAME = "Client Secret Post";
 
     /**
      * Returns the execution order of this authenticator
@@ -278,11 +281,13 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
      * @return      Authentication methods supported by the authenticator.
      */
     @Override
-    public List<String> getSupportedClientAuthenticationMethods() {
+    public List<ClientAuthenticationMethodModel> getSupportedClientAuthenticationMethods() {
 
-        List<String> supportedAuthMethods = new ArrayList<>();
-        supportedAuthMethods.add(CLIENT_SECRET_BASIC);
-        supportedAuthMethods.add(CLIENT_SECRET_POST);
+        List<ClientAuthenticationMethodModel> supportedAuthMethods = new ArrayList<>();
+        supportedAuthMethods.add(new ClientAuthenticationMethodModel(CLIENT_SECRET_BASIC,
+                CLIENT_SECRET_BASIC_DISPLAY_NAME));
+        supportedAuthMethods.add(new ClientAuthenticationMethodModel(CLIENT_SECRET_POST,
+                CLIENT_SECRET_POST_DISPLAY_NAME));
         return supportedAuthMethods;
     }
 
