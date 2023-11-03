@@ -76,6 +76,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_ALGORITHM;
@@ -1545,6 +1546,9 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TYPE, consumerAppDO.getSubjectType());
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1696,6 +1700,10 @@ public class OAuthAppDAO {
                 spOIDCProperties, IS_CERTIFICATE_BOUND_ACCESS_TOKEN);
         if (isCertificateBoundAccessToken != null) {
             oauthApp.setTlsClientCertificateBoundAccessTokens(Boolean.parseBoolean(isCertificateBoundAccessToken));
+        }
+        String isFAPI = getFirstPropertyValue(spOIDCProperties, IS_FAPI_CONFORMANT_APP);
+        if (isFAPI != null) {
+            oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
         }
     }
 
