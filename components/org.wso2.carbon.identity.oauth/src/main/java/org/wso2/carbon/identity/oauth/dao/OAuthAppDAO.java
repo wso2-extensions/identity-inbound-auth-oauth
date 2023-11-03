@@ -1740,8 +1740,12 @@ public class OAuthAppDAO {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             DatabaseMetaData metaData = connection.getMetaData();
-            if (metaData.getDatabaseProductName().contains("DB2")) {
+
+            if (metaData.getDatabaseProductName().toLowerCase().contains("db2")) {
                 sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE_DB2;
+            } else if (metaData.getDatabaseProductName().toLowerCase().contains("oracle")) {
+                sqlQuery = SQLQueries.OAuthAppDAOSQLQueries
+                        .CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE_ORACLE;
             }
             if (metaData.storesLowerCaseIdentifiers()) {
                 tableName = tableName.toLowerCase();
