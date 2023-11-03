@@ -5042,12 +5042,14 @@ public class OAuth2Util {
      *
      * @return true if compliant.
      */
-    public static boolean isCompliantWithClientIDTenantUnification() {
+    public static boolean isCompliantWithClientIDTenantUnification() throws IdentityOAuth2Exception {
 
-        if (new OAuthAppDAO().isClientIDTenantUniqueKeyExistsInConsumerAppsTable()) {
-            return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() &&
-                    IdentityTenantUtil.isTenantedSessionsEnabled();
+        boolean isClientIdUnique = new OAuthAppDAO().isClientIDUniqueConstraintExistsInConsumerAppsTable();
+
+        if (isClientIdUnique) {
+            return true;
+        } else {
+            return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled();
         }
-        return true;
     }
 }

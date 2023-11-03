@@ -212,6 +212,11 @@ public class SQLQueries {
         public static final String REMOVE_APP_SCOPE_VALIDATORS = "DELETE FROM IDN_OAUTH2_SCOPE_VALIDATORS " +
                 "WHERE APP_ID=?";
 
+        public static final String CHECK_UNIQUE_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE =
+                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE " +
+                        "TABLE_NAME = 'IDN_OAUTH_CONSUMER_APPS' GROUP BY CONSTRAINT_NAME " +
+                        "HAVING COUNT(DISTINCT COLUMN_NAME) = 1 AND MAX(COLUMN_NAME) = 'CONSUMER_KEY'";
+
         private OAuthAppDAOSQLQueries() {
         }
     }

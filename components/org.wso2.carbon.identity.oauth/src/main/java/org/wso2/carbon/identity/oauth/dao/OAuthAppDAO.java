@@ -53,7 +53,6 @@ import org.wso2.carbon.utils.DBUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -106,7 +105,6 @@ public class OAuthAppDAO {
     private static final String LOWER_USERNAME = "LOWER(USERNAME)";
     private static final String CONSUMER_KEY_CONSTRAINT = "CONSUMER_KEY_CONSTRAINT";
     private static final String OAUTH_VERSION = "OAUTH_VERSION";
-    private static final String CONSUMER_KEY = "CONSUMER_KEY";
     private static final String CONSUMER_SECRET = "CONSUMER_SECRET";
     private static final String APP_NAME = "APP_NAME";
     private static final String CALLBACK_URL = "CALLBACK_URL";
@@ -120,14 +118,6 @@ public class OAuthAppDAO {
     private static final String APP_ACCESS_TOKEN_EXPIRE_TIME = "APP_ACCESS_TOKEN_EXPIRE_TIME";
     private static final String REFRESH_TOKEN_EXPIRE_TIME = "REFRESH_TOKEN_EXPIRE_TIME";
     private static final String ID_TOKEN_EXPIRE_TIME = "ID_TOKEN_EXPIRE_TIME";
-    private static final String PK_NAME_COLUMN = "PK_NAME";
-    private static final String PKTABLE_NAME_COLUMN = "PKTABLE_NAME";
-    private static final String PKCOLUMN_NAME_COLUMN = "PKCOLUMN_NAME";
-    private static final String FKTABLE_NAME_COLUMN = "FKTABLE_NAME";
-    private static final String FKCOLUMN_NAME_COLUMN = "FKCOLUMN_NAME";
-
-    private static final String CONSUMER_APPS_TABLE_NAME = "IDN_OAUTH_CONSUMER_APPS";
-    private static final String OIDC_PROPERTY_TABLE_NAME = "IDN_OIDC_PROPERTY";
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
@@ -1732,64 +1722,26 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Check whether the client ID and tenant ID unique key constraint exists in the IDN_OAUTH_CONSUMER_APPS table.
+     * Check whether a client ID unique key constraint exists in the IDN_OAUTH_CONSUMER_APPS table.
      * This is required to check compatibility with client ID tenant unification.
      *
      * @return true if the unique key constraint exists, false otherwise.
      */
-    public boolean isClientIDTenantUniqueKeyExistsInConsumerAppsTable() {
+    public boolean isClientIDUniqueConstraintExistsInConsumerAppsTable() throws IdentityOAuth2Exception {
 
-        String uniqueKeyTableName = CONSUMER_APPS_TABLE_NAME;
-        String foreignKeyTableName = OIDC_PROPERTY_TABLE_NAME;
-        boolean isTenantIdUniqueKeyExists = false;
-        boolean isClientIdUniqueKeyExists = false;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(
+                     SQLQueries.OAuthAppDAOSQLQueries.CHECK_UNIQUE_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE)) {
 
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            DatabaseMetaData metaData = connection.getMetaData();
-            if (metaData.storesLowerCaseIdentifiers()) {
-                uniqueKeyTableName = uniqueKeyTableName.toLowerCase();
-                foreignKeyTableName = foreignKeyTableName.toLowerCase();
-            }
-
-            // TODO: This will raise issues if both constraints exists.
-            try (ResultSet rs = metaData.getExportedKeys(null, null, uniqueKeyTableName)) {
-                while (rs.next()) {
-                    if (CONSUMER_KEY_CONSTRAINT.equals(rs.getString(PK_NAME_COLUMN)) &&
-                            foreignKeyTableName.equals(rs.getString(FKTABLE_NAME_COLUMN))) {
-                        if (TENANT_ID.equals(rs.getString(PKCOLUMN_NAME_COLUMN)) &&
-                                TENANT_ID.equals(rs.getString(FKCOLUMN_NAME_COLUMN))) {
-                            isTenantIdUniqueKeyExists = true;
-                        } else if (CONSUMER_KEY.equals(rs.getString(PKCOLUMN_NAME_COLUMN)) &&
-                                CONSUMER_KEY.equals(rs.getString(FKCOLUMN_NAME_COLUMN))) {
-                            isClientIdUniqueKeyExists = true;
-                        }
-                    }
-                }
-            } catch (SQLException ex) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug(String.format("Error while retrieving exported keys for the table %s with the " +
-                            "constraint name %s.", uniqueKeyTableName, CONSUMER_KEY_CONSTRAINT), ex);
-                }
-                return false;
+            try (ResultSet rSet = prepStmt.executeQuery()) {
+                return rSet.next();
             }
         } catch (SQLException e) {
+            String msg = "Error while checking client ID unique constraint in the IDN_OAUTH_CONSUMER_APPS table.";
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Error while retrieving database metadata for the table: " + uniqueKeyTableName, e);
+                LOG.debug(msg, e);
             }
-            return false;
+            throw new IdentityOAuth2Exception(msg, e);
         }
-
-        if (isClientIdUniqueKeyExists && isTenantIdUniqueKeyExists) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("Required unique key constraint %s exists in the table %s.",
-                        CONSUMER_KEY_CONSTRAINT, uniqueKeyTableName));
-            }
-            return true;
-        }
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Required unique key constraint doesn't exist in the table: " + uniqueKeyTableName);
-        }
-        return false;
     }
 }
