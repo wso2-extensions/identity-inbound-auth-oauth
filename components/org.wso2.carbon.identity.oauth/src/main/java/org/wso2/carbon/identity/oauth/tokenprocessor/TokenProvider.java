@@ -56,4 +56,13 @@ public interface TokenProvider {
      */
     RefreshTokenValidationDataDO getVerifiedRefreshToken(String refreshToken, String consumerKey)
             throws IdentityOAuth2Exception;
+
+    /**
+     * Validates the refresh token to check whether it is active and returns the validation data in an AccessTokenDO.
+     *
+     * @param refreshToken The refresh token to validate
+     * @return The AccessTokenDO if the token is valid (ACTIVE), or null if the token is not found in active state
+     * @throws IdentityOAuth2Exception If there is an error during the refresh token validation process.
+     */
+    public AccessTokenDO getVerifiedRefreshToken(String refreshToken) throws IdentityOAuth2Exception;
 }
