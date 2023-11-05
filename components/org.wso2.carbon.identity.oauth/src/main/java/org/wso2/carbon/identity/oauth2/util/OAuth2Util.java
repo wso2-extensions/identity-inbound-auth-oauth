@@ -5037,6 +5037,12 @@ public class OAuth2Util {
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
     }
 
+    /**
+     * Resolves the grant type from the response type for implicit and hybrid flows.
+     *
+     * @param responseType Response type Eg: token, id_token
+     * @return Grant type
+     */
     public static String getGrantType(String responseType) {
 
         String grantType;
