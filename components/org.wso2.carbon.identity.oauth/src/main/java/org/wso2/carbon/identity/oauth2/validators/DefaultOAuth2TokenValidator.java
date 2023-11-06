@@ -170,7 +170,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
      * @return OAuthAppDO
      * @throws IdentityOAuth2Exception If failed to get app information
      */
-    public OAuthAppDO getAppInformation(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    protected OAuthAppDO getAppInformation(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
 
         OAuthAppDO app;
         try {

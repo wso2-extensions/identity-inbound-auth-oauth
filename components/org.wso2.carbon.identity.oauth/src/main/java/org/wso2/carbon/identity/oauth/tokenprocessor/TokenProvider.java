@@ -46,7 +46,8 @@ public interface TokenProvider {
 
 
     /**
-     * Retrieves and verifies a refresh token.
+     * Retrieves and verifies a refresh token. This should also validate the consumer key in the token if available
+     * as a claim against the provided consumer key in the verification request. Eg: token revocation
      *
      * @param refreshToken The refresh token data object to retrieve and verify.
      * @param consumerKey  Consumer key
@@ -64,5 +65,5 @@ public interface TokenProvider {
      * @return The AccessTokenDO if the token is valid (ACTIVE), or null if the token is not found in active state
      * @throws IdentityOAuth2Exception If there is an error during the refresh token validation process.
      */
-    public AccessTokenDO getVerifiedRefreshToken(String refreshToken) throws IdentityOAuth2Exception;
+    AccessTokenDO getVerifiedRefreshToken(String refreshToken) throws IdentityOAuth2Exception;
 }
