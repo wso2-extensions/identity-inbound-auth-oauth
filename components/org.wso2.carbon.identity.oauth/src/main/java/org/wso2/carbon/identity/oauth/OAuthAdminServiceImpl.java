@@ -2274,11 +2274,19 @@ public class OAuthAdminServiceImpl {
         }
     }
 
+    /**
+     * Notify OAuthApplicationMgtListeners on post consumer app change events which have impact on token revocation.
+     *
+     * @param consumerKey consumer key of the application
+     * @param properties  properties
+     * @throws IdentityOAuthAdminException if an error occurs while handling the internal token revocation
+     */
     private void handleInternalTokenRevocation(String consumerKey, Properties properties)
             throws IdentityOAuthAdminException {
+
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
-            oAuthApplicationMgtListener.doPostRegenerateClientSecret(consumerKey, properties);
+            oAuthApplicationMgtListener.doPostTokenRevocationOnClientAppEvent(consumerKey, properties);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
             }
