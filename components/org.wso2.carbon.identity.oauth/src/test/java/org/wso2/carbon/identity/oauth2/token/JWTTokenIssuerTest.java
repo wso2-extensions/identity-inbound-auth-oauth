@@ -210,8 +210,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         assertEquals(plainJWT.getJWTClaimsSet().getClaim("binding_type"),
                 OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
         assertEquals(plainJWT.getJWTClaimsSet().getClaim("binding_ref"), "test_binding_reference");
-        assertEquals(((Map<String, String>) plainJWT.getJWTClaimsSet().getClaim("cnf")).get("x5t#S256"),
-                "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+        assertEquals(((Map<String, String>) plainJWT.getJWTClaimsSet().getClaim(OAuthConstants.CNF))
+                .get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
     }
 
     /**

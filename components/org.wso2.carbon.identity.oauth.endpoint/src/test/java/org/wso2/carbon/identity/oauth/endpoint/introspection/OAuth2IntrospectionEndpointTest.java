@@ -119,9 +119,8 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
         assertEquals(map.get("token_type"), expectedTokenType);
         assertEquals(map.get("binding_type"), OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
         assertEquals(map.get("binding_ref"), "test_reference_value");
-        assertEquals(((Map<String, String>) map.get("cnf")).get("x5t#S256"),
-                "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
-
+        assertEquals(((Map<String, String>) map.get(OAuthConstants.CNF))
+                        .get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
 
     }
 

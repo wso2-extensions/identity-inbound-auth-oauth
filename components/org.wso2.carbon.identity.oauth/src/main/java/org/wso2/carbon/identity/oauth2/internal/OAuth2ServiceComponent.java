@@ -253,6 +253,8 @@ public class OAuth2ServiceComponent {
                 bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
             }
 
+            /* Certificate based token binder will be enabled only if certificate binding is not being performed in the
+               MTLS authenticator. By default, the certificate binding type will be enabled. */
             if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING))) {
                 CertificateBasedTokenBinder certificateBasedTokenBinder = new CertificateBasedTokenBinder();
                 bundleContext.registerService(TokenBinderInfo.class.getName(), certificateBasedTokenBinder, null);

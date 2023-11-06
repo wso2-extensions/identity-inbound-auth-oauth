@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.introspection;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.utils.JSONUtils;
 import org.json.JSONException;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 
 import java.util.Collections;
@@ -252,7 +253,8 @@ public class IntrospectionResponseBuilder {
     public IntrospectionResponseBuilder setCnfBindingValue(String cnfBindingValue) {
 
         if (StringUtils.isNotBlank(cnfBindingValue)) {
-            parameters.put(IntrospectionResponse.CNF, Collections.singletonMap("x5t#S256", cnfBindingValue));
+            parameters.put(IntrospectionResponse.CNF,
+                    Collections.singletonMap(OAuthConstants.X5T_S256, cnfBindingValue));
         }
         return this;
     }

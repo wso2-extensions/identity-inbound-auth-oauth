@@ -829,7 +829,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
                 String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
                 if (StringUtils.isNotBlank(cnf)) {
-                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap("x5t#S256",
+                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap(OAuthConstants.X5T_S256,
                             tokReqMsgCtx.getTokenBinding().getBindingValue()));
                 }
             }

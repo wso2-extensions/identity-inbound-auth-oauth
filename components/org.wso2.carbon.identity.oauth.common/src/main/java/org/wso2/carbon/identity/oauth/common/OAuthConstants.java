@@ -121,9 +121,10 @@ public final class OAuthConstants {
     public static final String END_CERT = "-----END CERTIFICATE-----";
     public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
     public static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
+    public static final String X5T_S256 = "x5t#S256";
 
     public static final String ENABLE_TLS_CERT_TOKEN_BINDING = "OAuth.OpenIDConnect." +
-            "EnableTLSCertificateBoundAccessTokens";
+            "EnableTLSCertificateBoundAccessTokensViaBindingType";
 
     /**
      * Enum for OIDC supported subject types.

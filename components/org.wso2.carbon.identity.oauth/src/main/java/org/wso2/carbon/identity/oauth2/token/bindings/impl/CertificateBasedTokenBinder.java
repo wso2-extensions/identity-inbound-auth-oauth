@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2023, WSO2 Inc. (http://www.wso2.com).
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 
 import com.nimbusds.jose.util.Base64URL;
@@ -67,12 +85,13 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
     @Override
     public String getDescription() {
 
-        return "Bind the TLS certificate to the token. Supported grant types: Code";
+        return "Bind the TLS certificate to the token.";
     }
 
     @Override
     public String getOrGenerateTokenBindingValue(HttpServletRequest request) throws OAuthSystemException {
 
+        // Returning null as the TLS certificate cannot be obtained in this flow.
         return null;
     }
 
@@ -110,7 +129,7 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
 
         String cnfValue = generateCnfHashValue((HttpServletRequest) request);
         if (StringUtils.isNotBlank(cnfValue)) {
-            return bindingReference.equals(OAuth2Util.getTokenBindingReference(cnfValue));
+            return StringUtils.equals(bindingReference, OAuth2Util.getTokenBindingReference(cnfValue));
         }
         return false;
     }
@@ -125,8 +144,8 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
 
             if (tokenBinding != null && CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinding.getBindingType()) &&
                     StringUtils.isNotBlank(cnfValue)) {
-                return cnfValue.equalsIgnoreCase(tokenBinding.getBindingValue()) && bindingReference
-                        .equalsIgnoreCase(tokenBinding.getBindingReference());
+                return StringUtils.equals(cnfValue, tokenBinding.getBindingValue()) &&
+                        StringUtils.equals(bindingReference, tokenBinding.getBindingReference());
             }
             return false;
         } catch (IdentityOAuth2Exception e) {
@@ -197,9 +216,8 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
                         return tokenBinding;
                     },
                     preparedStatement -> {
-                        int parameterIndex = 0;
-                        preparedStatement.setString(++parameterIndex, finalRefreshToken);
-                        preparedStatement.setString(++parameterIndex, CERTIFICATE_BASED_TOKEN_BINDER);
+                        preparedStatement.setString(1, finalRefreshToken);
+                        preparedStatement.setString(2, CERTIFICATE_BASED_TOKEN_BINDER);
                     });
 
             return tokenBindingList.isEmpty() ? null : tokenBindingList.get(0);

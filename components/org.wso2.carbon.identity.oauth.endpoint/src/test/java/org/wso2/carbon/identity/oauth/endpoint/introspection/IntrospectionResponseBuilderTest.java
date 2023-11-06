@@ -141,7 +141,8 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
                 "AUT values are not equal");
         Map<String, Object> cnf = new ObjectMapper()
                 .readValue(jsonObject.get(IntrospectionResponse.CNF).toString(), HashMap.class);
-        assertEquals(cnf.get("x5t#S256"), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9", "CNF value is not equal");
+        assertEquals(cnf.get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9",
+                "CNF value is not equal");
     }
 
     /**

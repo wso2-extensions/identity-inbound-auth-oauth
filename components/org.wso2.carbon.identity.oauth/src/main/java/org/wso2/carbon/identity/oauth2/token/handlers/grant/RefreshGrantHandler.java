@@ -487,8 +487,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             accessTokenDO.setAccessToken(accessToken);
             accessTokenDO.setRefreshToken(refreshToken);
         } catch (OAuthSystemException e) {
-            /* Below condition check is added to send a client error when a TLS certificate is not found in the request
-               in a scenario where it is required to bind the cnf claim to the access token. */
+            /* Below condition check is added in order to send a client error when the root cause of the exception is
+               actually a client error and not an internal server error. */
             if (e.getCause() instanceof IdentityOAuth2ClientException) {
                 throw (IdentityOAuth2ClientException) e.getCause();
             }
