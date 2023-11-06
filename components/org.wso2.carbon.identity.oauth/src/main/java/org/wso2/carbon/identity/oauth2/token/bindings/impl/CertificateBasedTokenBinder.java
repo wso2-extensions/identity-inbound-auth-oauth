@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth2.token.bindings.impl;
 import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jose.util.X509CertUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
@@ -62,6 +64,8 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
                     "FROM IDN_OAUTH2_ACCESS_TOKEN TOKEN LEFT JOIN IDN_OAUTH2_TOKEN_BINDING BINDING ON " +
                     "TOKEN.TOKEN_ID=BINDING.TOKEN_ID WHERE TOKEN.REFRESH_TOKEN = ? " +
                     "AND BINDING.TOKEN_BINDING_TYPE = ?";
+
+    private static final Log log = LogFactory.getLog(CertificateBasedTokenBinder.class);
 
     @Override
     public String getBindingType() {
@@ -168,6 +172,9 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
             try {
                 certificate = parseCertificate(certificateInHeader);
             } catch (CertificateException e) {
+                /* Adding a debug log as these errors cannot be thrown as per the TokenBinder interface implementation.
+                   But null checks have been performed where these methods are being executed. */
+                log.debug("Error occurred while extracting the certificate from the request header.", e);
                 return null;
             }
         } else if (certObject instanceof X509Certificate) {
@@ -181,6 +188,7 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
             return certThumbprint.toString();
         } else {
+            log.debug("TLS certificate not found in the request.");
             return null;
         }
     }
