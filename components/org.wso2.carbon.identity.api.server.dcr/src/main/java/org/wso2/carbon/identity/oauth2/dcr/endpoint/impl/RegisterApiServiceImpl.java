@@ -18,8 +18,10 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.impl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.RegisterApiService;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ApplicationDTO;
@@ -79,6 +81,12 @@ public class RegisterApiServiceImpl extends RegisterApiService {
     @Override
     public Response registerApplication(RegistrationRequestDTO registrationRequest) {
 
+        if (registrationRequest == null) {
+            DCRMException dcrmException = new DCRMException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA.getMessage());
+            DCRMUtils.handleErrorResponse(Response.Status.BAD_REQUEST, dcrmException, false, LOG);
+        }
+
         ApplicationDTO applicationDTO = null;
         try {
             Application application = DCRMUtils.getOAuth2DCRMService()
@@ -100,6 +108,12 @@ public class RegisterApiServiceImpl extends RegisterApiService {
 
     @Override
     public Response updateApplication(UpdateRequestDTO updateRequest, String clientId) {
+
+        if (updateRequest == null) {
+            DCRMException dcrmException = new DCRMException(
+                    DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA.getMessage());
+            DCRMUtils.handleErrorResponse(Response.Status.BAD_REQUEST, dcrmException, false, LOG);
+        }
 
         ApplicationDTO applicationDTO = null;
         try {

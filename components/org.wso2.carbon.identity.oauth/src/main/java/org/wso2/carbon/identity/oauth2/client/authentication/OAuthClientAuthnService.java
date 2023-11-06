@@ -26,7 +26,6 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -185,7 +184,7 @@ public class OAuthClientAuthnService {
                 applicableAuthenticators.forEach(oAuthClientAuthenticator -> {
                     executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
                 });
-            } catch (IdentityOAuth2ClientException e) {
+            } catch (InvalidOAuthClientException e) {
                 throw new OAuthClientAuthnException("Could not find an existing app for client_id: " + clientId,
                         OAuth2ErrorCodes.INVALID_CLIENT);
             } catch (IdentityOAuth2Exception e) {
