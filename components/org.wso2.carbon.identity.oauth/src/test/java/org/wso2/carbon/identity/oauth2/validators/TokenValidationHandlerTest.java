@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -241,10 +240,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
         accessTokenDO.setTokenBinding(tokenBinding);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)).thenReturn("true");
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
-
         mockStatic(OAuth2ServiceComponentHolder.class);
         OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
                 Mockito.mock(OAuth2ServiceComponentHolder.class);

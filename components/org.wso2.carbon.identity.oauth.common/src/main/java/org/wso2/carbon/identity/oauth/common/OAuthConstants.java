@@ -123,7 +123,7 @@ public final class OAuthConstants {
     public static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
     public static final String X5T_S256 = "x5t#S256";
 
-    public static final String ENABLE_TLS_CERT_TOKEN_BINDING = "OAuth.OpenIDConnect." +
+    public static final String ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE = "OAuth.OpenIDConnect." +
             "EnableTLSCertificateBoundAccessTokensViaBindingType";
 
     /**

@@ -24,15 +24,11 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
-import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
-import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
-import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -57,13 +53,6 @@ import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CE
  * This class provides the certificate based token binder implementation.
  */
 public class CertificateBasedTokenBinder extends AbstractTokenBinder {
-
-    private static TokenPersistenceProcessor hashingPersistenceProcessor;
-    private static final String RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN =
-            "SELECT BINDING.TOKEN_BINDING_TYPE,BINDING.TOKEN_BINDING_VALUE,BINDING.TOKEN_BINDING_REF " +
-                    "FROM IDN_OAUTH2_ACCESS_TOKEN TOKEN LEFT JOIN IDN_OAUTH2_TOKEN_BINDING BINDING ON " +
-                    "TOKEN.TOKEN_ID=BINDING.TOKEN_ID WHERE TOKEN.REFRESH_TOKEN = ? " +
-                    "AND BINDING.TOKEN_BINDING_TYPE = ?";
 
     private static final Log log = LogFactory.getLog(CertificateBasedTokenBinder.class);
 
@@ -143,7 +132,8 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
 
         String refreshToken = oAuth2AccessTokenReqDTO.getRefreshToken();
         try {
-            TokenBinding tokenBinding = getBindingFromRefreshToken(refreshToken, OAuth2Util.isHashEnabled());
+            TokenBinding tokenBinding = OAuthTokenPersistenceFactory.getInstance().getTokenBindingMgtDAO()
+                    .getBindingFromRefreshToken(refreshToken, OAuth2Util.isHashEnabled());
             String cnfValue = generateCnfHashValue(oAuth2AccessTokenReqDTO.getHttpServletRequestWrapper());
 
             if (tokenBinding != null && CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinding.getBindingType()) &&
@@ -202,37 +192,5 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
 
         return (X509Certificate) CertificateFactory.getInstance(Constants.X509)
                 .generateCertificate(new ByteArrayInputStream(decodedContent));
-    }
-
-    private TokenBinding getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
-            throws IdentityOAuth2Exception {
-
-        hashingPersistenceProcessor = new HashingPersistenceProcessor();
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(IdentityDatabaseUtil.getDataSource());
-        if (isTokenHashingEnabled) {
-            refreshToken = hashingPersistenceProcessor.getProcessedRefreshToken(refreshToken);
-        }
-        try {
-            String finalRefreshToken = refreshToken;
-            List<TokenBinding> tokenBindingList = jdbcTemplate.executeQuery(RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN,
-                    (resultSet, rowNumber) -> {
-                        TokenBinding tokenBinding = new TokenBinding();
-                        tokenBinding.setBindingType(resultSet.getString(1));
-                        tokenBinding.setBindingValue(resultSet.getString(2));
-                        tokenBinding.setBindingReference(resultSet.getString(3));
-
-                        return tokenBinding;
-                    },
-                    preparedStatement -> {
-                        preparedStatement.setString(1, finalRefreshToken);
-                        preparedStatement.setString(2, CERTIFICATE_BASED_TOKEN_BINDER);
-                    });
-
-            return tokenBindingList.isEmpty() ? null : tokenBindingList.get(0);
-        } catch (DataAccessException e) {
-            String error = String.format("Error obtaining token binding type using refresh token: %s.",
-                    refreshToken);
-            throw new IdentityOAuth2Exception(error, e);
-        }
     }
 }

@@ -1060,8 +1060,7 @@ public class AccessTokenIssuer {
 
         Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
         if (!tokenBindingValueOptional.isPresent()) {
-            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)) &&
-                  OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinder.getBindingType())) {
+            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinder.getBindingType())) {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "TLS certificate not found in the request.");
             }

@@ -825,8 +825,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             String bindingType = tokReqMsgCtx.getTokenBinding().getBindingType();
             jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokReqMsgCtx.getTokenBinding().getBindingReference());
             jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
-            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)) &&
-                    OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
                 String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
                 if (StringUtils.isNotBlank(cnf)) {
                     jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap(OAuthConstants.X5T_S256,

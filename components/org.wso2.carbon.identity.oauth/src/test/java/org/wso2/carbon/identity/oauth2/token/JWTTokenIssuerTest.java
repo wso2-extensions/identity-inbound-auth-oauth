@@ -37,7 +37,6 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -95,8 +94,7 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
                 OAuth2Util.class,
                 JWTTokenIssuer.class,
                 IdentityTenantUtil.class,
-                OIDCClaimUtil.class,
-                IdentityUtil.class
+                OIDCClaimUtil.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -187,8 +185,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         tokenBinding.setBindingReference("test_binding_reference");
         tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
         reqMessageContext.setTokenBinding(tokenBinding);
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)).thenReturn("true");
 
         OAuth2ServiceComponentHolder.getInstance().addJWTAccessTokenClaimProvider(
                 new DummyTestJWTAccessTokenClaimProvider());

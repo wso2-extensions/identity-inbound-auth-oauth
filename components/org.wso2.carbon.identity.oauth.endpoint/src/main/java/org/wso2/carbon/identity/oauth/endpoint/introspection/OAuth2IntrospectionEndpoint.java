@@ -25,7 +25,6 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
@@ -165,8 +164,7 @@ public class OAuth2IntrospectionEndpoint {
             respBuilder.setBindingType(bindingType);
             respBuilder.setBindingReference(introspectionResponse.getBindingReference());
             if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) &&
-                    StringUtils.isNotBlank(introspectionResponse.getCnfBindingValue()) &&
-                    Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING))) {
+                    StringUtils.isNotBlank(introspectionResponse.getCnfBindingValue())) {
                 respBuilder.setCnfBindingValue(introspectionResponse.getCnfBindingValue());
             }
         }

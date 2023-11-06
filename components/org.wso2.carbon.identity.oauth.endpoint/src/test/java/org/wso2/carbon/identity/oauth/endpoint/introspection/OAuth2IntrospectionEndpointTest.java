@@ -16,7 +16,6 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -41,7 +40,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 
 @PrepareForTest({PrivilegedCarbonContext.class, LoggerUtils.class, IdentityTenantUtil.class,
-        OAuthServerConfiguration.class, TokenPersistenceProcessor.class, IdentityUtil.class})
+        OAuthServerConfiguration.class, TokenPersistenceProcessor.class})
 public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -107,8 +106,6 @@ public class OAuth2IntrospectionEndpointTest extends PowerMockIdentityBaseTest {
                 .thenReturn("test_reference_value");
         when(mockedIntrospectionResponse.getCnfBindingValue())
                 .thenReturn("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_TOKEN_BINDING)).thenReturn("true");
 
         Response response = oAuth2IntrospectionEndpoint.introspect(token, tokenTypeHint, requiredClaims);
 
