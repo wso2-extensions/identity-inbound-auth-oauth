@@ -899,19 +899,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                         + authenticatedUser.getLoggableMaskedUserId(), e);
             }
             if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-                String grantType;
+                boolean isConsented;
                 if (tokenReqMessageContext != null) {
-                    grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+                    isConsented = tokenReqMessageContext.isConsentedToken();
                 } else {
-                    OAuth2AuthorizeReqDTO authorizationReqDTO = authAuthzReqMessageContext.getAuthorizationReqDTO();
-                    grantType = OAuth2Util.getGrantType(authorizationReqDTO.getResponseType());
+                    isConsented = authAuthzReqMessageContext.isConsentedToken();
                 }
                 // when no persistence of tokens, there is no existing token to check the consented value for.
-                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
-                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, true);
-                } else {
-                    jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, false);
-                }
+                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
             }
         }
     }
