@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -32,6 +33,7 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.JdbcUtils;
 import org.wso2.carbon.identity.oauth.Error;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
@@ -1741,9 +1743,9 @@ public class OAuthAppDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
             DatabaseMetaData metaData = connection.getMetaData();
 
-            if (metaData.getDatabaseProductName().toLowerCase().contains("db2")) {
+            if (JdbcUtils.isDB2DB()) {
                 sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE_DB2;
-            } else if (metaData.getDatabaseProductName().toLowerCase().contains("oracle")) {
+            } else if (JdbcUtils.isOracleDB()) {
                 sqlQuery = SQLQueries.OAuthAppDAOSQLQueries
                         .CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE_ORACLE;
             }
@@ -1761,6 +1763,12 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             String msg = "Error while checking client ID unique constraint in the IDN_OAUTH_CONSUMER_APPS table.";
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, e);
+            }
+            throw new IdentityOAuth2Exception(msg, e);
+        } catch (DataAccessException e) {
+            String msg = "Error while checking for the database type.";
             if (LOG.isDebugEnabled()) {
                 LOG.debug(msg, e);
             }

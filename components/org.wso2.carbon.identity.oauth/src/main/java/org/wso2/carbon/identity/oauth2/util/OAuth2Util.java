@@ -5039,6 +5039,9 @@ public class OAuth2Util {
 
     /**
      * Utility method to check if server compatible with client ID tenant unification.
+     * With the client ID tenant unification, the OAuth client ID will be unique only for the tenant. This
+     * requires enabling both the tenant qualified URLs and tenanted sessions. If any of these configs are disabled,
+     * the IDN_OAUTH_CONSUMER_APPS table need to have a unique key constraint for the consumer_key column.
      *
      * @return true if compliant.
      */
