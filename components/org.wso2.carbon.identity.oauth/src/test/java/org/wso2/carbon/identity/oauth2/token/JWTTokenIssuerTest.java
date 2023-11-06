@@ -114,8 +114,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final long DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME = 3600L;
 
     private static final String USER_ACCESS_TOKEN_GRANT_TYPE = "userAccessTokenGrantType";
-    private static final String USER_ACCESS_GRANT_TYPE = "userAccessGrantType";
-
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
@@ -279,15 +277,16 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         authorizeReqDTO.setTenantDomain("super.wso2");
         authorizeReqDTO.setUser(authenticatedUser);
-        authorizeReqDTO.setResponseType(USER_ACCESS_GRANT_TYPE);
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+        authzReqMessageContext.setConsentedToken(true);
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
         tokenReqDTO.setTenantDomain("super.wso2");
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
         tokenReqMessageContext.setAuthorizedUser(authenticatedUser);
+        tokenReqMessageContext.setConsentedToken(false);
         Calendar cal = Calendar.getInstance(); // creates calendar
         cal.setTime(new Date()); // sets calendar time/date
         cal.add(Calendar.HOUR_OF_DAY, 1); // adds one hour
@@ -396,11 +395,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         // The entity_id claim and is_consented are mandatory claims in the JWT when token persistence is disabled.
         OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(true);
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(false);
-        when(OAuth2Util.getGrantType(anyString())).thenCallRealMethod();
-        PowerMockito.doReturn(false).when(OIDCClaimUtil.class, "isConsentBasedClaimFilteringApplicable",
-                APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
-        PowerMockito.doReturn(true).when(OIDCClaimUtil.class, "isConsentBasedClaimFilteringApplicable",
-                USER_ACCESS_GRANT_TYPE);
         jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                 (OAuthAuthzReqMessageContext) authzReqMessageContext,
                 (OAuthTokenReqMessageContext) tokenReqMessageContext,
