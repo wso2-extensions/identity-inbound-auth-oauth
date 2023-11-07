@@ -82,6 +82,7 @@ public interface TokenBindingMgtDAO {
      *
      * @param refreshToken Refresh token sent in the request.
      * @param isTokenHashingEnabled Whether token hashing is enabled.
+     * @return  Optional token binding for the refresh token.
      * @throws IdentityOAuth2Exception An exception is thrown if an error occurs while obtaining the token binding.
      */
     default Optional<TokenBinding> getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
