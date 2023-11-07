@@ -514,6 +514,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     private JWTClaimsSet handleCnf(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenReqMessageContext) {
+
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
         Map<String, Object> userClaimsInOIDCDialect = new HashMap<>();
         String mtlsAuthHeaderName = IdentityUtil.getProperty(MTLS_AUTH_HEADER);
@@ -554,6 +555,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String,
             Object> userClaimsInOIDCDialect) {
+
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
@@ -587,6 +589,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @throws CertificateException if error occurs while parsing content
      */
     private static X509Certificate parseCertificate(String content) throws CertificateException {
+
         String decodedContent = StringUtils.trim(content);
         byte[] decoded = Base64.getDecoder().decode(StringUtils.trim(decodedContent.
                 replaceAll(BEGIN_CERT, "").
