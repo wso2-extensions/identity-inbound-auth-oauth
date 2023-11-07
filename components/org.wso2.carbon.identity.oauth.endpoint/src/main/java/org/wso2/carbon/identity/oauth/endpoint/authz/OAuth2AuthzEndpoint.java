@@ -1502,7 +1502,8 @@ public class OAuth2AuthzEndpoint {
         String responseType = oauth2Params.getResponseType();
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler,
+                        oAuthMessage.getRequest());
         /* We have persisted the oAuthAuthzReqMessageContext before the consent after scope validation. Here we
         retrieve it from the cache and use it again because it contains  information that was set during the scope
         validation process. */
@@ -2796,7 +2797,8 @@ public class OAuth2AuthzEndpoint {
         consent page. */
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
         OAuth2AuthorizeReqDTO authzReqDTO =
-                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler);
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler,
+                        oAuthMessage.getRequest());
         try {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -3598,7 +3600,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry
-            sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler) {
+            sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler, HttpServletRequest request) {
 
         OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
         authzReqDTO.setCallbackUrl(oauth2Params.getRedirectURI());
@@ -3619,6 +3621,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setIdpSessionIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
         authzReqDTO.setState(oauth2Params.getState());
+        authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {

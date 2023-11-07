@@ -388,20 +388,22 @@ public class OAuthAdminServiceImpl {
                             application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
                         }
                         if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(application.getSubjectType())) {
-                            List<String> callBackURIList = new ArrayList<>();
-                            // Need to split the redirect uris for validating the host names since it is combined
-                            // into one regular expression.
-                            if (application.getCallbackUrl().startsWith(
-                                    OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                                callBackURIList = getRedirectURIList(application);
-                            } else {
-                                callBackURIList.add(application.getCallbackUrl());
-                            }
-                            if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
-                                validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
-                                app.setSectorIdentifierURI(application.getSectorIdentifierURI());
-                            } else {
-                                validateRedirectURIForPPID(callBackURIList);
+                            if (StringUtils.isNotEmpty(application.getCallbackUrl())) {
+                                List<String> callBackURIList = new ArrayList<>();
+                                // Need to split the redirect uris for validating the host names since it is combined
+                                // into one regular expression.
+                                if (application.getCallbackUrl().startsWith(
+                                        OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                                    callBackURIList = getRedirectURIList(application);
+                                } else {
+                                    callBackURIList.add(application.getCallbackUrl());
+                                }
+                                if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
+                                    validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
+                                    app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                                } else {
+                                    validateRedirectURIForPPID(callBackURIList);
+                                }
                             }
                         }
                         app.setSubjectType(application.getSubjectType());
@@ -767,19 +769,21 @@ public class OAuthAdminServiceImpl {
                 consumerAppDTO.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
             }
             if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
-                List<String> callBackURIList = new ArrayList<>();
-                // Need to split the redirect uris for validating the host names since it is combined
-                // into one regular expression.
-                if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
-                    callBackURIList = getRedirectURIList(consumerAppDTO);
-                } else {
-                    callBackURIList.add(consumerAppDTO.getCallbackUrl());
-                }
-                if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
-                    validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
-                    oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
-                } else {
-                    validateRedirectURIForPPID(callBackURIList);
+                if (StringUtils.isNotEmpty(consumerAppDTO.getCallbackUrl())) {
+                    List<String> callBackURIList = new ArrayList<>();
+                    // Need to split the redirect uris for validating the host names since it is combined
+                    // into one regular expression.
+                    if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                        callBackURIList = getRedirectURIList(consumerAppDTO);
+                    } else {
+                        callBackURIList.add(consumerAppDTO.getCallbackUrl());
+                    }
+                    if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                        validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                        oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+                    } else {
+                        validateRedirectURIForPPID(callBackURIList);
+                    }
                 }
             }
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
