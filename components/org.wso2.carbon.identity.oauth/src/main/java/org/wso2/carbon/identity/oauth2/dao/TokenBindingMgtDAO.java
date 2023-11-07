@@ -84,6 +84,9 @@ public interface TokenBindingMgtDAO {
      * @param isTokenHashingEnabled Whether token hashing is enabled.
      * @throws IdentityOAuth2Exception An exception is thrown if an error occurs while obtaining the token binding.
      */
-    TokenBinding getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
-            throws IdentityOAuth2Exception;
+    default Optional<TokenBinding> getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
+            throws IdentityOAuth2Exception {
+
+        return Optional.empty();
+    }
 }

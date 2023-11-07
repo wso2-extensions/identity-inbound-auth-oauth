@@ -132,14 +132,14 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
 
         String refreshToken = oAuth2AccessTokenReqDTO.getRefreshToken();
         try {
-            TokenBinding tokenBinding = OAuthTokenPersistenceFactory.getInstance().getTokenBindingMgtDAO()
+            Optional<TokenBinding> tokenBinding = OAuthTokenPersistenceFactory.getInstance().getTokenBindingMgtDAO()
                     .getBindingFromRefreshToken(refreshToken, OAuth2Util.isHashEnabled());
             String cnfValue = generateCnfHashValue(oAuth2AccessTokenReqDTO.getHttpServletRequestWrapper());
 
-            if (tokenBinding != null && CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinding.getBindingType()) &&
-                    StringUtils.isNotBlank(cnfValue)) {
-                return StringUtils.equals(cnfValue, tokenBinding.getBindingValue()) &&
-                        StringUtils.equals(bindingReference, tokenBinding.getBindingReference());
+            if (tokenBinding.isPresent() && CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinding.get().getBindingType())
+                    && StringUtils.isNotBlank(cnfValue)) {
+                return StringUtils.equals(cnfValue, tokenBinding.get().getBindingValue()) &&
+                        StringUtils.equals(bindingReference, tokenBinding.get().getBindingReference());
             }
             return false;
         } catch (IdentityOAuth2Exception e) {
@@ -164,7 +164,9 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
             } catch (CertificateException e) {
                 /* Adding a debug log as these errors cannot be thrown as per the TokenBinder interface implementation.
                    But null checks have been performed where these methods are being executed. */
-                log.debug("Error occurred while extracting the certificate from the request header.", e);
+                if (log.isDebugEnabled()) {
+                    log.debug("Error occurred while extracting the certificate from the request header.", e);
+                }
                 return null;
             }
         } else if (certObject instanceof X509Certificate) {
@@ -178,7 +180,9 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
             certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
             return certThumbprint.toString();
         } else {
-            log.debug("TLS certificate not found in the request.");
+            if (log.isDebugEnabled()) {
+                log.debug("TLS certificate not found in the request.");
+            }
             return null;
         }
     }

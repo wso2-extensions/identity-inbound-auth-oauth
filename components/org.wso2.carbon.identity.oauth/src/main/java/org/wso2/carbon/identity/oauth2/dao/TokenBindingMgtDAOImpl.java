@@ -172,7 +172,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
     }
 
     @Override
-    public TokenBinding getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
+    public Optional<TokenBinding> getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
             throws IdentityOAuth2Exception {
 
         TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
@@ -196,7 +196,7 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
                         preparedStatement.setString(2, CERTIFICATE_BASED_TOKEN_BINDER);
                     });
 
-            return tokenBindingList.isEmpty() ? null : tokenBindingList.get(0);
+            return tokenBindingList.isEmpty() ? null : Optional.ofNullable(tokenBindingList.get(0));
         } catch (DataAccessException e) {
             String error = String.format("Error obtaining token binding type using refresh token: %s.",
                     refreshToken);
