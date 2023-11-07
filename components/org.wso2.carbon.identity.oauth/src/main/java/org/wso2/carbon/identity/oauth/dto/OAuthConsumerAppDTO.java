@@ -63,6 +63,7 @@ public class OAuthConsumerAppDTO {
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private String jwksURI;
+    private boolean fapiConformanceEnabled;
 
     public String getJwksURI() {
 
@@ -416,6 +417,16 @@ public class OAuthConsumerAppDTO {
     public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
 
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
+    }
+
+    public boolean isFapiConformanceEnabled() {
+
+        return fapiConformanceEnabled;
+    }
+
+    public void setFapiConformanceEnabled(boolean fapiConformant) {
+
+        fapiConformanceEnabled = fapiConformant;
     }
 }
 

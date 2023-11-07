@@ -230,6 +230,15 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
                         appDTO.getApplicationName(), null);
             }
+            // Validate software statement assertion signature.
+            if (StringUtils.isNotEmpty(updateRequest.getSoftwareStatement())) {
+                try {
+                    validateSSASignature(updateRequest.getSoftwareStatement());
+                } catch (IdentityOAuth2Exception e) {
+                    throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                            DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
+                }
+            }
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
             // Update jwksURI.
@@ -630,6 +639,16 @@ public class DCRMService {
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
+        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
+        if (enableFAPI) {
+            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
+            if (enableFAPIDCR) {
+                // Add FAPI conformant property to Oauth application.
+                oAuthConsumerApp.setFapiConformanceEnabled(true);
+            }
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
@@ -667,15 +686,6 @@ public class DCRMService {
         sp.setManagementApp(isManagementApp);
 
         Map<String, Object> spProperties = new HashMap<>();
-        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
-        if (enableFAPI) {
-            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
-            if (enableFAPIDCR) {
-                // Add FAPI conformant application nad isThirdParty property to the service provider.
-                spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
-            }
-        }
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
         addSPProperties(spProperties, sp);
 

@@ -76,7 +76,6 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -196,7 +195,6 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -4951,22 +4949,17 @@ public class OAuth2Util {
      *
      * @param clientId       Client ID of the application.
      * @return Whether the application should be FAPI conformant.
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception InvalidOAuthClientException
      */
-    public static boolean isFapiConformantApp(String clientId) throws IdentityOAuth2Exception {
+    public static boolean isFapiConformantApp(String clientId)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        boolean enableFAPIValidation = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
-        if (!enableFAPIValidation) {
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
             return false;
         }
-        ServiceProvider serviceProvider = getServiceProvider(clientId);
-        ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
-        for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
-            if (IS_FAPI_CONFORMANT_APP.equals(serviceProviderProperty.getName())) {
-                return Boolean.parseBoolean(serviceProviderProperty.getValue());
-            }
-        }
-        return false;
+        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+        return oAuthAppDO.isFapiConformanceEnabled();
     }
 
     /**
@@ -5042,5 +5035,23 @@ public class OAuth2Util {
             return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE));
         }
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
+
+    /**
+     * Resolves the grant type from the response type for implicit and hybrid flows.
+     *
+     * @param responseType Response type Eg: token, id_token
+     * @return Grant type
+     */
+    public static String getGrantType(String responseType) {
+
+        String grantType;
+        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
+            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
+            grantType = OAuthConstants.GrantTypes.IMPLICIT;
+        } else {
+            grantType = responseType;
+        }
+        return grantType;
     }
 }

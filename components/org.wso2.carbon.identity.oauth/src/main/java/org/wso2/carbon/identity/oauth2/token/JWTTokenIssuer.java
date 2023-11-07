@@ -493,8 +493,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
-        setEntityIdClaim(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext, authenticatedUser,
-                oAuthAppDO);
+        setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
+                authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
@@ -872,11 +872,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @param oAuthAppDO                 OAuthAppDO
      * @throws IdentityOAuth2Exception If an error occurs while setting entity_id claim.
      */
-    private void setEntityIdClaim(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                  OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-                                  OAuthTokenReqMessageContext tokenReqMessageContext,
-                                  AuthenticatedUser authenticatedUser,
-                                  OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+    protected void setClaimsForNonPersistence(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                              OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                              OAuthTokenReqMessageContext tokenReqMessageContext,
+                                              AuthenticatedUser authenticatedUser,
+                                              OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
 
         if (!OAuth2Util.isTokenPersistenceEnabled()) {
             try {
@@ -896,6 +896,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user: "
                         + authenticatedUser.getLoggableMaskedUserId(), e);
+            }
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                boolean isConsented;
+                if (tokenReqMessageContext != null) {
+                    isConsented = tokenReqMessageContext.isConsentedToken();
+                } else {
+                    isConsented = authAuthzReqMessageContext.isConsentedToken();
+                }
+                // when no persistence of tokens, there is no existing token to check the consented value for.
+                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
             }
         }
     }
