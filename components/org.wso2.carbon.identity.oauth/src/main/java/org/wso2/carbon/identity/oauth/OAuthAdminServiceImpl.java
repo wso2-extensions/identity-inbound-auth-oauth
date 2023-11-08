@@ -100,8 +100,7 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.*;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -450,8 +449,6 @@ public class OAuthAdminServiceImpl {
                                     OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
-                        app.setTlsClientCertificateBoundAccessTokens(
-                                application.getTlsClientCertificateBoundAccessTokens());
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                     }
                     dao.addOAuthApplication(app);
