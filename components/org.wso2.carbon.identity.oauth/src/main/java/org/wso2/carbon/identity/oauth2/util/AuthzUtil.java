@@ -190,13 +190,15 @@ public class AuthzUtil {
     private static String getUserIdOfAssociatedUser(AuthenticatedUser authenticatedUser)
             throws IdentityOAuth2Exception {
 
-        String associatedUserId = getUserId(authenticatedUser);
+        String associatedUserId;
         /* When user ID resolving for the organization SSO federated users, the associated user ID can be found from the
          userName of the authenticated user object. */
         if (authenticatedUser.isFederatedUser()) {
             String userName = MultitenantUtils.getTenantAwareUsername(authenticatedUser.getUserName());
             userName = UserCoreUtil.removeDomainFromName(userName);
             associatedUserId = userName;
+        } else {
+            associatedUserId = getUserId(authenticatedUser);
         }
         try {
             Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
