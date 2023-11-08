@@ -129,6 +129,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -5013,15 +5014,31 @@ public class OAuth2Util {
      */
     public static String[] getSupportedClientAuthMethods() {
 
-        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> clientAuthenticators = OAuth2Util.getSupportedAuthenticationMethods();
         HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (ClientAuthenticationMethodModel authMethod : clientAuthenticators) {
+            supportedClientAuthMethods.add(authMethod.getName());
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server with the authenticator display name.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static HashSet<ClientAuthenticationMethodModel> getSupportedAuthenticationMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> supportedClientAuthMethods = new HashSet<>();
         for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
-            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            List<ClientAuthenticationMethodModel> supportedAuthMethods = clientAuthenticator
+                    .getSupportedClientAuthenticationMethods();
             if (!supportedAuthMethods.isEmpty()) {
                 supportedClientAuthMethods.addAll(supportedAuthMethods);
             }
         }
-        return supportedClientAuthMethods.toArray(new String[0]);
+        return supportedClientAuthMethods;
     }
 
     /**
