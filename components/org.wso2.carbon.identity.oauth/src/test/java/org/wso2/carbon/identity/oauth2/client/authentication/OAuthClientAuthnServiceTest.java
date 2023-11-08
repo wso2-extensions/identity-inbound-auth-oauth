@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
@@ -246,7 +247,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         PowerMockito.when(oAuthClientAuthenticator.getClientId(Mockito.any(), Mockito.any(), Mockito.any()))
                 .thenReturn(CLIENT_ID);
         PowerMockito.when(oAuthClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("private_key_jwt"));
+                .thenReturn(Arrays.asList(new ClientAuthenticationMethodModel("private_key_jwt", "Private Key JWT")));
         OAuthClientAuthnService oAuthClientAuthnService = Mockito.spy(OAuthClientAuthnService.class);
         PowerMockito.when(oAuthClientAuthnService.getClientAuthenticators()).thenReturn
                 (Arrays.asList(oAuthClientAuthenticator));

@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
@@ -382,8 +383,11 @@ public class OAuthClientAuthnService {
 
         List<OAuthClientAuthenticator> filteredAuthenticators = new ArrayList<>();
         for (OAuthClientAuthenticator authenticator : configuredAuthenticators) {
-            if (fapiAllowedAuthMethods.stream().anyMatch(authenticator
-                    .getSupportedClientAuthenticationMethods()::contains)) {
+            List<String> supportedClientAuthMethods = new ArrayList<>();
+            for (ClientAuthenticationMethodModel authMethod : authenticator.getSupportedClientAuthenticationMethods()) {
+                supportedClientAuthMethods.add(authMethod.getName());
+            }
+            if (fapiAllowedAuthMethods.stream().anyMatch(supportedClientAuthMethods::contains)) {
                 filteredAuthenticators.add(authenticator);
             }
         }
@@ -401,8 +405,11 @@ public class OAuthClientAuthnService {
 
         List<OAuthClientAuthenticator> applicableClientAuthenticators = new ArrayList<>();
         for (OAuthClientAuthenticator authenticator : this.getClientAuthenticators()) {
-            if (configuredAuthenticators.stream().anyMatch(
-                    authenticator.getSupportedClientAuthenticationMethods()::contains)) {
+            List<String> supportedClientAuthMethods = new ArrayList<>();
+            for (ClientAuthenticationMethodModel authMethod : authenticator.getSupportedClientAuthenticationMethods()) {
+                supportedClientAuthMethods.add(authMethod.getName());
+            }
+            if (configuredAuthenticators.stream().anyMatch(supportedClientAuthMethods::contains)) {
                 applicableClientAuthenticators.add(authenticator);
             }
         }
