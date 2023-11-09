@@ -41,6 +41,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.Group;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,7 +104,7 @@ public class AuthzUtil {
     private static List<String> getSwitchUserRoles(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
 
         String accessingTenantDomain = getAccessingTenantDomain(authenticatedUser);
-        String accessingUserId = getAccessingUserId(authenticatedUser);
+        String accessingUserId = getUserIdOfAssociatedUser(authenticatedUser);
         return getRoles(accessingUserId, accessingTenantDomain);
     }
 
@@ -180,15 +181,25 @@ public class AuthzUtil {
     }
 
     /**
-     * Get accessing user id of authenticated user.
+     * Get user ID corresponds to the accessing user ID of authenticated user.
      *
      * @param authenticatedUser Authenticated user.
-     * @return Accessing tenant domain.
-     * @throws IdentityOAuth2Exception if an error occurs while retrieving accessing user id.
+     * @return The user ID.
+     * @throws IdentityOAuth2Exception If an error occurs while resolving the user ID.
      */
-    private static String getAccessingUserId(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
+    private static String getUserIdOfAssociatedUser(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
 
-        String associatedUserId = getUserId(authenticatedUser);
+        String associatedUserId;
+        /* When user ID resolving for the organization SSO federated users, the associated user ID can be found from the
+         userName of the authenticated user object. */
+        if (authenticatedUser.isFederatedUser()) {
+            String userName = MultitenantUtils.getTenantAwareUsername(authenticatedUser.getUserName());
+            userName = UserCoreUtil.removeDomainFromName(userName);
+            associatedUserId = userName;
+        } else {
+            associatedUserId = getUserId(authenticatedUser);
+        }
         try {
             Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
                     .getUserIdOfAssociatedUserByOrgId(associatedUserId, authenticatedUser.getAccessingOrganization());

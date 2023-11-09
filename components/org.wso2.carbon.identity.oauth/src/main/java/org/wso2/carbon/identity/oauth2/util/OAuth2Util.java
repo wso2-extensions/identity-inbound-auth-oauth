@@ -130,6 +130,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -5014,15 +5015,31 @@ public class OAuth2Util {
      */
     public static String[] getSupportedClientAuthMethods() {
 
-        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> clientAuthenticators = OAuth2Util.getSupportedAuthenticationMethods();
         HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (ClientAuthenticationMethodModel authMethod : clientAuthenticators) {
+            supportedClientAuthMethods.add(authMethod.getName());
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server with the authenticator display name.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static HashSet<ClientAuthenticationMethodModel> getSupportedAuthenticationMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> supportedClientAuthMethods = new HashSet<>();
         for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
-            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            List<ClientAuthenticationMethodModel> supportedAuthMethods = clientAuthenticator
+                    .getSupportedClientAuthenticationMethods();
             if (!supportedAuthMethods.isEmpty()) {
                 supportedClientAuthMethods.addAll(supportedAuthMethods);
             }
         }
-        return supportedClientAuthMethods.toArray(new String[0]);
+        return supportedClientAuthMethods;
     }
 
     /**
@@ -5036,6 +5053,24 @@ public class OAuth2Util {
             return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE));
         }
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
+
+    /**
+     * Resolves the grant type from the response type for implicit and hybrid flows.
+     *
+     * @param responseType Response type Eg: token, id_token
+     * @return Grant type
+     */
+    public static String getGrantType(String responseType) {
+
+        String grantType;
+        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
+            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
+            grantType = OAuthConstants.GrantTypes.IMPLICIT;
+        } else {
+            grantType = responseType;
+        }
+        return grantType;
     }
 
     /**

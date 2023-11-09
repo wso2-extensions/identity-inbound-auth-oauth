@@ -82,6 +82,7 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -2617,27 +2618,42 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetSupportedClientAuthMethods() {
 
+        ClientAuthenticationMethodModel secretBasic = new ClientAuthenticationMethodModel("client_secret_basic",
+                "Client Secret Basic");
+        ClientAuthenticationMethodModel secretPost = new ClientAuthenticationMethodModel("client_secret_post",
+                "Client Secret Post");
+        ClientAuthenticationMethodModel mtls = new ClientAuthenticationMethodModel("tls_client_auth",
+                "Mutual TLS");
+        ClientAuthenticationMethodModel pkJwt = new ClientAuthenticationMethodModel("private_key_jwt",
+                "Private Key JWT");
         List<OAuthClientAuthenticator> clientAuthenticators = new ArrayList<>();
         OAuthClientAuthenticator basicClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
         PowerMockito.when(basicClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("client_secret_basic", "client_secret_post"));
+                .thenReturn(Arrays.asList(secretBasic, secretPost));
         clientAuthenticators.add(basicClientAuthenticator);
         OAuthClientAuthenticator mtlsClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
         PowerMockito.when(mtlsClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("tls_client_auth"));
+                .thenReturn(Arrays.asList(mtls));
         clientAuthenticators.add(mtlsClientAuthenticator);
         OAuthClientAuthenticator pkjwtClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
         PowerMockito.when(pkjwtClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("private_key_jwt"));
+                .thenReturn(Arrays.asList(pkJwt));
         clientAuthenticators.add(pkjwtClientAuthenticator);
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getAuthenticationHandlers()).thenReturn(clientAuthenticators);
-        List<String> supportedClientAuthMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
-        assertTrue(supportedClientAuthMethods.contains("client_secret_basic"));
-        assertTrue(supportedClientAuthMethods.contains("client_secret_post"));
-        assertTrue(supportedClientAuthMethods.contains("tls_client_auth"));
-        assertTrue(supportedClientAuthMethods.contains("private_key_jwt"));
+        HashSet<ClientAuthenticationMethodModel> supportedClientAuthMethods = OAuth2Util
+                .getSupportedAuthenticationMethods();
+        assertTrue(supportedClientAuthMethods.contains(secretBasic));
+        assertTrue(supportedClientAuthMethods.contains(secretPost));
+        assertTrue(supportedClientAuthMethods.contains(mtls));
+        assertTrue(supportedClientAuthMethods.contains(pkJwt));
         assertEquals(supportedClientAuthMethods.size(), 4);
+        List<String> supportedAuthMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
+        assertTrue(supportedAuthMethods.contains("client_secret_basic"));
+        assertTrue(supportedAuthMethods.contains("client_secret_post"));
+        assertTrue(supportedAuthMethods.contains("tls_client_auth"));
+        assertTrue(supportedAuthMethods.contains("private_key_jwt"));
+        assertEquals(supportedAuthMethods.size(), 4);
     }
 
     @Test

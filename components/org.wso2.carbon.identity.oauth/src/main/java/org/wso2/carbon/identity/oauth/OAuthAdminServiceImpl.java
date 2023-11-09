@@ -101,6 +101,7 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -1302,6 +1303,8 @@ public class OAuthAdminServiceImpl {
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreRemoveOAuthApplicationData(consumerKey);
         }
+        Properties properties = new Properties();
+        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
@@ -1338,6 +1341,7 @@ public class OAuthAdminServiceImpl {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
         }
+        handleInternalTokenRevocation(consumerKey, properties);
         if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
@@ -2274,11 +2278,19 @@ public class OAuthAdminServiceImpl {
         }
     }
 
+    /**
+     * Notify OAuthApplicationMgtListeners on post consumer app change events which have impact on token revocation.
+     *
+     * @param consumerKey consumer key of the application
+     * @param properties  properties
+     * @throws IdentityOAuthAdminException if an error occurs while handling the internal token revocation
+     */
     private void handleInternalTokenRevocation(String consumerKey, Properties properties)
             throws IdentityOAuthAdminException {
+
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
-            oAuthApplicationMgtListener.doPostRegenerateClientSecret(consumerKey, properties);
+            oAuthApplicationMgtListener.doPostTokenRevocationOnClientAppEvent(consumerKey, properties);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
             }

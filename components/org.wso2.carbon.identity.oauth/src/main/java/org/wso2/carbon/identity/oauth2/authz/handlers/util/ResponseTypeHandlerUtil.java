@@ -54,11 +54,13 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
@@ -631,7 +633,20 @@ public class ResponseTypeHandlerUtil {
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
         newTokenBean.setValidityPeriod(validityPeriodInMillis / SECOND_TO_MILLISECONDS_FACTOR);
-        newTokenBean.setGrantType(getGrantType(authorizationReqDTO.getResponseType()));
+        String grantType = OAuth2Util.getGrantType(authorizationReqDTO.getResponseType());
+        newTokenBean.setGrantType(grantType);
+        /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
+        from the current grant. */
+        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            if (existingTokenBean != null) {
+                newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
+            } else {
+                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
+                    newTokenBean.setIsConsentedToken(true);
+                }
+            }
+            oauthAuthzMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
+        }
         newTokenBean.setAccessToken(getNewAccessToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         setRefreshTokenDetails(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean, newTokenBean, oauthIssuerImpl,
                 timestamp);
@@ -953,19 +968,6 @@ public class ResponseTypeHandlerUtil {
             }
         }
         return userStoreDomain;
-    }
-
-    private static String getGrantType(String responseType) {
-
-        String grantType;
-        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
-            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
-            grantType = OAuthConstants.GrantTypes.IMPLICIT;
-        } else {
-            grantType = responseType;
-        }
-
-        return grantType;
     }
 
     private static OAuthCacheKey getOAuthCacheKey(String consumerKey, String scope, String authorizedUserId,
