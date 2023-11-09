@@ -907,6 +907,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 // when no persistence of tokens, there is no existing token to check the consented value for.
                 jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
             }
+            jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
         }
     }
 }
