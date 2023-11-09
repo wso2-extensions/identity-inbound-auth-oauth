@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -580,8 +581,13 @@ public class TokenValidationHandler {
             introResp.setClientId(accessTokenDO.getConsumerKey());
             // Set token binding info.
             if (accessTokenDO.getTokenBinding() != null) {
-                introResp.setBindingType(accessTokenDO.getTokenBinding().getBindingType());
+                String bindingType = accessTokenDO.getTokenBinding().getBindingType();
+                introResp.setBindingType(bindingType);
                 introResp.setBindingReference(accessTokenDO.getTokenBinding().getBindingReference());
+                if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) &&
+                        StringUtils.isNotBlank(accessTokenDO.getTokenBinding().getBindingValue())) {
+                    introResp.setCnfBindingValue(accessTokenDO.getTokenBinding().getBindingValue());
+                }
             }
             // add authorized user type
             if (tokenType != null) {

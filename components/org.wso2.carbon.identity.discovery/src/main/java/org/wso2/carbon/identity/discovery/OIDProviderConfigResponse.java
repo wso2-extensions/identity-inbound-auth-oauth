@@ -80,6 +80,7 @@ public class OIDProviderConfigResponse {
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
     private String webFingerEndpoint;
+    private Boolean tlsClientCertificateBoundAccessTokens;
 
     public String getIssuer() {
         return issuer;
@@ -508,6 +509,11 @@ public class OIDProviderConfigResponse {
         this.webFingerEndpoint = webFingerEndpoint;
     }
 
+    public void setTlsClientCertificateBoundAccessTokens(Boolean tlsClientCertificateBoundAccessTokens) {
+
+        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -573,6 +579,8 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
         configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);
+        configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN.toLowerCase(),
+                this.tlsClientCertificateBoundAccessTokens);
         return configMap;
     }
 }

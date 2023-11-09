@@ -104,6 +104,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
@@ -5070,5 +5071,21 @@ public class OAuth2Util {
             grantType = responseType;
         }
         return grantType;
+    }
+
+    /**
+     * Retrieve the list of token binding types supported by the server.
+     *
+     * @return     Token binding types supported by the server.
+     */
+    public static List<String> getSupportedTokenBindingTypes() {
+
+        List<TokenBindingMetaDataDTO> supportedTokenBindings = OAuthComponentServiceHolder.getInstance()
+                .getTokenBindingMetaDataDTOs();
+        List<String> supportedBindingTypes = new ArrayList<>();
+        for (TokenBindingMetaDataDTO tokenBindingMetaDataDTO : supportedTokenBindings) {
+            supportedBindingTypes.add(tokenBindingMetaDataDTO.getTokenBindingType());
+        }
+        return supportedBindingTypes;
     }
 }
