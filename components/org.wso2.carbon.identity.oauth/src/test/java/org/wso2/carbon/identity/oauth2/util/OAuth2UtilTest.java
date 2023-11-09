@@ -68,11 +68,13 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
@@ -2652,5 +2654,30 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         assertTrue(supportedAuthMethods.contains("tls_client_auth"));
         assertTrue(supportedAuthMethods.contains("private_key_jwt"));
         assertEquals(supportedAuthMethods.size(), 4);
+    }
+
+    @Test
+    public void getSupportedTokenBindingTypes() {
+
+        List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOS = new ArrayList<>();
+        TokenBindingMetaDataDTO cookieTokenBindingMetaDataDTO = new TokenBindingMetaDataDTO();
+        cookieTokenBindingMetaDataDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER);
+        tokenBindingMetaDataDTOS.add(cookieTokenBindingMetaDataDTO);
+        TokenBindingMetaDataDTO ssoTokenBindingMetaDataDTO = new TokenBindingMetaDataDTO();
+        ssoTokenBindingMetaDataDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+        tokenBindingMetaDataDTOS.add(ssoTokenBindingMetaDataDTO);
+        TokenBindingMetaDataDTO certificateTokenBindingMetaDataDTO = new TokenBindingMetaDataDTO();
+        certificateTokenBindingMetaDataDTO
+                .setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        tokenBindingMetaDataDTOS.add(certificateTokenBindingMetaDataDTO);
+        when(oAuthComponentServiceHolderMock.getTokenBindingMetaDataDTOs()).thenReturn(tokenBindingMetaDataDTOS);
+        List<String> supportedTokenBindingTypes = OAuth2Util.getSupportedTokenBindingTypes();
+        Assert.assertTrue(supportedTokenBindingTypes
+                .contains(OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER));
+        Assert.assertTrue(supportedTokenBindingTypes
+                .contains(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER));
+        Assert.assertTrue(supportedTokenBindingTypes
+                .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
+        Assert.assertEquals(supportedTokenBindingTypes.size(), 3);
     }
 }

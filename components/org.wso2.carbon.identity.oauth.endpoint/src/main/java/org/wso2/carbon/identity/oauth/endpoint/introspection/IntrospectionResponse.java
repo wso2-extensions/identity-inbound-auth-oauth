@@ -79,6 +79,7 @@ public final class IntrospectionResponse {
     // OPTIONAL
     // Access token binding reference.
     public static final String BINDING_REFERENCE = "binding_ref";
+    public static final String CNF = "cnf";
 
     public static final String AUT = "aut";
 
