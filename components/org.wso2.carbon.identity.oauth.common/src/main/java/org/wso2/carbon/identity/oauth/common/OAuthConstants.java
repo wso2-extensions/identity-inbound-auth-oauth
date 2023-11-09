@@ -259,9 +259,6 @@ public final class OAuthConstants {
             "SupportedIDTokenEncryptionMethod";
     public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "OAuth.OpenIDConnect." +
             "SupportedRequestObjectEncryptionMethods.SupportedRequestObjectEncryptionMethod";
-
-    public static final String ENABLE_TLS_CERT_TOKEN_BINDING = "OAuth.OpenIDConnect." +
-            "EnableTLSCertificateBoundAccessTokens";
     public static final String IS_PUSH_AUTHORIZATION_REQUEST = "isPushAuthorizationRequest";
 
 
@@ -657,8 +654,6 @@ public final class OAuthConstants {
     public static class TokenBindings {
 
         public static final String NONE = "NONE";
-
-        public static final String CERTIFICATE_BASED_TOKEN_BINDER = "certificate";
     }
 
     /**
