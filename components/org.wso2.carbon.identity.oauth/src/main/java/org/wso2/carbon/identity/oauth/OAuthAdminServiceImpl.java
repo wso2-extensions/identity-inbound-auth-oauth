@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -75,6 +74,7 @@ import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
+import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
@@ -266,13 +266,30 @@ public class OAuthAdminServiceImpl {
      */
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
-
+        
+        // When external service call this method, it will always audit the action.
+        return registerAndRetrieveOAuthApplicationData(application, true);
+    }
+    
+    /**
+     * Same as {@link #registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO)} but with an option to disable
+     * the audit logs. This is to avoid logging duplicate logs.
+     *
+     * @param application    <code>OAuthConsumerAppDTO</code> with application information.
+     * @param enableAuditing Enable auditing or not.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
+     */
+    OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application, boolean enableAuditing)
+            throws IdentityOAuthAdminException {
+        
         boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
                 OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDO app = new OAuthAppDO();
         AuthenticatedUser defaultAppOwner = null;
+        Map<String, Object> oidcDataMap;
         try {
             if (StringUtils.isNotEmpty(tenantAwareLoggedInUsername)) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
@@ -282,15 +299,15 @@ public class OAuthAdminServiceImpl {
                     defaultAppOwner = new AuthenticatedUser(tenantAwareLoggedInUser.get());
                 }
             }
-
+            
             if (defaultAppOwner != null) {
                 OAuthAppDAO dao = new OAuthAppDAO();
                 if (application != null) {
                     app.setApplicationName(application.getApplicationName());
-
+                    
                     validateCallbackURI(application);
                     app.setCallbackUrl(application.getCallbackUrl());
-
+                    
                     app.setState(APP_STATE_ACTIVE);
                     if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                         app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
@@ -303,10 +320,10 @@ public class OAuthAdminServiceImpl {
                             app.setOauthConsumerSecret(application.getOauthConsumerSecret());
                         }
                     }
-
+                    
                     AuthenticatedUser appOwner = getAppOwner(application, defaultAppOwner);
                     app.setAppOwner(appOwner);
-
+                    
                     if (application.getOAuthVersion() != null) {
                         app.setOauthVersion(application.getOAuthVersion());
                     } else {   // by default, assume OAuth 2.0, if it is not set.
@@ -315,9 +332,9 @@ public class OAuthAdminServiceImpl {
                     if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOauthVersion())) {
                         validateGrantTypes(application);
                         app.setGrantTypes(application.getGrantTypes());
-
+                        
                         app.setScopeValidators(filterScopeValidators(application));
-
+                        
                         validateAudiences(application);
                         app.setAudiences(application.getAudiences());
                         app.setPkceMandatory(application.getPkceMandatory());
@@ -328,10 +345,11 @@ public class OAuthAdminServiceImpl {
                         app.setApplicationAccessTokenExpiryTime(application.getApplicationAccessTokenExpiryTime());
                         app.setRefreshTokenExpiryTime(application.getRefreshTokenExpiryTime());
                         app.setIdTokenExpiryTime(application.getIdTokenExpiryTime());
-
+                        
                         // Set OIDC Config Properties.
                         app.setRequestObjectSignatureValidationEnabled(
                                 application.isRequestObjectSignatureValidationEnabled());
+                        
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
@@ -345,7 +363,7 @@ public class OAuthAdminServiceImpl {
                                     filterEncryptionMethod(application.getIdTokenEncryptionMethod(),
                                             OAuthConstants.ID_TOKEN_ENCRYPTION_METHOD));
                         }
-
+                        
                         app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
                         app.setFrontchannelLogoutUrl(application.getFrontchannelLogoutUrl());
                         if (application.getTokenType() != null) {
@@ -460,14 +478,16 @@ public class OAuthAdminServiceImpl {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
                                 " in tenant domain: " + tenantDomain);
                     }
-                    if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+                    oidcDataMap = buildSPData(app);
+                    oidcDataMap.put("allowedOrigins", application.getAllowedOrigins());
+                    if (CarbonUtils.isLegacyAuditLogsDisabled() && enableAuditing) {
                         Optional<String> initiatorId = getInitiatorId();
                         if (initiatorId.isPresent()) {
                             AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                                     initiatorId.get(), USER,
                                     app.getOauthConsumerKey(), TARGET_APPLICATION,
                                     OAuthConstants.LogConstants.CREATE_OAUTH_APPLICATION)
-                                    .data(buildSPData(app));
+                                    .data(oidcDataMap);
                             triggerAuditLogEvent(auditLogBuilder, true);
                         } else {
                             LOG.error("Error getting the logged in userId");
@@ -476,7 +496,7 @@ public class OAuthAdminServiceImpl {
                 } else {
                     String message = "No application details in the request. Failed to register OAuth App.";
                     LOG.debug(message);
-
+                    
                     throw handleClientError(INVALID_REQUEST, message);
                 }
             } else {
@@ -495,7 +515,9 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
         }
-        return OAuthUtil.buildConsumerAppDTO(app);
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
+        oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
+        return oAuthConsumerAppDTO;
     }
 
 
@@ -641,16 +663,28 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
+        updateConsumerApplication(consumerAppDTO, true);
+    }
+    
+    /**
+     * Same as {@link #updateConsumerApplication(OAuthConsumerAppDTO)} but with an option to enable/disable audit logs.
+     *
+     * @param consumerAppDTO <code>OAuthConsumerAppDTO</code> with updated application information
+     * @throws IdentityOAuthAdminException Error when updating the underlying identity persistence store.
+     */
+    void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO, boolean enableAuditing)
+            throws IdentityOAuthAdminException {
+        
         boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
                 OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
         }
-
+        
         String errorMessage = "Error while updating the app information.";
         String oauthConsumerKey = consumerAppDTO.getOauthConsumerKey();
-
+        
         if (StringUtils.isEmpty(oauthConsumerKey) || StringUtils.isEmpty(consumerAppDTO.getOauthConsumerSecret())) {
             errorMessage = "ConsumerKey or ConsumerSecret is not provided for updating the OAuth application.";
             if (LOG.isDebugEnabled()) {
@@ -658,9 +692,9 @@ public class OAuthAdminServiceImpl {
             }
             throw handleClientError(INVALID_REQUEST, errorMessage);
         }
-
+        
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-
+        
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo;
         try {
@@ -686,17 +720,17 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while updating the app information.", e);
         }
-
+        
         AuthenticatedUser defaultAppOwner = oauthappdo.getAppOwner();
         AuthenticatedUser appOwner = getAppOwner(consumerAppDTO, defaultAppOwner);
         oauthappdo.setAppOwner(appOwner);
-
+        
         oauthappdo.setOauthConsumerKey(oauthConsumerKey);
         oauthappdo.setOauthConsumerSecret(consumerAppDTO.getOauthConsumerSecret());
-
+        
         validateCallbackURI(consumerAppDTO);
         oauthappdo.setCallbackUrl(consumerAppDTO.getCallbackUrl());
-
+        
         oauthappdo.setApplicationName(consumerAppDTO.getApplicationName());
         oauthappdo.setPkceMandatory(consumerAppDTO.getPkceMandatory());
         oauthappdo.setPkceSupportPlain(consumerAppDTO.getPkceSupportPlain());
@@ -711,13 +745,13 @@ public class OAuthAdminServiceImpl {
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             validateGrantTypes(consumerAppDTO);
             oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
-
+            
             validateAudiences(consumerAppDTO);
             oauthappdo.setAudiences(consumerAppDTO.getAudiences());
             oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
             oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
-
+            
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
@@ -729,7 +763,7 @@ public class OAuthAdminServiceImpl {
                 oauthappdo.setIdTokenEncryptionMethod(filterEncryptionMethod(
                         consumerAppDTO.getIdTokenEncryptionMethod(), OAuthConstants.ID_TOKEN_ENCRYPTION_METHOD));
             }
-
+            
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
@@ -838,13 +872,16 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
         }
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        Map<String, Object> oidcDataMap = buildSPData(oauthappdo);
+        oidcDataMap.put("allowedOrigins", consumerAppDTO.getAllowedOrigins());
+        consumerAppDTO.setAuditLogData(oidcDataMap);
+        if (CarbonUtils.isLegacyAuditLogsDisabled() && enableAuditing) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                         initiatorId.get(), USER, oauthConsumerKey,
                         TARGET_APPLICATION, OAuthConstants.LogConstants.UPDATE_OAUTH_APPLICATION)
-                        .data(buildSPData(oauthappdo));
+                        .data(oidcDataMap);
                 triggerAuditLogEvent(auditLogBuilder, true);
             } else {
                 LOG.error("Error getting the logged in userId");
@@ -1137,7 +1174,7 @@ public class OAuthAdminServiceImpl {
                         "consumerKey: " + consumerKey);
             }
 
-            if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            if (CarbonUtils.isLegacyAuditLogsDisabled()) {
                 Optional<String> initiatorId = getInitiatorId();
                 if (initiatorId.isPresent()) {
                     AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -1189,7 +1226,7 @@ public class OAuthAdminServiceImpl {
         String newSecret = OAuthUtil.getRandomNumberSecure();
         OAuthConsumerAppDTO oldAppDTO = null;
 
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        if (CarbonUtils.isLegacyAuditLogsDisabled()) {
             oldAppDTO = getOAuthApplicationData(consumerKey);
         }
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
@@ -1205,7 +1242,7 @@ public class OAuthAdminServiceImpl {
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        if (CarbonUtils.isLegacyAuditLogsDisabled()) {
             // This API is invoked when regenerating client secret and when activating the app.
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
@@ -1298,7 +1335,18 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
      */
     public void removeOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
-
+        
+        removeOAuthApplicationData(consumerKey, true);
+    }
+    
+    /**
+     * Removes an OAuth consumer application. Also this will allow to enable or disable audit logs.
+     *
+     * @param consumerKey Consumer Key
+     * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
+     */
+    void removeOAuthApplicationData(String consumerKey, boolean enableAuditing) throws IdentityOAuthAdminException {
+        
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreRemoveOAuthApplicationData(consumerKey);
@@ -1306,6 +1354,7 @@ public class OAuthAdminServiceImpl {
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
 
+        
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
             dao.removeConsumerApplication(consumerKey);
@@ -1342,7 +1391,7 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
         }
         handleInternalTokenRevocation(consumerKey, properties);
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        if (CarbonUtils.isLegacyAuditLogsDisabled() && enableAuditing) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(

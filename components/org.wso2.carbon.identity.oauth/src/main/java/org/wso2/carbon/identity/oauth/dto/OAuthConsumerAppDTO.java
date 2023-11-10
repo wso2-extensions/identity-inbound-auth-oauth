@@ -18,10 +18,16 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
+
+import java.util.List;
+import java.util.Map;
+
 /**
  * OAuth consumer app dto.
  */
-public class OAuthConsumerAppDTO {
+public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
@@ -65,6 +71,9 @@ public class OAuthConsumerAppDTO {
     private String requestObjectEncryptionMethod;
     private String jwksURI;
     private boolean fapiConformanceEnabled;
+    // CORS orgin related properties. This will be used by the CORS management service
+    private List<String> allowedOrigins = null;
+    private Map<String, Object> auditLogData;
 
     public String getJwksURI() {
 
@@ -438,6 +447,32 @@ public class OAuthConsumerAppDTO {
     public void setFapiConformanceEnabled(boolean fapiConformant) {
 
         fapiConformanceEnabled = fapiConformant;
+    }
+
+    @Override
+    public String getProtocolName() {
+
+        return FrameworkConstants.StandardInboundProtocols.OAUTH2;
+    }
+    
+    public List<String> getAllowedOrigins() {
+        
+        return allowedOrigins;
+    }
+    
+    public void setAllowedOrigins(List<String> allowedOrigins) {
+        
+        this.allowedOrigins = allowedOrigins;
+    }
+    
+    public Map<String, Object> getAuditLogData() {
+        
+        return auditLogData;
+    }
+    
+    public void setAuditLogData(Map<String, Object> auditLogData) {
+        
+        this.auditLogData = auditLogData;
     }
 }
 

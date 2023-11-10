@@ -208,7 +208,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     private void deleteAssociatedOAuthApps(ServiceProvider serviceProvider, String tenantDomain)
-            throws IdentityOAuthAdminException, IdentityOAuth2Exception {
+            throws IdentityOAuthAdminException, IdentityOAuth2Exception, IdentityApplicationManagementException {
 
         Set<String> associatedOAuthConsumerKeys = getOAuthAppsAssociatedWithApplication(serviceProvider);
         for (String consumerKey : associatedOAuthConsumerKeys) {
@@ -216,7 +216,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 log.debug("Removing OAuth application data for clientId: " + consumerKey + " associated with " +
                         "application: " + serviceProvider.getApplicationName() + " tenantDomain: " + tenantDomain);
             }
-            OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService().removeOAuthApplicationData(consumerKey);
+            OAuthComponentServiceHolder.getInstance().getOAuthInboundConfigHandler().handleConfigDeletion(
+                    consumerKey);
         }
         removeEntriesFromCache(associatedOAuthConsumerKeys);
     }
@@ -570,9 +571,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                             "service provider with id: " + appId + ". Removing the stale OAuth application for " +
                             "clientId: " + deletedConsumerKey);
                 }
-                OAuth2ServiceComponentHolder.getInstance()
-                        .getOAuthAdminService().removeOAuthApplicationData(deletedConsumerKey);
-            } catch (IdentityOAuthAdminException e) {
+                OAuthComponentServiceHolder.getInstance().getOAuthInboundConfigHandler().handleConfigDeletion(
+                        deletedConsumerKey);
+            } catch (IdentityApplicationManagementException e) {
                 String msg = "Error removing OAuth2 inbound data for clientId: %s associated with service provider " +
                         "with id: %s during application update.";
                 throw new IdentityApplicationManagementException(String.format(msg, deletedConsumerKey, appId), e);

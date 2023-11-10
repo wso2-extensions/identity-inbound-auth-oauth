@@ -27,9 +27,13 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -97,6 +101,11 @@ public class OAuthServiceComponent {
                 log.debug("OAuthTokenSessionMapping Event Handler is enabled");
             }
             context.getBundleContext().registerService(OAuthAdminServiceImpl.class.getName(), oauthAdminService, null);
+            OauthInboundAuthConfigHandler authProtocolApplicationService = new OauthInboundAuthConfigHandler();
+            OAuthComponentServiceHolder.getInstance().setOAuthInboundConfigHandler(
+                    authProtocolApplicationService);
+            context.getBundleContext().registerService(ApplicationInboundAuthConfigHandler.class,
+                    authProtocolApplicationService, null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -375,5 +384,39 @@ public class OAuthServiceComponent {
 
         OAuthComponentServiceHolder.getInstance().setOrganizationManager(null);
         log.debug("Unset organization management service.");
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.application.mgt.service",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService"
+    )
+    protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+    }
+
+    protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(null);
+    }
+    
+    @Reference(
+            name = "org.wso2.carbon.identity.application.cors.mgt.service",
+            service = CORSManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationCORSManagementService"
+    )
+    protected void setApplicationCORSManagementService(CORSManagementService corsManagementService) {
+        
+        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
+    }
+    
+    protected void unsetApplicationCORSManagementService(CORSManagementService corsManagementService) {
+        
+        OAuthComponentServiceHolder.getInstance().setCorsManagementService(null);
     }
 }
