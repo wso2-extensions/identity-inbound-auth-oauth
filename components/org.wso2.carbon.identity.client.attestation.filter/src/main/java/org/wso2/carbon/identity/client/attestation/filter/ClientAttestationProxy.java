@@ -26,7 +26,12 @@ import org.apache.cxf.jaxrs.impl.MetadataMap;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.AbstractPhaseInterceptor;
 import org.apache.cxf.phase.Phase;
+import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.client.attestation.mgt.exceptions.ClientAttestationMgtException;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -35,12 +40,15 @@ import java.util.List;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.ATTESTATION_HEADER;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ID;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.DIRECT;
+import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.OAUTH2;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.RESPONSE_MODE;
 
 /**
@@ -64,12 +72,23 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
 
     private ClientAttestationService clientAttestationService;
+    private ApplicationManagementService applicationManagementService;
 
 
     public ClientAttestationProxy() {
 
         // Since the body is consumed and body parameters are available at this phase we use "PRE_INVOKE"
         super(Phase.PRE_INVOKE);
+    }
+
+    public ApplicationManagementService getApplicationManagementService() {
+
+        return applicationManagementService;
+    }
+
+    public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        this.applicationManagementService = applicationManagementService;
     }
 
     public ClientAttestationService getClientAttestationService() {
@@ -86,7 +105,6 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
      * Handles the incoming JAX-RS message for the purpose of OAuth2 client authentication.
      * It extracts the HttpServletRequest from the incoming message, retrieves the attestation header
      * from the HTTP request, and extracts content parameters from the message.
-     *
      * If the incoming request is determined to be an API-based authentication request, it proceeds to:
      * 1. Validate the attestation header to establish client authenticity and obtain a client
      *    attestation context.
@@ -105,12 +123,42 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
 
         // Check if this is an API-based authentication request
         if (isApiBasedAuthnRequest(bodyContentParams)) {
-            // Validate the attestation header and obtain client attestation context
-            ClientAttestationContext clientAttestationContext =
-                    clientAttestationService.validateAttestation(attestationHeader,
-                    getClientId(bodyContentParams), getTenantDomain());
-            // Set the client attestation context in the HTTP request
-            setContextToRequest(request, clientAttestationContext);
+
+            String clientId = getClientId(bodyContentParams);
+            if (StringUtils.isEmpty(clientId)) {
+
+                String errorMessage = new JSONObject().put("error_description", "Client Id not found.")
+                        .put("error", "Bad Request").toString();
+                Response response = Response.status(Response.Status.BAD_REQUEST).entity(errorMessage)
+                        .build();
+                throw new WebApplicationException(response);
+            } else {
+                try {
+                    ServiceProvider serviceProvider =  getServiceProvider(clientId, getTenantDomain());
+                    // Validate the attestation header and obtain client attestation context
+                    ClientAttestationContext clientAttestationContext = clientAttestationService
+                            .validateAttestation(attestationHeader,
+                                    serviceProvider.getApplicationResourceId(), getTenantDomain());
+                    // Set the client attestation context in the HTTP request
+                    setContextToRequest(request, clientAttestationContext);
+                    if (!clientAttestationContext.isAttested()) {
+                        String errorMessage = new JSONObject().put("error_description",
+                                        "Client Attestation validation failed.").put("error", "Bad Request").toString();
+                        Response response = Response.status(Response.Status.BAD_REQUEST).entity(errorMessage)
+                                .build();
+                        throw new WebApplicationException(response);
+                    }
+                } catch (ClientAttestationMgtException e) {
+                    // Create a Response object with a 400 status code and a detailed message
+                    Response response = Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity("Invalid Request: " + e.getMessage())
+                            .build();
+
+                    // Throw a WebApplicationException with the custom response
+                    throw new WebApplicationException(e, response);
+                }
+            }
         }
     }
 
@@ -175,5 +223,28 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         }
         // Add the Client Attestation context as an attribute to the HttpServletRequest
         request.setAttribute(CLIENT_ATTESTATION_CONTEXT, clientAttestationContext);
+    }
+
+    private ServiceProvider getServiceProvider(String clientId, String tenantDomain)
+            throws ClientAttestationMgtException {
+
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = applicationManagementService.getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+        } catch (IdentityApplicationManagementException e) {
+            String errorMessage = new JSONObject().put("error_description", "Internal Server Error when " +
+                            "retrieving service provider.").put("error", "server_error").toString();
+            Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(errorMessage)
+                    .build();
+            throw new WebApplicationException(response);
+        }
+        if (serviceProvider == null) {
+            String errorMessage = new JSONObject().put("error_description", "Service provider not found.")
+                    .put("error", "Bad Request").toString();
+            Response response = Response.status(Response.Status.BAD_REQUEST).entity(errorMessage)
+                    .build();
+            throw new WebApplicationException(response);
+        }
+        return serviceProvider;
     }
 }
