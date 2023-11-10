@@ -25,7 +25,6 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * This is the DataHolder class of DynamicClientRegistration bundle. This holds a reference to the
@@ -41,7 +40,6 @@ public class DCRDataHolder {
     private List<RegistrationHandler> registrationHandlerList = new ArrayList<>();
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
     private List<TokenBinder> tokenBinders = new ArrayList<>();
-
 
     private DCRDataHolder() {
 
@@ -90,11 +88,6 @@ public class DCRDataHolder {
     public List<TokenBinder> getTokenBinders() {
 
         return tokenBinders;
-    }
-
-    public Optional<TokenBinder> getTokenBinder(String bindingType) {
-
-        return tokenBinders.stream().filter(t -> t.getBindingType().equals(bindingType)).findAny();
     }
 
     public void addTokenBinder(TokenBinder tokenBinder) {

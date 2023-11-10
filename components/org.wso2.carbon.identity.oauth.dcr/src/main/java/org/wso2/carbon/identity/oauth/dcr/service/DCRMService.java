@@ -328,10 +328,10 @@ public class DCRMService {
             appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
             appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
             if (updateRequest.isTlsClientCertificateBoundAccessTokens()) {
-                boolean isCertificateTokenBindEnabled = DCRDataHolder.getInstance().getTokenBinders().stream()
-                        .anyMatch(t -> t.getBindingType().equals(
-                                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
-                if (isCertificateTokenBindEnabled) {
+                boolean isCertificateTokenBinderAvailable = DCRDataHolder.getInstance().getTokenBinders().stream()
+                        .anyMatch(t -> OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER
+                                .equals(t.getBindingType()));
+                if (isCertificateTokenBinderAvailable) {
                     appDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
                     appDTO.setTokenBindingValidationEnabled(true);
                 }
@@ -634,10 +634,10 @@ public class DCRMService {
         oAuthConsumerApp.setRequirePushedAuthorizationRequests(
                 registrationRequest.isRequirePushedAuthorizationRequests());
         if (registrationRequest.isTlsClientCertificateBoundAccessTokens()) {
-            boolean isCertificateTokenBindEnabled = DCRDataHolder.getInstance().getTokenBinders().stream()
-                    .anyMatch(t -> t.getBindingType().equals(
-                            OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
-            if (isCertificateTokenBindEnabled) {
+            boolean isCertificateTokenBinderAvailable = DCRDataHolder.getInstance().getTokenBinders().stream()
+                    .anyMatch(t -> OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER
+                            .equals(t.getBindingType()));
+            if (isCertificateTokenBinderAvailable) {
                 oAuthConsumerApp.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
                 oAuthConsumerApp.setTokenBindingValidationEnabled(true);
             }

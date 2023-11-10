@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
@@ -161,6 +162,39 @@ public class DCRServiceComponent {
         DCRDataHolder.getInstance().getUnRegistrationHandlerList().add(null);
     }
 
+    /**
+     * Sets ApplicationManagement Service.
+     *
+     * @param applicationManagementService An instance of ApplicationManagementService
+     */
+    @Reference(
+            name = "application.mgt.service",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService"
+    )
+    protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting ApplicationManagement Service");
+        }
+        DCRDataHolder.getInstance().
+                setApplicationManagementService(applicationManagementService);
+    }
+
+    /**
+     * Unsets ApplicationManagement Service.
+     *
+     * @param applicationManagementService An instance of ApplicationManagementService
+     */
+    protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting ApplicationManagement.");
+        }
+        DCRDataHolder.getInstance().setApplicationManagementService(null);
+    }
 
     @Reference(name = "token.binding.service",
             service = TokenBinderInfo.class,
