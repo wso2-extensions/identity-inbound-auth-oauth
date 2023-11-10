@@ -70,7 +70,8 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
 
     private static final Log LOG = LogFactory.getLog(ClientAttestationProxy.class);
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
-
+    public static final String ERROR = "error";
+    public static final String ERROR_DESCRIPTION = "error_description";
     private ClientAttestationService clientAttestationService;
     private ApplicationManagementService applicationManagementService;
 
@@ -127,11 +128,8 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
             String clientId = getClientId(bodyContentParams);
             if (StringUtils.isEmpty(clientId)) {
 
-                String errorMessage = new JSONObject().put("error_description", "Client Id not found.")
-                        .put("error", "Bad Request").toString();
-                Response response = Response.status(Response.Status.BAD_REQUEST).entity(errorMessage)
-                        .build();
-                throw new WebApplicationException(response);
+                throw new WebApplicationException(buildResponse("Client Id not found in the request",
+                        Response.Status.BAD_REQUEST));
             } else {
                 try {
                     ServiceProvider serviceProvider =  getServiceProvider(clientId, getTenantDomain());
@@ -142,11 +140,10 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
                     // Set the client attestation context in the HTTP request
                     setContextToRequest(request, clientAttestationContext);
                     if (!clientAttestationContext.isAttested()) {
-                        String errorMessage = new JSONObject().put("error_description",
-                                        "Client Attestation validation failed.").put("error", "Bad Request").toString();
-                        Response response = Response.status(Response.Status.BAD_REQUEST).entity(errorMessage)
-                                .build();
-                        throw new WebApplicationException(response);
+
+                        throw new WebApplicationException(buildResponse
+                                (clientAttestationContext.getValidationFailureMessage(),
+                                        Response.Status.BAD_REQUEST));
                     }
                 } catch (ClientAttestationMgtException e) {
                     // Create a Response object with a 400 status code and a detailed message
@@ -225,26 +222,44 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         request.setAttribute(CLIENT_ATTESTATION_CONTEXT, clientAttestationContext);
     }
 
-    private ServiceProvider getServiceProvider(String clientId, String tenantDomain)
-            throws ClientAttestationMgtException {
+    /**
+     * Retrieves the service provider based on the given client ID and tenant domain.
+     *
+     * @param clientId     The client ID associated with the service provider.
+     * @param tenantDomain The tenant domain in which the service provider is registered.
+     * @return The retrieved service provider.
+     * @throws WebApplicationException If an error occurs during the retrieval process.
+     */
+    private ServiceProvider getServiceProvider(String clientId, String tenantDomain) {
 
         ServiceProvider serviceProvider;
         try {
             serviceProvider = applicationManagementService.getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
-            String errorMessage = new JSONObject().put("error_description", "Internal Server Error when " +
-                            "retrieving service provider.").put("error", "server_error").toString();
-            Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(errorMessage)
-                    .build();
-            throw new WebApplicationException(response);
+            throw new WebApplicationException(
+                    buildResponse("Internal Server Error when retrieving service provider.",
+                            Response.Status.INTERNAL_SERVER_ERROR));
         }
         if (serviceProvider == null) {
-            String errorMessage = new JSONObject().put("error_description", "Service provider not found.")
-                    .put("error", "Bad Request").toString();
-            Response response = Response.status(Response.Status.BAD_REQUEST).entity(errorMessage)
-                    .build();
-            throw new WebApplicationException(response);
+
+            throw new WebApplicationException(buildResponse("Service provider not found.",
+                    Response.Status.BAD_REQUEST));
         }
         return serviceProvider;
+    }
+
+    /**
+     * Builds a JAX-RS Response object with the specified error description and HTTP status.
+     *
+     * @param errorDescription The description of the error.
+     * @param status           The HTTP status to be set in the response.
+     * @return A JAX-RS Response object representing the error.
+     */
+    private Response buildResponse(String errorDescription, Response.Status status) {
+
+        String errorJSON = new JSONObject().put(ERROR_DESCRIPTION, errorDescription)
+                .put(ERROR, status.getReasonPhrase()).toString();
+
+        return Response.status(status).entity(errorJSON).build();
     }
 }
