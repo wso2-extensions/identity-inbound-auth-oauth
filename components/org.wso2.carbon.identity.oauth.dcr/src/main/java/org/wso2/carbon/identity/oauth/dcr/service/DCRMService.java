@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -76,6 +77,7 @@ public class DCRMService {
 
     private static final Log log = LogFactory.getLog(DCRMService.class);
     private static OAuthAdminService oAuthAdminService = new OAuthAdminService();
+    private static  OAuth2Service oAuth2Service = new OAuth2Service();
 
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
@@ -329,8 +331,10 @@ public class DCRMService {
             appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
             appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
             if (updateRequest.isTlsClientCertificateBoundAccessTokens()) {
-                if (Boolean.parseBoolean(IdentityUtil.getProperty(
-                        OAuthConstants.ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE))) {
+                boolean isCertificateTokenBindEnabled = oAuth2Service.getSupportedTokenBinders().stream()
+                        .anyMatch(t -> t.getBindingType().equals(
+                                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
+                if (isCertificateTokenBindEnabled) {
                     appDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
                     appDTO.setTokenBindingValidationEnabled(true);
                 }
@@ -633,8 +637,10 @@ public class DCRMService {
         oAuthConsumerApp.setRequirePushedAuthorizationRequests(
                 registrationRequest.isRequirePushedAuthorizationRequests());
         if (registrationRequest.isTlsClientCertificateBoundAccessTokens()) {
-            if (Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE))) {
+            boolean isCertificateTokenBindEnabled = oAuth2Service.getSupportedTokenBinders().stream()
+                    .anyMatch(t -> t.getBindingType().equals(
+                            OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
+            if (isCertificateTokenBindEnabled) {
                 oAuthConsumerApp.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
                 oAuthConsumerApp.setTokenBindingValidationEnabled(true);
             }
