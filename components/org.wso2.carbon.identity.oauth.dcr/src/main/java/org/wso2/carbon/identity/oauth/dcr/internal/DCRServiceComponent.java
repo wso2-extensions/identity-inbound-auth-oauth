@@ -28,7 +28,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
-import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 
 /**
  * OAuth DCRM service component.
@@ -160,38 +161,29 @@ public class DCRServiceComponent {
         DCRDataHolder.getInstance().getUnRegistrationHandlerList().add(null);
     }
 
-    /**
-     * Sets ApplicationManagement Service.
-     *
-     * @param applicationManagementService An instance of ApplicationManagementService
-     */
-    @Reference(
-            name = "application.mgt.service",
-            service = ApplicationManagementService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
+
+    @Reference(name = "token.binding.service",
+            service = TokenBinderInfo.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetApplicationManagementService"
-    )
-    protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+            unbind = "unsetTokenBinderInfo")
+    protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Setting ApplicationManagement Service");
+            log.debug("Setting the token binder for: " + tokenBinderInfo.getBindingType());
         }
-        DCRDataHolder.getInstance().
-                setApplicationManagementService(applicationManagementService);
+        if (tokenBinderInfo instanceof TokenBinder) {
+            DCRDataHolder.getInstance().addTokenBinder((TokenBinder) tokenBinderInfo);
+        }
     }
-
-    /**
-     * Unsets ApplicationManagement Service.
-     *
-     * @param applicationManagementService An instance of ApplicationManagementService
-     */
-    protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
+    protected void unsetTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Unsetting ApplicationManagement.");
+            log.debug("Un-setting the token binder for: " + tokenBinderInfo.getBindingType());
         }
-        DCRDataHolder.getInstance().setApplicationManagementService(null);
+        if (tokenBinderInfo instanceof TokenBinder) {
+            DCRDataHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
+        }
     }
 
 }

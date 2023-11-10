@@ -56,7 +56,6 @@ import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
-import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -77,8 +76,6 @@ public class DCRMService {
 
     private static final Log log = LogFactory.getLog(DCRMService.class);
     private static OAuthAdminService oAuthAdminService = new OAuthAdminService();
-    private static  OAuth2Service oAuth2Service = new OAuth2Service();
-
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
@@ -331,7 +328,7 @@ public class DCRMService {
             appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
             appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
             if (updateRequest.isTlsClientCertificateBoundAccessTokens()) {
-                boolean isCertificateTokenBindEnabled = oAuth2Service.getSupportedTokenBinders().stream()
+                boolean isCertificateTokenBindEnabled = DCRDataHolder.getInstance().getTokenBinders().stream()
                         .anyMatch(t -> t.getBindingType().equals(
                                 OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
                 if (isCertificateTokenBindEnabled) {
@@ -637,7 +634,7 @@ public class DCRMService {
         oAuthConsumerApp.setRequirePushedAuthorizationRequests(
                 registrationRequest.isRequirePushedAuthorizationRequests());
         if (registrationRequest.isTlsClientCertificateBoundAccessTokens()) {
-            boolean isCertificateTokenBindEnabled = oAuth2Service.getSupportedTokenBinders().stream()
+            boolean isCertificateTokenBindEnabled = DCRDataHolder.getInstance().getTokenBinders().stream()
                     .anyMatch(t -> t.getBindingType().equals(
                             OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
             if (isCertificateTokenBindEnabled) {
