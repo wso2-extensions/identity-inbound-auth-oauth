@@ -633,7 +633,8 @@ public class DCRMService {
         oAuthConsumerApp.setRequirePushedAuthorizationRequests(
                 registrationRequest.isRequirePushedAuthorizationRequests());
         if (registrationRequest.isTlsClientCertificateBoundAccessTokens()) {
-            if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE))) {
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(
+                    OAuthConstants.ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE))) {
                 oAuthConsumerApp.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
                 oAuthConsumerApp.setTokenBindingValidationEnabled(true);
             }
