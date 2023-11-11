@@ -2976,9 +2976,17 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             String subjectIdentifier = resultSet.getString("SUBJECT_IDENTIFIER");
                             String userDomain = resultSet.getString("USER_DOMAIN");
                             String authenticatedIDPName = resultSet.getString("NAME");
+                            String authorizedOrganization = resultSet.getString("AUTHORIZED_ORGANIZATION");
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
                                     userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
                             user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
+                            if (user.isFederatedUser() &&
+                                    !OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+                                user.setAccessingOrganization(authorizedOrganization);
+                                user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
+                                // Tenant domain should be properly set for the organization SSO login users.
+                                user.setTenantDomain(OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                            }
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                             Timestamp refreshTokenIssuedTime =
