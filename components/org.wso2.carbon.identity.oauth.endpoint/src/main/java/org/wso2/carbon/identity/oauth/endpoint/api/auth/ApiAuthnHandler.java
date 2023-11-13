@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.api.auth;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
@@ -26,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorParamMetadata;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponseData;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -35,7 +37,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Authenticator;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthenticatorMetadata;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.FlowStatusEnum;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Context;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Link;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Message;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
@@ -60,6 +62,8 @@ public class ApiAuthnHandler {
     private static final String AUTHENTICATION_EP_LINK_NAME = "authentication";
     private static final String TENANT_CONTEXT_PATH_COMPONENT = "/t/%s";
     private static final String HTTP_POST = "POST";
+    private static final String MESSAGE = "message";
+    private static final String DOT_SEPARATOR = ".";
 
     /**
      * Build the response for the authentication API.
@@ -72,7 +76,7 @@ public class ApiAuthnHandler {
 
         AuthResponse authResponse = new AuthResponse();
         authResponse.setFlowId(authServiceResponse.getSessionDataKey());
-        authResponse.setFlowStatus(getFlowStatus(authServiceResponse.getFlowStatus()));
+        authResponse.setFlowStatus(authServiceResponse.getFlowStatus());
         NextStep nextStep = buildNextStep(authServiceResponse);
         authResponse.setNextStep(nextStep);
         authResponse.setLinks(buildLinks());
@@ -116,7 +120,55 @@ public class ApiAuthnHandler {
     private List<Message> buildMessages(AuthServiceResponse authServiceResponse) {
 
         List<Message> messages = new ArrayList<>();
+        boolean hasErrorMessageFromAuthenticator = false;
+        if (authServiceResponse.getData().isPresent()) {
+            AuthServiceResponseData responseData = authServiceResponse.getData().get();
+            for (AuthenticatorData authenticatorData : responseData.getAuthenticatorOptions()) {
+                if (authenticatorData.getMessage() != null) {
+                    Message message = new Message();
+                    if (authenticatorData.getMessage().getType() == FrameworkConstants.AuthenticatorMessageType.ERROR) {
+                        hasErrorMessageFromAuthenticator = true;
+                    }
+                    message.setType(authenticatorData.getMessage().getType());
+                    message.setMessageId(authenticatorData.getMessage().getCode());
+                    message.setMessage(authenticatorData.getMessage().getMessage());
+                    message.setI18nKey(getMessageI18nKey(authenticatorData.getMessage().getCode()));
+                    if (MapUtils.isNotEmpty(authenticatorData.getMessage().getContext())) {
+                        message.setContext(buildMessageContext(authenticatorData.getMessage().getContext()));
+                    }
+                    message.setContext(buildMessageContext(authenticatorData.getMessage().getContext()));
+
+                }
+            }
+        }
+
+        // If there are no error messages from authenticators, check for error info.
+        if (!hasErrorMessageFromAuthenticator && authServiceResponse.getErrorInfo().isPresent()) {
+            Message errorMessage = new Message();
+            errorMessage.setType(FrameworkConstants.AuthenticatorMessageType.ERROR);
+            errorMessage.setMessageId(authServiceResponse.getErrorInfo().get().getErrorCode());
+            errorMessage.setMessage(authServiceResponse.getErrorInfo().get().getErrorMessage());
+            errorMessage.setI18nKey(getMessageI18nKey(authServiceResponse.getErrorInfo().get().getErrorCode()));
+            messages.add(errorMessage);
+        }
         return messages;
+    }
+
+    private String getMessageI18nKey(String messageId) {
+
+        return MESSAGE + DOT_SEPARATOR + messageId;
+    }
+
+    private List<Context> buildMessageContext(Map<String, String> contextData) {
+
+        List<Context> contextList = new ArrayList<>();
+        contextData.forEach((key, value) -> {
+            Context context = new Context();
+            context.setKey(key);
+            context.setValue(value);
+            contextList.add(context);
+        });
+        return contextList;
     }
 
     private AuthenticatorMetadata buildAuthenticatorMetadata(AuthenticatorData authenticatorData) {
@@ -178,7 +230,8 @@ public class ApiAuthnHandler {
         try {
             href = ServiceURLBuilder.create().addPath(endpoint).build().getAbsolutePublicURL();
         } catch (URLBuilderException e) {
-            throw new AuthServiceException("Error occurred while building links", e);
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                    "Error occurred while building links", e);
         }
         authnEpLink.setHref(href);
         authnEpLink.setMethod(HTTP_POST);
@@ -198,24 +251,6 @@ public class ApiAuthnHandler {
     private String buildAuthenticatorId(String authenticator, String idp) {
 
         return base64URLEncode(authenticator + OAuthConstants.AUTHENTICATOR_IDP_SPLITTER + idp);
-    }
-
-    private FlowStatusEnum getFlowStatus(AuthServiceConstants.FlowStatus flowStatus) throws
-            AuthServiceException {
-
-        switch (flowStatus) {
-            case INCOMPLETE:
-                return FlowStatusEnum.INCOMPLETE;
-            case FAIL_INCOMPLETE:
-                return FlowStatusEnum.FAIL_INCOMPLETE;
-            case SUCCESS_COMPLETED:
-                return FlowStatusEnum.SUCCESS_COMPLETED;
-            case FAIL_COMPLETED:
-                return FlowStatusEnum.FAIL_COMPLETED;
-            default:
-                throw new AuthServiceException("Unknown flow status: " + flowStatus +
-                        "received from the Authentication Service.");
-        }
     }
 
     private StepTypeEnum getStepType(boolean isMultiOps) {

@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.api.auth.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +29,7 @@ import java.util.List;
 public class AuthResponse {
 
     private String flowId;
-    private FlowStatusEnum flowStatus;
+    private AuthServiceConstants.FlowStatus flowStatus;
     private FlowTypeEnum flowType = FlowTypeEnum.AUTHENTICATION;
     private NextStep nextStep;
     private List<Link> links = new ArrayList<>();
@@ -36,8 +38,8 @@ public class AuthResponse {
 
     }
 
-    public AuthResponse(String flowId, FlowStatusEnum flowStatus, FlowTypeEnum flowType, NextStep nextStep,
-                        List<Link> links) {
+    public AuthResponse(String flowId, AuthServiceConstants.FlowStatus flowStatus, FlowTypeEnum flowType,
+                        NextStep nextStep, List<Link> links) {
 
         this.flowId = flowId;
         this.flowStatus = flowStatus;
@@ -56,12 +58,12 @@ public class AuthResponse {
         this.flowId = flowId;
     }
 
-    public FlowStatusEnum getFlowStatus() {
+    public AuthServiceConstants.FlowStatus getFlowStatus() {
 
         return flowStatus;
     }
 
-    public void setFlowStatus(FlowStatusEnum flowStatus) {
+    public void setFlowStatus(AuthServiceConstants.FlowStatus flowStatus) {
 
         this.flowStatus = flowStatus;
     }
