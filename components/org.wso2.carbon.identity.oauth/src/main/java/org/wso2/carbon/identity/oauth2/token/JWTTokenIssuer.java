@@ -60,6 +60,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -493,8 +494,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
-        setEntityIdClaim(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext, authenticatedUser,
-                oAuthAppDO);
+        setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
+                authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
@@ -821,8 +822,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
             // Include token binding into the jwt token.
+            String bindingType = tokReqMsgCtx.getTokenBinding().getBindingType();
             jwtClaimsSetBuilder.claim(TOKEN_BINDING_REF, tokReqMsgCtx.getTokenBinding().getBindingReference());
-            jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, tokReqMsgCtx.getTokenBinding().getBindingType());
+            jwtClaimsSetBuilder.claim(TOKEN_BINDING_TYPE, bindingType);
+            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+                String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
+                if (StringUtils.isNotBlank(cnf)) {
+                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, Collections.singletonMap(OAuthConstants.X5T_S256,
+                            tokReqMsgCtx.getTokenBinding().getBindingValue()));
+                }
+            }
         }
         return jwtClaimsSetBuilder.build();
     }
@@ -872,11 +881,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @param oAuthAppDO                 OAuthAppDO
      * @throws IdentityOAuth2Exception If an error occurs while setting entity_id claim.
      */
-    private void setEntityIdClaim(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                  OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-                                  OAuthTokenReqMessageContext tokenReqMessageContext,
-                                  AuthenticatedUser authenticatedUser,
-                                  OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
+    protected void setClaimsForNonPersistence(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                              OAuthAuthzReqMessageContext authAuthzReqMessageContext,
+                                              OAuthTokenReqMessageContext tokenReqMessageContext,
+                                              AuthenticatedUser authenticatedUser,
+                                              OAuthAppDO oAuthAppDO) throws IdentityOAuth2Exception {
 
         if (!OAuth2Util.isTokenPersistenceEnabled()) {
             try {
@@ -896,6 +905,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user: "
                         + authenticatedUser.getLoggableMaskedUserId(), e);
+            }
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+                boolean isConsented;
+                if (tokenReqMessageContext != null) {
+                    isConsented = tokenReqMessageContext.isConsentedToken();
+                } else {
+                    isConsented = authAuthzReqMessageContext.isConsentedToken();
+                }
+                // when no persistence of tokens, there is no existing token to check the consented value for.
+                jwtClaimsSetBuilder.claim(OAuth2Constants.IS_CONSENTED, isConsented);
             }
         }
     }

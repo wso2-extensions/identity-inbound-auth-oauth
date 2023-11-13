@@ -110,6 +110,7 @@ public class OAuth2IntrospectionResponseDTO {
      * OPTIONAL. Token binding reference.
      */
     private String bindingReference;
+    private String cnfBindingValue;
 
     /**
      * OPTIONAL. Authorized user type of the token. (APPLICATION or APPLICATION_USER)
@@ -291,6 +292,16 @@ public class OAuth2IntrospectionResponseDTO {
     public String getBindingReference() {
 
         return bindingReference;
+    }
+
+    public void setCnfBindingValue(String cnfBindingValue) {
+
+        this.cnfBindingValue = cnfBindingValue;
+    }
+
+    public String getCnfBindingValue() {
+
+        return cnfBindingValue;
     }
 
     public void setBindingReference(String bindingReference) {

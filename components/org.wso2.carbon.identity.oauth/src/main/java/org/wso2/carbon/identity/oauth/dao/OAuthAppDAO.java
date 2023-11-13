@@ -584,7 +584,6 @@ public class OAuthAppDAO {
                 if (oauthAppList.isEmpty()) {
                     handleRequestForANonExistingConsumerKey(consumerKey);
                 }
-                connection.commit();
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);

@@ -73,15 +73,8 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
             return false;
         }
 
-        OAuthAppDO app;
-        try {
-            app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
-            scopeValidators = app.getScopeValidators();
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +
-                    "client id %s ", accessTokenDO.getConsumerKey()), e);
-        }
-
+        OAuthAppDO app = getAppInformation(accessTokenDO);
+        scopeValidators = app.getScopeValidators();
         if (ArrayUtils.isEmpty(scopeValidators)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("There is no scope validator registered for %s@%s", app.getApplicationName(),
@@ -170,4 +163,22 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
         return "Bearer";
     }
 
+    /**
+     * Get the app information for the given access token.
+     *
+     * @param accessTokenDO Access token data object
+     * @return OAuthAppDO
+     * @throws IdentityOAuth2Exception If failed to get app information
+     */
+    protected OAuthAppDO getAppInformation(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
+        OAuthAppDO app;
+        try {
+            app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for "
+                    + "client id %s ", accessTokenDO.getConsumerKey()), e);
+        }
+        return app;
+    }
 }

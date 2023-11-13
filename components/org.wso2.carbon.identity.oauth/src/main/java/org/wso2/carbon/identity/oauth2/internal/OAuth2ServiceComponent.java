@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -76,6 +77,7 @@ import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadat
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.CertificateBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
@@ -255,6 +257,14 @@ public class OAuth2ServiceComponent {
             if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
                 DeviceFlowTokenBinder deviceFlowTokenBinder = new DeviceFlowTokenBinder();
                 bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
+            }
+
+            /* Certificate based token binder will be enabled only if certificate binding is not being performed in the
+               MTLS authenticator. By default, the certificate binding type will be enabled. */
+            if (Boolean.parseBoolean(IdentityUtil
+                    .getProperty(OAuthConstants.ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE))) {
+                CertificateBasedTokenBinder certificateBasedTokenBinder = new CertificateBasedTokenBinder();
+                bundleContext.registerService(TokenBinderInfo.class.getName(), certificateBasedTokenBinder, null);
             }
 
             bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),

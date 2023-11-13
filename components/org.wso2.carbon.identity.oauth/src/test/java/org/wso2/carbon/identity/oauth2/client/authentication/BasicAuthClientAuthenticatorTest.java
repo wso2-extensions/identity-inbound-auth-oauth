@@ -33,11 +33,13 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -289,7 +291,11 @@ public class BasicAuthClientAuthenticatorTest extends PowerMockIdentityBaseTest 
     @Test
     public void testGetSupportedClientAuthenticationMethods() {
 
-        List<String> supportedAuthMethods = basicAuthClientAuthenticator.getSupportedClientAuthenticationMethods();
+        List<String> supportedAuthMethods = new ArrayList<>();
+        for (ClientAuthenticationMethodModel clientAuthenticationMethodModel : basicAuthClientAuthenticator
+                .getSupportedClientAuthenticationMethods()) {
+            supportedAuthMethods.add(clientAuthenticationMethodModel.getName());
+        }
         Assert.assertTrue(supportedAuthMethods.contains("client_secret_basic"));
         Assert.assertTrue(supportedAuthMethods.contains("client_secret_post"));
         assertEquals(supportedAuthMethods.size(), 2);

@@ -230,6 +230,15 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
                         appDTO.getApplicationName(), null);
             }
+            // Validate software statement assertion signature.
+            if (StringUtils.isNotEmpty(updateRequest.getSoftwareStatement())) {
+                try {
+                    validateSSASignature(updateRequest.getSoftwareStatement());
+                } catch (IdentityOAuth2Exception e) {
+                    throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                            DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
+                }
+            }
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
             // Update jwksURI.

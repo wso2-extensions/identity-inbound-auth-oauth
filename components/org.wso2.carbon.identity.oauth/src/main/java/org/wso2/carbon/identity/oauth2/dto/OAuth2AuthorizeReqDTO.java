@@ -26,6 +26,7 @@ import java.util.LinkedHashSet;
 import java.util.Properties;
 
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequestWrapper;
 
 /**
  * OAuth 2 authorization request bean.
@@ -48,6 +49,7 @@ public class OAuth2AuthorizeReqDTO {
     private String essentialClaims;
     private long maxAge;
     private HttpRequestHeader[] httpRequestHeaders;
+    private HttpServletRequestWrapper httpServletRequestWrapper;
     private Cookie[] cookies;
     private RequestObject requestObject;
     private String requestUriParamClaims;
@@ -279,5 +281,15 @@ public class OAuth2AuthorizeReqDTO {
     public void setState(String state) {
 
         this.state = state;
+    }
+
+    public HttpServletRequestWrapper getHttpServletRequestWrapper() {
+
+        return httpServletRequestWrapper;
+    }
+
+    public void setHttpServletRequestWrapper(HttpServletRequestWrapper httpServletRequestWrapper) {
+
+        this.httpServletRequestWrapper = httpServletRequestWrapper;
     }
 }
