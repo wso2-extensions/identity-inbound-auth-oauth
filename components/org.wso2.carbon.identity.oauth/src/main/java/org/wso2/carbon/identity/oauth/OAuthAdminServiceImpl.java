@@ -818,13 +818,18 @@ public class OAuthAdminServiceImpl {
             if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
                 if (enforceFAPIDCR) {
                     validateFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
+                } else {
+                    filterEncryptionAlgorithms(
+                            requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
                 }
             }
-            oauthappdo.setRequestObjectEncryptionAlgorithm(filterEncryptionAlgorithms(
-                    requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM));
-            oauthappdo.setRequestObjectEncryptionMethod(filterEncryptionMethod(
-                    consumerAppDTO.getRequestObjectEncryptionMethod(),
-                    OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
+            oauthappdo.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+            String requestObjectEncryptionMethod = consumerAppDTO.getRequestObjectEncryptionMethod();
+            if (StringUtils.isNotEmpty(requestObjectEncryptionMethod)) {
+                filterEncryptionMethod(requestObjectEncryptionMethod, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD);
+
+            }
+            oauthappdo.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
             oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
         }
         dao.updateConsumerApplication(oauthappdo);
