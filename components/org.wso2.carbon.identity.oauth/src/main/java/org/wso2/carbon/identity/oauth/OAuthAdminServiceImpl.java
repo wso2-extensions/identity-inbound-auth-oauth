@@ -450,8 +450,6 @@ public class OAuthAdminServiceImpl {
                                     OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
                         }
                         app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
-                        app.setTlsClientCertificateBoundAccessTokens(
-                                application.getTlsClientCertificateBoundAccessTokens());
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                     }
                     dao.addOAuthApplication(app);
@@ -746,8 +744,8 @@ public class OAuthAdminServiceImpl {
                 } else {
                     filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
                 }
-                oauthappdo.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
             }
+            oauthappdo.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
@@ -757,8 +755,8 @@ public class OAuthAdminServiceImpl {
                     filterSignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm,
                             OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
                 }
-                oauthappdo.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSignatureAlgorithm);
             }
+            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSignatureAlgorithm);
 
             if (StringUtils.isEmpty(consumerAppDTO.getSubjectType())) {
                 // Set default subject type if not set.
@@ -787,6 +785,7 @@ public class OAuthAdminServiceImpl {
                     }
                 }
             }
+            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
             oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
 
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
@@ -797,8 +796,8 @@ public class OAuthAdminServiceImpl {
                     filterSignatureAlgorithms(idTokenSignatureAlgorithm,
                             OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
                 }
-                oauthappdo.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
             }
+            oauthappdo.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
 
             String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
@@ -808,10 +807,10 @@ public class OAuthAdminServiceImpl {
                     filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
                             OAuthConstants.REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION);
                 }
-                oauthappdo.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
-                oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
-                        .isRequestObjectSignatureValidationEnabled());
             }
+            oauthappdo.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
+            oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
+                    .isRequestObjectSignatureValidationEnabled());
 
             oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
 
@@ -819,18 +818,19 @@ public class OAuthAdminServiceImpl {
             if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
                 if (enforceFAPIDCR) {
                     validateFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
+                } else {
+                    filterEncryptionAlgorithms(
+                            requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
                 }
-                oauthappdo.setRequestObjectEncryptionAlgorithm(filterEncryptionAlgorithms(
-                        requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM));
             }
-            if (StringUtils.isNotEmpty(consumerAppDTO.getRequestObjectEncryptionMethod())) {
-                oauthappdo.setRequestObjectEncryptionMethod(filterEncryptionMethod(
-                        consumerAppDTO.getRequestObjectEncryptionMethod(),
-                        OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
+            oauthappdo.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+            String requestObjectEncryptionMethod = consumerAppDTO.getRequestObjectEncryptionMethod();
+            if (StringUtils.isNotEmpty(requestObjectEncryptionMethod)) {
+                filterEncryptionMethod(requestObjectEncryptionMethod, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD);
+
             }
+            oauthappdo.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
             oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
-            oauthappdo.setTlsClientCertificateBoundAccessTokens(
-                    consumerAppDTO.getTlsClientCertificateBoundAccessTokens());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
