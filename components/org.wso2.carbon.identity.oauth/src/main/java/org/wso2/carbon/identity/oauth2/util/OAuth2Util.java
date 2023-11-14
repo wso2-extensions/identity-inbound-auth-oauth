@@ -222,7 +222,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth 2.0 implementation.
  */
 public class OAuth2Util {
 
@@ -5087,5 +5087,24 @@ public class OAuth2Util {
             supportedBindingTypes.add(tokenBindingMetaDataDTO.getTokenBindingType());
         }
         return supportedBindingTypes;
+    }
+
+    /**
+     * Utility method to check if server compatible with client ID tenant unification.
+     * With the client ID tenant unification, the OAuth client ID will be unique only for the tenant. This
+     * requires enabling both the tenant qualified URLs and tenanted sessions. If any of these configs are disabled,
+     * the IDN_OAUTH_CONSUMER_APPS table need to have a unique key constraint for the consumer_key column.
+     *
+     * @return true if compliant.
+     */
+    public static boolean isCompliantWithClientIDTenantUnification() throws IdentityOAuth2Exception {
+
+        boolean isClientIdUnique = new OAuthAppDAO().isClientIDUniqueConstraintExistsInConsumerAppsTable();
+
+        if (isClientIdUnique) {
+            return true;
+        } else {
+            return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled();
+        }
     }
 }
