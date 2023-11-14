@@ -104,6 +104,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
@@ -129,6 +130,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -220,7 +222,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth 2.0 implementation.
  */
 public class OAuth2Util {
 
@@ -5013,15 +5015,31 @@ public class OAuth2Util {
      */
     public static String[] getSupportedClientAuthMethods() {
 
-        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> clientAuthenticators = OAuth2Util.getSupportedAuthenticationMethods();
         HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (ClientAuthenticationMethodModel authMethod : clientAuthenticators) {
+            supportedClientAuthMethods.add(authMethod.getName());
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server with the authenticator display name.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static HashSet<ClientAuthenticationMethodModel> getSupportedAuthenticationMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> supportedClientAuthMethods = new HashSet<>();
         for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
-            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            List<ClientAuthenticationMethodModel> supportedAuthMethods = clientAuthenticator
+                    .getSupportedClientAuthenticationMethods();
             if (!supportedAuthMethods.isEmpty()) {
                 supportedClientAuthMethods.addAll(supportedAuthMethods);
             }
         }
-        return supportedClientAuthMethods.toArray(new String[0]);
+        return supportedClientAuthMethods;
     }
 
     /**
@@ -5053,6 +5071,41 @@ public class OAuth2Util {
             grantType = responseType;
         }
         return grantType;
+    }
+
+    /**
+     * Retrieve the list of token binding types supported by the server.
+     *
+     * @return     Token binding types supported by the server.
+     */
+    public static List<String> getSupportedTokenBindingTypes() {
+
+        List<TokenBindingMetaDataDTO> supportedTokenBindings = OAuthComponentServiceHolder.getInstance()
+                .getTokenBindingMetaDataDTOs();
+        List<String> supportedBindingTypes = new ArrayList<>();
+        for (TokenBindingMetaDataDTO tokenBindingMetaDataDTO : supportedTokenBindings) {
+            supportedBindingTypes.add(tokenBindingMetaDataDTO.getTokenBindingType());
+        }
+        return supportedBindingTypes;
+    }
+
+    /**
+     * Utility method to check if server compatible with client ID tenant unification.
+     * With the client ID tenant unification, the OAuth client ID will be unique only for the tenant. This
+     * requires enabling both the tenant qualified URLs and tenanted sessions. If any of these configs are disabled,
+     * the IDN_OAUTH_CONSUMER_APPS table need to have a unique key constraint for the consumer_key column.
+     *
+     * @return true if compliant.
+     */
+    public static boolean isCompliantWithClientIDTenantUnification() throws IdentityOAuth2Exception {
+
+        boolean isClientIdUnique = new OAuthAppDAO().isClientIDUniqueConstraintExistsInConsumerAppsTable();
+
+        if (isClientIdUnique) {
+            return true;
+        } else {
+            return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled();
+        }
     }
 
     /**

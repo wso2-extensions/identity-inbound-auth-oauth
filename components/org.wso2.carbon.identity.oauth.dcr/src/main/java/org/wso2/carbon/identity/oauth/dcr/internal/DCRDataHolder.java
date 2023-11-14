@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr.internal;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class DCRDataHolder {
     private ApplicationManagementService applicationManagementService = null;
     private List<RegistrationHandler> registrationHandlerList = new ArrayList<>();
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
+    private List<TokenBinder> tokenBinders = new ArrayList<>();
 
     private DCRDataHolder() {
 
@@ -81,5 +83,20 @@ public class DCRDataHolder {
             List<UnRegistrationHandler> unRegistrationHandlerList) {
 
         this.unRegistrationHandlerList = unRegistrationHandlerList;
+    }
+
+    public List<TokenBinder> getTokenBinders() {
+
+        return tokenBinders;
+    }
+
+    public void addTokenBinder(TokenBinder tokenBinder) {
+
+        this.tokenBinders.add(tokenBinder);
+    }
+
+    public void removeTokenBinder(TokenBinder tokenBinder) {
+
+        this.tokenBinders.remove(tokenBinder);
     }
 }

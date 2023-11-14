@@ -212,6 +212,21 @@ public class SQLQueries {
         public static final String REMOVE_APP_SCOPE_VALIDATORS = "DELETE FROM IDN_OAUTH2_SCOPE_VALIDATORS " +
                 "WHERE APP_ID=?";
 
+        public static final String CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE =
+                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = ? " +
+                        "GROUP BY CONSTRAINT_NAME HAVING COUNT(DISTINCT COLUMN_NAME) = 1 AND MAX(COLUMN_NAME) = ?";
+
+        public static final String CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE_DB2 =
+                "SELECT si.INDNAME AS CONSTRAINT_NAME FROM SYSCAT.INDEXES si LEFT JOIN SYSCAT.INDEXCOLUSE sicu " +
+                        "ON si.INDNAME = sicu.INDNAME WHERE si.TABNAME = ? AND si.UNIQUERULE = 'U' " +
+                        "GROUP BY si.INDNAME HAVING COUNT(DISTINCT sicu.COLNAME) = 1 AND MAX(sicu.COLNAME) = ?";
+
+        public static final String CHECK_CONSUMER_KEY_CONSTRAINT_ON_CONSUMER_APPS_TABLE_ORACLE =
+                "SELECT c.constraint_name AS CONSTRAINT_NAME FROM user_cons_columns c JOIN user_constraints cons " +
+                        "ON c.constraint_name = cons.constraint_name WHERE cons.table_name = ? " +
+                        "AND cons.constraint_type = 'U' GROUP BY c.constraint_name " +
+                        "HAVING COUNT(DISTINCT c.column_name) = 1 AND MAX(c.column_name) = ?";
+
         private OAuthAppDAOSQLQueries() {
         }
     }

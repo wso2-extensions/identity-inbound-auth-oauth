@@ -20,8 +20,12 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -30,9 +34,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.DELETE_TOKEN_BINDING_BY_TOKEN_ID;
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID_AND_BINDING_REF;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_REF_EXISTS;
@@ -161,6 +168,39 @@ public class TokenBindingMgtDAOImpl implements TokenBindingMgtDAO {
             preparedStatement.execute();
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Failed to get token binding for the token id: " + tokenId, e);
+        }
+    }
+
+    @Override
+    public Optional<TokenBinding> getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
+            throws IdentityOAuth2Exception {
+
+        TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(IdentityDatabaseUtil.getDataSource());
+        if (isTokenHashingEnabled) {
+            refreshToken = hashingPersistenceProcessor.getProcessedRefreshToken(refreshToken);
+        }
+        try {
+            String finalRefreshToken = refreshToken;
+            List<TokenBinding> tokenBindingList = jdbcTemplate.executeQuery(RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN,
+                    (resultSet, rowNumber) -> {
+                        TokenBinding tokenBinding = new TokenBinding();
+                        tokenBinding.setBindingType(resultSet.getString(1));
+                        tokenBinding.setBindingValue(resultSet.getString(2));
+                        tokenBinding.setBindingReference(resultSet.getString(3));
+
+                        return tokenBinding;
+                    },
+                    preparedStatement -> {
+                        preparedStatement.setString(1, finalRefreshToken);
+                        preparedStatement.setString(2, CERTIFICATE_BASED_TOKEN_BINDER);
+                    });
+
+            return tokenBindingList.isEmpty() ? null : Optional.ofNullable(tokenBindingList.get(0));
+        } catch (DataAccessException e) {
+            String error = String.format("Error obtaining token binding type using refresh token: %s.",
+                    refreshToken);
+            throw new IdentityOAuth2Exception(error, e);
         }
     }
 }

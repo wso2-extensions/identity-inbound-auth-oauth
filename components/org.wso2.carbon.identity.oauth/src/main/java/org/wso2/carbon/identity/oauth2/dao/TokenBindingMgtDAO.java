@@ -76,4 +76,18 @@ public interface TokenBindingMgtDAO {
      * @throws IdentityOAuth2Exception in case of failure.
      */
     void deleteTokenBinding(String tokenId) throws IdentityOAuth2Exception;
+
+    /**
+     * Obtain token binding from refresh token.
+     *
+     * @param refreshToken Refresh token sent in the request.
+     * @param isTokenHashingEnabled Whether token hashing is enabled.
+     * @return  Optional token binding for the refresh token.
+     * @throws IdentityOAuth2Exception An exception is thrown if an error occurs while obtaining the token binding.
+     */
+    default Optional<TokenBinding> getBindingFromRefreshToken(String refreshToken, boolean isTokenHashingEnabled)
+            throws IdentityOAuth2Exception {
+
+        return Optional.empty();
+    }
 }

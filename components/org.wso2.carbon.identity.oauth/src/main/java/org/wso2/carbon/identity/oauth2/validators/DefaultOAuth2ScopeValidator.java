@@ -128,6 +128,13 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        /* The APPLICATION type token requests with the organization_switch grant custom grant type will be handled same
+        as client_credentials grant type when scope validation. */
+        if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType) &&
+                OAuthConstants.UserType.APPLICATION.equals(
+                        tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE))) {
+            grantType = OAuthConstants.GrantTypes.CLIENT_CREDENTIALS;
+        }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
                         .getAuthorizedUser(), appId, grantType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
