@@ -39,7 +39,7 @@ public class OAuth2Constants {
     public static final String IS_FEDERATED = "is_federated";
     public static final boolean DEFAULT_PERSIST_ENABLED = true;
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
-    public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.AuthCodePersistence.Enable";
+    public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
 
 
     /**
