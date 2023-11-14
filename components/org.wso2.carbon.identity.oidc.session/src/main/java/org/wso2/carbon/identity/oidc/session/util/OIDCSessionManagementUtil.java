@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.core.util.KeyStoreManager;
@@ -246,7 +247,11 @@ public class OIDCSessionManagementUtil {
                                     MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
                                 servletCookie.setPath("/");
                             } else {
-                                servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                                if (PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId() != null) {
+                                    servletCookie.setPath("/o/" + tenantDomain + "/");
+                                } else {
+                                    servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                                }
                             }
                         } else {
                             servletCookie.setPath("/");
