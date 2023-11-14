@@ -273,4 +273,17 @@ public interface AccessTokenDAO {
     default void updateTokenIsConsented(String tokenId, boolean isConsentedGrant)
             throws IdentityOAuth2Exception {
     }
+
+    /**
+     * Checks if the provided token identifier is invalid as an access token or refresh token. A token is
+     * considered invalid if its token state is one of 'INACTIVE', 'REVOKED', or 'EXPIRED'.
+     *
+     * @param accessTokenIdentifier The unique identifier of the access token.
+     * @return {@code true} if the access token is invalid, {@code false} otherwise.
+     * @throws IdentityOAuth2Exception If an error occurs while checking the token's validity.
+     */
+    default boolean isInvalidToken(String accessTokenIdentifier) throws IdentityOAuth2Exception {
+
+        return false;
+    }
 }

@@ -3072,4 +3072,25 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     tenantDomain, e);
         }
     }
+
+    public boolean isInvalidToken(String accessTokenIdentifier) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+            log.debug("Retrieving state of access token(hashed): " + DigestUtils.sha256Hex(accessTokenIdentifier));
+        }
+        String sql = SQLQueries.IS_INVALID_TOKEN;
+        sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, accessTokenIdentifier);
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, getHashingPersistenceProcessor()
+                    .getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+            preparedStatement.setString(2, getHashingPersistenceProcessor()
+                    .getProcessedAccessTokenIdentifier(accessTokenIdentifier));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                return resultSet.next();
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error while checking state of token is invalid.", e);
+        }
+    }
 }
