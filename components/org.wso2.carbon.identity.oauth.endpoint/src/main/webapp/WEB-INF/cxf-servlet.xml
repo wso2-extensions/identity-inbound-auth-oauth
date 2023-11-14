@@ -53,6 +53,7 @@
     <bean id="clientAttestationBean" class="org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy">
         <property name="clientAttestationService" ref="clientAttestationServiceFactoryBean"/>
         <property name="applicationManagementService" ref="applicationManagementServiceFactoryBean"/>
+        <property name="oAuthClientAuthnService" ref="oAuthClientAuthnFactoryBean"/>
     </bean>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint">
         <property name="openIDConnectClaimFilter" ref="openIDConnectClaimFilterFactoryBean"/>

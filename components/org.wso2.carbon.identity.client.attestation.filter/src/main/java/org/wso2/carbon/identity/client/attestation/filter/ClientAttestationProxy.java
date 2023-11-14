@@ -35,18 +35,20 @@ import org.wso2.carbon.identity.client.attestation.mgt.exceptions.ClientAttestat
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.ATTESTATION_HEADER;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
-import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ID;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.DIRECT;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.OAUTH2;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.RESPONSE_MODE;
@@ -74,7 +76,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
     public static final String ERROR_DESCRIPTION = "error_description";
     private ClientAttestationService clientAttestationService;
     private ApplicationManagementService applicationManagementService;
-
+    private OAuthClientAuthnService oAuthClientAuthnService;
 
     public ClientAttestationProxy() {
 
@@ -102,6 +104,16 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         this.clientAttestationService = clientAttestationService;
     }
 
+    public OAuthClientAuthnService getOAuthClientAuthnService() {
+
+        return oAuthClientAuthnService;
+    }
+
+    public void setOAuthClientAuthnService(OAuthClientAuthnService oAuthClientAuthnService) {
+
+        this.oAuthClientAuthnService = oAuthClientAuthnService;
+    }
+
     /**
      * Handles the incoming JAX-RS message for the purpose of OAuth2 client authentication.
      * It extracts the HttpServletRequest from the incoming message, retrieves the attestation header
@@ -115,17 +127,30 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
      */
     @Override
     public void handleMessage(Message message) {
+
         // Extract the HttpServletRequest from the incoming message
         HttpServletRequest request = (HttpServletRequest) message.get(HTTP_REQUEST);
         // Retrieve the attestation header from the HTTP request
         String attestationHeader = request.getHeader(ATTESTATION_HEADER);
         // Extract the content parameters from the message
-        MultivaluedMap<String, String> bodyContentParams = getContentParams(message);
+        Map<String, List> bodyContentParams = getContentParams(message);
 
         // Check if this is an API-based authentication request
         if (isApiBasedAuthnRequest(bodyContentParams)) {
 
-            String clientId = getClientId(bodyContentParams);
+            // call authenticators to get client id.
+            String clientId;
+            try {
+                clientId = oAuthClientAuthnService.extractClientId(request, bodyContentParams);
+            } catch (OAuthClientAuthnException e) {
+                // Create a Response object with a 400 status code and a detailed message
+                Response response = Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("Invalid Request: " + e.getMessage())
+                        .build();
+
+                throw new WebApplicationException(e, response);
+            }
             if (StringUtils.isEmpty(clientId)) {
 
                 throw new WebApplicationException(buildResponse("Client Id not found in the request",
@@ -139,12 +164,6 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
                                     serviceProvider.getApplicationResourceId(), getTenantDomain());
                     // Set the client attestation context in the HTTP request
                     setContextToRequest(request, clientAttestationContext);
-                    if (!clientAttestationContext.isAttested()) {
-
-                        throw new WebApplicationException(buildResponse
-                                (clientAttestationContext.getValidationFailureMessage(),
-                                        Response.Status.BAD_REQUEST));
-                    }
                 } catch (ClientAttestationMgtException e) {
                     // Create a Response object with a 400 status code and a detailed message
                     Response response = Response
@@ -159,44 +178,42 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         }
     }
 
-    private String getClientId(MultivaluedMap<String, String> bodyContentParams) {
-
-        // Retrieve the client ID from the MultivaluedMap
-        return bodyContentParams.getFirst(CLIENT_ID);
-    }
-
     /**
      * Checks if the authentication request is API-based, based on the provided request parameters.
      *
      * @param bodyContentParams Multivalued map containing request parameters.
      * @return True if the request uses API-based authentication; false otherwise.
      */
-    private boolean isApiBasedAuthnRequest(MultivaluedMap<String, String> bodyContentParams) {
-        // Retrieve the 'response_mode' parameter from the request.
-        String responseMode = bodyContentParams.getFirst(RESPONSE_MODE);
+    private boolean isApiBasedAuthnRequest(Map<String, List> bodyContentParams) {
 
-        // Check if 'response_mode' is not null and equals 'DIRECT' (case-insensitive).
-        if (responseMode != null) {
+        if (bodyContentParams.containsKey(RESPONSE_MODE)) {
+            // Retrieve the 'response_mode' parameter from the request.
+            String responseMode = bodyContentParams.get(RESPONSE_MODE).get(0).toString();
             return responseMode.equalsIgnoreCase(DIRECT);
-        } else {
-            // If 'response_mode' is not provided, it's not an API-based authentication request.
-            return false;
         }
+        return false;
     }
 
     /**
-     * Retrieve body content as a MultivaluedMap.
+     * Retrieve body content as a String, List map.
      *
      * @param message JAX-RS incoming message
-     * @return Body parameters of the incoming request message
+     * @return Body parameter of the incoming request message
      */
-    protected MultivaluedMap<String, String> getContentParams(Message message) {
-        MultivaluedMap<String, String> contentMap = new MetadataMap<>();
-        List<Object> contentList = message.getContent(List.class);
-        contentList.stream()
-                .filter(item -> item instanceof MetadataMap)
-                .map(item -> (MetadataMap<String, String>) item)
-                .forEach(metadataMap -> contentMap.putAll(metadataMap));
+    protected Map<String, List> getContentParams(Message message) {
+
+        Map<String, List> contentMap = new HashMap<>();
+        List contentList = message.getContent(List.class);
+        contentList.forEach(item -> {
+            if (item instanceof MetadataMap) {
+                MetadataMap metadataMap = (MetadataMap) item;
+                metadataMap.forEach((key, value) -> {
+                    if (key instanceof String && value instanceof List) {
+                        contentMap.put((String) key, (List) value);
+                    }
+                });
+            }
+        });
         return contentMap;
     }
 
