@@ -17,7 +17,7 @@
  *
  */
 
-package org.wso2.carbon.identity.client.attestation.filter;
+package org.wso2.carbon.identity.client.attestation.filter.factory;
 
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestatio
 public class ClientAttestationServiceFactory extends AbstractFactoryBean<ClientAttestationService> {
 
     public ClientAttestationService clientAttestationService;
-
 
     @Override
     public Class<ClientAttestationService> getObjectType() {

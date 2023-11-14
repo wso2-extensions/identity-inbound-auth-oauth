@@ -27,21 +27,16 @@ import org.apache.cxf.message.Message;
 import org.apache.cxf.phase.AbstractPhaseInterceptor;
 import org.apache.cxf.phase.Phase;
 import org.json.JSONObject;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.client.attestation.mgt.exceptions.ClientAttestationMgtException;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
-import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
@@ -57,9 +52,7 @@ import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.RE
  * This interceptor, ClientAttestationProxy, is responsible for handling incoming JAX-RS messages related to
  * client attestation. It checks for attestation information in the HTTP request and validates it to establish
  * the client's authenticity and context.
- *
  * It operates at the "PRE_INVOKE" phase, allowing it to access the message body and parameters.
- *
  * The interceptor performs the following tasks:
  * 1. Extracts the HttpServletRequest from the incoming JAX-RS message.
  * 2. Retrieves the attestation header from the HTTP request.
@@ -72,46 +65,15 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
 
     private static final Log LOG = LogFactory.getLog(ClientAttestationProxy.class);
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
-    public static final String ERROR = "error";
-    public static final String ERROR_DESCRIPTION = "error_description";
-    private ClientAttestationService clientAttestationService;
-    private ApplicationManagementService applicationManagementService;
-    private OAuthClientAuthnService oAuthClientAuthnService;
+    private static final String AUTHZ_ENDPOINT_PATH = "/oauth2/authorize";
+    private static final String CLIENT_ID = "client_id";
+    private static final String ERROR = "error";
+    private static final String ERROR_DESCRIPTION = "error_description";
 
     public ClientAttestationProxy() {
 
         // Since the body is consumed and body parameters are available at this phase we use "PRE_INVOKE"
         super(Phase.PRE_INVOKE);
-    }
-
-    public ApplicationManagementService getApplicationManagementService() {
-
-        return applicationManagementService;
-    }
-
-    public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
-
-        this.applicationManagementService = applicationManagementService;
-    }
-
-    public ClientAttestationService getClientAttestationService() {
-
-        return clientAttestationService;
-    }
-
-    public void setClientAttestationService(ClientAttestationService clientAttestationService) {
-
-        this.clientAttestationService = clientAttestationService;
-    }
-
-    public OAuthClientAuthnService getOAuthClientAuthnService() {
-
-        return oAuthClientAuthnService;
-    }
-
-    public void setOAuthClientAuthnService(OAuthClientAuthnService oAuthClientAuthnService) {
-
-        this.oAuthClientAuthnService = oAuthClientAuthnService;
     }
 
     /**
@@ -136,34 +98,30 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         Map<String, List> bodyContentParams = getContentParams(message);
 
         // Check if this is an API-based authentication request
-        if (isApiBasedAuthnRequest(bodyContentParams)) {
+        if (canHandle(request, message, bodyContentParams)) {
 
-            // call authenticators to get client id.
-            String clientId;
-            try {
-                clientId = oAuthClientAuthnService.extractClientId(request, bodyContentParams);
-            } catch (OAuthClientAuthnException e) {
-                // Create a Response object with a 400 status code and a detailed message
-                Response response = Response
-                        .status(Response.Status.BAD_REQUEST)
-                        .entity("Invalid Request: " + e.getMessage())
-                        .build();
+            String clientId =  extractClientId(request, bodyContentParams);
 
-                throw new WebApplicationException(e, response);
-            }
             if (StringUtils.isEmpty(clientId)) {
 
                 throw new WebApplicationException(buildResponse("Client Id not found in the request",
                         Response.Status.BAD_REQUEST));
             } else {
                 try {
-                    ServiceProvider serviceProvider =  getServiceProvider(clientId, getTenantDomain());
-                    // Validate the attestation header and obtain client attestation context
-                    ClientAttestationContext clientAttestationContext = clientAttestationService
-                            .validateAttestation(attestationHeader,
-                                    serviceProvider.getApplicationResourceId(), getTenantDomain());
-                    // Set the client attestation context in the HTTP request
-                    setContextToRequest(request, clientAttestationContext);
+                    ServiceProvider serviceProvider =  getServiceProvider(clientId,
+                            IdentityTenantUtil.resolveTenantDomain());
+                    if (serviceProvider.isAPIBasedAuthenticationEnabled()) {
+                        // Validate the attestation header and obtain client attestation context
+                        ClientAttestationContext clientAttestationContext = ClientAttestationServiceHolder.getInstance()
+                                .getClientAttestationService().validateAttestation(attestationHeader,
+                                        serviceProvider.getApplicationResourceId(),
+                                        IdentityTenantUtil.resolveTenantDomain());
+                        // Set the client attestation context in the HTTP request
+                        setContextToRequest(request, clientAttestationContext);
+                    } else {
+                        throw new WebApplicationException(buildResponse("Client is not registered for " +
+                                        "API Based Authentication Service", Response.Status.BAD_REQUEST));
+                    }
                 } catch (ClientAttestationMgtException e) {
                     // Create a Response object with a 400 status code and a detailed message
                     Response response = Response
@@ -179,20 +137,77 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
     }
 
     /**
-     * Checks if the authentication request is API-based, based on the provided request parameters.
+     * Determines whether the interceptor can handle the request based on the request path and the authentication
+     * request type.
      *
-     * @param bodyContentParams Multivalued map containing request parameters.
-     * @return True if the request uses API-based authentication; false otherwise.
+     * @param message           The CXF Message object representing the incoming request.
+     * @return True if the interceptor can handle the request, false otherwise.
      */
-    private boolean isApiBasedAuthnRequest(Map<String, List> bodyContentParams) {
+    private boolean canHandle(HttpServletRequest request, Message message, Map<String, List> bodyContentParams) {
 
-        if (bodyContentParams.containsKey(RESPONSE_MODE)) {
-            // Retrieve the 'response_mode' parameter from the request.
+        return isMatchesEndPoint(message) && isApiBasedAuthnRequest(request, bodyContentParams);
+    }
+
+    /**
+     * Checks if the request path matches the expected authorization endpoint path.
+     *
+     * @param message The CXF Message object representing the incoming request.
+     * @return True if the request path matches the authorization endpoint path, false otherwise.
+     */
+    private boolean isMatchesEndPoint(Message message) {
+
+        String requestPath = (String) message.get(Message.REQUEST_URI);
+        return StringUtils.equalsIgnoreCase(requestPath, AUTHZ_ENDPOINT_PATH);
+    }
+
+
+    /**
+     * Checks if the authentication request is based on API by examining the 'response_mode' parameter.
+     * If the 'response_mode' parameter is present in the parsed body content parameters and its value
+     * is equal to 'direct', it indicates an API-based authentication request.
+     * Otherwise, it checks the 'response_mode' parameter in the request parameters using 'direct' as the default.
+     *
+     * @param request           The HttpServletRequest object representing the incoming HTTP request.
+     * @param bodyContentParams A map containing the parsed parameters from the request body content.
+     * @return True if the authentication request is API-based, false otherwise.
+     */
+    private boolean isApiBasedAuthnRequest(HttpServletRequest request, Map<String, List> bodyContentParams) {
+
+        // Check if the 'response_mode' parameter is present in the parsed body content parameters.
+        if (bodyContentParams.containsKey(RESPONSE_MODE) && !bodyContentParams.get(RESPONSE_MODE).isEmpty()) {
+            // Retrieve the 'response_mode' parameter value from the request body.
             String responseMode = bodyContentParams.get(RESPONSE_MODE).get(0).toString();
+            // Check if the 'response_mode' parameter value is equal to 'direct'.
             return responseMode.equalsIgnoreCase(DIRECT);
         }
-        return false;
+
+        // If 'response_mode' is not found in the body content parameters, fall back to the request parameters.
+        // Check if the 'response_mode' parameter value in the request is equal to 'direct'.
+        return StringUtils.equals(DIRECT, request.getParameter(RESPONSE_MODE));
     }
+
+    /**
+     * Extracts the client ID from the request. It first checks the body content parameters,
+     * and if the 'client_id' parameter is found, it returns its value. Otherwise, it falls back
+     * to checking the request parameters using the 'response_mode' parameter as a default.
+     *
+     * @param request           The HttpServletRequest object representing the incoming HTTP request.
+     * @param bodyContentParams A map containing the parsed parameters from the request body content.
+     * @return The extracted client ID.
+     */
+    private String extractClientId(HttpServletRequest request, Map<String, List> bodyContentParams) {
+
+        // Check if the 'client_id' parameter is present in the parsed body content parameters.
+        if (bodyContentParams.containsKey(CLIENT_ID) && !bodyContentParams.get(CLIENT_ID).isEmpty()) {
+            // Retrieve and return the 'client_id' parameter value from the request body.
+            return bodyContentParams.get(CLIENT_ID).get(0).toString();
+        }
+
+        // If 'client_id' is not found in the body content parameters, fall back to the request parameters.
+        // Return the value of the 'client_id' parameter as a default.
+        return request.getParameter(CLIENT_ID);
+    }
+
 
     /**
      * Retrieve body content as a String, List map.
@@ -217,13 +232,6 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         return contentMap;
     }
 
-    private String getTenantDomain() {
-
-        return Optional.ofNullable(IdentityTenantUtil.getTenantDomainFromContext())
-                .filter(StringUtils::isNotBlank)
-                .orElseGet(() -> PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-    }
-
     /**
      * Sets the Client Attestation context to the HttpServletRequest's attributes.
      *
@@ -231,7 +239,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
      * @param clientAttestationContext  The Client Attestation context to be added to the request.
      */
     private void setContextToRequest(HttpServletRequest request, ClientAttestationContext clientAttestationContext) {
-        // Check if DEBUG logging is enabled before logging
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("Setting Client Attestation context to request");
         }
@@ -251,11 +259,18 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
 
         ServiceProvider serviceProvider;
         try {
-            serviceProvider = applicationManagementService.getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            serviceProvider = ClientAttestationServiceHolder.getInstance().getApplicationManagementService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
-            throw new WebApplicationException(
-                    buildResponse("Internal Server Error when retrieving service provider.",
-                            Response.Status.INTERNAL_SERVER_ERROR));
+            if (e instanceof  IdentityApplicationManagementClientException) {
+                throw new WebApplicationException(
+                        buildResponse("Invalid client Id .",
+                                Response.Status.BAD_REQUEST));
+            } else {
+                throw new WebApplicationException(
+                        buildResponse("Internal Server Error when retrieving service provider.",
+                                Response.Status.INTERNAL_SERVER_ERROR));
+            }
         }
         if (serviceProvider == null) {
 

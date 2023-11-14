@@ -17,7 +17,7 @@
  *
  */
 
-package org.wso2.carbon.identity.client.attestation.filter;
+package org.wso2.carbon.identity.client.attestation.filter.factory;
 
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.context.PrivilegedCarbonContext;

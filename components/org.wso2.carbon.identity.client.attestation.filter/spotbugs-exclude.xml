@@ -23,9 +23,12 @@
         <Bug pattern="SERVLET_HEADER"/>
     </Match>
     <Match>
-        <Bug pattern="EI_EXPOSE_REP2"/>
+        <Bug pattern="MS_EXPOSE_REP"/>
     </Match>
     <Match>
         <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <Match>
+        <Bug pattern="SERVLET_PARAMETER"/>
     </Match>
 </FindBugsFilter>
