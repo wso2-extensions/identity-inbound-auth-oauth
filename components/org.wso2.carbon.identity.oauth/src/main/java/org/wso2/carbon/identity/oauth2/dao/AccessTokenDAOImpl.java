@@ -2980,8 +2980,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
                                     userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
                             user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                            if (user.isFederatedUser() &&
-                                    !OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+                            if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                                 user.setAccessingOrganization(authorizedOrganization);
                                 user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
                                 /* Tenant domain of the application is set as the authenticated user tenant domain

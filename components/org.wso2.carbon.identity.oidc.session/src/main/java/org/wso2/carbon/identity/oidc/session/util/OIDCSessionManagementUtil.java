@@ -253,7 +253,8 @@ public class OIDCSessionManagementUtil {
                                     servletCookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX +
                                             organizationId + "/");
                                 } else {
-                                    servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                                    servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX +
+                                            tenantDomain + "/");
                                 }
                             }
                         } else {
