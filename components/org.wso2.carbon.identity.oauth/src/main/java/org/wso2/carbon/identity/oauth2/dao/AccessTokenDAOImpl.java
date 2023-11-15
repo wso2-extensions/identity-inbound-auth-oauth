@@ -2984,7 +2984,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                     !OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                                 user.setAccessingOrganization(authorizedOrganization);
                                 user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
-                                // Tenant domain should be properly set for the organization SSO login users.
+                                /* Tenant domain of the application is set as the authenticated user tenant domain
+                                for the organization SSO login users. */
                                 user.setTenantDomain(OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
                             }
                             Timestamp issuedTime = resultSet
