@@ -1648,9 +1648,6 @@ public class SQLQueries {
                     "TOKEN.TOKEN_ID=BINDING.TOKEN_ID WHERE TOKEN.REFRESH_TOKEN = ? " +
                     "AND BINDING.TOKEN_BINDING_TYPE = ?";
 
-    public static final String IS_INVALID_TOKEN = "SELECT 1 FROM IDN_OAUTH2_ACCESS_TOKEN WHERE "
-            + "ACCESS_TOKEN_HASH=? AND (TOKEN_STATE='INACTIVE' OR TOKEN_STATE='REVOKED' OR TOKEN_STATE='EXPIRED')";
-
     private SQLQueries() {
 
     }
