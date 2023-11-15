@@ -275,14 +275,16 @@ public interface AccessTokenDAO {
     }
 
     /**
-     * Checks if the provided token identifier is invalid as an access token or refresh token. A token is
-     * considered invalid if its token state is one of 'INACTIVE', 'REVOKED', or 'EXPIRED'.
+     * Checks if the provided token identifier is an invalid access token. A token is
+     * considered invalid if its token state is one of 'INACTIVE', 'REVOKED', or 'EXPIRED'. A token is considered
+     * valid even if it is not available in the database. This is because the token may not be available in the database
+     * if token persistence is disabled.
      *
      * @param accessTokenIdentifier The unique identifier of the access token.
      * @return {@code true} if the access token is invalid, {@code false} otherwise.
      * @throws IdentityOAuth2Exception If an error occurs while checking the token's validity.
      */
-    default boolean isInvalidToken(String accessTokenIdentifier) throws IdentityOAuth2Exception {
+    default boolean isInvalidAccessToken(String accessTokenIdentifier) throws IdentityOAuth2Exception {
 
         return false;
     }

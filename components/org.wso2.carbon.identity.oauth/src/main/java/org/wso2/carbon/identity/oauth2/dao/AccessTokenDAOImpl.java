@@ -3073,10 +3073,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
     }
 
-    public boolean isInvalidToken(String accessTokenIdentifier) throws IdentityOAuth2Exception {
+    @Override
+    public boolean isInvalidAccessToken(String accessTokenIdentifier) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-            log.debug("Retrieving state of access token(hashed): " + DigestUtils.sha256Hex(accessTokenIdentifier));
+            log.debug("Validating state of access token(hashed): " + DigestUtils.sha256Hex(accessTokenIdentifier));
         }
         String sql = SQLQueries.IS_INVALID_TOKEN;
         sql = OAuth2Util.getTokenPartitionedSqlByToken(sql, accessTokenIdentifier);
@@ -3084,13 +3085,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, getHashingPersistenceProcessor()
                     .getProcessedAccessTokenIdentifier(accessTokenIdentifier));
-            preparedStatement.setString(2, getHashingPersistenceProcessor()
-                    .getProcessedAccessTokenIdentifier(accessTokenIdentifier));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                /*
+                 * Token is considered as invalid if the token is either expired or revoked or inactive.
+                 * Token is considered as valid if the token is active or not in the database.
+                 */
                 return resultSet.next();
             }
         } catch (SQLException e) {
-            throw new IdentityOAuth2Exception("Error while checking state of token is invalid.", e);
+            throw new IdentityOAuth2Exception("Error while checking state of Access Token is invalid.", e);
         }
     }
 }
