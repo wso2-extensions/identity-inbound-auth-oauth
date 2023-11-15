@@ -175,7 +175,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
 
         OAuthAppDO app;
         try {
-            if (StringUtils.isBlank(accessTokenDO.getTokenId())) {
+            if (!StringUtils.isBlank(accessTokenDO.getTokenId())) {
                 app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
             } else {
                 app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
