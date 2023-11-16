@@ -112,6 +112,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
@@ -298,6 +299,13 @@ public class OAuth2AuthzEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException {
 
+        // Perform request authentication for API based auth flow.
+        if (isApiBasedAuthenticationFlow(request)) {
+            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
+            if (!oAuthClientAuthnContext.isAuthenticated()) {
+                return handleAuthFailureResponse(oAuthClientAuthnContext);
+            }
+        }
         OAuthMessage oAuthMessage;
 
         // TODO: 2021-01-22 Check for the flag in request.
@@ -3785,6 +3793,10 @@ public class OAuth2AuthzEndpoint {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
 
             if (isApiBasedAuthenticationFlow(oAuthMessage)) {
+                // Marking the initial request as additional validation will be done from the auth service.
+                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
+                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
+
                 AuthenticationService authenticationService = new AuthenticationService();
                 AuthServiceResponse authServiceResponse = authenticationService.
                         handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
@@ -3813,7 +3825,9 @@ public class OAuth2AuthzEndpoint {
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
                 return authorize(requestWrapper, oAuthMessage.getResponse());
             }
-        } catch (ServletException | IOException | URLBuilderException | AuthServiceException e) {
+        } catch (AuthServiceException e) {
+            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
+        } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -4312,8 +4326,13 @@ public class OAuth2AuthzEndpoint {
             return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
         }
 
+        return isApiBasedAuthenticationFlow(oAuthMessage.getRequest());
+    }
+
+    private boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
+
         return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
-                oAuthMessage.getRequest().getParameter(RESPONSE_MODE));
+                request.getParameter(RESPONSE_MODE));
     }
 
     private boolean isApiBasedAuthenticationFlow(OAuth2Parameters oAuth2Parameters) {
@@ -4389,20 +4408,23 @@ public class OAuth2AuthzEndpoint {
                     }
                 }
             }
-        } catch (AuthServiceClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Client error while handling the request.", e);
-            }
-            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForClientError(e);
         } catch (AuthServiceException e) {
-            log.error("Error while handling API based response.", e);
-            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForServerError(e);
+            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
         }
 
         // Returning the original response as it hasn't been handled as an API based authentication response.
         return oauthResponse;
+    }
+
+    private Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e) {
+
+        if (e instanceof AuthServiceClientException) {
+            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+            return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
+        } else {
+            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+            return ApiAuthnUtils.buildResponseForServerError(e, log);
+        }
     }
 
     private Map<String, String> getQueryParamsFromUrl(String url) throws UnsupportedEncodingException,
@@ -4471,5 +4493,34 @@ public class OAuth2AuthzEndpoint {
         } else {
             return oauthErrorCode + " " + AuthServiceConstants.INTERNAL_ERROR_MSG_SEPARATOR + " " + oauthErrorMsg;
         }
+    }
+
+    private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext;
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        } else {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+        }
+        return oAuthClientAuthnContext;
+    }
+
+    /**
+     * Handle the authentication failure response for API based authentication.
+     *
+     * @param oAuthClientAuthnContext OAuth client authentication context.
+     * @return Auth failure response.
+     */
+    private Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext) {
+
+        if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
+            String msg = "Server encountered an error while authorizing the request.";
+            return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
+        }
+        return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
     }
 }
