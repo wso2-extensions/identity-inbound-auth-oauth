@@ -1632,7 +1632,9 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(defaultContext).build().getAbsolutePublicURL();
+                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+                return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId).build()
+                        .getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
             }
