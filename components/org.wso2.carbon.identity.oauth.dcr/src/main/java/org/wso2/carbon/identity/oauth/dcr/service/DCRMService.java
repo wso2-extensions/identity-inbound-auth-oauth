@@ -336,7 +336,7 @@ public class DCRMService {
                     appDTO.setTokenBindingValidationEnabled(true);
                 }
             } else {
-                appDTO.setTokenBindingType("");
+                appDTO.setTokenBindingType(OAuthConstants.TokenBindings.NONE);
             }
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
@@ -525,8 +525,6 @@ public class DCRMService {
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
         if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
             application.setTlsClientCertificateBoundAccessTokens(true);
-        } else if (StringUtils.isEmpty(createdApp.getTokenBindingType())) {
-            application.setTlsClientCertificateBoundAccessTokens(false);
         }
         return application;
     }
@@ -645,8 +643,6 @@ public class DCRMService {
                 oAuthConsumerApp.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
                 oAuthConsumerApp.setTokenBindingValidationEnabled(true);
             }
-        } else {
-            oAuthConsumerApp.setTokenBindingType("");
         }
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
