@@ -178,6 +178,7 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
             if (!StringUtils.isBlank(accessTokenDO.getTokenId())) {
                 app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
             } else {
+                // This path will be executed when token persistence is disabled.
                 app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
                         IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
             }
