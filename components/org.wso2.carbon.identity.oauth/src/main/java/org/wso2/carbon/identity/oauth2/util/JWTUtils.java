@@ -68,6 +68,7 @@ import static org.wso2.carbon.identity.organization.management.service.constant
  * Utility class for JWT related operations.
  */
 public class JWTUtils {
+
     private static final Log log = LogFactory.getLog(JWTUtils.class);
     private static final String DOT_SEPARATOR = ".";
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
@@ -93,6 +94,7 @@ public class JWTUtils {
      * @return true for a JWT token.
      */
     public static boolean isJWT(String tokenIdentifier) {
+
         // JWT token contains 3 base64 encoded components separated by periods.
         return StringUtils.countMatches(tokenIdentifier, DOT_SEPARATOR) == 2;
     }
