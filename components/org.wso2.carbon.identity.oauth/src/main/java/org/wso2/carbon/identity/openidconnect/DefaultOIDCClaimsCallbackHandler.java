@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.organization.management.service.exception.Organi
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
@@ -157,7 +158,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Get any user attributes that were cached against the access token
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
-        if (isEmpty(userAttributes) && isLocalUser(requestMsgCtx.getAuthorizedUser())) {
+        if (userAttributes.isEmpty() && (isLocalUser(requestMsgCtx.getAuthorizedUser())
+                || isOrganizationSsoUser(requestMsgCtx.getAuthorizedUser()))) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
@@ -541,12 +543,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         /* For B2B users, the resident organization is available to find the tenant where the user's identity is
         managed. Hence, the correct tenant domain should be used to fetch user claims. */
         if (!StringUtils.equals(userTenantDomain, userResidentTenantDomain)) {
+            String userId = authenticatedUser.getUserId();
+            if (authenticatedUser.isFederatedUser()) {
+                userId = resolveUserIdForOrganizationSsoUser(authenticatedUser);
+            }
             AbstractUserStoreManager userStoreManager =
                     (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
                             .getTenantUserRealm(IdentityTenantUtil.getTenantId(userResidentTenantDomain))
                             .getUserStoreManager();
             userTenantDomain = userResidentTenantDomain;
-            fullQualifiedUsername = userStoreManager.getUser(authenticatedUser.getUserId(), null)
+            fullQualifiedUsername = userStoreManager.getUser(userId, null)
                     .getFullQualifiedUsername();
         }
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
@@ -613,6 +619,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                                                             UserRealm realm,
                                                             List<String> claimURIList)
             throws UserStoreException {
+
         return realm.getUserStoreManager()
                 .getUserClaimValues(
                         MultitenantUtils.getTenantAwareUsername(username),
@@ -621,11 +628,34 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
+     * Check whether the authorized user is an organization SSO user.
+     *
+     * @param authorizedUser authorized user from the token request.
+     * @return true if the authorized user is an organization SSO user.
+     */
+    private boolean isOrganizationSsoUser(AuthenticatedUser authorizedUser) {
+
+        return authorizedUser.isFederatedUser() && StringUtils.isNotEmpty(authorizedUser.getUserResidentOrganization());
+    }
+
+    /**
+     * Resolve the userId of the organization SSO user from username.
+     *
+     * @param authenticatedUser authorized user from the token request.
+     * @return the userId of the organization SSO user from username.
+     */
+    private String resolveUserIdForOrganizationSsoUser(AuthenticatedUser authenticatedUser) {
+
+        String userName = MultitenantUtils.getTenantAwareUsername(authenticatedUser.getUserName());
+        return UserCoreUtil.removeDomainFromName(userName);
+    }
+
+    /**
      * Adds the application roles claim for local user.
      *
-     * @param userClaims User claims in local dialect.
+     * @param userClaims        User claims in local dialect.
      * @param authenticatedUser Authenticated user.
-     * @param applicationId Application ID.
+     * @param applicationId     Application ID.
      * @throws ApplicationRolesException Error while getting application roles.
      */
     private void handleAppRoleClaimInLocalDialect(Map<String, String> userClaims, AuthenticatedUser authenticatedUser,
