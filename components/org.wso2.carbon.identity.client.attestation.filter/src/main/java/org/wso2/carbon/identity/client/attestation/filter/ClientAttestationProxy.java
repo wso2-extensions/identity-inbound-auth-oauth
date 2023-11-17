@@ -261,16 +261,14 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         try {
             serviceProvider = ClientAttestationServiceHolder.getInstance().getApplicationManagementService()
                     .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+        } catch (IdentityApplicationManagementClientException e) {
+            throw new WebApplicationException(
+                    buildResponse("Invalid client Id : " + clientId,
+                            Response.Status.BAD_REQUEST));
         } catch (IdentityApplicationManagementException e) {
-            if (e instanceof  IdentityApplicationManagementClientException) {
-                throw new WebApplicationException(
-                        buildResponse("Invalid client Id : " + clientId,
-                                Response.Status.BAD_REQUEST));
-            } else {
-                throw new WebApplicationException(
+            throw new WebApplicationException(
                         buildResponse("Internal Server Error when retrieving service provider.",
                                 Response.Status.INTERNAL_SERVER_ERROR));
-            }
         }
         if (serviceProvider == null) {
 
