@@ -264,7 +264,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
         } catch (IdentityApplicationManagementException e) {
             if (e instanceof  IdentityApplicationManagementClientException) {
                 throw new WebApplicationException(
-                        buildResponse("Invalid client Id .",
+                        buildResponse("Invalid client Id : " + clientId,
                                 Response.Status.BAD_REQUEST));
             } else {
                 throw new WebApplicationException(
