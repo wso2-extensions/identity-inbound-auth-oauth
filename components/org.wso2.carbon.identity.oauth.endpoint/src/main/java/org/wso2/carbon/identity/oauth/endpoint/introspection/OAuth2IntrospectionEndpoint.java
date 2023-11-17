@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
@@ -159,8 +160,13 @@ public class OAuth2IntrospectionEndpoint {
         // Provide token binding related info which required to validate the token.
         if (StringUtils.isNotBlank(introspectionResponse.getBindingType()) && StringUtils
                 .isNotBlank(introspectionResponse.getBindingReference())) {
-            respBuilder.setBindingType(introspectionResponse.getBindingType());
+            String bindingType = introspectionResponse.getBindingType();
+            respBuilder.setBindingType(bindingType);
             respBuilder.setBindingReference(introspectionResponse.getBindingReference());
+            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) &&
+                    StringUtils.isNotBlank(introspectionResponse.getCnfBindingValue())) {
+                respBuilder.setCnfBindingValue(introspectionResponse.getCnfBindingValue());
+            }
         }
 
         // Retrieve list of registered IntrospectionDataProviders.

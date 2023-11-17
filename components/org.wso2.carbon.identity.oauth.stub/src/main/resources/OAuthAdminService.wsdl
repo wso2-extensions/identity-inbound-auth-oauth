@@ -401,6 +401,7 @@
                     <xs:element minOccurs="0" name="backChannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="bypassClientCredentials" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="fapiConformanceEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="frontchannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionAlgorithm" nillable="true" type="xs:string"/>
@@ -425,7 +426,6 @@
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="subjectType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tlsClientAuthSubjectDN" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="tlsClientCertificateBoundAccessTokens" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingValidationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenEndpointAuthMethod" nillable="true" type="xs:string"/>

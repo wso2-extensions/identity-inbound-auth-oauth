@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -75,7 +76,6 @@ public class DCRMService {
 
     private static final Log log = LogFactory.getLog(DCRMService.class);
     private static OAuthAdminService oAuthAdminService = new OAuthAdminService();
-
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
@@ -230,6 +230,15 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
                         appDTO.getApplicationName(), null);
             }
+            // Validate software statement assertion signature.
+            if (StringUtils.isNotEmpty(updateRequest.getSoftwareStatement())) {
+                try {
+                    validateSSASignature(updateRequest.getSoftwareStatement());
+                } catch (IdentityOAuth2Exception e) {
+                    throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                            DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
+                }
+            }
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
             // Update jwksURI.
@@ -318,7 +327,17 @@ public class DCRMService {
             }
             appDTO.setRequestObjectSignatureValidationEnabled(updateRequest.isRequireSignedRequestObject());
             appDTO.setRequirePushedAuthorizationRequests(updateRequest.isRequirePushedAuthorizationRequests());
-            appDTO.setTlsClientCertificateBoundAccessTokens(updateRequest.isTlsClientCertificateBoundAccessTokens());
+            if (updateRequest.isTlsClientCertificateBoundAccessTokens()) {
+                boolean isCertificateTokenBinderAvailable = DCRDataHolder.getInstance().getTokenBinders().stream()
+                        .anyMatch(t -> OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER
+                                .equals(t.getBindingType()));
+                if (isCertificateTokenBinderAvailable) {
+                    appDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+                    appDTO.setTokenBindingValidationEnabled(true);
+                }
+            } else {
+                appDTO.setTokenBindingType(OAuthConstants.TokenBindings.NONE);
+            }
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
@@ -504,7 +523,9 @@ public class DCRMService {
         application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
         application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
-        application.setTlsClientCertificateBoundAccessTokens(createdApp.getTlsClientCertificateBoundAccessTokens());
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
+            application.setTlsClientCertificateBoundAccessTokens(true);
+        }
         return application;
     }
 
@@ -614,11 +635,28 @@ public class DCRMService {
         oAuthConsumerApp.setRequestObjectSignatureValidationEnabled(registrationRequest.isRequireSignedRequestObject());
         oAuthConsumerApp.setRequirePushedAuthorizationRequests(
                 registrationRequest.isRequirePushedAuthorizationRequests());
-        oAuthConsumerApp.setTlsClientCertificateBoundAccessTokens(
-                registrationRequest.isTlsClientCertificateBoundAccessTokens());
+        if (registrationRequest.isTlsClientCertificateBoundAccessTokens()) {
+            boolean isCertificateTokenBinderAvailable = DCRDataHolder.getInstance().getTokenBinders().stream()
+                    .anyMatch(t -> OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER
+                            .equals(t.getBindingType()));
+            if (isCertificateTokenBinderAvailable) {
+                oAuthConsumerApp.setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+                oAuthConsumerApp.setTokenBindingValidationEnabled(true);
+            }
+        }
         oAuthConsumerApp.setPkceMandatory(registrationRequest.isExtPkceMandatory());
         oAuthConsumerApp.setPkceSupportPlain(registrationRequest.isExtPkceSupportPlain());
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
+        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
+        if (enableFAPI) {
+            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
+            if (enableFAPIDCR) {
+                // Add FAPI conformant property to Oauth application.
+                oAuthConsumerApp.setFapiConformanceEnabled(true);
+            }
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Creating OAuth Application: " + spName + " in tenant: " + tenantDomain);
         }
@@ -656,15 +694,6 @@ public class DCRMService {
         sp.setManagementApp(isManagementApp);
 
         Map<String, Object> spProperties = new HashMap<>();
-        boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
-        if (enableFAPI) {
-            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
-            if (enableFAPIDCR) {
-                // Add FAPI conformant application nad isThirdParty property to the service provider.
-                spProperties.put(OAuthConstants.IS_FAPI_CONFORMANT_APP, true);
-            }
-        }
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
         addSPProperties(spProperties, sp);
 

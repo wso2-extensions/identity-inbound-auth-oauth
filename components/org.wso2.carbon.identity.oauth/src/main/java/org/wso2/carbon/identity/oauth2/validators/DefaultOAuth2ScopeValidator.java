@@ -129,10 +129,11 @@ public class DefaultOAuth2ScopeValidator {
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
-                        .getAuthorizedUser(), appId, grantType, tenantDomain);
+                .getAuthorizedUser(), appId, grantType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)
+                || OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
             authorizedScopes.remove(OPENID_SCOPE);
         }

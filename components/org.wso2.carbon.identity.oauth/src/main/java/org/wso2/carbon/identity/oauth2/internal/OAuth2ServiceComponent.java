@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -76,6 +77,7 @@ import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadat
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.CertificateBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
@@ -197,6 +199,12 @@ public class OAuth2ServiceComponent {
     protected void activate(ComponentContext context) {
 
         try {
+            // Check if server compliant with the client ID tenant unification.
+            if (!OAuth2Util.isCompliantWithClientIDTenantUnification()) {
+                throw new RuntimeException("The unique key constraint in the IDN_OAUTH_CONSUMER_APPS table is not " +
+                        "compatible with the server configs on tenant qualified URLs and/ or tenanted sessions.");
+            }
+
             if (OAuth2ServiceComponentHolder.getInstance().getScopeClaimMappingDAO() == null) {
                 OAuth2ServiceComponentHolder.getInstance()
                         .setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
@@ -249,6 +257,14 @@ public class OAuth2ServiceComponent {
             if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
                 DeviceFlowTokenBinder deviceFlowTokenBinder = new DeviceFlowTokenBinder();
                 bundleContext.registerService(TokenBinderInfo.class.getName(), deviceFlowTokenBinder, null);
+            }
+
+            /* Certificate based token binder will be enabled only if certificate binding is not being performed in the
+               MTLS authenticator. By default, the certificate binding type will be enabled. */
+            if (Boolean.parseBoolean(IdentityUtil
+                    .getProperty(OAuthConstants.ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE))) {
+                CertificateBasedTokenBinder certificateBasedTokenBinder = new CertificateBasedTokenBinder();
+                bundleContext.registerService(TokenBinderInfo.class.getName(), certificateBasedTokenBinder, null);
             }
 
             bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),

@@ -30,13 +30,16 @@ public class OAuth2Constants {
 
         public static final String SSO_SESSION_BASED_TOKEN_BINDER = "sso-session";
         public static final String COOKIE_BASED_TOKEN_BINDER = "cookie";
+        public static final String CERTIFICATE_BASED_TOKEN_BINDER = "certificate";
 
     }
     public static final String GROUPS = "groups";
     public static final String ENTITY_ID = "entity_id";
     public static final String IS_CONSENTED = "is_consented";
+    public static final String IS_FEDERATED = "is_federated";
     public static final boolean DEFAULT_PERSIST_ENABLED = true;
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
+    public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
 
 
     /**

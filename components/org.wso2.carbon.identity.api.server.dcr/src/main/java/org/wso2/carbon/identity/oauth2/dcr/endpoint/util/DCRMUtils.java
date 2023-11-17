@@ -93,7 +93,7 @@ public class DCRMUtils {
                 (registrationRequestDTO.getRequestObjectEncryptionMethod());
         appRegistrationRequest.setTlsClientAuthSubjectDN(registrationRequestDTO.getTlsClientAuthSubjectDn());
         appRegistrationRequest.setRequirePushedAuthorizationRequests
-                (registrationRequestDTO.isRequireSignedRequestObject());
+                (registrationRequestDTO.isRequirePushAuthorizationRequest());
         appRegistrationRequest.setRequireSignedRequestObject(registrationRequestDTO.isRequireSignedRequestObject());
         appRegistrationRequest.setTlsClientCertificateBoundAccessTokens
                 (registrationRequestDTO.isTlsClientCertificateBoundAccessToken());
@@ -267,7 +267,7 @@ public class DCRMUtils {
             return new DCRMEndpointException(status);
         } else {
             String error = DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA;
-            if (code.equals(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI.toString())) {
+            if (DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI.toString().equals(code)) {
                 error = DCRMConstants.ErrorCodes.INVALID_REDIRECT_URI;
             }
             if (code.equals(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {

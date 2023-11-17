@@ -112,7 +112,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             if (isOrganizationQualifiedRequest()) {
                 cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + loginTenantDomain + "/");
             } else {
-                if (!IdentityTenantUtil.isSuperTenantRequiredInUrl() &&
+                if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
                     cookie.setPath("/");
                 } else {

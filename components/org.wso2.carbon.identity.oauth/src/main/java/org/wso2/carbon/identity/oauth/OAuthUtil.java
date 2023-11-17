@@ -523,7 +523,7 @@ public final class OAuthUtil {
         dto.setRequestObjectEncryptionAlgorithm(appDO.getRequestObjectEncryptionAlgorithm());
         dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
         dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
-        dto.setTlsClientCertificateBoundAccessTokens(appDO.isTlsClientCertificateBoundAccessTokens());
+        dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         return dto;
     }
 

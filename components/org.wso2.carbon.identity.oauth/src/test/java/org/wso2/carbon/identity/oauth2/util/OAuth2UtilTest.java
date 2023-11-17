@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -69,11 +68,13 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
@@ -81,6 +82,7 @@ import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -119,8 +121,10 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
+import static org.powermock.api.mockito.PowerMockito.doReturn;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.powermock.api.mockito.PowerMockito.spy;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
@@ -129,7 +133,6 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
@@ -2513,19 +2516,24 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "FAPI status data provider")
     public void testIsFapiConformantApp(boolean isFapiConformant) throws Exception {
 
-        setCache();
-        ServiceProvider serviceProvider = new ServiceProvider();
-        ServiceProviderProperty fapiAppSpProperty = new ServiceProviderProperty();
-        fapiAppSpProperty.setName(IS_FAPI_CONFORMANT_APP);
-        fapiAppSpProperty.setValue(String.valueOf(isFapiConformant));
-        serviceProvider.setSpProperties(new ServiceProviderProperty[]{fapiAppSpProperty});
-        ApplicationManagementService applicationManagementService = mock(ApplicationManagementService.class);
-        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
+        spy(OAuth2Util.class);
         mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(anyString())).thenReturn("true");
-        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
-                .thenReturn(serviceProvider);
-        Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+        if (isFapiConformant) {
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setFapiConformanceEnabled(true);
+            doReturn(oAuthAppDO).when(OAuth2Util.class, "getAppInformationByClientId", anyString(), anyString());
+            when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
+            when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
+            when(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI)).thenReturn("true");
+            Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+        } else {
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setFapiConformanceEnabled(false);
+            doReturn(oAuthAppDO).when(OAuth2Util.class, "getAppInformationByClientId", anyString(), anyString());
+            when(IdentityTenantUtil.resolveTenantDomain()).thenReturn("carbon.super");
+            when(IdentityUtil.getProperty(any())).thenReturn("true");
+            Assert.assertEquals(OAuth2Util.isFapiConformantApp(clientId), isFapiConformant);
+        }
     }
 
     @DataProvider(name = "extractCredentialDataProvider")
@@ -2610,26 +2618,66 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetSupportedClientAuthMethods() {
 
+        ClientAuthenticationMethodModel secretBasic = new ClientAuthenticationMethodModel("client_secret_basic",
+                "Client Secret Basic");
+        ClientAuthenticationMethodModel secretPost = new ClientAuthenticationMethodModel("client_secret_post",
+                "Client Secret Post");
+        ClientAuthenticationMethodModel mtls = new ClientAuthenticationMethodModel("tls_client_auth",
+                "Mutual TLS");
+        ClientAuthenticationMethodModel pkJwt = new ClientAuthenticationMethodModel("private_key_jwt",
+                "Private Key JWT");
         List<OAuthClientAuthenticator> clientAuthenticators = new ArrayList<>();
         OAuthClientAuthenticator basicClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
         PowerMockito.when(basicClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("client_secret_basic", "client_secret_post"));
+                .thenReturn(Arrays.asList(secretBasic, secretPost));
         clientAuthenticators.add(basicClientAuthenticator);
         OAuthClientAuthenticator mtlsClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
         PowerMockito.when(mtlsClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("tls_client_auth"));
+                .thenReturn(Arrays.asList(mtls));
         clientAuthenticators.add(mtlsClientAuthenticator);
         OAuthClientAuthenticator pkjwtClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
         PowerMockito.when(pkjwtClientAuthenticator.getSupportedClientAuthenticationMethods())
-                .thenReturn(Arrays.asList("private_key_jwt"));
+                .thenReturn(Arrays.asList(pkJwt));
         clientAuthenticators.add(pkjwtClientAuthenticator);
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getAuthenticationHandlers()).thenReturn(clientAuthenticators);
-        List<String> supportedClientAuthMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
-        assertTrue(supportedClientAuthMethods.contains("client_secret_basic"));
-        assertTrue(supportedClientAuthMethods.contains("client_secret_post"));
-        assertTrue(supportedClientAuthMethods.contains("tls_client_auth"));
-        assertTrue(supportedClientAuthMethods.contains("private_key_jwt"));
+        HashSet<ClientAuthenticationMethodModel> supportedClientAuthMethods = OAuth2Util
+                .getSupportedAuthenticationMethods();
+        assertTrue(supportedClientAuthMethods.contains(secretBasic));
+        assertTrue(supportedClientAuthMethods.contains(secretPost));
+        assertTrue(supportedClientAuthMethods.contains(mtls));
+        assertTrue(supportedClientAuthMethods.contains(pkJwt));
         assertEquals(supportedClientAuthMethods.size(), 4);
+        List<String> supportedAuthMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
+        assertTrue(supportedAuthMethods.contains("client_secret_basic"));
+        assertTrue(supportedAuthMethods.contains("client_secret_post"));
+        assertTrue(supportedAuthMethods.contains("tls_client_auth"));
+        assertTrue(supportedAuthMethods.contains("private_key_jwt"));
+        assertEquals(supportedAuthMethods.size(), 4);
+    }
+
+    @Test
+    public void getSupportedTokenBindingTypes() {
+
+        List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOS = new ArrayList<>();
+        TokenBindingMetaDataDTO cookieTokenBindingMetaDataDTO = new TokenBindingMetaDataDTO();
+        cookieTokenBindingMetaDataDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER);
+        tokenBindingMetaDataDTOS.add(cookieTokenBindingMetaDataDTO);
+        TokenBindingMetaDataDTO ssoTokenBindingMetaDataDTO = new TokenBindingMetaDataDTO();
+        ssoTokenBindingMetaDataDTO.setTokenBindingType(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER);
+        tokenBindingMetaDataDTOS.add(ssoTokenBindingMetaDataDTO);
+        TokenBindingMetaDataDTO certificateTokenBindingMetaDataDTO = new TokenBindingMetaDataDTO();
+        certificateTokenBindingMetaDataDTO
+                .setTokenBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+        tokenBindingMetaDataDTOS.add(certificateTokenBindingMetaDataDTO);
+        when(oAuthComponentServiceHolderMock.getTokenBindingMetaDataDTOs()).thenReturn(tokenBindingMetaDataDTOS);
+        List<String> supportedTokenBindingTypes = OAuth2Util.getSupportedTokenBindingTypes();
+        Assert.assertTrue(supportedTokenBindingTypes
+                .contains(OAuth2Constants.TokenBinderType.COOKIE_BASED_TOKEN_BINDER));
+        Assert.assertTrue(supportedTokenBindingTypes
+                .contains(OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER));
+        Assert.assertTrue(supportedTokenBindingTypes
+                .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
+        Assert.assertEquals(supportedTokenBindingTypes.size(), 3);
     }
 }

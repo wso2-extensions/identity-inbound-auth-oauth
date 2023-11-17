@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.introspection;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.mockito.Mock;
@@ -83,7 +84,8 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
      * This method does unit test for build response with values
      */
     @Test(dataProvider = "provideBuilderData")
-    public void testResposeBuilderWithVal(boolean isActive, int notBefore, int expiration, boolean timesSetInJson) {
+    public void testResposeBuilderWithVal(boolean isActive, int notBefore, int expiration, boolean timesSetInJson)
+            throws Exception {
 
         String idToken = "eyJhbGciOiJSUzI1NiJ9.eyJhdXRoX3RpbWUiOjE0NTIxNzAxNzYsImV4cCI6MTQ1MjE3Mzc3Niwic3ViI" +
                 "joidXNlQGNhcmJvbi5zdXBlciIsImF6cCI6IjF5TDFfZnpuekdZdXRYNWdCMDNMNnRYR3lqZ2EiLCJhdF9oYXNoI" +
@@ -109,6 +111,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
         introspectionResponseBuilder1.setErrorCode("Invalid input");
         introspectionResponseBuilder1.setErrorDescription("error_discription");
         introspectionResponseBuilder1.setAuthorizedUserType(OAuthConstants.UserType.APPLICATION_USER);
+        introspectionResponseBuilder1.setCnfBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
@@ -136,6 +139,10 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
                 "ERROR_DESCRIPTION messages are not equal");
         assertEquals(jsonObject.get(IntrospectionResponse.AUT), "APPLICATION_USER",
                 "AUT values are not equal");
+        Map<String, Object> cnf = new ObjectMapper()
+                .readValue(jsonObject.get(IntrospectionResponse.CNF).toString(), HashMap.class);
+        assertEquals(cnf.get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9",
+                "CNF value is not equal");
     }
 
     /**
@@ -161,6 +168,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
         introspectionResponseBuilder2.setErrorCode("");
         introspectionResponseBuilder2.setErrorDescription("");
         introspectionResponseBuilder2.setAuthorizedUserType("");
+        introspectionResponseBuilder2.setCnfBindingValue("");
 
         JSONObject jsonObject2 = new JSONObject(introspectionResponseBuilder2.build());
         assertFalse(jsonObject2.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
@@ -180,6 +188,7 @@ public class IntrospectionResponseBuilderTest extends PowerMockIdentityBaseTest 
         assertFalse(jsonObject2.has(IntrospectionResponse.Error.ERROR_DESCRIPTION),
                 "ERROR_DESCRIPTION already exists in the response builder");
         assertFalse(jsonObject2.has(IntrospectionResponse.AUT), "AUT already exists in the response builder");
+        assertFalse(jsonObject2.has(IntrospectionResponse.CNF), "CNF value exists in the response builder");
     }
 
     @Test(dependsOnMethods = "testResposeBuilderWithVal")

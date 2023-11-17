@@ -30,9 +30,10 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.a
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
@@ -87,21 +88,20 @@ public class ApiAuthnEndpoint {
                 case SUCCESS_COMPLETED:
                     return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
-                    return handleFailAuthResponse(authServiceResponse);
+                    return handleFailIncompleteAuthResponse(authServiceResponse);
                 case FAIL_COMPLETED:
-                    return handleFailAuthResponse(authServiceResponse);
+                    return handleFailCompletedAuthResponse(authServiceResponse);
                 default:
-                    throw new AuthServiceException("Unknown flow status: " + authServiceResponse.getFlowStatus());
+                    throw new AuthServiceException(
+                            AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS.code(),
+                            String.format(AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS
+                                    .description(), authServiceResponse.getFlowStatus()));
             }
 
-        } catch (AuthServiceClientException | InvalidRequestParentException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Client error while handling authentication request.", e);
-            }
-            return buildOAuthInvalidRequestError(e.getMessage());
-        } catch (AuthServiceException | URISyntaxException e) {
-            LOG.error("Error while handling authentication request.", e);
-            return buildOAuthServerError();
+        } catch (AuthServiceClientException e) {
+            return ApiAuthnUtils.buildResponseForClientError(e, LOG);
+        } catch (AuthServiceException e) {
+            return ApiAuthnUtils.buildResponseForServerError(e, LOG);
         }
     }
 
@@ -112,19 +112,21 @@ public class ApiAuthnEndpoint {
             return objectMapper.readValue(payload, AuthRequest.class);
         } catch (JsonProcessingException e) {
             // Throwing a client exception here as the exception can occur due to a malformed request.
-            throw new AuthServiceClientException(e.getMessage());
+            throw new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error occurred while parsing the authentication request.", e);
         }
     }
 
-    private Response buildResponse(AuthResponse response) {
+    private Response buildResponse(AuthResponse response) throws AuthServiceException {
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-        String jsonString = null;
+        String jsonString;
         try {
             jsonString = objectMapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                    "Error while building JSON response.", e);
         }
         return Response.ok().entity(jsonString).build();
     }
@@ -144,10 +146,15 @@ public class ApiAuthnEndpoint {
                 params.put(AUTHENTICATOR, new String[]{authenticatorIdSplit[0]});
                 params.put(IDP, new String[]{authenticatorIdSplit[1]});
             } else {
-                throw new AuthServiceClientException("Provided authenticator id: " + authenticatorId + " is invalid.");
+                throw new AuthServiceClientException(
+                        AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTHENTICATOR_ID.code(),
+                        String.format(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTHENTICATOR_ID.description(),
+                                authenticatorId));
             }
         } else {
-            throw new AuthServiceClientException("Authenticator id is not provided.");
+            throw new AuthServiceClientException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTHENTICATOR_ID.code(),
+                    "Authenticator id is not provided.");
         }
 
         Map<String, String[]> authParams = authRequest.getSelectedAuthenticator().getParams().entrySet().stream()
@@ -165,8 +172,8 @@ public class ApiAuthnEndpoint {
     }
 
     private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
-                                                        AuthServiceResponse authServiceResponse) throws
-            InvalidRequestParentException, URISyntaxException {
+                                                        AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
 
         String callerSessionDataKey = authServiceResponse.getSessionDataKey();
 
@@ -175,7 +182,12 @@ public class ApiAuthnEndpoint {
         OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
         internalRequest.setInternalRequest(true);
 
-        return oAuth2AuthzEndpoint.authorize(internalRequest, response);
+        try {
+            return oAuth2AuthzEndpoint.authorize(internalRequest, response);
+        } catch (InvalidRequestParentException | URISyntaxException e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error while processing the final oauth authorization request.", e);
+        }
     }
 
     private Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
@@ -184,35 +196,42 @@ public class ApiAuthnEndpoint {
         return buildResponse(authResponse);
     }
 
-    private Response handleFailAuthResponse(AuthServiceResponse authServiceResponse) {
+    private Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
 
-        String errorMsg = "Unhandled flow status: " + authServiceResponse.getFlowStatus();
+        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+        return buildResponse(authResponse);
+    }
+
+    private Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
+
+        APIError apiError = new APIError();
         if (authServiceResponse.getErrorInfo().isPresent()) {
             AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
-            errorMsg = errorInfo.getErrorCode() + " - " + errorInfo.getErrorMessage();
+            apiError.setCode(errorInfo.getErrorCode());
+            apiError.setMessage(errorInfo.getErrorMessage());
+            apiError.setDescription(errorInfo.getErrorDescription());
+        } else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error info is not present in the authentication service response. " +
+                        "Setting default error details.");
+            }
+            apiError.setCode(getDefaultAuthenticationFailureError().code());
+            apiError.setMessage(getDefaultAuthenticationFailureError().message());
+            apiError.setDescription(getDefaultAuthenticationFailureError().description());
         }
-        Map<String, String> params = new HashMap<>();
-        params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
-        params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, errorMsg);
-        String jsonString = new Gson().toJson(params);
-        return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).entity(jsonString).build();
+        apiError.setTraceId(ApiAuthnUtils.getCorrelationId());
+        String jsonString = new Gson().toJson(apiError);
+        /* Authentication FAIL_COMPLETED status could happen due to both client errors and server errors.
+         Generally FAIL_COMPLETED status is received when an authenticator throws a AuthenticationFailedException
+         and this exception could be thrown for both client and server errors and with the current framework
+         implementation it is not possible to distinguish between these two types of errors. Therefore,
+         it was decided to set the http status code to 400.*/
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
     }
 
-    private Response buildOAuthInvalidRequestError(String errorMessage) {
+    private AuthServiceConstants.ErrorMessage getDefaultAuthenticationFailureError() {
 
-        Map<String, String> params = new HashMap<>();
-        params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.INVALID_REQUEST);
-        params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, errorMessage);
-        String jsonString = new Gson().toJson(params);
-        return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).entity(jsonString).build();
-    }
-
-    private Response buildOAuthServerError() {
-
-        Map<String, String> params = new HashMap<>();
-        params.put(OAuthConstants.OAUTH_ERROR, OAuth2ErrorCodes.SERVER_ERROR);
-        params.put(OAuthConstants.OAUTH_ERROR_DESCRIPTION, "Server error occurred while performing authentication.");
-        String jsonString = new Gson().toJson(params);
-        return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).entity(jsonString).build();
+        return AuthServiceConstants.ErrorMessage.ERROR_AUTHENTICATION_FAILURE;
     }
 }

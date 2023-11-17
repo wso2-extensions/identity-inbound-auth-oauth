@@ -59,11 +59,11 @@ public class OAuthConsumerAppDTO {
     private String requestObjectSignatureAlgorithm;
     private String tlsClientAuthSubjectDN;
     private boolean requirePushedAuthorizationRequests;
-    private boolean tlsClientCertificateBoundAccessTokens;
     private String subjectType;
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private String jwksURI;
+    private boolean fapiConformanceEnabled;
 
     public String getJwksURI() {
 
@@ -380,16 +380,6 @@ public class OAuthConsumerAppDTO {
         this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
     }
 
-    public boolean getTlsClientCertificateBoundAccessTokens() {
-
-        return tlsClientCertificateBoundAccessTokens;
-    }
-
-    public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
-
-        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
-    }
-
     public String getSubjectType() {
 
         return subjectType;
@@ -427,6 +417,16 @@ public class OAuthConsumerAppDTO {
     public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
 
         this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
+    }
+
+    public boolean isFapiConformanceEnabled() {
+
+        return fapiConformanceEnabled;
+    }
+
+    public void setFapiConformanceEnabled(boolean fapiConformant) {
+
+        fapiConformanceEnabled = fapiConformant;
     }
 }
 

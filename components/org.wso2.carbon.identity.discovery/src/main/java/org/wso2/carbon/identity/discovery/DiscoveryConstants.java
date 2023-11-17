@@ -363,4 +363,11 @@ public class DiscoveryConstants {
      * OPTIONAL. URL of the OpenID Connect token discovery endpoint
      */
     public static final String WEBFINGER_ENDPOINT = "WebFinger_endpoint";
+
+    /**
+     * tls_client_certificate_bound_access_tokens
+     * OPTIONAL. Boolean value indicating server support for mutual-TLS client certificate-bound access tokens.
+     * If omitted, the default value is false.
+     */
+    public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
 }

@@ -114,6 +114,18 @@ public final class OAuthConstants {
 
     public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
     public static final String SUBJECT_TYPE = "subject_type";
+
+    public static final String CNF = "cnf";
+    public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
+    public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    public static final String END_CERT = "-----END CERTIFICATE-----";
+    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
+    public static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
+    public static final String X5T_S256 = "x5t#S256";
+
+    public static final String ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE = "OAuth.OpenIDConnect." +
+            "EnableTLSCertificateBoundAccessTokensViaBindingType";
+
     /**
      * Enum for OIDC supported subject types.
      */
@@ -226,7 +238,6 @@ public final class OAuthConstants {
 
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
-    public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String ENABLE_DCR_FAPI_ENFORCEMENT = "OAuth.DCRM.EnableFAPIEnforcement";
     public static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
@@ -274,6 +285,8 @@ public final class OAuthConstants {
         public static final String JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer";
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
+        public static final String ORGANIZATION_SWITCH = "organization_switch";
+        public static final String ORGANIZATION_SWITCH_CC = "organization_switch_cc";
 
         private GrantTypes() {
 
@@ -452,6 +465,7 @@ public final class OAuthConstants {
 
         public static final String APP_STATE_ACTIVE = "ACTIVE";
         public static final String APP_STATE_REVOKED = "REVOKED";
+        public static final String APP_STATE_DELETED = "DELETED";
 
         private OauthAppStates() {
 
@@ -599,6 +613,7 @@ public final class OAuthConstants {
         public static final String SUBJECT_TYPE = "subjectType";
         public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
         public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
+        public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
 
         private OIDCConfigProperties() {
 
