@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.a
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
@@ -3966,7 +3967,62 @@ public class OAuth2AuthzEndpoint {
             for (AuthHistory authHistory : sessionContext.getSessionAuthHistory().getHistory()) {
                 authMethods.add(authHistory.toTranslatableString());
             }
+            authMethods = getAMRValues(authMethods, sessionContext.getAuthenticatedIdPs());
             resultFromLogin.getParamMap().put(OAuthConstants.AMR, authMethods.toArray(new String[authMethods.size()]));
+        }
+    }
+
+    /**
+     * Replaces the authenticator names with the AMR values sent by the IDP.
+     *
+     * @param authMethods       The list of authentication methods set by resident IDP.
+     * @param authenticatedIdPs The authenticated IDPs.
+     */
+    private List<String> getAMRValues(List<String> authMethods, Map<String, AuthenticatedIdPData> authenticatedIdPs) {
+
+        boolean readAMRValueFromIdp = Boolean.parseBoolean(IdentityUtil.getProperty(
+                OAuthConstants.READ_AMR_VALUE_FROM_IDP));
+        if (readAMRValueFromIdp) {
+            List<String> resultantAuthMethods = new ArrayList<>();
+            Object[] idpKeySet = authenticatedIdPs.keySet().toArray();
+            for (int i = 0; i < authMethods.size(); i++) {
+                boolean amrFieldExists = false;
+                if (idpKeySet[i] != null) {
+                    String idpKey = (String) idpKeySet[i];
+                    if (authenticatedIdPs.get(idpKey) != null && authenticatedIdPs.get(idpKey).getUser() != null
+                            && authenticatedIdPs.get(idpKey).getUser().getUserAttributes() != null) {
+                        for (Map.Entry<ClaimMapping, String> entry : authenticatedIdPs.get(idpKey).getUser()
+                                .getUserAttributes().entrySet()) {
+                            if (entry.getKey().getLocalClaim().getClaimUri().equals(OAuthConstants.AMR)) {
+                                amrFieldExists = true;
+                                addToAuthMethods(entry.getValue(), resultantAuthMethods);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!amrFieldExists) {
+                    resultantAuthMethods.add(authMethods.get(i));
+                }
+            }
+            return resultantAuthMethods;
+        }
+        return authMethods;
+    }
+
+    /**
+     * Adds the authentication methods to the list.
+     *
+     * @param amrValue             Comma separated authentication method value or values.
+     * @param resultantAuthMethods The resultant list of authentication methods.
+     */
+    private void addToAuthMethods(String amrValue, List<String> resultantAuthMethods) {
+
+        if (amrValue.contains(",")) {
+            String[] amrValues = amrValue.split(",");
+            resultantAuthMethods.addAll(Arrays.asList(amrValues));
+        } else {
+            resultantAuthMethods.add(amrValue);
         }
     }
 
