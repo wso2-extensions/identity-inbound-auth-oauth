@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
@@ -566,15 +567,30 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Improve runtime claim value storage in cache through https://github.com/wso2/product-is/issues/15056
         requestedClaimUris.removeIf(claim -> claim.startsWith("http://wso2.org/claims/runtime/"));
 
-        boolean requestedAppRoleClaim = false;
+        boolean roleClaimRequested = false;
+        String rolesClaimURI = IdentityUtil.getLocalGroupsClaimURI();
+        if (requestedClaimUris.contains(rolesClaimURI) && !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+            requestedClaimUris.remove(rolesClaimURI);
+            roleClaimRequested = true;
+        }
+        boolean appRoleClaimRequested = false;
         if (requestedClaimUris.contains(APP_ROLES_CLAIM)) {
             requestedClaimUris.remove(APP_ROLES_CLAIM);
-            requestedAppRoleClaim = true;
+            appRoleClaimRequested = true;
         }
         Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
-        if (requestedAppRoleClaim) {
-            handleAppRoleClaimInLocalDialect(userClaims, authenticatedUser, serviceProvider.getApplicationResourceId());
+
+        if (roleClaimRequested || appRoleClaimRequested) {
+            String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(authenticatedUser,
+                    serviceProvider.getApplicationResourceId());
+            if (roleClaimRequested) {
+                setRoleClaimInLocalDialect(userClaims, appAssocatedRolesOfUser);
+            }
+            if (appRoleClaimRequested) {
+                setAppRoleClaimInLocalDialect(userClaims, appAssocatedRolesOfUser);
+            }
         }
+
         if (isEmpty(userClaims)) {
             // User claims can be empty if user does not exist in user stores. Probably a federated user.
             if (log.isDebugEnabled()) {
@@ -651,25 +667,51 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Adds the application roles claim for local user.
+     * Get app associated roles of the user.
      *
-     * @param userClaims        User claims in local dialect.
      * @param authenticatedUser Authenticated user.
-     * @param applicationId     Application ID.
-     * @throws ApplicationRolesException Error while getting application roles.
+     * @param applicationId     Application id.
+     * @return App associated roles of the user.
+     * @throws ApplicationRolesException If an error occurred while getting app associated roles.
      */
-    private void handleAppRoleClaimInLocalDialect(Map<String, String> userClaims, AuthenticatedUser authenticatedUser,
-                                                  String applicationId) throws ApplicationRolesException {
+    private String[] getAppAssociatedRolesOfUser(AuthenticatedUser authenticatedUser, String applicationId) throws
+            ApplicationRolesException {
 
         ApplicationRolesResolver appRolesResolver =
                 OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityApplicationRolesResolver();
         if (appRolesResolver == null) {
             log.debug("No application roles resolver found. So not adding application roles claim to the id_token.");
-            return;
+            return new String[0];
         }
-        String[] appRoles = appRolesResolver.getRoles(authenticatedUser, applicationId);
-        if (ArrayUtils.isNotEmpty(appRoles)) {
-            userClaims.put(APP_ROLES_CLAIM, String.join(FrameworkUtils.getMultiAttributeSeparator(), appRoles));
+        return appRolesResolver.getRoles(authenticatedUser, applicationId);
+    }
+
+    /**
+     * Set the roles claim for local user.
+     *
+     * @param userClaims         User claims in local dialect.
+     * @param appAssociatedRoles App associated roles of the user.
+     */
+    private void setRoleClaimInLocalDialect(Map<String, String> userClaims, String[] appAssociatedRoles) {
+
+        String rolesClaimURI = IdentityUtil.getLocalGroupsClaimURI();
+        if (ArrayUtils.isNotEmpty(appAssociatedRoles)) {
+            userClaims.put(rolesClaimURI,
+                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appAssociatedRoles));
+        }
+    }
+
+    /**
+     * Set the application roles claim for local user.
+     *
+     * @param userClaims         User claims in local dialect.
+     * @param appAssociatedRoles App associated roles of the user.
+     */
+    private void setAppRoleClaimInLocalDialect(Map<String, String> userClaims, String[] appAssociatedRoles) {
+
+        if (ArrayUtils.isNotEmpty(appAssociatedRoles)) {
+            userClaims.put(APP_ROLES_CLAIM,
+                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appAssociatedRoles));
         }
     }
 
