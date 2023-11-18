@@ -1009,7 +1009,7 @@ public class AccessTokenIssuer {
 
     private void removeAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> authorizedScopes) {
 
-        if (tokReqMsgCtx.getScope() == null) {
+        if (tokReqMsgCtx.getScope() == null || authorizedScopes == null) {
             return;
         }
         List<String> scopes = new ArrayList<>();
