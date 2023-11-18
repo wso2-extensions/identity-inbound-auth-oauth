@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.api.auth.model;
 
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,7 +28,7 @@ import java.util.List;
  */
 public class Message {
 
-    private MessageTypeEnum type;
+    private FrameworkConstants.AuthenticatorMessageType type;
     private String messageId;
     private String message;
     private String i18nKey;
@@ -36,7 +38,8 @@ public class Message {
 
     }
 
-    public Message(MessageTypeEnum type, String messageId, String message, String i18nKey, List<Context> context) {
+    public Message(FrameworkConstants.AuthenticatorMessageType type, String messageId, String message, String i18nKey,
+                   List<Context> context) {
 
         this.type = type;
         this.messageId = messageId;
@@ -45,12 +48,12 @@ public class Message {
         this.context = context;
     }
 
-    public MessageTypeEnum getType() {
+    public FrameworkConstants.AuthenticatorMessageType getType() {
 
         return type;
     }
 
-    public void setType(MessageTypeEnum type) {
+    public void setType(FrameworkConstants.AuthenticatorMessageType type) {
 
         this.type = type;
     }

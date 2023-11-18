@@ -104,6 +104,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dao.OAuthConsumerDAO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
@@ -129,6 +130,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -220,7 +222,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_B
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_SUCCESS_ENDPOINT_PATH;
 
 /**
- * Utility methods for OAuth 2.0 implementation
+ * Utility methods for OAuth 2.0 implementation.
  */
 public class OAuth2Util {
 
@@ -1630,7 +1632,9 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(defaultContext).build().getAbsolutePublicURL();
+                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+                return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId).build()
+                        .getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
             }
@@ -5013,15 +5017,31 @@ public class OAuth2Util {
      */
     public static String[] getSupportedClientAuthMethods() {
 
-        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> clientAuthenticators = OAuth2Util.getSupportedAuthenticationMethods();
         HashSet<String> supportedClientAuthMethods = new HashSet<>();
+        for (ClientAuthenticationMethodModel authMethod : clientAuthenticators) {
+            supportedClientAuthMethods.add(authMethod.getName());
+        }
+        return supportedClientAuthMethods.toArray(new String[0]);
+    }
+
+    /**
+     * Retrieve the list of client authentication methods supported by the server with the authenticator display name.
+     *
+     * @return     Client authentication methods supported by the server.
+     */
+    public static HashSet<ClientAuthenticationMethodModel> getSupportedAuthenticationMethods() {
+
+        List<OAuthClientAuthenticator> clientAuthenticators = OAuth2ServiceComponentHolder.getAuthenticationHandlers();
+        HashSet<ClientAuthenticationMethodModel> supportedClientAuthMethods = new HashSet<>();
         for (OAuthClientAuthenticator clientAuthenticator : clientAuthenticators) {
-            List<String> supportedAuthMethods = clientAuthenticator.getSupportedClientAuthenticationMethods();
+            List<ClientAuthenticationMethodModel> supportedAuthMethods = clientAuthenticator
+                    .getSupportedClientAuthenticationMethods();
             if (!supportedAuthMethods.isEmpty()) {
                 supportedClientAuthMethods.addAll(supportedAuthMethods);
             }
         }
-        return supportedClientAuthMethods.toArray(new String[0]);
+        return supportedClientAuthMethods;
     }
 
     /**
@@ -5033,6 +5053,72 @@ public class OAuth2Util {
 
         if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE) != null) {
             return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE));
+        }
+        return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
+
+    /**
+     * Resolves the grant type from the response type for implicit and hybrid flows.
+     *
+     * @param responseType Response type Eg: token, id_token
+     * @return Grant type
+     */
+    public static String getGrantType(String responseType) {
+
+        String grantType;
+        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
+            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
+            grantType = OAuthConstants.GrantTypes.IMPLICIT;
+        } else {
+            grantType = responseType;
+        }
+        return grantType;
+    }
+
+    /**
+     * Retrieve the list of token binding types supported by the server.
+     *
+     * @return     Token binding types supported by the server.
+     */
+    public static List<String> getSupportedTokenBindingTypes() {
+
+        List<TokenBindingMetaDataDTO> supportedTokenBindings = OAuthComponentServiceHolder.getInstance()
+                .getTokenBindingMetaDataDTOs();
+        List<String> supportedBindingTypes = new ArrayList<>();
+        for (TokenBindingMetaDataDTO tokenBindingMetaDataDTO : supportedTokenBindings) {
+            supportedBindingTypes.add(tokenBindingMetaDataDTO.getTokenBindingType());
+        }
+        return supportedBindingTypes;
+    }
+
+    /**
+     * Utility method to check if server compatible with client ID tenant unification.
+     * With the client ID tenant unification, the OAuth client ID will be unique only for the tenant. This
+     * requires enabling both the tenant qualified URLs and tenanted sessions. If any of these configs are disabled,
+     * the IDN_OAUTH_CONSUMER_APPS table need to have a unique key constraint for the consumer_key column.
+     *
+     * @return true if compliant.
+     */
+    public static boolean isCompliantWithClientIDTenantUnification() throws IdentityOAuth2Exception {
+
+        boolean isClientIdUnique = new OAuthAppDAO().isClientIDUniqueConstraintExistsInConsumerAppsTable();
+
+        if (isClientIdUnique) {
+            return true;
+        } else {
+            return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled();
+        }
+    }
+
+    /**
+     * Check if oauth code persistence is enabled.
+     *
+     * @return True if oauth code persistence is enabled.
+     */
+    public static boolean isAuthCodePersistenceEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE));
         }
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
     }

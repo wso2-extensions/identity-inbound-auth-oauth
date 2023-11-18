@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -73,15 +74,8 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
             return false;
         }
 
-        OAuthAppDO app;
-        try {
-            app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
-            scopeValidators = app.getScopeValidators();
-        } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +
-                    "client id %s ", accessTokenDO.getConsumerKey()), e);
-        }
-
+        OAuthAppDO app = getAppInformation(accessTokenDO);
+        scopeValidators = app.getScopeValidators();
         if (ArrayUtils.isEmpty(scopeValidators)) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("There is no scope validator registered for %s@%s", app.getApplicationName(),
@@ -170,4 +164,28 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
         return "Bearer";
     }
 
+    /**
+     * Get the app information for the given access token.
+     *
+     * @param accessTokenDO Access token data object
+     * @return OAuthAppDO
+     * @throws IdentityOAuth2Exception If failed to get app information
+     */
+    private OAuthAppDO getAppInformation(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+
+        OAuthAppDO app;
+        try {
+            if (!StringUtils.isBlank(accessTokenDO.getTokenId())) {
+                app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
+            } else {
+                // This path will be executed when token persistence is disabled.
+                app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+            }
+        } catch (InvalidOAuthClientException e) {
+            throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for "
+                    + "client id %s ", accessTokenDO.getConsumerKey()), e);
+        }
+        return app;
+    }
 }

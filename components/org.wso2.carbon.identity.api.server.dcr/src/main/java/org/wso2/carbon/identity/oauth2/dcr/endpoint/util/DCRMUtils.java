@@ -93,7 +93,7 @@ public class DCRMUtils {
                 (registrationRequestDTO.getRequestObjectEncryptionMethod());
         appRegistrationRequest.setTlsClientAuthSubjectDN(registrationRequestDTO.getTlsClientAuthSubjectDn());
         appRegistrationRequest.setRequirePushedAuthorizationRequests
-                (registrationRequestDTO.isRequireSignedRequestObject());
+                (registrationRequestDTO.isRequirePushAuthorizationRequest());
         appRegistrationRequest.setRequireSignedRequestObject(registrationRequestDTO.isRequireSignedRequestObject());
         appRegistrationRequest.setTlsClientCertificateBoundAccessTokens
                 (registrationRequestDTO.isTlsClientCertificateBoundAccessToken());

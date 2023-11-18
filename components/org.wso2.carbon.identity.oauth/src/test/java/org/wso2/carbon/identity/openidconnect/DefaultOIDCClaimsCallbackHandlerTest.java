@@ -40,6 +40,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.w3c.dom.Element;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -230,6 +231,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
     @BeforeClass
     public void setUp() throws Exception {
 
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
         System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
         BasicDataSource dataSource1 = new BasicDataSource();
         dataSource1.setDriverClassName("org.h2.Driver");
