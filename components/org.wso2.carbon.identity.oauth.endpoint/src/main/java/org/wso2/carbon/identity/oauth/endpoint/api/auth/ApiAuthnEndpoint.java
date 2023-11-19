@@ -99,13 +99,9 @@ public class ApiAuthnEndpoint {
             }
 
         } catch (AuthServiceClientException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Client error while handling authentication request.", e);
-            }
-            return ApiAuthnUtils.buildResponseForClientError(e);
+            return ApiAuthnUtils.buildResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
-            LOG.error("Error while handling authentication request.", e);
-            return ApiAuthnUtils.buildResponseForServerError(e);
+            return ApiAuthnUtils.buildResponseForServerError(e, LOG);
         }
     }
 

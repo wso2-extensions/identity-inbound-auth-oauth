@@ -30,6 +30,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -154,6 +156,11 @@ public class OAuthAppDAO {
                     String processedClientSecret =
                             persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
 
+                    if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName())) {
+                        consumerAppDO.setCallbackUrl(
+                                ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(consumerAppDO.getCallbackUrl()));
+                    }
+
                     String dbProductName = connection.getMetaData().getDatabaseProductName();
                     try (PreparedStatement prepStmt = connection
                             .prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.ADD_OAUTH_APP_WITH_PKCE, new String[] {
@@ -212,6 +219,9 @@ public class OAuthAppDAO {
                         "TokenPersistenceProcessor", null);
             } catch (InvalidOAuthClientException e) {
                 throw handleError("Error occurred while processing client id", e);
+            } catch (URLBuilderException e) {
+                throw handleError(
+                        "Error occurred when replacing origin of the access URL with placeholders", e);
             }
         } else {
             String msg = "An application with the same name already exists.";
@@ -315,7 +325,13 @@ public class OAuthAppDAO {
                             }
                             oauthApp.setApplicationName(rSet.getString(3));
                             oauthApp.setOauthVersion(rSet.getString(4));
+
                             oauthApp.setCallbackUrl(rSet.getString(5));
+                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                                oauthApp.setCallbackUrl(
+                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5)));
+                            }
+
                             oauthApp.setGrantTypes(rSet.getString(6));
                             oauthApp.setId(rSet.getInt(7));
                             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -346,6 +362,9 @@ public class OAuthAppDAO {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error occurred while processing client id and client secret by " +
                     "TokenPersistenceProcessor", e);
+        } catch (URLBuilderException e) {
+            throw handleError(
+                    "Error occurred when replacing origin of the access URL with placeholders", e);
         }
         return oauthAppsOfUser;
     }
@@ -414,7 +433,13 @@ public class OAuthAppDAO {
                             authenticatedUser.setUserName(rSet.getString(2));
                             oauthApp.setApplicationName(rSet.getString(3));
                             oauthApp.setOauthVersion(rSet.getString(4));
+
                             oauthApp.setCallbackUrl(rSet.getString(5));
+                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                                oauthApp.setCallbackUrl(
+                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5)));
+                            }
+
                             authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(6)));
                             authenticatedUser.setUserStoreDomain(rSet.getString(7));
                             oauthApp.setUser(authenticatedUser);
@@ -442,6 +467,9 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error occurred when replacing origin of the access URL with placeholders", e);
         }
         return oauthApp;
     }
@@ -493,7 +521,13 @@ public class OAuthAppDAO {
                         authenticatedUser.setUserName(rSet.getString(USERNAME));
                         oauthApp.setApplicationName(rSet.getString(APP_NAME));
                         oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
+
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
+                        if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                            oauthApp.setCallbackUrl(
+                                    ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL)));
+                        }
+
                         authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
                         authenticatedUser.setUserStoreDomain(rSet.getString(USER_DOMAIN));
                         oauthApp.setAppOwner(authenticatedUser);
@@ -521,6 +555,9 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error occurred when replacing origin of the access URL with placeholders", e);
         }
         return oauthApp;
     }
@@ -559,7 +596,13 @@ public class OAuthAppDAO {
                         authenticatedUser.setUserName(rSet.getString(USERNAME));
                         oauthApp.setApplicationName(rSet.getString(APP_NAME));
                         oauthApp.setOauthVersion(rSet.getString(OAUTH_VERSION));
+
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
+                        if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                            oauthApp.setCallbackUrl(
+                                    ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL)));
+                        }
+
                         authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID)));
                         authenticatedUser.setUserStoreDomain(rSet.getString(USER_DOMAIN));
                         oauthApp.setAppOwner(authenticatedUser);
@@ -587,6 +630,9 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error occurred when replacing origin of the access URL with placeholders", e);
         }
 
         return oauthAppList.toArray(new OAuthAppDO[oauthAppList.size()]);
@@ -634,7 +680,13 @@ public class OAuthAppDAO {
                                     (4));
                             oauthApp.setOauthConsumerKey(preprocessedClientId);
                             oauthApp.setOauthVersion(rSet.getString(5));
+
                             oauthApp.setCallbackUrl(rSet.getString(6));
+                            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
+                                oauthApp.setCallbackUrl(
+                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(6)));
+                            }
+
                             oauthApp.setGrantTypes(rSet.getString(7));
                             oauthApp.setId(rSet.getInt(8));
                             oauthApp.setPkceMandatory(!"0".equals(rSet.getString(9)));
@@ -657,13 +709,21 @@ public class OAuthAppDAO {
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error occurred when replacing origin of the access URL with placeholders",  e);
         }
         return oauthApp;
     }
 
     public void updateConsumerApplication(OAuthAppDO oauthAppDO) throws IdentityOAuthAdminException {
+
         boolean isUserValidForOwnerUpdate = validateUserForOwnerUpdate(oauthAppDO);
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthAppDO.getApplicationName())) {
+                oauthAppDO.setCallbackUrl(
+                        ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(oauthAppDO.getCallbackUrl()));
+            }
             String sqlQuery = getSqlQuery(isUserValidForOwnerUpdate);
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
                 prepStmt.setString(1, oauthAppDO.getApplicationName());
@@ -692,6 +752,9 @@ public class OAuthAppDAO {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error occurred while processing client id and client secret by " +
                     "TokenPersistenceProcessor", e);
+        } catch (URLBuilderException e) {
+            throw handleError(
+                    "Error occurred when replacing origin of the access URL with placeholders", e);
         }
     }
 

@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -170,11 +171,17 @@ public class DefaultOAuth2TokenValidator implements OAuth2TokenValidator {
      * @return OAuthAppDO
      * @throws IdentityOAuth2Exception If failed to get app information
      */
-    protected OAuthAppDO getAppInformation(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
+    private OAuthAppDO getAppInformation(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
 
         OAuthAppDO app;
         try {
-            app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
+            if (!StringUtils.isBlank(accessTokenDO.getTokenId())) {
+                app = OAuth2Util.getAppInformationByAccessTokenDO(accessTokenDO);
+            } else {
+                // This path will be executed when token persistence is disabled.
+                app = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+            }
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for "
                     + "client id %s ", accessTokenDO.getConsumerKey()), e);

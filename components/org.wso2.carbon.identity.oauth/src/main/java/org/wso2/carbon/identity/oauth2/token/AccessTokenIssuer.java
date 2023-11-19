@@ -654,7 +654,8 @@ public class AccessTokenIssuer {
         String[] authorizedInternalScopes = new String[0];
         String[] requestedScopes = tokReqMsgCtx.getScope();
         List<String> authorizedScopes = null;
-        if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) && !isManagementApp) {
+        if (AuthzUtil.isLegacyAuthzRuntime() && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                !isManagementApp) {
             log.debug("Application is not configured as Management App and the grant type is client credentials. " +
                     "Hence skipping internal scope validation to stop issuing internal scopes for the client : " +
                     tokenReqDTO.getClientId());
@@ -1009,7 +1010,7 @@ public class AccessTokenIssuer {
 
     private void removeAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> authorizedScopes) {
 
-        if (tokReqMsgCtx.getScope() == null) {
+        if (tokReqMsgCtx.getScope() == null || authorizedScopes == null) {
             return;
         }
         List<String> scopes = new ArrayList<>();

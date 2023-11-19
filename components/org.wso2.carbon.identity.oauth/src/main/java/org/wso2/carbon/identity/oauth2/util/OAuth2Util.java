@@ -1632,7 +1632,9 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(defaultContext).build().getAbsolutePublicURL();
+                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+                return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId).build()
+                        .getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
             }
@@ -5106,5 +5108,18 @@ public class OAuth2Util {
         } else {
             return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && IdentityTenantUtil.isTenantedSessionsEnabled();
         }
+    }
+
+    /**
+     * Check if oauth code persistence is enabled.
+     *
+     * @return True if oauth code persistence is enabled.
+     */
+    public static boolean isAuthCodePersistenceEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE));
+        }
+        return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
     }
 }

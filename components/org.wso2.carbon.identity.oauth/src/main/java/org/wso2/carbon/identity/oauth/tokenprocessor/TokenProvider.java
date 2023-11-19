@@ -51,8 +51,7 @@ public interface TokenProvider {
      *
      * @param refreshToken The refresh token data object to retrieve and verify.
      * @param consumerKey  Consumer key
-     * @return The RefreshTokenValidationDataDO if the token is valid (ACTIVE or EXPIRED), or null if the token
-     * is not found either in ACTIVE or EXPIRED states.
+     * @return The RefreshTokenValidationDataDO if the token is available, or null otherwise.
      * @throws IdentityOAuth2Exception If there is an error during the access token retrieval or verification process.
      */
     RefreshTokenValidationDataDO getVerifiedRefreshToken(String refreshToken, String consumerKey)
