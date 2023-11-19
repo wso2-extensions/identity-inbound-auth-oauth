@@ -115,7 +115,7 @@ public class OAuthAdminServiceImpl {
     public static final String AUTHORIZATION_CODE = "authorization_code";
     static final String RESPONSE_TYPE_TOKEN = "token";
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
-    static final String BINDING_TYPE_NONE = "None";
+    static final String BINDING_TYPE_NONE = "NONE";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
