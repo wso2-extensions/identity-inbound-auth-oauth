@@ -345,7 +345,7 @@ public class OAuthClientAuthnService {
      * @return Client ID of the application.
      * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
-    private String extractClientId(HttpServletRequest request, Map<String, List> bodyContentMap)
+    public String extractClientId(HttpServletRequest request, Map<String, List> bodyContentMap)
             throws OAuthClientAuthnException {
 
         String clientId = null;

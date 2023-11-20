@@ -30,6 +30,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
@@ -55,6 +56,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.a
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ClaimMetaData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.ConsentClaimsData;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.exception.SSOConsentServiceException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
@@ -75,6 +77,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.model.UserAgent;
@@ -112,6 +115,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
@@ -220,6 +224,7 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
  * Rest implementation of OAuth2 authorize endpoint.
  */
 @Path("/authorize")
+@InInterceptors(classes = ClientAttestationProxy.class)
 public class OAuth2AuthzEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2AuthzEndpoint.class);
@@ -298,6 +303,13 @@ public class OAuth2AuthzEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException {
 
+        // Perform request authentication for API based auth flow.
+        if (isApiBasedAuthenticationFlow(request)) {
+            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
+            if (!oAuthClientAuthnContext.isAuthenticated()) {
+                return handleAuthFailureResponse(oAuthClientAuthnContext);
+            }
+        }
         OAuthMessage oAuthMessage;
 
         // TODO: 2021-01-22 Check for the flag in request.
@@ -3785,6 +3797,10 @@ public class OAuth2AuthzEndpoint {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
 
             if (isApiBasedAuthenticationFlow(oAuthMessage)) {
+                // Marking the initial request as additional validation will be done from the auth service.
+                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
+                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
+
                 AuthenticationService authenticationService = new AuthenticationService();
                 AuthServiceResponse authServiceResponse = authenticationService.
                         handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
@@ -3813,7 +3829,9 @@ public class OAuth2AuthzEndpoint {
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
                 return authorize(requestWrapper, oAuthMessage.getResponse());
             }
-        } catch (ServletException | IOException | URLBuilderException | AuthServiceException e) {
+        } catch (AuthServiceException e) {
+            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
+        } catch (ServletException | IOException | URLBuilderException e) {
             log.error("Error occurred while sending request to authentication framework.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -3949,7 +3967,62 @@ public class OAuth2AuthzEndpoint {
             for (AuthHistory authHistory : sessionContext.getSessionAuthHistory().getHistory()) {
                 authMethods.add(authHistory.toTranslatableString());
             }
+            authMethods = getAMRValues(authMethods, sessionContext.getAuthenticatedIdPs());
             resultFromLogin.getParamMap().put(OAuthConstants.AMR, authMethods.toArray(new String[authMethods.size()]));
+        }
+    }
+
+    /**
+     * Replaces the authenticator names with the AMR values sent by the IDP.
+     *
+     * @param authMethods       The list of authentication methods set by resident IDP.
+     * @param authenticatedIdPs The authenticated IDPs.
+     */
+    private List<String> getAMRValues(List<String> authMethods, Map<String, AuthenticatedIdPData> authenticatedIdPs) {
+
+        boolean readAMRValueFromIdp = Boolean.parseBoolean(IdentityUtil.getProperty(
+                OAuthConstants.READ_AMR_VALUE_FROM_IDP));
+        if (readAMRValueFromIdp) {
+            List<String> resultantAuthMethods = new ArrayList<>();
+            Object[] idpKeySet = authenticatedIdPs.keySet().toArray();
+            for (int i = 0; i < authMethods.size(); i++) {
+                boolean amrFieldExists = false;
+                if (idpKeySet[i] != null) {
+                    String idpKey = (String) idpKeySet[i];
+                    if (authenticatedIdPs.get(idpKey) != null && authenticatedIdPs.get(idpKey).getUser() != null
+                            && authenticatedIdPs.get(idpKey).getUser().getUserAttributes() != null) {
+                        for (Map.Entry<ClaimMapping, String> entry : authenticatedIdPs.get(idpKey).getUser()
+                                .getUserAttributes().entrySet()) {
+                            if (entry.getKey().getLocalClaim().getClaimUri().equals(OAuthConstants.AMR)) {
+                                amrFieldExists = true;
+                                addToAuthMethods(entry.getValue(), resultantAuthMethods);
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!amrFieldExists) {
+                    resultantAuthMethods.add(authMethods.get(i));
+                }
+            }
+            return resultantAuthMethods;
+        }
+        return authMethods;
+    }
+
+    /**
+     * Adds the authentication methods to the list.
+     *
+     * @param amrValue             Comma separated authentication method value or values.
+     * @param resultantAuthMethods The resultant list of authentication methods.
+     */
+    private void addToAuthMethods(String amrValue, List<String> resultantAuthMethods) {
+
+        if (amrValue.contains(",")) {
+            String[] amrValues = amrValue.split(",");
+            resultantAuthMethods.addAll(Arrays.asList(amrValues));
+        } else {
+            resultantAuthMethods.add(amrValue);
         }
     }
 
@@ -4312,8 +4385,13 @@ public class OAuth2AuthzEndpoint {
             return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
         }
 
+        return isApiBasedAuthenticationFlow(oAuthMessage.getRequest());
+    }
+
+    private boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
+
         return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
-                oAuthMessage.getRequest().getParameter(RESPONSE_MODE));
+                request.getParameter(RESPONSE_MODE));
     }
 
     private boolean isApiBasedAuthenticationFlow(OAuth2Parameters oAuth2Parameters) {
@@ -4389,20 +4467,23 @@ public class OAuth2AuthzEndpoint {
                     }
                 }
             }
-        } catch (AuthServiceClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Client error while handling the request.", e);
-            }
-            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForClientError(e);
         } catch (AuthServiceException e) {
-            log.error("Error while handling API based response.", e);
-            oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForServerError(e);
+            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
         }
 
         // Returning the original response as it hasn't been handled as an API based authentication response.
         return oauthResponse;
+    }
+
+    private Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e) {
+
+        if (e instanceof AuthServiceClientException) {
+            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+            return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
+        } else {
+            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+            return ApiAuthnUtils.buildResponseForServerError(e, log);
+        }
     }
 
     private Map<String, String> getQueryParamsFromUrl(String url) throws UnsupportedEncodingException,
@@ -4471,5 +4552,34 @@ public class OAuth2AuthzEndpoint {
         } else {
             return oauthErrorCode + " " + AuthServiceConstants.INTERNAL_ERROR_MSG_SEPARATOR + " " + oauthErrorMsg;
         }
+    }
+
+    private OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
+
+        OAuthClientAuthnContext oAuthClientAuthnContext;
+        Object oauthClientAuthnContextObj = request.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT);
+        if (oauthClientAuthnContextObj instanceof OAuthClientAuthnContext) {
+            oAuthClientAuthnContext = (OAuthClientAuthnContext) oauthClientAuthnContextObj;
+        } else {
+            oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorCode(OAuthError.TokenResponse.INVALID_REQUEST);
+        }
+        return oAuthClientAuthnContext;
+    }
+
+    /**
+     * Handle the authentication failure response for API based authentication.
+     *
+     * @param oAuthClientAuthnContext OAuth client authentication context.
+     * @return Auth failure response.
+     */
+    private Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext) {
+
+        if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
+            String msg = "Server encountered an error while authorizing the request.";
+            return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
+        }
+        return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
     }
 }

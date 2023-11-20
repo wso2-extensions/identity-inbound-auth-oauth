@@ -49,6 +49,10 @@
     <bean id="oauthClientAuthnBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy">
         <property name="oAuthClientAuthnService" ref="oAuthClientAuthnFactoryBean"/>
     </bean>
+    <bean id="clientAttestationServiceHolderBean" class="org.wso2.carbon.identity.client.attestation.filter.ClientAttestationServiceHolder">
+        <property name="clientAttestationService" ref="clientAttestationServiceFactoryBean"/>
+        <property name="applicationManagementService" ref="applicationManagementServiceFactoryBean"/>
+    </bean>
     <bean id="authzEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint">
         <property name="openIDConnectClaimFilter" ref="openIDConnectClaimFilterFactoryBean"/>
         <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
@@ -64,6 +68,8 @@
         <property name="oidProviderResponseBuilder" ref="oidcProviderResponseBuilderBean"/>
     </bean>
     <bean id="oAuthClientAuthnFactoryBean" class="org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthnServiceFactory"/>
+    <bean id="clientAttestationServiceFactoryBean" class="org.wso2.carbon.identity.client.attestation.filter.factory.ClientAttestationServiceFactory"/>
+    <bean id="applicationManagementServiceFactoryBean" class="org.wso2.carbon.identity.client.attestation.filter.factory.ApplicationManagementServiceFactory"/>
     <bean id="endpointUtilBean" class="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil">
         <property name="oAuth2Service" ref="oAuth2ServiceFactoryBean"/>
         <property name="oAuth2ScopeService" ref="oAuth2ScopeServiceFactoryBean"/>
