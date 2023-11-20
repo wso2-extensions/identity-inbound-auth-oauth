@@ -69,6 +69,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
     private static final String CLIENT_ID = "client_id";
     private static final String ERROR = "error";
     private static final String ERROR_DESCRIPTION = "error_description";
+    private static final String SLASH = "/";
 
     public ClientAttestationProxy() {
 
@@ -110,18 +111,23 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
                 try {
                     ServiceProvider serviceProvider =  getServiceProvider(clientId,
                             IdentityTenantUtil.resolveTenantDomain());
+                    ClientAttestationContext clientAttestationContext;
+                    // Attestation validation should be performed only if API-based authentication is enabled.
                     if (serviceProvider.isAPIBasedAuthenticationEnabled()) {
                         // Validate the attestation header and obtain client attestation context
-                        ClientAttestationContext clientAttestationContext = ClientAttestationServiceHolder.getInstance()
+                        clientAttestationContext = ClientAttestationServiceHolder.getInstance()
                                 .getClientAttestationService().validateAttestation(attestationHeader,
                                         serviceProvider.getApplicationResourceId(),
                                         IdentityTenantUtil.resolveTenantDomain());
-                        // Set the client attestation context in the HTTP request
-                        setContextToRequest(request, clientAttestationContext);
                     } else {
-                        throw new WebApplicationException(buildResponse("Client is not registered for " +
-                                        "API Based Authentication Service", Response.Status.BAD_REQUEST));
+                        /* In order for client attestation to be enabled it requires API-based authentication to be
+                         enabled. Therefore, if API-based authentication is disabled, client attestation is disabled.*/
+                        clientAttestationContext = new ClientAttestationContext();
+                        clientAttestationContext.setAttestationEnabled(false);
+                        clientAttestationContext.setAttested(false);
                     }
+                    // Set the client attestation context in the HTTP request.
+                    setContextToRequest(request, clientAttestationContext);
                 } catch (ClientAttestationMgtException e) {
                     // Create a Response object with a 400 status code and a detailed message
                     Response response = Response
@@ -157,6 +163,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
     private boolean isMatchesEndPoint(Message message) {
 
         String requestPath = (String) message.get(Message.REQUEST_URI);
+        requestPath = removeTrailingSlash(requestPath);
         return StringUtils.equalsIgnoreCase(requestPath, AUTHZ_ENDPOINT_PATH);
     }
 
@@ -291,5 +298,13 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
                 .put(ERROR, status.getReasonPhrase()).toString();
 
         return Response.status(status).entity(errorJSON).build();
+    }
+
+    private String removeTrailingSlash(String url) {
+
+        if (url != null && url.endsWith(SLASH)) {
+            return url.substring(0, url.length() - 1);
+        }
+        return url;
     }
 }

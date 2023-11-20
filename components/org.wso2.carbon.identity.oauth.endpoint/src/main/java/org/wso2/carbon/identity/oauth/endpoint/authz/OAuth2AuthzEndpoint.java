@@ -78,6 +78,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
+import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.model.UserAgent;
@@ -90,6 +91,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -193,6 +195,7 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
+import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -224,7 +227,7 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
  * Rest implementation of OAuth2 authorize endpoint.
  */
 @Path("/authorize")
-@InInterceptors(classes = ClientAttestationProxy.class)
+@InInterceptors(classes = {OAuthClientAuthenticatorProxy.class, ClientAttestationProxy.class})
 public class OAuth2AuthzEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2AuthzEndpoint.class);
@@ -308,6 +311,11 @@ public class OAuth2AuthzEndpoint {
             OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
                 return handleAuthFailureResponse(oAuthClientAuthnContext);
+            }
+
+            ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
+            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
+                return handleAttestationFailureResponse(clientAttestationContext);
             }
         }
         OAuthMessage oAuthMessage;
@@ -4568,6 +4576,20 @@ public class OAuth2AuthzEndpoint {
         return oAuthClientAuthnContext;
     }
 
+    private ClientAttestationContext getClientAttestationContext(HttpServletRequest request) {
+
+        ClientAttestationContext clientAttestationContext;
+        Object clientAttestationContextObj = request.getAttribute(CLIENT_ATTESTATION_CONTEXT);
+        if (clientAttestationContextObj instanceof ClientAttestationContext) {
+            clientAttestationContext = (ClientAttestationContext) clientAttestationContextObj;
+        } else {
+            clientAttestationContext = new ClientAttestationContext();
+            clientAttestationContext.setAttestationEnabled(false);
+            clientAttestationContext.setAttested(false);
+        }
+        return clientAttestationContext;
+    }
+
     /**
      * Handle the authentication failure response for API based authentication.
      *
@@ -4581,5 +4603,11 @@ public class OAuth2AuthzEndpoint {
             return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
         }
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
+    }
+
+    private Response handleAttestationFailureResponse(ClientAttestationContext clientAttestationContext) {
+
+        return ApiAuthnUtils.buildResponseForAuthorizationFailure(
+                clientAttestationContext.getValidationFailureMessage(), log);
     }
 }
