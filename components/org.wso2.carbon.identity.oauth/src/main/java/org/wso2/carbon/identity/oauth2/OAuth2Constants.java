@@ -36,9 +36,11 @@ public class OAuth2Constants {
     public static final String GROUPS = "groups";
     public static final String ENTITY_ID = "entity_id";
     public static final String IS_CONSENTED = "is_consented";
+    public static final String IS_FEDERATED = "is_federated";
     public static final boolean DEFAULT_PERSIST_ENABLED = true;
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
-
+    public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
+    public static final String OAUTH_ENABLE_REVOKE_TOKEN_HEADERS = "OAuth.EnableRevokeTokenHeadersInResponse";
 
     /**
      * Constants for global role based scope issuer.
