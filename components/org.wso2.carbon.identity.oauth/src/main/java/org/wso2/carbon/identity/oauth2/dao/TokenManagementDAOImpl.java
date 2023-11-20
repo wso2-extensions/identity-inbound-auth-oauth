@@ -185,7 +185,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     int tenantId = resultSet.getInt(3);
                     String userDomain = resultSet.getString(4);
                     String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
-
+                    validationDataDO.setRefreshToken(refreshToken);
                     validationDataDO.setScope(OAuth2Util.buildScopeArray(resultSet.getString(5)));
                     validationDataDO.setRefreshTokenState(resultSet.getString(6));
                     validationDataDO.setIssuedTime(
@@ -329,6 +329,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(tokenId);
                     validationDataDO.setGrantType(grantType);
                     validationDataDO.setTenantID(tenantId);
+                    validationDataDO.setRefreshToken(refreshToken);
                 } else {
                     scopes.add(resultSet.getString(5));
                 }

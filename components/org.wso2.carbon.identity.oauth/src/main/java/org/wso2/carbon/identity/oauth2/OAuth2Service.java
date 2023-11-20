@@ -992,16 +992,18 @@ public class OAuth2Service extends AbstractAdmin {
         if (OAuthServerConfiguration.getInstance().isRevokeResponseHeadersEnabled()) {
             List<ResponseHeader> respHeaders = new ArrayList<>();
             ResponseHeader header = new ResponseHeader();
-            header.setKey("RevokedAccessToken");
-            header.setValue(accessToken);
-            respHeaders.add(header);
+            if (OAuth2Util.isRevokeTokenHeadersEnabled()) {
+                header.setKey("RevokedAccessToken");
+                header.setValue(accessToken);
+                respHeaders.add(header);
+                header = new ResponseHeader();
+                header.setKey("RevokedRefreshToken");
+                header.setValue(refreshToken);
+                respHeaders.add(header);
+            }
             header = new ResponseHeader();
             header.setKey("AuthorizedUser");
             header.setValue(authorizedUser);
-            respHeaders.add(header);
-            header = new ResponseHeader();
-            header.setKey("RevokedRefreshToken");
-            header.setValue(refreshToken);
             respHeaders.add(header);
             revokeResponseDTP.setResponseHeaders(respHeaders.toArray(new ResponseHeader[respHeaders.size()]));
         }

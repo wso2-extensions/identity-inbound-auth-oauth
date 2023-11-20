@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Timestamp;
+import java.util.Properties;
 
 /**
  * Access token data object.
@@ -71,6 +72,8 @@ public class AccessTokenDO extends CacheEntry {
     private TokenBinding tokenBinding;
 
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
+
+    private Properties properties = new Properties();
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
@@ -314,5 +317,20 @@ public class AccessTokenDO extends CacheEntry {
     public void setAccessTokenExtendedAttributes(AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
 
         this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
+    }
+
+    public Properties getProperties() {
+
+        return properties;
+    }
+
+    public void addProperty(Object propName, Object propValue) {
+
+        properties.put(propName, propValue);
+    }
+
+    public Object getProperty(Object propName) {
+
+        return properties.get(propName);
     }
 }
