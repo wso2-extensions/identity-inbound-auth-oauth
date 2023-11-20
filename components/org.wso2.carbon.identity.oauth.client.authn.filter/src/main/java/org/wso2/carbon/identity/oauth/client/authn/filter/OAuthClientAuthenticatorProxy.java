@@ -49,7 +49,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
     private static final List<String> PROXY_ENDPOINT_LIST = Arrays.asList("/oauth2/token", "/oauth2/revoke",
-            "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par");
+            "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par", "/oauth2/authorize");
     private OAuthClientAuthnService oAuthClientAuthnService;
 
     public OAuthClientAuthenticatorProxy() {
