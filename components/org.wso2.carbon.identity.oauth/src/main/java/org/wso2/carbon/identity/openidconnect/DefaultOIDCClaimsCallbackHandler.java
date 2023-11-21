@@ -237,6 +237,17 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
         }
 
+        // User consent checking is skipped for API based authentication flow.
+        if (isApiBasedAuthFlow(accessToken, authorizationCode)) {
+            if (log.isDebugEnabled()) {
+                String msg = "Filtering user claims based on user consent skipped due api based auth flow. Returning " +
+                        "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
+                log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
+                        clientId, spTenantDomain));
+            }
+            return filteredUserClaimsByOIDCScopes;
+        }
+
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
                 spTenantDomain, isConsentedToken);
@@ -940,5 +951,25 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return true;
         }
         return StringUtils.contains(claimValue, multiAttributeSeparator);
+    }
+
+    private boolean isApiBasedAuthFlow(String accessToken, String authorizationCode) {
+
+        if (StringUtils.isNotEmpty(authorizationCode)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+            if (cacheEntry != null) {
+                return cacheEntry.isApiBasedAuthRequest();
+            }
+        } else if (StringUtils.isNotEmpty(accessToken)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+            if (cacheEntry != null) {
+                return cacheEntry.isApiBasedAuthRequest();
+            }
+        }
+        return false;
     }
 }
