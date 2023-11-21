@@ -65,7 +65,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String requestObjectSignatureAlgorithm;
     private String tlsClientAuthSubjectDN;
     private boolean requirePushedAuthorizationRequests;
-    private boolean tlsClientCertificateBoundAccessTokens;
     private String subjectType;
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
@@ -388,16 +387,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setRequirePushedAuthorizationRequests(boolean requirePushedAuthorizationRequests) {
 
         this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
-    }
-
-    public boolean getTlsClientCertificateBoundAccessTokens() {
-
-        return tlsClientCertificateBoundAccessTokens;
-    }
-
-    public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
-
-        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
     }
 
     public String getSubjectType() {

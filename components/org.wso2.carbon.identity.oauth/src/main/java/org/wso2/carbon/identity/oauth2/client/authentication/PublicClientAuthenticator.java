@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.OAuth;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -42,6 +43,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
     private static final String GRANT_TYPE = "grant_type";
+    private static final String RESPONSE_MODE = "response_mode";
 
     /**
      * Returns the execution order of this authenticator.
@@ -104,7 +106,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
         String clientId = getClientId(request, bodyParams, context);
 
         try {
-            if (isClientIdExistsAsParams(bodyParams)) {
+            if (isClientIdExistsAsParams(request, bodyParams)) {
                 if (canBypassClientCredentials(context.getClientId())) {
                     if (clientId != null) {
                         context.setClientId(clientId);
@@ -160,7 +162,7 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
             oAuthClientAuthnContext) {
 
         if (StringUtils.isBlank(oAuthClientAuthnContext.getClientId())) {
-            setClientCredentialsFromParam(bodyParams, oAuthClientAuthnContext);
+            setClientCredentialsFromParam(request, bodyParams, oAuthClientAuthnContext);
         }
         return oAuthClientAuthnContext.getClientId();
     }
@@ -182,25 +184,47 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     /**
      * Checks for the client ID in body parameters.
      *
+     * @param request    HttpServletRequest which is the incoming request.
      * @param contentParam Request body parameters.
      * @return True if client ID exists as a body parameter, false otherwise.
      */
-    private boolean isClientIdExistsAsParams(Map<String, List> contentParam) {
+    private boolean isClientIdExistsAsParams(HttpServletRequest request, Map<String, List> contentParam) {
 
         Map<String, String> stringContent = getBodyParameters(contentParam);
-        return (StringUtils.isNotEmpty(stringContent.get(OAuth.OAUTH_CLIENT_ID)));
+        String clientId = stringContent.get(OAuth.OAUTH_CLIENT_ID);
+        /* With API based authentication, client authentication is provided for the authorization endpoint.
+         When calling /GET authorization ep, the client ID is not available in the request body.
+         Hence, the client ID is extracted from the request parameter.*/
+        if (StringUtils.isBlank(clientId) && isApiBasedAuthenticationFlow(request)) {
+            clientId = request.getParameter(OAuth.OAUTH_CLIENT_ID);
+        }
+        return (StringUtils.isNotEmpty(clientId));
     }
 
     /**
      * Sets client id from body parameters to the OAuth client authentication context.
      *
+     * @param request    HttpServletRequest which is the incoming request.
      * @param params Body parameters of the incoming request.
      * @param context      OAuth client authentication context.
      */
-    private void setClientCredentialsFromParam(Map<String, List> params, OAuthClientAuthnContext context) {
+    private void setClientCredentialsFromParam(HttpServletRequest request, Map<String, List> params,
+                                               OAuthClientAuthnContext context) {
 
         Map<String, String> stringContent = getBodyParameters(params);
-        context.setClientId(stringContent.get(OAuth.OAUTH_CLIENT_ID));
+        String clientId = stringContent.get(OAuth.OAUTH_CLIENT_ID);
+        /* With API based authentication, client authentication is provided for the authorization endpoint.
+         When calling /GET authorization ep, the client ID is not available in the request body.
+         Hence, the client ID is extracted from the request parameter.*/
+        if (StringUtils.isBlank(clientId) && isApiBasedAuthenticationFlow(request)) {
+            clientId = request.getParameter(OAuth.OAUTH_CLIENT_ID);
+        }
+        context.setClientId(clientId);
     }
 
+    private boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
+
+        return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
+                request.getParameter(RESPONSE_MODE));
+    }
 }

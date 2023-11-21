@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>6.11.192-SNAPSHOT</version>
+    <version>6.11.212-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -61,6 +61,7 @@
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>components/org.wso2.carbon.identity.oauth.ciba</module>
+        <module>components/org.wso2.carbon.identity.client.attestation.filter</module>
         <module>features/org.wso2.carbon.identity.oauth.common.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>
@@ -265,6 +266,12 @@
                 <version>${carbon.identity.organization.management.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.client.attestation.mgt</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
+
             <!--SAML Common Util dependency-->
             <dependency>
                 <groupId>org.wso2.carbon.identity.saml.common</groupId>
@@ -437,6 +444,11 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.client.attestation.filter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -883,7 +895,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.459</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.25.520</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 7.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 

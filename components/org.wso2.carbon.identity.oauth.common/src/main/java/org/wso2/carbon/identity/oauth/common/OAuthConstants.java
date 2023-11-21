@@ -115,6 +115,8 @@ public final class OAuthConstants {
     public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
     public static final String SUBJECT_TYPE = "subject_type";
 
+    public static final String READ_AMR_VALUE_FROM_IDP = "OAuth.ReplaceDefaultAMRValuesWithIDPSentValues";
+
     public static final String CNF = "cnf";
     public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
     public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
@@ -286,6 +288,7 @@ public final class OAuthConstants {
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
+        public static final String ORGANIZATION_SWITCH_CC = "organization_switch_cc";
 
         private GrantTypes() {
 
