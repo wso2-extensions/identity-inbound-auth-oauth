@@ -336,7 +336,7 @@ public class DCRMService {
                     appDTO.setTokenBindingValidationEnabled(true);
                 }
             } else {
-                appDTO.setTokenBindingType(OAuthConstants.TokenBindings.NONE);
+                appDTO.setTokenBindingType(OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE);
             }
             appDTO.setPkceMandatory(updateRequest.isExtPkceMandatory());
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
