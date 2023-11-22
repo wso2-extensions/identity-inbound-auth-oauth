@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols.OAUTH2;
 
 /**
- * OAuth Protocol Service. This class is responsible for handling the protocol operations for OAuth2 according to the
+ * OAuth Protocol Handler. This class is responsible for handling the protocol operations for OAuth2 according to the
  * application management service. No audit logs will be published from this class since those will be published from
  * the application management service.
  */
@@ -97,6 +97,16 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
         }
     }
     
+    /**
+     * Update OAuth application. Before calling this method, the can handle method should be called to identify whether
+     * this handler can actually handle the request.
+     *
+     * @param application                     Service provider.
+     * @param inboundProtocolConfigurationDTO Inbound protocol configuration DTO. This should be an instance of
+     *                                        OAuthConsumerAppDTO
+     * @return InboundAuthenticationRequestConfig object.
+     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
+     */
     @Override
     public InboundAuthenticationRequestConfig handleConfigUpdate(
             ServiceProvider application, InboundProtocolConfigurationDTO inboundProtocolConfigurationDTO)
@@ -135,7 +145,6 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
                 if (!StringUtils.equals(oauthApp.getOauthConsumerKey(), consumerAppDTO.getOauthConsumerKey())) {
                     throw new IdentityOAuthClientException("Invalid ClientID provided for update.");
                 }
-                
                 if (!StringUtils.equals(oauthApp.getOauthConsumerSecret(), consumerAppDTO.getOauthConsumerSecret())) {
                     throw new IdentityOAuthClientException("Invalid ClientSecret provided for update.");
                 }
@@ -199,6 +208,13 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
         }
     }
     
+    /**
+     * This method is used to handle the retrieval of OAuth protocol configurations.
+     *
+     * @param consumerKey Consumer key of the OAuth application.
+     * @return OAuthConsumerAppDTO object.
+     * @throws IdentityApplicationManagementException IdentityApplicationManagementException.
+     */
     @Override
     public OAuthConsumerAppDTO handleConfigRetrieval(String consumerKey) throws IdentityApplicationManagementException {
         
@@ -252,16 +268,6 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
             tenantDomain = (String) IdentityUtil.threadLocalProperties.get().get(TENANT_NAME_FROM_CONTEXT);
         }
         return tenantDomain;
-    }
-    
-    /**
-     * Retrieves authenticated username from carbon context.
-     *
-     * @return username of the authenticated user.
-     */
-    public static String getUsernameFromContext() {
-        
-        return PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
     }
     
     private static IdentityApplicationManagementException handleException(IdentityOAuthAdminException e) {

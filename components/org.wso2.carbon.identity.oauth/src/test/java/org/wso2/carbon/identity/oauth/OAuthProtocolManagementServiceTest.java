@@ -183,7 +183,7 @@ public class OAuthProtocolManagementServiceTest extends PowerMockTestCase {
         } catch (IdentityApplicationManagementException e) {
             verify(oAuthAdminService, times(1)).updateConsumerApplication(eq(oAuthConsumerAppDTO),
                     eq(false));
-            // Verify that setCorsOrigins is called twice, once before update and once after rollback.
+            // Verify that setCorsOrigins is called twice, once before update and once during rollback.
             verify(corsManagementService, times(2)).setCORSOrigins(eq(APPLICATION_RESOURCE_ID),
                     any(), any());
         }

@@ -1342,7 +1342,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Removes an OAuth consumer application. Also this will allow to enable or disable audit logs.
      *
-     * @param consumerKey Consumer Key
+     * @param consumerKey Consumer Key.
      * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
      */
     void removeOAuthApplicationData(String consumerKey, boolean enableAuditing) throws IdentityOAuthAdminException {
@@ -1353,7 +1353,6 @@ public class OAuthAdminServiceImpl {
         }
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
-
         
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
