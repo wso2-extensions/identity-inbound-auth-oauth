@@ -1357,11 +1357,11 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 // tenantDomain
                 // oauthUrl
                 {true, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
-                        "https://localhost:9443/t/testDomain/.well-know/webfinger"},
+                        "https://localhost:9443/t/testDomain/.well-known/webfinger"},
                 {true, "", "https://localhost:9443/testUrl", "",
-                        "https://localhost:9443/.well-know/webfinger"},
+                        "https://localhost:9443/.well-known/webfinger"},
                 {true, "", "https://localhost:9443/testUrl", "testDomain",
-                        "https://localhost:9443/t/testDomain/.well-know/webfinger"},
+                        "https://localhost:9443/t/testDomain/.well-known/webfinger"},
                 {false, "https://localhost:9443/testUrl", "https://localhost:9443/testUrl", "testDomain",
                         "https://localhost:9443/testUrl"},
                 {false, "", "https://localhost:9443/testUrl", "",
