@@ -402,7 +402,7 @@ public final class OAuthConstants {
         public static final String  OAUTH2_DISCOVERY_EP_URL = "/oauth2/oidcdiscovery";
         public static final String OAUTH2_USER_INFO_EP_URL = "oauth2/userinfo";
         public static final String OAUTH2_REVOKE_EP_URL = "oauth2/revoke";
-        public static final String OIDC_WEB_FINGER_EP_URL = ".well-know/webfinger";
+        public static final String OIDC_WEB_FINGER_EP_URL = ".well-known/webfinger";
         public static final String OAUTH2_INTROSPECT_EP_URL = "oauth2/introspect";
         public static final String OIDC_CONSENT_EP_URL = "/authenticationendpoint/oauth2_consent.do";
         public static final String OAUTH2_CONSENT_EP_URL = "/authenticationendpoint/oauth2_authz.do";
