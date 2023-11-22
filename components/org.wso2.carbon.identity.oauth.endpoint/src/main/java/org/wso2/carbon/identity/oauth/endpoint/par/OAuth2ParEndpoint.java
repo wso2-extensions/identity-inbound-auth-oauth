@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
+import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParCoreException;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
@@ -50,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -88,9 +90,11 @@ public class OAuth2ParEndpoint {
                         MultivaluedMap<String, String> params) {
 
         try {
-            checkClientAuthentication(request);
-            handleValidation(request, params);
             Map<String, String> parameters = transformParams(params);
+            // Wrap the request with the parameters obtained from the PAR endpoint.
+            HttpServletRequestWrapper httpRequest = new OAuthParRequestWrapper(request, parameters);
+            checkClientAuthentication(httpRequest);
+            handleValidation(httpRequest, params);
             ParAuthData parAuthData =
                     getParAuthService().handleParAuthRequest(parameters);
             return createAuthResponse(response, parAuthData);
