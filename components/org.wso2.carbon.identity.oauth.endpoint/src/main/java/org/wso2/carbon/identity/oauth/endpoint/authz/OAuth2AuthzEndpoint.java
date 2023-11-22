@@ -1992,6 +1992,9 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setTokenBindingValue(tokenBindingValue);
         authorizationGrantCacheEntry.setSessionContextIdentifier(sessionDataCacheEntry.getSessionContextIdentifier());
         authorizationGrantCacheEntry.setAccessTokenExtensionDO(tokenExtendedAttributes);
+        if (isApiBasedAuthenticationFlow(oAuthMessage)) {
+            authorizationGrantCacheEntry.setApiBasedAuthRequest(true);
+        }
 
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);
         if (ArrayUtils.isNotEmpty(sessionIds)) {
