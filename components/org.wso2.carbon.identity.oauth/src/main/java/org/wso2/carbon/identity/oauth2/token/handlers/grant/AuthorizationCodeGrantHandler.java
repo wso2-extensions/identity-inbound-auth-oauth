@@ -316,21 +316,20 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     throw e;
                 }
             }
-        }
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
-        clearAccessTokenOAuthCache(accessTokenDO);
-
-        if (log.isDebugEnabled()) {
-            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
-                log.debug("Validated authorization code(hashed): " + DigestUtils.sha256Hex(authzCodeDO
-                        .getAuthorizationCode()) + " for client: " + authzCodeDO.getConsumerKey() + " is not active. " +
-                        "So revoking the access tokens issued for the authorization code.");
-            } else {
-                log.debug("Validated authorization code for client: " + authzCodeDO.getConsumerKey() + " is not " +
-                        "active. So revoking the access tokens issued for the authorization code.");
+            OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessToken(tokenId, userId);
+            clearAccessTokenOAuthCache(accessTokenDO);
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)) {
+                    log.debug("Validated authorization code(hashed): " + DigestUtils.sha256Hex(authzCodeDO
+                            .getAuthorizationCode()) + " for client: " + authzCodeDO.getConsumerKey()
+                            + " is not active. So revoking the access tokens issued for the authorization code.");
+                } else {
+                    log.debug("Validated authorization code for client: " + authzCodeDO.getConsumerKey() + " is not "
+                            + "active. So revoking the access tokens issued for the authorization code.");
+                }
             }
+            invokePostAccessTokenRevocationListeners(accessTokenDO);
         }
-        invokePostAccessTokenRevocationListeners(accessTokenDO);
     }
 
     /**
