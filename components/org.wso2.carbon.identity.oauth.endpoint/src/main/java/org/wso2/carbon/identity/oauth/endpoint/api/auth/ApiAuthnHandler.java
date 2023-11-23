@@ -175,7 +175,6 @@ public class ApiAuthnHandler {
 
         AuthenticatorMetadata authenticatorMetadata = new AuthenticatorMetadata();
         authenticatorMetadata.setI18nKey(authenticatorData.getI18nKey());
-        authenticatorMetadata.setDisplayName(authenticatorData.getDisplayName());
         if (isAdditionalAuthenticatorDataAvailable(authenticatorData)) {
             authenticatorMetadata.setPromptType(authenticatorData.getPromptType());
             List<Param> params = new ArrayList<>();

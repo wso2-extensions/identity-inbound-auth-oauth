@@ -31,9 +31,10 @@ import java.util.Map;
 public class AuthenticatorMetadata {
 
     private String i18nKey;
-    private String displayName;
+
     private FrameworkConstants.AuthenticatorPromptType promptType;
     private List<Param> params = new ArrayList<>();
+
     private Map<String, String> additionalData = new HashMap<>();
 
     public AuthenticatorMetadata() {
@@ -48,16 +49,6 @@ public class AuthenticatorMetadata {
     public void setI18nKey(String i18nKey) {
 
         this.i18nKey = i18nKey;
-    }
-
-    public String getDisplayName() {
-
-        return displayName;
-    }
-
-    public void setDisplayName(String displayName) {
-
-        this.displayName = displayName;
     }
 
     public FrameworkConstants.AuthenticatorPromptType getPromptType() {
