@@ -797,7 +797,7 @@ public final class OAuthUtil {
         return true;
     }
 
-    private static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
+    public static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
 
         if (!accessTokens.isEmpty()) {
             // Revoking token from database.
