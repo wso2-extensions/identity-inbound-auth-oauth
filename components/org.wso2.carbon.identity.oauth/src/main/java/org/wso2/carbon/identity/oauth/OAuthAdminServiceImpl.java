@@ -1634,6 +1634,7 @@ public class OAuthAdminServiceImpl {
 
             revokeAccessTokens(accessTokens, consumerKey, tenantDomain);
             revokeOAuthConsentsForApplication(applicationName, tenantDomain);
+            handleInternalTokenRevocation(consumerKey, new Properties());
         }
         triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
         return revokeRespDTO;
