@@ -953,7 +953,7 @@
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
         <thetransactioncompany.utils.wso2.version>1.9.0.wso2v1</thetransactioncompany.utils.wso2.version>
 
-        <json.wso2.version>3.0.0.wso2v2</json.wso2.version>
+        <json.wso2.version>3.0.0.wso2v4</json.wso2.version>
         <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
 
         <opensaml.version>3.3.1</opensaml.version>
