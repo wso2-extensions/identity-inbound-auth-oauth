@@ -31,6 +31,7 @@ public class Param {
     private Integer order;
     private String validationRegex;
     private String i18nKey;
+    private String displayName;
 
     public Param() {
 
@@ -105,6 +106,16 @@ public class Param {
     public void setI18nKey(String i18nKey) {
 
         this.i18nKey = i18nKey;
+    }
+
+    public String getDisplayName() {
+
+        return displayName;
+    }
+
+    public void setDisplayName(String displayName) {
+
+        this.displayName = displayName;
     }
 }
 
