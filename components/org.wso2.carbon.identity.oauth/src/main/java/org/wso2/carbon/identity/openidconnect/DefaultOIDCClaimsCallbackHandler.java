@@ -284,7 +284,8 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
 
-        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
+        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx),
+                null);
         if (log.isDebugEnabled()) {
             log.debug("Retrieving claims cached against access_token for user: " + requestMsgCtx.getAuthorizedUser());
         }
@@ -331,7 +332,16 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 }
                 RefreshTokenValidationDataDO refreshTokenValidationDataDO =
                         (RefreshTokenValidationDataDO) previousAccessTokenObject;
-                userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken());
+                if (refreshTokenValidationDataDO.getAccessToken() == null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("No access token found in the refresh token validation data for user : " +
+                                requestMsgCtx.getAuthorizedUser());
+                    }
+
+                } else {
+                    userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken(),
+                            refreshTokenValidationDataDO.getTokenId());
+                }
                 requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
                         isTokenHasCustomUserClaims(refreshTokenValidationDataDO));
             }
@@ -370,11 +380,11 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         return userAttributes;
     }
 
-    private Map<ClaimMapping, String> getUserAttributesCachedAgainstToken(String accessToken) {
+    private Map<ClaimMapping, String> getUserAttributesCachedAgainstToken(String accessToken, String tokenId) {
         Map<ClaimMapping, String> userAttributes = Collections.emptyMap();
-        if (accessToken != null) {
+        if (accessToken != null || tokenId != null) {
             // get the user claims cached against the access token if any
-            userAttributes = getUserAttributesFromCacheUsingToken(accessToken);
+            userAttributes = getUserAttributesFromCacheUsingToken(accessToken, tokenId);
         }
         return userAttributes;
     }
@@ -395,7 +405,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         Map<String, Object> userClaimsInOIDCDialect;
         Map<ClaimMapping, String> userAttributes =
-                getUserAttributesCachedAgainstToken(getAccessToken(authzReqMessageContext));
+                getUserAttributesCachedAgainstToken(getAccessToken(authzReqMessageContext), null);
 
         if (isEmpty(userAttributes)) {
             if (isLocalUser(authzReqMessageContext)) {
@@ -832,7 +842,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * @param accessToken Access token
      * @return User attributes cached against the access token
      */
-    private Map<ClaimMapping, String> getUserAttributesFromCacheUsingToken(String accessToken) {
+    private Map<ClaimMapping, String> getUserAttributesFromCacheUsingToken(String accessToken, String tokenId) {
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Retrieving user attributes cached against access token: " + accessToken);
@@ -843,7 +853,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheByToken(cacheKey);
+                .getValueFromCacheByTokenId(cacheKey, tokenId);
 
         return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
     }
