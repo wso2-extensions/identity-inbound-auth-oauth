@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -325,7 +326,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         spy(EndpointUtil.class);
         doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
         doCallRealMethod().when(oAuth2Service).validateInputParameters(request);
-        doCallRealMethod().when(oAuth2Service).validateClientInfo(request);
+        doCallRealMethod().when(oAuth2Service).validateClientInfo(any(OAuthParRequestWrapper.class));
         doReturn(parAuthService).when(EndpointUtil.class, "getParAuthService");
         if (testOAuthSystemException) {
             doThrow(new OAuthSystemException()).when(EndpointUtil.class, "getOAuthAuthzRequest", any());
