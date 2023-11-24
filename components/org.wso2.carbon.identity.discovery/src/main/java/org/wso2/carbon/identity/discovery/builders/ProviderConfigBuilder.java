@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URISyntaxException;
@@ -66,6 +67,7 @@ public class ProviderConfigBuilder {
             providerConfig.setIssuer(OAuth2Util.getIDTokenIssuer());
         }
         providerConfig.setAuthorizationEndpoint(OAuth2Util.OAuthURL.getOAuth2AuthzEPUrl());
+        providerConfig.setPushedAuthorizationRequestEndpoint(OAuth2Util.OAuthURL.getOAuth2ParEPUrl());
         providerConfig.setTokenEndpoint(OAuth2Util.OAuthURL.getOAuth2TokenEPUrl());
         providerConfig.setUserinfoEndpoint(OAuth2Util.OAuthURL.getOAuth2UserInfoEPUrl());
         providerConfig.setRevocationEndpoint(OAuth2Util.OAuthURL.getOAuth2RevocationEPUrl());
@@ -111,13 +113,12 @@ public class ProviderConfigBuilder {
         providerConfig.setResponseTypesSupported(supportedResponseTypeNames.toArray(new
                 String[supportedResponseTypeNames.size()]));
 
-        providerConfig.setSubjectTypesSupported(new String[]{"public"});
+        providerConfig.setSubjectTypesSupported(new String[]{"public", "pairwise"});
 
         providerConfig.setCheckSessionIframe(buildServiceUrl(IdentityConstants.OAuth.CHECK_SESSION,
                 IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL)));
         providerConfig.setEndSessionEndpoint(buildServiceUrl(IdentityConstants.OAuth.LOGOUT,
                 IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL)));
-
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
                     OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
@@ -126,8 +127,8 @@ public class ProviderConfigBuilder {
         } catch (IdentityOAuth2Exception e) {
             throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
         }
-        providerConfig.setTokenEndpointAuthMethodsSupported(
-                OAuth2Util.getSupportedClientAuthenticationMethods().stream().toArray(String[]::new));
+
+        providerConfig.setTokenEndpointAuthMethodsSupported(OAuth2Util.getSupportedClientAuthMethods());
         providerConfig.setGrantTypesSupported(OAuth2Util.getSupportedGrantTypes().stream().toArray(String[]::new));
         providerConfig.setRequestParameterSupported(Boolean.valueOf(OAuth2Util.isRequestParameterSupported()));
         providerConfig.setClaimsParameterSupported(Boolean.valueOf(OAuth2Util.isClaimsParameterSupported()));
@@ -140,6 +141,13 @@ public class ProviderConfigBuilder {
         if (OAuth2Util.getSupportedGrantTypes().contains(DEVICE_FLOW_GRANT_TYPE)) {
             providerConfig.setDeviceAuthorizationEndpoint(OAuth2Util.OAuthURL.getDeviceAuthzEPUrl());
         }
+        List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointSigningAlgorithms();
+        providerConfig.setTokenEndpointAuthSigningAlgValuesSupported(
+                supportedTokenEndpointSigningAlgorithms.toArray(new String[0]));
+        providerConfig.setWebFingerEndpoint(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl());
+        providerConfig.setTlsClientCertificateBoundAccessTokens(OAuth2Util.getSupportedTokenBindingTypes()
+                .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
         return providerConfig;
     }
 }

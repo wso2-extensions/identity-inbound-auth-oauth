@@ -45,6 +45,8 @@ import org.wso2.carbon.identity.application.authentication.framework.config.buil
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
@@ -60,12 +62,16 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
+import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -95,7 +101,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Matchers.any;
@@ -200,10 +208,13 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
 
     private static final String REQUESTED_OIDC_SCOPES_KEY = "requested_oidc_scopes=";
     private static final String REQUESTED_OIDC_SCOPES_VALUES = "openid+profile";
-
+    private static final String EXTERNAL_CONSENTED_APP_NAME = "testApp";
+    private static final String REDIRECT = "redirect";
+    private static final String EXTERNAL_CONSENT_URL = "https://localhost:9443/consent";
     private String username;
     private String password;
     private String sessionDataKey;
+    private String sessionDataKeyConsent;
     private String clientId;
     private AuthenticatedUser user;
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
@@ -214,6 +225,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         username = "myUsername";
         password = "myPassword";
         sessionDataKey = "1234567890";
+        sessionDataKeyConsent = "1234567891";
         clientId = "myClientId";
         user = new AuthenticatedUser();
         user.setFederatedUser(false);
@@ -266,21 +278,29 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         paramsOIDC.setScopes(
                 new HashSet<String>(Arrays.asList("openid", "profile", "scope1", "scope2", "internal_login")));
 
+        OAuth2Parameters paramsExternalConsentUrl = new OAuth2Parameters();
+        paramsExternalConsentUrl.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
+        paramsExternalConsentUrl.setClientId("testClientId");
+        paramsExternalConsentUrl.setTenantDomain("testTenantDomain");
+        paramsExternalConsentUrl.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login")));
+
         return new Object[][]{
-                {params, true, true, false, "QueryString", true},
-                {null, true, true, false, "QueryString", true},
-                {params, false, true, false, "QueryString", true},
-                {params, true, false, false, "QueryString", true},
-                {params, true, false, false, "QueryString", false},
-                {params, true, true, false, null, true},
-                {params, true, true, true, "QueryString", true},
-                {paramsOIDC, true, true, true, "QueryString", true},
+                {params, true, true, false, "QueryString", true, false},
+                {null, true, true, false, "QueryString", true, false},
+                {params, false, true, false, "QueryString", true, true},
+                {params, true, false, false, "QueryString", true, false},
+                {params, true, false, false, "QueryString", false, false},
+                {params, true, true, false, null, true, true},
+                {params, true, true, true, "QueryString", true, false},
+                {paramsOIDC, true, true, true, "QueryString", true, false},
+                {paramsExternalConsentUrl, false, true, true, "QueryString", true, false},
         };
     }
 
     @Test(dataProvider = "provideDataForUserConsentURL")
     public void testGetUserConsentURL(Object oAuth2ParamObject, boolean isOIDC, boolean cacheEntryExists,
-                                      boolean throwError, String queryString, boolean isDebugEnabled) throws Exception {
+                                      boolean throwError, String queryString, boolean isDebugEnabled,
+                                      boolean isConfigAvailable) throws Exception {
 
         setMockedLog(isDebugEnabled);
         OAuth2Parameters parameters = (OAuth2Parameters) oAuth2ParamObject;
@@ -294,9 +314,21 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
                 .thenReturn(oAuth2ScopeConsentResponse);
 
         mockStatic(OAuth2Util.class);
+        when(OAuth2Util.isOIDCAuthzRequest(any(Set.class))).thenReturn(isOIDC);
+        if (parameters != null && parameters.getApplicationName().equals(EXTERNAL_CONSENTED_APP_NAME)) {
+            when(OAuth2Util.getServiceProvider(anyString())).thenReturn(getServiceProvider());
+        } else {
+            when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
+        }
+        when(OAuth2Util.resolveExternalConsentPageUrl(anyString())).thenReturn(EXTERNAL_CONSENT_URL);
+
         mockStatic(OAuth2Util.OAuthURL.class);
         when(OAuth2Util.OAuthURL.getOIDCConsentPageUrl()).thenReturn(OIDC_CONSENT_PAGE_URL);
         when(OAuth2Util.OAuthURL.getOAuth2ConsentPageUrl()).thenReturn(OAUTH2_CONSENT_PAGE_URL);
+
+        mockStatic(FileBasedConfigurationBuilder.class);
+        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
+        when(fileBasedConfigurationBuilder.isAuthEndpointRedirectParamsConfigAvailable()).thenReturn(isConfigAvailable);
 
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -304,7 +336,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString())).thenReturn("sample");
         when(FrameworkUtils.getRedirectURLWithFilteredParams(anyString(), anyMap()))
                 .then(i -> i.getArgument(0));
-        mockStatic(OAuth2Util.class);
+        when(FrameworkUtils.appendQueryParamsStringToUrl(anyString(), anyString()))
+                .then(i -> i.getArgument(0));
         spy(EndpointUtil.class);
         doReturn("sampleId").when(EndpointUtil.class, "getAppIdFromClientId", anyString());
         mockStatic(SessionDataCache.class);
@@ -340,47 +373,64 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
             if (isOIDC) {
                 Assert.assertTrue(consentUrl.contains(OIDC_CONSENT_PAGE_URL), "Incorrect consent page url for OIDC");
             } else {
-                Assert.assertTrue(consentUrl.contains(OAUTH2_CONSENT_PAGE_URL), "Incorrect consent page url for OAuth");
-            }
-
-            Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
-                    "loggedInUser parameter value is not found in url");
-            Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
-                    "application parameter value is not found in url");
-            List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
-            Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
-                    nameValuePair.getName().equals("scope")).findAny();
-            Assert.assertTrue(optionalScope.isPresent());
-            NameValuePair scopeNameValuePair = optionalScope.get();
-            String[] scopeArray = scopeNameValuePair.getValue().split(" ");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
-                    "is not found in url");
-            Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
-                    "scope parameter value is not found in url");
-
-            if (queryString != null && cacheEntryExists) {
-                Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
-            }
-
-            if (parameters.getScopes().contains("openid")) {
-                String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
-                int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
-                Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
-
-                String requestedClaimString = decodedConsentUrl.substring(checkIndex);
-                checkIndex = requestedClaimString.indexOf("&");
-                if (checkIndex != -1) {
-                    requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                if (parameters != null && parameters.getApplicationName().equals(EXTERNAL_CONSENTED_APP_NAME)) {
+                    Assert.assertTrue(consentUrl.contains(EXTERNAL_CONSENT_URL),
+                            "Incorrect consent page url for OIDC");
+                } else {
+                    Assert.assertTrue(consentUrl.contains(OAUTH2_CONSENT_PAGE_URL),
+                            "Incorrect consent page url for OAuth");
                 }
-                Assert.assertTrue(StringUtils.equals(
-                                requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
-                        "Incorrect requested OIDC scopes in query parameter.");
+            }
+
+            if (isConfigAvailable) {
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode(username, "UTF-8")),
+                        "loggedInUser parameter value is not found in url");
+                Assert.assertTrue(consentUrl.contains(URLEncoder.encode("TestApplication", "ISO-8859-1")),
+                        "application parameter value is not found in url");
+                List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(consentUrl, StandardCharsets.UTF_8);
+                Optional<NameValuePair> optionalScope = nameValuePairList.stream().filter(nameValuePair ->
+                        nameValuePair.getName().equals("scope")).findAny();
+                Assert.assertTrue(optionalScope.isPresent());
+                NameValuePair scopeNameValuePair = optionalScope.get();
+                String[] scopeArray = scopeNameValuePair.getValue().split(" ");
+                Assert.assertTrue(ArrayUtils.contains(scopeArray, "scope2"), "scope parameter value " +
+                        "is not found in url");
+                Assert.assertTrue(ArrayUtils.contains(scopeArray, "internal_login"), "internal_login " +
+                        "scope parameter value is not found in url");
+
+                if (queryString != null && cacheEntryExists) {
+                    Assert.assertTrue(consentUrl.contains(queryString), "spQueryParams value is not found in url");
+                }
+
+                if (parameters.getScopes().contains("openid")) {
+                    String decodedConsentUrl = URLDecoder.decode(consentUrl, "UTF-8");
+                    int checkIndex = decodedConsentUrl.indexOf(REQUESTED_OIDC_SCOPES_KEY);
+                    Assert.assertTrue(checkIndex != -1, "Requested OIDC scopes query parameter is not found in url.");
+
+                    String requestedClaimString = decodedConsentUrl.substring(checkIndex);
+                    checkIndex = requestedClaimString.indexOf("&");
+                    if (checkIndex != -1) {
+                        requestedClaimString = requestedClaimString.substring(0, checkIndex);
+                    }
+                    Assert.assertTrue(StringUtils.equals(
+                                    requestedClaimString, REQUESTED_OIDC_SCOPES_KEY + REQUESTED_OIDC_SCOPES_VALUES),
+                            "Incorrect requested OIDC scopes in query parameter.");
+                }
+            } else {
+                String queryParamString = consentUrl.substring(consentUrl.indexOf("?") + 1);
+                List<NameValuePair> nameValuePairList = URLEncodedUtils.parse(queryParamString, StandardCharsets.UTF_8);
+                if (cacheEntryExists) {
+                    Assert.assertEquals(nameValuePairList.size(), 1);
+                }
+                Optional<NameValuePair> sessionDataKeyConsent = nameValuePairList.stream().filter(nameValuePair ->
+                        nameValuePair.getName().equals("sessionDataKeyConsent")).findAny();
+                Assert.assertTrue(sessionDataKeyConsent.isPresent());
             }
 
         } catch (OAuthSystemException e) {
-            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name"));
+            Assert.assertTrue(e.getMessage().contains("Error while retrieving the application name") || e.getMessage()
+                    .contains("Unable to find a service provider with client_id:"));
         }
-
     }
 
     @DataProvider(name = "provideScopeData")
@@ -598,7 +648,7 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
 
         when(mockedOAuthResponse.getLocationUri()).thenReturn("http://localhost:8080/location");
-        when(mockedHttpServletRequest.getParameter(anyString())).thenReturn("http://localhost:8080/location");
+        when(mockedHttpServletRequest.getParameter(contains(REDIRECT))).thenReturn("http://localhost:8080/location");
 
         String url = EndpointUtil.getErrorPageURL(mockedHttpServletRequest, "invalid request",
                 "invalid request object", "invalid request", "test", parameters);
@@ -627,20 +677,21 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         Map<String, String[]> requestParams2 = new HashedMap();
         requestParams2.put("reqParam1", new String[]{"val1"});
 
-        return new Object[][]{
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {paramMap1, requestParams1, false},
                 {paramMap2, requestParams1, false},
                 {paramMap2, requestParams2, true},
                 {null, null, true}
-        };
+        });
     }
 
     @Test(dataProvider = "provideParams")
-    public void testValidateParams(Object paramObject, Map<String, String[]> requestParams, boolean expected) {
+    public void testValidateParams(Object paramObject, Map<String, String[]> requestParams, boolean expected,
+                                   boolean diagnosticLogEnabled) {
 
         mockStatic(IdentityTenantUtil.class);
         mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogEnabled);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
         MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramObject;
         when(mockedHttpServletRequest.getParameterMap()).thenReturn(requestParams);
@@ -741,6 +792,48 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         assertEquals(EndpointUtil.getUserInfoClaimDialect(), USER_INFO_CLAIM_DIALECT);
     }
 
+    @Test
+    public void testGetOAuthAuthzRequest() throws Exception {
+
+        mockStatic(OAuthServerConfiguration.class);
+        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+        // test when OAuthAuthzRequestClassName is not defined
+        when(mockedOAuthServerConfiguration.getOAuthAuthzRequestClassName()).thenReturn("");
+        CarbonOAuthAuthzRequest mockCarbonOAuthAuthzRequest = mock(CarbonOAuthAuthzRequest.class);
+        whenNew(CarbonOAuthAuthzRequest.class).withArguments(any(HttpServletRequest.class))
+                .thenReturn(mockCarbonOAuthAuthzRequest);
+        assertEquals(EndpointUtil.getOAuthAuthzRequest(mockedHttpServletRequest), mockCarbonOAuthAuthzRequest);
+    }
+
+    @DataProvider(name = "provideState")
+    public Object[][] provideState() {
+
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
+                {"ACTIVE"},
+                {"INACTIVE"},
+                {null},
+        });
+    }
+
+    @Test(dataProvider = "provideState")
+    public void testValidateOauthApplication(String state, boolean diagnosticLogEnabled) {
+
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogEnabled);
+        EndpointUtil.setOAuth2Service(mockedOAuth2Service);
+        when(mockedOAuth2Service.getOauthApplicationState(anyString())).thenReturn(state);
+
+        Response response;
+        try {
+            EndpointUtil.validateOauthApplication(clientId);
+        } catch (InvalidApplicationClientException e) {
+            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+            response = invalidRequestExceptionMapper.toResponse(e);
+            final String responseBody = response.getEntity().toString();
+            assertTrue(responseBody.contains(OAuth2ErrorCodes.INVALID_CLIENT), "Expected error code not found");
+        }
+    }
+
     private void setMockedLog(boolean isDebugEnabled) throws Exception {
 
         Constructor<EndpointUtil> constructor = EndpointUtil.class.getDeclaredConstructor(new Class[0]);
@@ -807,5 +900,62 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         scopeList.add(new Scope("internal_user_mgt_update", "Update Users", "description4"));
         scopeList.add(new Scope("internal_list_tenants", "List Tenant", "description5"));
         return scopeList;
+    }
+
+    @Test
+    public void testIsExternalizedConsentPageEnabledForSP() throws Exception {
+
+        assertTrue(EndpointUtil.isExternalConsentPageEnabledForSP(getServiceProvider()));
+    }
+
+    private ServiceProvider getServiceProvider() {
+
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setApplicationName(EXTERNAL_CONSENTED_APP_NAME);
+        serviceProvider.setTenantDomain("testTenantDomain");
+        LocalAndOutboundAuthenticationConfig localAndOutboundAuthenticationConfig = new
+                LocalAndOutboundAuthenticationConfig();
+        localAndOutboundAuthenticationConfig.setUseExternalConsentPage(true);
+        serviceProvider.setLocalAndOutBoundAuthenticationConfig(localAndOutboundAuthenticationConfig);
+        return serviceProvider;
+    }
+
+    private static Object[][] addDiagnosticLogStatusToExistingDataProvider(Object[][] existingData) {
+
+        // Combine original values with diagnostic log status.
+        Object[][] combinedValues = new Object[existingData.length * 2][];
+        for (int i = 0; i < existingData.length; i++) {
+            combinedValues[i * 2] = appendValue(existingData[i], true); // Enable diagnostic logs.
+            combinedValues[i * 2 + 1] = appendValue(existingData[i], false); // Disable diagnostic logs.
+        }
+        return combinedValues;
+    }
+
+    private static Object[] appendValue(Object[] originalArray, Object value) {
+
+        Object[] newArray = Arrays.copyOf(originalArray, originalArray.length + 1);
+        newArray[originalArray.length] = value;
+        return newArray;
+    }
+
+    @DataProvider(name = "provideResponseTypeAndMode")
+    public Object[][] provideResponseTypeAndMode() {
+
+        return new Object[][]{
+                {"code", "form_post", false},
+                {"code", "jwt", true},
+                {"code id_token", null, true},
+                {"code token", "jwt", false}
+        };
+    }
+
+    @Test(dataProvider = "provideResponseTypeAndMode")
+    public void testValidateFAPIAllowedResponseMode(String responseType, String responseMode, boolean shouldPass) {
+
+        try {
+            EndpointUtil.validateFAPIAllowedResponseTypeAndMode(responseType, responseMode);
+        } catch (OAuthProblemException e) {
+            Assert.assertFalse(shouldPass, "Expected exception not thrown");
+        }
     }
 }

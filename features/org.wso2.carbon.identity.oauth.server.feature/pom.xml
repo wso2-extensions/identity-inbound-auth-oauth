@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.28-SNAPSHOT</version>
+        <version>6.11.215-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -52,6 +52,10 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.ciba</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.gdata.wso2</groupId>
@@ -112,6 +116,10 @@
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.client.attestation.filter</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -149,6 +157,14 @@
                                 <artifactItem>
                                     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                                     <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
+                                    <version>${project.version}</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${basedir}/src/main/resources/runtimes/cxf3</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                                    <artifactId>org.wso2.carbon.identity.client.attestation.filter</artifactId>
                                     <version>${project.version}</version>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
@@ -216,6 +232,7 @@
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oidc.session</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.ciba</bundleDef>
+                                <bundleDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.par</bundleDef>
                                 <bundleDef>org.wso2.orbit.com.nimbusds:nimbus-jose-jwt</bundleDef>
                                 <bundleDef>net.minidev:json-smart</bundleDef>
                                 <bundleDef>net.minidev:accessors-smart:${net.minidev.accessors-smart.version}</bundleDef>
@@ -229,16 +246,16 @@
                             </bundles>
                             <importFeatures>
                                 <importFeatureDef>org.wso2.carbon.core:compatible:${carbon.kernel.feature.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.core:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.central.log.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.core.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.central.log.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.oauth.common:compatible:${project.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.idp.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.security.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.application.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.claim.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.event.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.idp.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.security.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.application.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.claim.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.event.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.saml.common.util:${saml.common.util.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>

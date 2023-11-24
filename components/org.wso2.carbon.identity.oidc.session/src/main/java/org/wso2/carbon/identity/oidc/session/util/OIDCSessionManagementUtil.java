@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016-2023, WSO2 LLC. (http://www.wso2.com).
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.core.util.KeyStoreManager;
@@ -236,8 +237,26 @@ public class OIDCSessionManagementUtil {
                     if (IdentityTenantUtil.isTenantedSessionsEnabled()) {
                         // check whether the opbs cookie has a tenanted path.
                         if (cookie.getValue().endsWith(OIDCSessionConstants.TENANT_QUALIFIED_OPBS_COOKIE_SUFFIX)) {
-                            String tenantDomain = resolveTenantDomain(request);
-                            servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + tenantDomain + "/");
+                            String tenantDomain;
+                            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                                tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+                            } else {
+                                tenantDomain = resolveTenantDomain(request);
+                            }
+                            if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
+                                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                                servletCookie.setPath("/");
+                            } else {
+                                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                        .getOrganizationId();
+                                if (StringUtils.isNotEmpty(organizationId)) {
+                                    servletCookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX +
+                                            organizationId + "/");
+                                } else {
+                                    servletCookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX +
+                                            tenantDomain + "/");
+                                }
+                            }
                         } else {
                             servletCookie.setPath("/");
                         }
@@ -472,7 +491,7 @@ public class OIDCSessionManagementUtil {
         if (StringUtils.isNotBlank(isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled)) {
             return Boolean.parseBoolean(isAllowAdditionalParamsFromPostLogoutRedirectURIEnabled);
         } else {
-            return true;
+            return false;
         }
     }
 

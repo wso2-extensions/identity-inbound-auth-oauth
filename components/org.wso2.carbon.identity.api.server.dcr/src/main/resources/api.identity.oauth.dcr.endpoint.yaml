@@ -3,7 +3,7 @@ info:
   version: 1.1.0
   title: WSO2 Identity Server OAuth2 Dynamic Client Registration Endpoint
   description: >
-    This document specifies an **OAuth2 Dyanmic Client Registration Endpoint**
+    This document specifies an **OAuth2 Dynamic Client Registration Endpoint**
     for WSO2 **Identity Server** .
 
 
@@ -54,7 +54,7 @@ paths:
          "grant_types": ["password"], 
          "ext_param_client_id":"provided_client_id0001", 
          "ext_param_client_secret":"provided_client_secret0001" }' 
-        "https://localhost:9443/api/identity/oauth2/dcr/v1.0/register"
+        "https://localhost:9443/api/identity/oauth2/dcr/v1.1/register"
       x-wso2-response: |
         "HTTP/1.1 201 Created"
         {"client_name”:"application_test",
@@ -308,6 +308,60 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      ext_application_display_name:
+        type: string
+      token_type_extension:
+        type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
+      ext_pkce_mandatory:
+        type: boolean
+      ext_pkce_support_plain:
+        type: boolean
+      ext_public_client:
+        type: boolean
+      token_endpoint_auth_method:
+        type: string
+      token_endpoint_auth_signing_alg:
+        type: string
+      sector_identifier_uri:
+        type: string
+      id_token_signed_response_alg:
+        type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      software_statement:
+        type: string
+      request_object_signing_alg:
+        type: string
+      tls_client_auth_subject_dn:
+        type: string
+      require_signed_request_object:
+        type: boolean
+      require_pushed_authorization_requests:
+        type: boolean
+      tls_client_certificate_bound_access_tokens:
+        type: boolean
+      subject_type:
+        type: string
+      request_object_encryption_alg:
+        type: string
+      request_object_encryption_enc:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -332,6 +386,60 @@ definitions:
         type: string
       backchannel_logout_session_required:
         type: boolean
+      ext_application_display_name:
+        type: string
+      token_type_extension:
+        type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
+      ext_pkce_mandatory:
+        type: boolean
+      ext_pkce_support_plain:
+        type: boolean
+      ext_public_client:
+        type: boolean
+      token_endpoint_auth_method:
+        type: string
+      token_endpoint_auth_signing_alg:
+        type: string
+      sector_identifier_uri:
+        type: string
+      id_token_signed_response_alg:
+        type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      software_statement:
+        type: string
+      request_object_signing_alg:
+        type: string
+      tls_client_auth_subject_dn:
+          type: string
+      require_signed_request_object:
+        type: boolean
+      require_pushed_authorization_requests:
+        type: boolean
+      tls_client_certificate_bound_access_tokens:
+        type: boolean
+      subject_type:
+        type: string
+      request_object_encryption_alg:
+        type: string
+      request_object_encryption_enc:
+        type: string
 #-----------------------------------------------------
 # The OAuth2 Application Object
 #-----------------------------------------------------
@@ -355,6 +463,26 @@ definitions:
           type: string
       client_name:
         type: string
+      ext_application_owner:
+        type: string
+      ext_application_token_lifetime:
+        type: integer
+        format: int64
+      ext_user_token_lifetime:
+        type: integer
+        format: int64
+      ext_refresh_token_lifetime:
+        type: integer
+        format: int64
+      ext_id_token_lifetime:
+        type: integer
+        format: int64
+      ext_pkce_mandatory:
+        type: boolean
+      ext_pkce_support_plain:
+        type: boolean
+      ext_public_client:
+        type: boolean
 #-----------------------------------------------------
 # The Error Response object
 #-----------------------------------------------------

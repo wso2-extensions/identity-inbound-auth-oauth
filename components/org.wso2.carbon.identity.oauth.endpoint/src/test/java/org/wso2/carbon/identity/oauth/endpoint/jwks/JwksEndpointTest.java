@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.util.Base64URL;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -83,7 +84,10 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     private static final String ALG = "RS256";
     private static final String USE = "sig";
     private static final JSONArray X5C_ARRAY = new JSONArray();
-    private static final String X5T = "ZHVtbXlUaHVtYlByaW50VmFsdWU";
+    private static final String X5T = "YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5MmVjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjY" +
+            "yZmZlYzkwNzY0YjU4NQ";
+    private static final String rsa256Thumbprint = "be:07:a3:8b:7e:24:cc:b5:3f:ea:ef:29:2e:cf:7c:e6:3f:24:3c:" +
+            "14:45:b4:06:27:66:2f:fe:c9:07:64:b5:85";
     private JwksEndpoint jwksEndpoint;
     private Object identityUtilObj;
 
@@ -196,7 +200,8 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         if ("foo.com".equals(tenantDomain)) {
             when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
         }
-        when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("dummyThumbPrintValue");
+        when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
         mockStatic(KeyStoreManager.class);
         when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
         when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
@@ -211,6 +216,8 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
             assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
             assertEquals(keyObject.get("use"), USE, "Incorrect use value");
             assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
+            assertEquals(keyObject.get("x5t#S256"),
+                    Base64URL.encode(rsa256Thumbprint.replaceAll(":", "")).toString());
             assertEquals(keyObject.get("x5t#S256"), X5T, "Incorrect x5t#S256 value");
             if ("foo.com".equals(tenantDomain)) {
                 assertEquals(objectArray.length(), 2, "Incorrect no of keysets");

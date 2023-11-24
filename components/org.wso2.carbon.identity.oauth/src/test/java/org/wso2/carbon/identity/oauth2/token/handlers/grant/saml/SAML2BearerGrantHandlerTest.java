@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -52,8 +52,8 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
-import org.wso2.carbon.identity.core.persistence.IdentityPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -76,7 +76,6 @@ import org.wso2.carbon.identity.sso.saml.util.SAMLSSOUtil;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -113,7 +112,7 @@ import static org.testng.Assert.fail;
 @PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class, IdentityProviderManager.class, MultitenantUtils.class,
         IdentityApplicationManagementUtil.class, OAuthServerConfiguration.class, SSOServiceProviderConfigManager.class,
         SAML2BearerGrantHandler.class, OAuthComponentServiceHolder.class, OAuth2ServiceComponentHolder.class,
-        OAuth2Util.class, IdentityPersistenceManager.class, SignatureValidator.class, UnmarshallUtils.class})
+        OAuth2Util.class, SAMLSSOServiceProviderManager.class, SignatureValidator.class, UnmarshallUtils.class})
 @WithCarbonHome
 public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
@@ -130,6 +129,8 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
+    @Mock
+    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
     @Mock
     private RealmService realmService;
     @Mock
@@ -153,7 +154,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
     @Mock
     private TokenPersistenceProcessor persistenceProcessor;
     @Mock
-    private IdentityPersistenceManager identityPersistenceManager;
+    private SAMLSSOServiceProviderManager samlSSOServiceProviderManager;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -419,6 +420,7 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         when(oAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
         mockStatic(OAuth2ServiceComponentHolder.class);
         when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(applicationManagementService);
+        when(OAuth2ServiceComponentHolder.getSamlSSOServiceProviderManager()).thenReturn(samlSSOServiceProviderManager);
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
     }
@@ -523,11 +525,10 @@ public class SAML2BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         samlssoServiceProviderDO.setIssuer(TestConstants.SAML_ISSUER);
         samlssoServiceProviderDO.setIdpEntityIDAlias(TestConstants.IDP_ENTITY_ID_ALIAS);
 
-        when(identityPersistenceManager.getServiceProvider(any(Registry.class), anyString()))
+        when(samlSSOServiceProviderManager.getServiceProvider(anyString(), anyInt()))
                 .thenReturn(samlssoServiceProviderDO);
-        mockStatic(IdentityPersistenceManager.class);
-        when(IdentityPersistenceManager.getPersistanceManager()).thenReturn(identityPersistenceManager);
-        when(identityPersistenceManager.isServiceProviderExists(any(Registry.class), anyString())).thenReturn(true);
+
+        when(samlSSOServiceProviderManager.isServiceProviderExists(anyString(), anyInt())).thenReturn(true);
 
         mockStatic(SSOServiceProviderConfigManager.class);
         when(SSOServiceProviderConfigManager.getInstance()).thenReturn(ssoServiceProviderConfigManager);

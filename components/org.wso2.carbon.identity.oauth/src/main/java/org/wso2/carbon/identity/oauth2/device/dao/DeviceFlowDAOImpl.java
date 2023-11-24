@@ -22,14 +22,21 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.store.UserSessionStore;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.device.util.DeviceFlowUtil;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Connection;
@@ -42,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -166,9 +174,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         AuthenticatedUser user;
         int tenantId = 0;
         String userName = null;
-        boolean isMatchingDeviceCodeAndClientId = false; // Check for matching deviceCode and clientId.
         String userDomain = null;
         String authenticatedIDP = null;
+        String subjectIdentifier = null;
         List<String> scopes = null;
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
@@ -177,7 +185,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.setString(1, deviceCode);
             prepStmt.setString(2, clientId);
             try (ResultSet resultSet = prepStmt.executeQuery()) {
-                while (resultSet.next()) {
+                if (resultSet.next()) {
                     deviceFlowDO.setStatus(resultSet.getString(1));
                     deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2,
                             Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
@@ -187,14 +195,31 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     userName = resultSet.getString(5);
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
-                    authenticatedIDP = resultSet.getString(8);
-                    scopes = getScopesForCodeId(resultSet.getString(9), connection);
-                    isMatchingDeviceCodeAndClientId = true;
-                }
-                if (isMatchingDeviceCodeAndClientId) {
+                    subjectIdentifier = resultSet.getString(8);
+                    authenticatedIDP = resultSet.getString(9);
+                    scopes = getScopesForCodeId(resultSet.getString(10), connection);
+
+                    if (StringUtils.isBlank(subjectIdentifier)) {
+                        int idpId = UserSessionStore.getInstance().getIdPId(authenticatedIDP, tenantId);
+                        subjectIdentifier = UserSessionStore.getInstance().getUserId(userName, tenantId,
+                                    userDomain, idpId);
+                        log.info("Defaulting to unique userID as subject identifier as the subject identifier " +
+                                "column value is empty in the table");
+                    }
+
                     if (StringUtils.isNotBlank(userName) && tenantId != 0 && StringUtils.isNotBlank(userDomain)) {
                         String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                         user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain, authenticatedIDP);
+                        ServiceProvider serviceProvider;
+                        try {
+                            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
+                                    getServiceProviderByClientId(clientId, OAuthConstants.Scope.OAUTH2,
+                                            tenantDomain);
+                        } catch (IdentityApplicationManagementException e) {
+                            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 " +
+                                    "application data for client id " + clientId, e);
+                        }
+                        user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
                         deviceFlowDO.setAuthorizedUser(user);
                         deviceFlowDO.setScopes(scopes);
                     }
@@ -202,6 +227,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     deviceFlowDO.setStatus(Constants.NOT_EXIST);
                 }
                 return deviceFlowDO;
+            } catch (UserSessionException e) {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving subject identifier for device " +
+                            "code: " + deviceCode, e);
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when getting authentication status for device_code: " +
@@ -240,7 +268,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                     userName = resultSet.getString(5);
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
-                    authenticatedIDP = resultSet.getString(8);
+                    authenticatedIDP = resultSet.getString(9);
                     isMatchingDeviceCodeAndClientId = true;
                 }
                 if (isMatchingDeviceCodeAndClientId) {
@@ -272,6 +300,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.CHECK_CLIENT_ID_EXISTS)) {
                 ResultSet resultSet;
                 prepStmt.setString(1, clientId);
+                prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
                 resultSet = prepStmt.executeQuery();
                 while (resultSet.next()) {
                     String status = resultSet.getString(1);
@@ -353,7 +382,8 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 prepStmt.setString(4, OAuth2Util.getUserStoreDomain(authenticatedUser));
                 prepStmt.setString(5, authenticatedIDP);
                 prepStmt.setInt(6, tenantId);
-                prepStmt.setString(7, userCode);
+                prepStmt.setString(7, authenticatedUser.getAuthenticatedSubjectIdentifier());
+                prepStmt.setString(8, userCode);
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
@@ -402,6 +432,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                          connection.prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.SET_CALLBACK_URL)) {
                 prepStmt.setString(1, callbackUri);
                 prepStmt.setString(2, clientId);
+                prepStmt.setInt(3, IdentityTenantUtil.getLoginTenantId());
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {
@@ -436,6 +467,32 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throw new IdentityOAuth2Exception("Error when getting scopes for user_code: " + userCode, e);
         }
         return scopeSet.toArray(new String[scopeSet.size()]);
+    }
+
+    @Override
+    public Optional<String> getDeviceCodeForUserCode(String userCode) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Getting device code for user_code: " + userCode);
+        }
+        String deviceCode = null;
+        try (
+                Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+                PreparedStatement prepStmt = connection
+                        .prepareStatement(SQLQueries.DeviceFlowDAOSQLQueries.GET_DEVICE_CODE_FOR_USER_CODE)
+        ) {
+            prepStmt.setString(1, userCode);
+            ResultSet resultSet = prepStmt.executeQuery();
+            if (resultSet.next()) {
+                deviceCode = resultSet.getString(1);
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when getting device code for user_code: " + userCode, e);
+        }
+        if (StringUtils.isBlank(deviceCode)) {
+            return Optional.empty();
+        }
+        return Optional.of(deviceCode);
     }
 
     @Override
@@ -510,6 +567,7 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
                 prepStmt.setString(8, Constants.PENDING);
                 prepStmt.setLong(9, quantifier);
                 prepStmt.setString(10, consumerKey);
+                prepStmt.setInt(11, IdentityTenantUtil.getLoginTenantId());
                 prepStmt.execute();
                 IdentityDatabaseUtil.commitTransaction(connection);
             } catch (SQLException e) {

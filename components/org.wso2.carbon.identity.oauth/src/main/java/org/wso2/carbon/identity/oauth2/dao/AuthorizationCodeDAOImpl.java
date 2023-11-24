@@ -1,21 +1,19 @@
 /*
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- *   Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   WSO2 Inc. licenses this file to you under the Apache License,
- *   Version 2.0 (the "License"); you may not use this file except
- *   in compliance with the License.
- *   You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing,
- *   software distributed under the License is distributed on an
- *   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *   KIND, either express or implied.  See the License for the
- *   specific language governing permissions and limitations
- *   under the License.
- * /
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.dao;
@@ -30,6 +28,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -68,7 +67,15 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
                                         AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
+        insertAuthorizationCode(authzCode, consumerKey,
+                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()), callbackUrl, authzCodeDO);
+    }
+
+    @Override
+    public void insertAuthorizationCode(String authzCode, String consumerKey, String appTenantDomain,
+                                        String callbackUrl, AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
+
+        if (!OAuth2Util.isAuthCodePersistenceEnabled()) {
             return;
         }
 
@@ -111,9 +118,14 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             //insert the hash value of the authorization code
             prepStmt.setString(13, getHashingPersistenceProcessor().getProcessedAuthzCode(authzCode));
             prepStmt.setString(14, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            int appTenantId = IdentityTenantUtil.getTenantId(appTenantDomain);
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 prepStmt.setString(15, authenticatedIDP);
-                prepStmt.setInt(16, tenantId);
+                // Set tenant ID of the IDP by considering it is same as appTenantID.
+                prepStmt.setInt(16, appTenantId);
+                prepStmt.setInt(17, appTenantId);
+            } else {
+                prepStmt.setInt(15, appTenantId);
             }
 
             prepStmt.execute();
@@ -222,8 +234,9 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             //use hash value for search
-            prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
+            prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedAuthzCode(authorizationKey));
             resultSet = prepStmt.executeQuery();
 
             if (resultSet.next()) {
@@ -338,7 +351,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     public void deactivateAuthorizationCode(AuthzCodeDO authzCodeDO) throws
             IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
+        if (!OAuth2Util.isAuthCodePersistenceEnabled()) {
             return;
         }
 
@@ -510,6 +523,69 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     }
 
     @Override
+    public List<AuthzCodeDO> getAuthorizationCodesDataByUser(AuthenticatedUser authenticatedUser) throws
+            IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving authorization codes of user: " + authenticatedUser.toString());
+        }
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet rs;
+        List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
+        String authzUser = authenticatedUser.getUserName();
+        String tenantDomain = authenticatedUser.getTenantDomain();
+        String userStoreDomain = authenticatedUser.getUserStoreDomain();
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authenticatedUser.toString());
+        try {
+            String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODE_DATA_BY_AUTHZUSER;
+            if (!isUsernameCaseSensitive) {
+                sqlQuery = sqlQuery.replace(AUTHZ_USER, LOWER_AUTHZ_USER);
+            }
+            ps = connection.prepareStatement(sqlQuery);
+            if (isUsernameCaseSensitive) {
+                ps.setString(1, authzUser);
+            } else {
+                ps.setString(1, authzUser.toLowerCase());
+            }
+            ps.setInt(2, OAuth2Util.getTenantId(tenantDomain));
+            ps.setString(3, userStoreDomain);
+            ps.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            rs = ps.executeQuery();
+
+            while (rs.next()) {
+                long validityPeriodInMillis = rs.getLong(3);
+                Timestamp timeCreated = rs.getTimestamp(2, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long issuedTimeInMillis = timeCreated.getTime();
+                String authorizationCode = getPersistenceProcessor().getPreprocessedAuthzCode(rs.getString(1));
+                String authzCodeId = rs.getString(4);
+                String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
+                String callbackUrl = rs.getString(6);
+                String consumerKey = rs.getString(7);
+
+
+                // Authorization codes that are in ACTIVE state and not expired should be removed from the cache.
+                if (OAuth2Util.getTimeToExpire(issuedTimeInMillis, validityPeriodInMillis) > 0) {
+                    if (isHashDisabled) {
+                        authorizationCodes
+                                .add(new AuthzCodeDO(authenticatedUser, scope, timeCreated, validityPeriodInMillis,
+                                        callbackUrl, consumerKey, authorizationCode, authzCodeId));
+                    }
+                }
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw new IdentityOAuth2Exception("Error occurred while revoking authorization code with username : " +
+                    authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
+                    .getTenantDomain()), e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, ps);
+        }
+        return authorizationCodes;
+    }
+    @Override
     public Set<String> getAuthorizationCodesByConsumerKey(String consumerKey) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
@@ -524,6 +600,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -555,7 +632,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String sqlQuery = SQLQueries.GET_ACTIVE_AUTHORIZATION_CODES_FOR_CONSUMER_KEY;
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
                 if (isHashDisabled) {
@@ -867,7 +945,8 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         try {
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setString(2, OAuthConstants.AuthorizationCodeState.ACTIVE);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            ps.setString(3, OAuthConstants.AuthorizationCodeState.ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
 

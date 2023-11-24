@@ -32,6 +32,7 @@ import org.apache.oltu.oauth2.as.validator.TokenValidator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.application.common.cache.BaseCache;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -48,10 +49,16 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.TokenIssuerDO;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2TokenCallbackHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.grant.AuthorizationCodeGrantValidator;
@@ -118,6 +125,7 @@ public class OAuthServerConfiguration {
     private static String oauth1AuthorizeUrl = null;
     private static String oauth1AccessTokenUrl = null;
     private static String oauth2AuthzEPUrl = null;
+    private static String oauth2ParEPUrl = null;
     private static String oauth2TokenEPUrl = null;
     private static String oauth2UserInfoEPUrl = null;
     private static String oauth2RevocationEPUrl = null;
@@ -132,6 +140,7 @@ public class OAuthServerConfiguration {
     private static boolean isOAuthResponseJspPageAvailable = false;
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
+    private long jarmResponseJwtValidityPeriodInSeconds = 3600;
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
@@ -146,6 +155,7 @@ public class OAuthServerConfiguration {
     private String tokenCleanupFeatureEnable;
     private OauthTokenIssuer oauthIdentityTokenGenerator;
     private boolean scopeValidationConfigValue = true;
+    private boolean globalRbacScopeIssuerEnabled = false;
     private boolean cacheEnabled = false;
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
@@ -154,6 +164,8 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
+    private boolean useClientIdAsSubClaimForAppTokens = true;
+    private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -169,9 +181,15 @@ public class OAuthServerConfiguration {
     private Map<String, String> supportedResponseTypeClassNames = new HashMap<>();
     private Map<String, ResponseTypeHandler> supportedResponseTypes;
     private Map<String, String> supportedResponseTypeValidatorNames = new HashMap<>();
+    private Map<String, String> supportedResponseModeProviderClassNames = new HashMap<>();
+    private Map<String, ResponseModeProvider> supportedResponseModes;
+    private String defaultResponseModeProviderClassName;
+    private ResponseModeProvider defaultResponseModeProvider;
     private Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> supportedResponseTypeValidators;
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private List<String> supportedTokenTypes = new ArrayList<>();
+    private List<String> publicClientSupportedGrantTypes = new ArrayList<>();
+    private List<String> publicClientNotSupportedGrantTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
@@ -266,6 +284,11 @@ public class OAuthServerConfiguration {
     // Property added to customize the token valued generation method. (IDENTITY-6139)
     private ValueGenerator tokenValueGenerator;
 
+    // property to skip OIDC claims retrieval for client credential grant type.
+    // By default, this is true because OIDC claims are not required for client credential grant type
+    // and CC grant doesn't involve a user.
+    private boolean skipOIDCClaimsForClientCredentialGrant = true;
+
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
     private String hashAlgorithm = "SHA-256";
@@ -292,6 +315,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -357,6 +381,14 @@ public class OAuthServerConfiguration {
             parseScopeHandlers(scopeHandlersElem);
         }
 
+        OMElement globalRoleBasedScopeIssuer = oauthElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ENABLE_GLOBAL_ROLE_BASED_SCOPE_ISSUER)
+        );
+
+        if (globalRoleBasedScopeIssuer != null) {
+            setGlobalRbacScopeIssuerEnabled(Boolean.parseBoolean(globalRoleBasedScopeIssuer.getText()));
+        }
+
         // read default timeout periods
         parseDefaultValidityPeriods(oauthElem);
 
@@ -366,6 +398,9 @@ public class OAuthServerConfiguration {
         // read token renewal per request config.
         // if enabled access token and refresh token will be renewed for each token endpoint call.
         parseTokenRenewalPerRequestConfiguration(oauthElem);
+
+        // Read map federated users to local config.
+        parseMapFederatedUsersToLocalConfiguration(oauthElem);
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
@@ -381,6 +416,9 @@ public class OAuthServerConfiguration {
 
         // read supported response types
         parseSupportedResponseTypesConfig(oauthElem);
+
+        // read supported response modes
+        parseSupportedResponseModesConfig(oauthElem);
 
         // read supported response types
         parseSupportedClientAuthHandlersConfig(oauthElem.getFirstChildWithName(
@@ -403,6 +441,8 @@ public class OAuthServerConfiguration {
 
         // read openid connect configurations
         parseOpenIDConnectConfig(oauthElem);
+
+        parseSkipOIDCClaimsForClientCredentialGrantConfig(oauthElem);
 
         // parse OAuth 2.0 token generator
         parseOAuthTokenGeneratorConfig(oauthElem);
@@ -462,6 +502,12 @@ public class OAuthServerConfiguration {
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
 
+        // Read config for using client id as sub claim for application tokens.
+        parseUseClientIdAsSubClaimForAppTokens(oauthElem);
+
+        // Read config for remove username from introspection response for application tokens.
+        parseRemoveUsernameFromIntrospectionResponseForAppTokens(oauthElem);
+
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
     }
@@ -482,6 +528,22 @@ public class OAuthServerConfiguration {
                 OMElement scopeElement = (OMElement) scopeIterator.next();
                 allowedScopes.add(scopeElement.getText());
             }
+        }
+    }
+
+    /**
+     * Parse config for skipping OIDC claims for client credentials
+     *
+     * @param oauthElem OauthConfigElem.
+     */
+    private void parseSkipOIDCClaimsForClientCredentialGrantConfig(OMElement oauthElem) {
+
+        OMElement skipOIDCClaimsForClientCredentialGrantElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT));
+        if (skipOIDCClaimsForClientCredentialGrantElement != null) {
+            skipOIDCClaimsForClientCredentialGrant = Boolean.parseBoolean(
+                    skipOIDCClaimsForClientCredentialGrantElement.getText().trim());
         }
     }
 
@@ -601,6 +663,11 @@ public class OAuthServerConfiguration {
         return oauth2AuthzEPUrl;
     }
 
+    public String getOAuth2ParEPUrl() {
+
+        return oauth2ParEPUrl;
+    }
+
     public String getOAuth2TokenEPUrl() {
         return oauth2TokenEPUrl;
     }
@@ -638,6 +705,11 @@ public class OAuthServerConfiguration {
     public String getDeviceAuthzEPUrl() {
 
         return deviceAuthzEPUrl;
+    }
+
+    public boolean isSkipOIDCClaimsForClientCredentialGrant() {
+
+        return skipOIDCClaimsForClientCredentialGrant;
     }
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
@@ -777,6 +849,11 @@ public class OAuthServerConfiguration {
 
     public long getUserAccessTokenValidityPeriodInSeconds() {
         return userAccessTokenValidityPeriodInSeconds;
+    }
+
+    public long getJarmResponseJwtValidityPeriodInSeconds() {
+
+        return jarmResponseJwtValidityPeriodInSeconds;
     }
 
     public long getApplicationAccessTokenValidityPeriodInSeconds() {
@@ -993,6 +1070,61 @@ public class OAuthServerConfiguration {
         return supportedResponseTypes;
     }
 
+    /**
+     * This method create ResponseModeProvider instances and add to supportedResponseModes Map and return
+     * supportedResponseModes.
+     * called inside OAuth2ServiceComponentHolder --> setResponseModeProviders()
+     * @return supportedResponseModes Map<String, ResponseModeProvider>
+     */
+    public Map<String, ResponseModeProvider> getSupportedResponseModes() {
+
+        if (supportedResponseModes == null) {
+            synchronized (this) {
+                if (supportedResponseModes == null) {
+                    Map<String, ResponseModeProvider> supportedResponseModesTemp = new Hashtable<>();
+                    for (Map.Entry<String, String> entry : supportedResponseModeProviderClassNames.entrySet()) {
+                        ResponseModeProvider responseModeProvider = null;
+                        try {
+                            responseModeProvider = (ResponseModeProvider) Class.forName(entry.getValue()).newInstance();
+                        } catch (InstantiationException e) {
+                            log.error("Error instantiating " + entry.getValue(), e);
+                            throw new RuntimeException(e);
+                        } catch (IllegalAccessException e) {
+                            log.error("Illegal access to " + entry.getValue(), e);
+                            throw new RuntimeException(e);
+                        } catch (ClassNotFoundException e) {
+                            log.error("Cannot find class: " + entry.getValue(), e);
+                            throw new RuntimeException(e);
+                        }
+                        supportedResponseModesTemp.put(entry.getKey(), responseModeProvider);
+                    }
+                    supportedResponseModes = supportedResponseModesTemp;
+                }
+            }
+        }
+        return supportedResponseModes;
+    }
+
+    public ResponseModeProvider getDefaultResponseModeProvider() {
+
+        String defaultResponseModeProviderClass = defaultResponseModeProviderClassName;
+        try {
+            defaultResponseModeProvider = (ResponseModeProvider) Class.forName
+                    (defaultResponseModeProviderClass).newInstance();
+        } catch (InstantiationException e) {
+            log.error("Error instantiating " + defaultResponseModeProviderClass, e);
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            log.error("Illegal access to " + defaultResponseModeProviderClass, e);
+            throw new RuntimeException(e);
+        } catch (ClassNotFoundException e) {
+            log.error("Cannot find class: " + defaultResponseModeProviderClass, e);
+            throw new RuntimeException(e);
+        }
+
+        return defaultResponseModeProvider;
+    }
+
     public String getHashAlgorithm() {
         return hashAlgorithm;
     }
@@ -1148,6 +1280,11 @@ public class OAuthServerConfiguration {
         return supportedResponseTypeClassNames.keySet();
     }
 
+    public List<String> getSupportedResponseModeNames() {
+
+        return new ArrayList<>(supportedResponseModeProviderClassNames.keySet());
+    }
+
     public String[] getSupportedClaims() {
         return supportedClaims;
     }
@@ -1192,6 +1329,11 @@ public class OAuthServerConfiguration {
 
     public Set<String> getIdTokenNotAllowedGrantTypesSet() {
         return idTokenNotAllowedGrantTypesSet;
+    }
+
+    public List<String> getPublicClientSupportedGrantTypesList() {
+
+        return publicClientSupportedGrantTypes;
     }
 
     public boolean isRedirectToRequestedRedirectUriEnabled() {
@@ -1819,6 +1961,13 @@ public class OAuthServerConfiguration {
             userAccessTokenValidityPeriodInSeconds = Long.parseLong(accessTokTimeoutElem.getText());
         }
 
+        // set the JARM response jwt validity timeout
+        OMElement jarmResponseJwtTimeoutElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD));
+        if (jarmResponseJwtTimeoutElem != null) {
+            jarmResponseJwtValidityPeriodInSeconds = Long.parseLong(jarmResponseJwtTimeoutElem.getText());
+        }
+
         // set the application access token default timeout
         OMElement applicationAccessTokTimeoutElem = oauthConfigElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD));
@@ -1897,6 +2046,13 @@ public class OAuthServerConfiguration {
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 oauth2AuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.OAUTH2_PAR_EP_URL));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ParEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
         elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
@@ -2244,6 +2400,29 @@ public class OAuthServerConfiguration {
                         refreshTokenAllowedGrantTypes.put(grantTypeName, isRefreshAllowed);
                     }
                 }
+
+                /* Read the public client allowed grant types for all grant types.
+                 * Grant types added with PublicClientAllowed property and value set to true will be added to
+                 * publicClientSupportedGrantTypes list and value set to false will be added to
+                 * publicClientNotSupportedGrantTypes. All default grant types will have the property set to either the
+                 * value.
+                 * If the property is not mentioned in the custom grant type configuration, the grant type will not be
+                 * added to either lists. So, if the custom grant type is added to the array configuration of allowed,
+                 * grant types, it will get added to the publicClientSupportedGrantTypes list.
+                 */
+                OMElement publicClientAllowedElement = supportedGrantTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ALLOWED));
+                String publicClientAllowed = null;
+                if (publicClientAllowedElement != null) {
+                    publicClientAllowed = publicClientAllowedElement.getText();
+                }
+                if (StringUtils.isNotEmpty(publicClientAllowed)) {
+                    if (Boolean.parseBoolean(publicClientAllowed)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    } else {
+                        publicClientNotSupportedGrantTypes.add(grantTypeName);
+                    }
+                }
             }
         } else {
             // if this element is not present, assume the default case.
@@ -2501,6 +2680,73 @@ public class OAuthServerConfiguration {
                 String responseTypeName = entry.getKey().toString();
                 String authzHandlerImplClass = entry.getValue().toString();
                 log.debug(responseTypeName + "supported by" + authzHandlerImplClass);
+            }
+        }
+    }
+
+    /**
+     * This method is to read the config file for supported response modes
+     * It gets response_mode_name : response_mode_class_name mapping and saves in
+     * supportedResponseModeClassNames Map <String,String>
+     * @param oauthConfigElem: oauth configs mentioned in identity.xml
+     */
+    private void parseSupportedResponseModesConfig(OMElement oauthConfigElem) {
+
+        OMElement supportedRespModesElem =
+                oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_MODES));
+        OMElement defaultRespModesElem = oauthConfigElem.getFirstChildWithName
+                (getQNameWithIdentityNS(ConfigElements.DEFAULT_RESP_MODE_PROVIDER_CLASS));
+
+        if (defaultRespModesElem != null) {
+            defaultResponseModeProviderClassName = defaultRespModesElem.getText();
+        } else {
+            defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
+        }
+
+        if (supportedRespModesElem != null) {
+            Iterator<OMElement> iterator = supportedRespModesElem
+                    .getChildrenWithName(getQNameWithIdentityNS(ConfigElements.SUPPORTED_RESP_MODE));
+            while (iterator.hasNext()) {
+                OMElement supportedResponseModeElement = iterator.next();
+                OMElement responseModeNameElement = supportedResponseModeElement.
+                        getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.RESP_MODE_NAME));
+                String responseModeName = null;
+                if (responseModeNameElement != null) {
+                    responseModeName = responseModeNameElement.getText();
+                }
+                OMElement responseModeProviderClassElement =
+                        supportedResponseModeElement.getFirstChildWithName(
+                                getQNameWithIdentityNS(ConfigElements.RESP_MODE_PROVIDER_CLASS));
+                String responseModeProviderClass = null;
+                if (responseModeProviderClassElement != null) {
+                    responseModeProviderClass = responseModeProviderClassElement.getText();
+                }
+                if (responseModeName != null && !"".equals(responseModeName) &&
+                        responseModeProviderClass != null && !"".equals(responseModeProviderClass)) {
+                    supportedResponseModeProviderClassNames.put(responseModeName, responseModeProviderClass);
+
+                }
+            }
+        } else {
+            // if this element is not present, add the default response modes.
+            log.warn("'SupportedResponseModes' element not configured in identity.xml. " +
+                    "Therefore instantiating default response mode providers");
+            Map<String, String> supportedResponseModeClassNamesTemp = new HashMap<>();
+            supportedResponseModeClassNamesTemp.put(OAuthConstants.ResponseModes.QUERY,
+                    QueryResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNamesTemp.put(OAuthConstants.ResponseModes.FRAGMENT,
+                    FragmentResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeClassNamesTemp.put(OAuthConstants.ResponseModes.FORM_POST,
+                    FormPostResponseModeProvider.class.getCanonicalName());
+            supportedResponseModeProviderClassNames.putAll(supportedResponseModeClassNamesTemp);
+        }
+
+        if (log.isDebugEnabled()) {
+            for (Map.Entry entry : supportedResponseModeProviderClassNames.entrySet()) {
+                String responseModeName = entry.getKey().toString();
+                String responseModeProviderClass = entry.getValue().toString();
+                log.debug(responseModeName + " supported by " + responseModeProviderClass);
             }
         }
     }
@@ -3004,6 +3250,17 @@ public class OAuthServerConfiguration {
                     requestObjectEnabled = false;
                 }
             }
+
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)) != null) {
+                try {
+                    parseSupportedTokenEndpointSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                            getQNameWithIdentityNS(ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS)));
+                } catch (ServerConfigurationException e) {
+                    log.error("Error while parsing supported token endpoint signing algorithms.", e);
+                }
+            }
+
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
             oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
@@ -3163,6 +3420,23 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the map federated users to local configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseMapFederatedUsersToLocalConfiguration(OMElement oauthConfigElem) {
+
+        OMElement mapFederatedUsersToLocalConfigElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.MAP_FED_USERS_TO_LOCAL));
+        if (mapFederatedUsersToLocalConfigElem != null) {
+            mapFederatedUsersToLocal = Boolean.parseBoolean(mapFederatedUsersToLocalConfigElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("MapFederatedUsersToLocal was set to : " + mapFederatedUsersToLocal);
+        }
+    }
+
+    /**
      * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
      * populated the oauthTokenIssuerMap when a token is issued but now we use this map for token validation
      * calls as well.
@@ -3224,6 +3498,56 @@ public class OAuthServerConfiguration {
         return allowCrossTenantIntrospection;
     }
 
+    /**
+     * Parses the UseClientIdAsSubClaimForAppTokens configuration that used to make the client id as the subject claim
+     * in access tokens issued for authenticated applications.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUseClientIdAsSubClaimForAppTokens(OMElement oauthConfigElem) {
+
+        OMElement useClientIdAsSubClaimForAppTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS));
+        if (useClientIdAsSubClaimForAppTokensElem != null) {
+            useClientIdAsSubClaimForAppTokens =
+                    Boolean.parseBoolean(useClientIdAsSubClaimForAppTokensElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property UseClientIdAsSubClaimForAppTokens for the OAuth configuration
+     * in identity.xml.
+     */
+    public boolean isUseClientIdAsSubClaimForAppTokensEnabled() {
+
+        return useClientIdAsSubClaimForAppTokens;
+    }
+
+    /**
+     * Parses the RemoveUsernameFromIntrospectionResponseForAppTokens configuration that used to remove username
+     * from access tokens issued for authenticated applications.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseRemoveUsernameFromIntrospectionResponseForAppTokens(OMElement oauthConfigElem) {
+
+        OMElement removeUsernameFromIntrospectionResponseForAppTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS));
+        if (removeUsernameFromIntrospectionResponseForAppTokensElem != null) {
+            removeUsernameFromIntrospectionResponseForAppTokens =
+                    Boolean.parseBoolean(removeUsernameFromIntrospectionResponseForAppTokensElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property RemoveUsernameFromIntrospectionResponseForAppTokens for the OAuth
+     * configuration in identity.xml.
+     */
+    public boolean isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled() {
+
+        return removeUsernameFromIntrospectionResponseForAppTokens;
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -3248,6 +3572,50 @@ public class OAuthServerConfiguration {
         return isFapiSecurity;
     }
 
+    public boolean isGlobalRbacScopeIssuerEnabled() {
+
+        return globalRbacScopeIssuerEnabled;
+    }
+
+    public void setGlobalRbacScopeIssuerEnabled(boolean globalRbacScopeIssuerEnabled) {
+
+        this.globalRbacScopeIssuerEnabled = globalRbacScopeIssuerEnabled;
+    }
+
+    public List<String> getSupportedTokenEndpointSigningAlgorithms() {
+
+        return supportedTokenEndpointSigningAlgorithms;
+    }
+
+    /**
+     * Parse supported signing algorithms and add them to the supportedTokenEndpointSigningAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+    private void parseSupportedTokenEndpointSigningAlgorithms(OMElement algorithms)
+            throws ServerConfigurationException {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG);
+        if (iterator != null) {
+            while (iterator.hasNext()) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    try {
+                        supportedTokenEndpointSigningAlgorithms.add(String.valueOf(
+                                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm.getText())));
+                    } catch (IdentityOAuth2Exception e) {
+                        throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
@@ -3258,6 +3626,7 @@ public class OAuthServerConfiguration {
         public static final String OAUTH1_AUTHORIZE_URL = "OAuth1AuthorizeUrl";
         public static final String OAUTH1_ACCESS_TOKEN_URL = "OAuth1AccessTokenUrl";
         public static final String OAUTH2_AUTHZ_EP_URL = "OAuth2AuthzEPUrl";
+        public static final String OAUTH2_PAR_EP_URL = "OAuth2ParEPUrl";
         public static final String OAUTH2_TOKEN_EP_URL = "OAuth2TokenEPUrl";
         public static final String OAUTH2_USERINFO_EP_URL = "OAuth2UserInfoEPUrl";
         public static final String OAUTH2_REVOCATION_EP_URL = "OAuth2RevokeEPUrl";
@@ -3348,6 +3717,7 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_HANDLER_CLASS_ATTR = "class";
         private static final String SCOPE_HANDLER_PROPERTY = "Property";
         private static final String SCOPE_HANDLER_PROPERTY_NAME_ATTR = "name";
+        private static final String ENABLE_GLOBAL_ROLE_BASED_SCOPE_ISSUER = "EnableGlobalRBACScopeIssuer";
         private static final String SCOPE_VALIDATOR = "OAuthScopeValidator";
         private static final String SCOPE_VALIDATORS = "ScopeValidators";
         private static final String SCOPE_VALIDATOR_ELEM = "ScopeValidator";
@@ -3367,6 +3737,9 @@ public class OAuthServerConfiguration {
         private static final String AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD =
                 "AuthorizationCodeDefaultValidityPeriod";
         private static final String USER_ACCESS_TOKEN_DEFAULT_VALIDITY_PERIOD = "UserAccessTokenDefaultValidityPeriod";
+
+        private static final String JARM_RESPONSE_JWT_DEFAULT_VALIDITY_PERIOD =
+                "JARMResponseJwtValidityPeriodInSeconds";
         private static final String APPLICATION_ACCESS_TOKEN_VALIDATION_PERIOD = "AccessTokenDefaultValidityPeriod";
         private static final String REFRESH_TOKEN_VALIDITY_PERIOD = "RefreshTokenValidityPeriod";
         // Enable/Disable cache
@@ -3396,6 +3769,10 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_GRANT_TYPE = "SupportedGrantType";
         private static final String GRANT_TYPE_NAME = "GrantTypeName";
 
+        // Public client supported Grant Types
+        private static final String PUBLIC_CLIENT_SUPPORTED_GRANT_TYPES = "PublicClientSupportedGrantTypes";
+        private static final String PUBLIC_CLIENT_ENABLED_GRANT_TYPE_NAME = "GrantTypeName";
+
         //Supported Token Types
         private static final String SUPPORTED_TOKEN_TYPES = "SupportedTokenTypes";
         private static final String SUPPORTED_TOKEN_TYPE = "SupportedTokenType";
@@ -3410,6 +3787,7 @@ public class OAuthServerConfiguration {
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
         private static final String TOKEN_TYPE_IMPL_CLASS = "TokenTypeImplClass";
+        private static final String PUBLIC_CLIENT_ALLOWED = "PublicClientAllowed";
         // Supported Client Authentication Methods
         private static final String CLIENT_AUTH_HANDLERS = "ClientAuthHandlers";
         private static final String CLIENT_AUTH_HANDLER_IMPL_CLASS = "ClientAuthHandler";
@@ -3423,6 +3801,12 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_RESP_TYPE = "SupportedResponseType";
         private static final String RESP_TYPE_NAME = "ResponseTypeName";
         private static final String RESP_TYPE_HANDLER_IMPL_CLASS = "ResponseTypeHandlerImplClass";
+        // Supported Response Modes
+        private static final String SUPPORTED_RESP_MODES = "SupportedResponseModes";
+        private static final String SUPPORTED_RESP_MODE = "SupportedResponseMode";
+        private static final String RESP_MODE_NAME = "ResponseModeName";
+        private static final String RESP_MODE_PROVIDER_CLASS = "ResponseModeProviderClass";
+        private static final String DEFAULT_RESP_MODE_PROVIDER_CLASS = "DefaultResponseModeProviderClass";
         // SAML2 assertion profile configurations
         private static final String SAML2_GRANT = "SAML2Grant";
         private static final String SAML2_TOKEN_HANDLER = "SAML2TokenHandler";
@@ -3470,13 +3854,24 @@ public class OAuthServerConfiguration {
         private static final String DEVICE_CODE_KEY_LENGTH = "KeyLength";
         private static final String DEVICE_CODE_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_POLLING_INTERVAL = "PollingInterval";
+        private static final String PAR = "PAR";
+        private static final String PAR_EXPIRY_TIME = "ExpiryTime";
         private static final String DEVICE_CODE_KEY_SET = "KeySet";
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
 
+        private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
+        private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
+                "RemoveUsernameFromIntrospectionResponseForAppTokens";
+
         // FAPI Configurations
         private static final String FAPI = "FAPI";
+
+        private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
+                "SkipOIDCClaimsForClientCredentialGrant";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
+        private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
     }
 
 }

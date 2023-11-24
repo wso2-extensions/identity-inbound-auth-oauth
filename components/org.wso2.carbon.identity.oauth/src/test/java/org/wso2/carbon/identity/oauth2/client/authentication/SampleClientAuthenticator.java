@@ -17,7 +17,9 @@
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +33,8 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public static final String SAMPLE_HEADER = "SampleHeader";
     public static final String EXPECTED_SAMPLE_HEADER = "expectedSampleHeader";
     public boolean enabled = true;
+    private static final String SAMPLE_CLIENT_AUTHENTICATOR = "SampleClientAuthenticator";
+    private static final String SAMPLE_CLIENT_AUTHENTICATOR_AUTH_METHOD = "client_auth_method_sample";
 
     @Override
     public boolean authenticateClient(HttpServletRequest request, Map<String, List> content,
@@ -74,12 +78,19 @@ public class SampleClientAuthenticator extends AbstractOAuthClientAuthenticator 
     @Override
     public String getName() {
 
-        return "SampleClientAuthenticator";
+        return SAMPLE_CLIENT_AUTHENTICATOR;
     }
 
     @Override
     public boolean isEnabled() {
 
         return this.enabled;
+    }
+
+    @Override
+    public List<ClientAuthenticationMethodModel> getSupportedClientAuthenticationMethods() {
+
+        return Arrays.asList(new ClientAuthenticationMethodModel(SAMPLE_CLIENT_AUTHENTICATOR_AUTH_METHOD,
+                SAMPLE_CLIENT_AUTHENTICATOR));
     }
 }

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -27,11 +27,14 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
-import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
@@ -47,7 +50,6 @@ import java.util.TreeMap;
 public class OAuthComponentServiceHolder {
 
     private static OAuthComponentServiceHolder instance = new OAuthComponentServiceHolder();
-    private RegistryService registryService;
     private RealmService realmService;
     private OAuthEventInterceptor oAuthEventInterceptorHandlerProxy;
     private OAuth2Service oauth2Service;
@@ -56,11 +58,14 @@ public class OAuthComponentServiceHolder {
     private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
     private OAuthAdminServiceImpl oAuthAdminService;
     private List<ScopeValidator> scopeValidators = new ArrayList<>();
+    private List<ScopeValidationHandler> scopeValidationHandlers = new ArrayList<>();
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
+    private OrganizationManager organizationManager;
     private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
-
+    private AccessTokenDAO accessTokenDAOService;
+    private TokenManagementDAO tokenManagementDAOService;
 
     /**
      * Get the list of scope validator implementations available.
@@ -102,6 +107,46 @@ public class OAuthComponentServiceHolder {
         this.scopeValidators = scopeValidators;
     }
 
+    /**
+     * Get the list of scope validation handler implementations available.
+     *
+     * @return ScopeValidationHandler returns a list ot scope validation policy handler.
+     */
+    public List<ScopeValidationHandler> getScopeValidationHandlers() {
+
+        return scopeValidationHandlers;
+    }
+
+    /**
+     * Add scope validation handler implementation.
+     *
+     * @param scopeValidationHandler Scope validation handler implementation.
+     */
+    public void addScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
+
+        scopeValidationHandlers.add(scopeValidationHandler);
+    }
+
+    /**
+     * Remove scope validation policy implementation.
+     *
+     * @param scopeValidationHandler Scope validation policy implementation.
+     */
+    public void removeScopeValidationHandler(ScopeValidationHandler scopeValidationHandler) {
+
+        scopeValidationHandlers.remove(scopeValidationHandler);
+    }
+
+    /**
+     * Set a list of scope validation handler implementations.
+     *
+     * @param scopeValidationHandlers List of Scope validation handler implementation.
+     */
+    public void setScopeValidatorPolicyHandlers(List<ScopeValidationHandler> scopeValidationHandlers) {
+
+        this.scopeValidationHandlers = scopeValidationHandlers;
+    }
+
     private OAuthComponentServiceHolder() {
 
     }
@@ -109,16 +154,6 @@ public class OAuthComponentServiceHolder {
     public static OAuthComponentServiceHolder getInstance() {
 
         return instance;
-    }
-
-    public RegistryService getRegistryService() {
-
-        return registryService;
-    }
-
-    public void setRegistryService(RegistryService registryService) {
-
-        this.registryService = registryService;
     }
 
     public RealmService getRealmService() {
@@ -247,6 +282,26 @@ public class OAuthComponentServiceHolder {
     }
 
     /**
+     * Get OrganizationManager instance.
+     *
+     * @return OrganizationManager instance.
+     */
+    public OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    /**
+     * Set OrganizationManager instance.
+     *
+     * @param organizationManager OrganizationManager instance.
+     */
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
+    }
+
+    /**
      * Registers access token response handlers for modifying token response attributes.
      *
      * @param accessTokenResponseHandler {@link AccessTokenResponseHandler} instance.
@@ -274,5 +329,45 @@ public class OAuthComponentServiceHolder {
     public List<AccessTokenResponseHandler> getAccessTokenResponseHandlers() {
 
         return accessTokenResponseHandlers;
+    }
+    
+    /**
+     * Get AccessTokenDAO instance.
+     * 
+     * @return AccessTokenDAO {@link AccessTokenDAO} instance.
+     */
+    public AccessTokenDAO getAccessTokenDAOService() {
+
+        return accessTokenDAOService;
+    }
+
+    /**
+     * Set AccessTokenDAO instance.
+     * 
+     * @param accessTokenDAOService {@link AccessTokenDAO} instance.
+     */
+    public void setAccessTokenDAOService(AccessTokenDAO accessTokenDAOService) {
+
+        this.accessTokenDAOService = accessTokenDAOService;
+    }
+
+    /**
+     * Get TokenManagementDAO instance.
+     * 
+     * @return  TokenManagementDAO  {@link TokenManagementDAO} instance.
+     */
+    public TokenManagementDAO getTokenManagementDAOService() {
+
+        return tokenManagementDAOService;
+    }
+
+    /**
+     * Set TokenManagementDAO instance.
+     * 
+     * @param tokenManagementDAOService {@link TokenManagementDAO} instance.
+     */
+    public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
+
+        this.tokenManagementDAOService = tokenManagementDAOService;
     }
 }

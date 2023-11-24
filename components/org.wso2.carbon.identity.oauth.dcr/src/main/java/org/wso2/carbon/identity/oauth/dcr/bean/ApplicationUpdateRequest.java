@@ -34,6 +34,31 @@ public class ApplicationUpdateRequest implements Serializable {
     private List<String> grantTypes = new ArrayList<>();
     private String tokenType = null;
     private String backchannelLogoutUri = null;
+    private String extApplicationDisplayName = null;
+    private String extApplicationOwner = null;
+    private Long extApplicationTokenLifetime = null;
+    private Long extUserTokenLifetime = null;
+    private Long extRefreshTokenLifetime = null;
+    private Long extIdTokenLifetime = null;
+    private boolean extPkceMandatory = false;
+    private boolean extPkceSupportPlain = false;
+    private boolean extPublicClient = false;
+    private String jwksURI = null;
+    private String softwareStatement;
+    private String tokenEndpointAuthMethod;
+    private String tokenEndpointAuthSignatureAlgorithm;
+    private String sectorIdentifierURI;
+    private String idTokenSignatureAlgorithm;
+    private String idTokenEncryptionAlgorithm;
+    private String idTokenEncryptionMethod;
+    private String requestObjectSignatureAlgorithm;
+    private String tlsClientAuthSubjectDN;
+    private boolean requirePushedAuthorizationRequests;
+    private boolean tlsClientCertificateBoundAccessTokens;
+    private boolean requireSignedRequestObject;
+    private String subjectType;
+    private String requestObjectEncryptionAlgorithm;
+    private String requestObjectEncryptionMethod;
 
     public List<String> getRedirectUris() {
 
@@ -84,4 +109,326 @@ public class ApplicationUpdateRequest implements Serializable {
 
         this.backchannelLogoutUri = backchannelLogoutUri;
     }
+
+    /**
+     * Get the external application display name.
+     * @return external application display name.
+     */
+    public String getExtApplicationDisplayName() {
+
+        return extApplicationDisplayName;
+    }
+
+    /**
+     * Set the external application display name.
+     * @param extApplicationDisplayName external application display name.
+     */
+    public void setExtApplicationDisplayName(String extApplicationDisplayName) {
+
+        this.extApplicationDisplayName = extApplicationDisplayName;
+    }
+
+    /**
+     * Get the external application owner.
+     * @return external application owner.
+     */
+    public String getExtApplicationOwner() {
+
+        return extApplicationOwner;
+    }
+
+    /**
+     * Set the external application owner.
+     * @param extApplicationOwner external application owner.
+     */
+    public void setExtApplicationOwner(String extApplicationOwner) {
+
+        this.extApplicationOwner = extApplicationOwner;
+    }
+
+    /**
+     * Get the external application token lifetime.
+     * @return external application token lifetime.
+     */
+    public Long getExtApplicationTokenLifetime() {
+
+        return extApplicationTokenLifetime;
+    }
+
+    /**
+     * Set the external application token lifetime.
+     * @param extApplicationTokenLifetime external application token lifetime.
+     */
+    public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
+
+        this.extApplicationTokenLifetime = extApplicationTokenLifetime;
+    }
+
+    /**
+     * Get the external user token lifetime.
+     * @return external user token lifetime.
+     */
+    public Long getExtUserTokenLifetime() {
+
+        return extUserTokenLifetime;
+    }
+
+    /**
+     * Set the external user token lifetime.
+     * @param extUserTokenLifetime external user token lifetime.
+     */
+    public void setExtUserTokenLifetime(Long extUserTokenLifetime) {
+
+        this.extUserTokenLifetime = extUserTokenLifetime;
+    }
+
+    /**
+     * Get the external refresh token lifetime.
+     * @return external refresh token lifetime.
+     */
+    public Long getExtRefreshTokenLifetime() {
+
+        return extRefreshTokenLifetime;
+    }
+
+    /**
+     * Set the external refresh token lifetime.
+     * @param extRefreshTokenLifetime external refresh token lifetime.
+     */
+    public void setExtRefreshTokenLifetime(Long extRefreshTokenLifetime) {
+
+        this.extRefreshTokenLifetime = extRefreshTokenLifetime;
+    }
+
+    /**
+     * Get the external id token lifetime.
+     * @return external id token lifetime.
+     */
+    public Long getExtIdTokenLifetime() {
+
+        return extIdTokenLifetime;
+    }
+
+    /**
+     * Set the external id token lifetime.
+     * @param extIdTokenLifetime external id token lifetime.
+     */
+    public void setExtIdTokenLifetime(Long extIdTokenLifetime) {
+
+        this.extIdTokenLifetime = extIdTokenLifetime;
+    }
+
+    /**
+     * Get whether the external PKCE is mandatory or not.
+     * @return whether the external PKCE is mandatory or not.
+     */
+    public boolean isExtPkceMandatory() {
+
+        return extPkceMandatory;
+    }
+
+    /**
+     * Set whether the external PKCE is mandatory or not.
+     * @param extPkceMandatory whether the external PKCE is mandatory or not.
+     */
+    public void setExtPkceMandatory(boolean extPkceMandatory) {
+
+        this.extPkceMandatory = extPkceMandatory;
+    }
+
+    /**
+     * Get whether the external PKCE supports "plain" challenge method or not.
+     * @return whether the external PKCE supports "plain" challenge method or not.
+     */
+    public boolean isExtPkceSupportPlain() {
+
+        return extPkceSupportPlain;
+    }
+
+    /**
+     * Set whether the external PKCE supports "plain" challenge method or not.
+     * @param extPkceSupportPlain whether the external PKCE supports "plain" challenge method or not.
+     */
+    public void setExtPkceSupportPlain(boolean extPkceSupportPlain) {
+
+        this.extPkceSupportPlain = extPkceSupportPlain;
+    }
+
+    /**
+     * Get whether the client is a public client or not.
+     * @return whether the client is a public client or not.
+     */
+    public boolean isExtPublicClient() {
+
+        return extPublicClient;
+    }
+
+    /**
+     * Set whether the client is a public client or not.
+     * @param extPublicClient whether the client is a public client or not.
+     */
+    public void setExtPublicClient(boolean extPublicClient) {
+
+        this.extPublicClient = extPublicClient;
+    }
+
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getTokenEndpointAuthSignatureAlgorithm() {
+
+        return tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
+
+        this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public String getSectorIdentifierURI() {
+
+        return sectorIdentifierURI;
+    }
+
+    public void setSectorIdentifierURI(String sectorIdentifierURI) {
+
+        this.sectorIdentifierURI = sectorIdentifierURI;
+    }
+
+    public String getRequestObjectSignatureAlgorithm() {
+
+        return requestObjectSignatureAlgorithm;
+    }
+
+    public void setRequestObjectSignatureAlgorithm(String requestObjectSignatureAlgorithm) {
+
+        this.requestObjectSignatureAlgorithm = requestObjectSignatureAlgorithm;
+    }
+
+    public String getTlsClientAuthSubjectDN() {
+
+        return tlsClientAuthSubjectDN;
+    }
+
+    public void setTlsClientAuthSubjectDN(String tlsClientAuthSubjectDN) {
+
+        this.tlsClientAuthSubjectDN = tlsClientAuthSubjectDN;
+    }
+    public String getSubjectType() {
+
+        return subjectType;
+    }
+
+    public void setSubjectType(String subjectType) {
+
+        this.subjectType = subjectType;
+    }
+
+    public String getRequestObjectEncryptionAlgorithm() {
+
+        return requestObjectEncryptionAlgorithm;
+    }
+
+    public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+
+        this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
+    }
+
+    public String getRequestObjectEncryptionMethod() {
+
+        return requestObjectEncryptionMethod;
+    }
+
+    public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+
+        this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+    }
+
+    public String getIdTokenSignatureAlgorithm() {
+
+        return idTokenSignatureAlgorithm;
+    }
+
+    public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
+
+        this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
+    }
+
+    public String getIdTokenEncryptionAlgorithm() {
+
+        return idTokenEncryptionAlgorithm;
+    }
+
+    public void setIdTokenEncryptionAlgorithm(String idTokenEncryptionAlgorithm) {
+
+        this.idTokenEncryptionAlgorithm = idTokenEncryptionAlgorithm;
+    }
+
+    public String getIdTokenEncryptionMethod() {
+
+        return idTokenEncryptionMethod;
+    }
+
+    public void setIdTokenEncryptionMethod(String idTokenEncryptionMethod) {
+
+        this.idTokenEncryptionMethod = idTokenEncryptionMethod;
+    }
+
+    public boolean isRequirePushedAuthorizationRequests() {
+
+        return requirePushedAuthorizationRequests;
+    }
+
+    public void setRequirePushedAuthorizationRequests(boolean requirePushedAuthorizationRequests) {
+
+        this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
+    }
+
+    public boolean isTlsClientCertificateBoundAccessTokens() {
+
+        return tlsClientCertificateBoundAccessTokens;
+    }
+
+    public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
+
+        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    }
+
+    public boolean isRequireSignedRequestObject() {
+
+        return requireSignedRequestObject;
+    }
+
+    public void setRequireSignedRequestObject(boolean requireSignedRequestObject) {
+
+        this.requireSignedRequestObject = requireSignedRequestObject;
+    }
+
+    public String getSoftwareStatement() {
+
+        return softwareStatement;
+    }
+
+    public void setSoftwareStatement(String softwareStatement) {
+
+        this.softwareStatement = softwareStatement;
+    }
+
+    public String getJwksURI() {
+
+        return jwksURI;
+    }
+
+    public void setJwksURI(String jwksURI) {
+
+        this.jwksURI = jwksURI;
+    }
+
 }

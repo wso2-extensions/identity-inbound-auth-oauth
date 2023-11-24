@@ -105,7 +105,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     revokeTokensForCommonAuthCookie(request, context.getLastAuthenticatedUser());
                 }
             } else {
-                revokeTokensForCommonAuthCookie(request, context.getLastAuthenticatedUser());
+                revokeTokensForCommonAuthCookie(request, getAuthenticatedUser(eventProperties, context));
             }
         } catch (IdentityOAuth2Exception | OAuthSystemException  e) {
             log.error("Error while revoking the tokens on session termination.", e);
@@ -417,5 +417,38 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
         OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+    }
+
+    /**
+     * Retrieve the authenticated user from the session context identifier in the event if it is not available in the
+     * authentication context.
+     *
+     * @param eventProperties Event properties.
+     * @param context         Authentication context.
+     * @return Authentication user.
+     */
+    private AuthenticatedUser getAuthenticatedUser(Map<String, Object> eventProperties, AuthenticationContext context) {
+
+        AuthenticatedUser authenticatedUser = context.getLastAuthenticatedUser();
+        if (authenticatedUser != null) {
+            return authenticatedUser;
+        }
+        Map<String, Object> paramMap = (Map<String, Object>) eventProperties.get(IdentityEventConstants
+                .EventProperty.PARAMS);
+        String sessionContextIdentifier = getSessionIdentifier(paramMap);
+        if (StringUtils.isNotBlank(sessionContextIdentifier)) {
+            SessionContext sessionContext = (SessionContext) eventProperties.get(IdentityEventConstants
+                    .EventProperty.SESSION_CONTEXT);
+            if (sessionContext != null) {
+                authenticatedUser = (AuthenticatedUser) sessionContext
+                        .getProperty(FrameworkConstants.AUTHENTICATED_USER);
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Session context for session context identifier: " + sessionContextIdentifier +
+                            " is not found.");
+                }
+            }
+        }
+        return authenticatedUser;
     }
 }

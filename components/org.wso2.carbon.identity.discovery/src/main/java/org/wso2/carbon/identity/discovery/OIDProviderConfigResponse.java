@@ -31,6 +31,7 @@ public class OIDProviderConfigResponse {
 
     private String issuer;
     private String authorizationEndpoint;
+    private String pushedAuthorizationRequestEndpoint;
     private String tokenEndpoint;
     private String userinfoEndpoint;
     private String revocationEndpoint;
@@ -78,6 +79,8 @@ public class OIDProviderConfigResponse {
     private Boolean backchannelLogoutSessionSupported;
     private String[] codeChallengeMethodsSupported;
     private String deviceAuthorizationEndpoint;
+    private String webFingerEndpoint;
+    private Boolean tlsClientCertificateBoundAccessTokens;
 
     public String getIssuer() {
         return issuer;
@@ -93,6 +96,16 @@ public class OIDProviderConfigResponse {
 
     public void setAuthorizationEndpoint(String authorizationEndpoint) {
         this.authorizationEndpoint = authorizationEndpoint;
+    }
+
+    public String getPushedAuthorizationRequestEndpoint() {
+
+        return pushedAuthorizationRequestEndpoint;
+    }
+
+    public void setPushedAuthorizationRequestEndpoint(String pushedAuthorizationRequestEndpoint) {
+
+        this.pushedAuthorizationRequestEndpoint = pushedAuthorizationRequestEndpoint;
     }
 
     public String getTokenEndpoint() {
@@ -488,11 +501,26 @@ public class OIDProviderConfigResponse {
         this.deviceAuthorizationEndpoint = deviceAuthorizationEndpoint;
     }
 
+    public String getWebFingerEndpoint() {
+        return webFingerEndpoint;
+    }
+
+    public void setWebFingerEndpoint(String webFingerEndpoint) {
+        this.webFingerEndpoint = webFingerEndpoint;
+    }
+
+    public void setTlsClientCertificateBoundAccessTokens(Boolean tlsClientCertificateBoundAccessTokens) {
+
+        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
         configMap.put(DiscoveryConstants.ACR_VALUES_SUPPORTED.toLowerCase(), this.acrValuesSupported);
         configMap.put(DiscoveryConstants.AUTHORIZATION_ENDPOINT.toLowerCase(), this.authorizationEndpoint);
+        configMap.put(DiscoveryConstants.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT.toLowerCase(),
+                this.pushedAuthorizationRequestEndpoint);
         configMap.put(DiscoveryConstants.CLAIM_TYPES_SUPPORTED.toLowerCase(), this.claimTypesSupported);
         configMap.put(DiscoveryConstants.CLAIMS_LOCALES_SUPPORTED.toLowerCase(), this.claimsLocalesSupported);
         configMap.put(DiscoveryConstants.CLAIMS_PARAMETER_SUPPORTED.toLowerCase(), this.isClaimsParameterSupported);
@@ -548,9 +576,11 @@ public class OIDProviderConfigResponse {
                 .userinfoSigningAlgValuesSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SUPPORTED, this.backchannelLogoutSupported);
         configMap.put(DiscoveryConstants.BACKCHANNEL_LOGOUT_SESSION_SUPPORTED, this.backchannelLogoutSessionSupported);
-        configMap.put(DiscoveryConstants.RESPONSE_MODES_SUPPORTED, this.responseModesSupported);
         configMap.put(DiscoveryConstants.CODE_CHALLENGE_METHODS_SUPPORTED, this.codeChallengeMethodsSupported);
         configMap.put(DiscoveryConstants.DEVICE_AUTHORIZATION_ENDPOINT, this.deviceAuthorizationEndpoint);
+        configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);
+        configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN.toLowerCase(),
+                this.tlsClientCertificateBoundAccessTokens);
         return configMap;
     }
 }

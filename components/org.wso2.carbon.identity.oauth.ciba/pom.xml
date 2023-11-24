@@ -20,7 +20,7 @@
     <parent>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-        <version>6.11.28-SNAPSHOT</version>
+        <version>6.11.215-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -135,7 +135,6 @@
                             ="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.* ; version
                             ="${identity.inbound.auth.oauth.imp.pkg.version.range}",
-                            org.wso2.carbon.registry.core.* ; version ="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.user.core.* ; version ="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.user.api.* ; version ="${carbon.user.api.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base.* ; version =

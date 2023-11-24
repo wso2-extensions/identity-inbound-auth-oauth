@@ -30,7 +30,9 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -45,14 +47,15 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuth2TokenResponse;
+import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -63,6 +66,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.PROP_CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getHttpServletResponseWrapper;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
@@ -84,62 +89,83 @@ public class OAuth2TokenEndpoint {
     @Path("/")
     @Consumes("application/json")
     @Produces("application/json")
-    public Response issueAccessToken(@Context HttpServletRequest request, String payload) throws
+    public Response issueAccessToken(@Context HttpServletRequest request, @Context HttpServletResponse response,
+                                     String payload) throws
             OAuthSystemException, InvalidRequestParentException {
 
         Map<String, List<String>> paramMap;
         try {
-            startSuperTenantFlow();
-            paramMap = parseJsonTokenRequest(payload);
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                if (MapUtils.isNotEmpty(paramMap)) {
-                    paramMap.forEach(params::put);
-                }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                        OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
-                        "receive-token-request", null);
+            // Start super tenant flow only if tenant qualified URLs are disabled.
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                startSuperTenantFlow();
             }
+            paramMap = parseJsonTokenRequest(payload);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.get(PROP_CLIENT_ID));
+            }
+            diagnosticLogBuilder.resultMessage("Successfully received the token request.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         } catch (TokenEndpointBadRequestException e) {
             triggerOnTokenExceptionListeners(e, request, null);
             throw e;
         } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
-        return issueAccessToken(request, paramMap);
+        return issueAccessToken(request, response, paramMap);
     }
 
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
-    public Response issueAccessToken(@Context HttpServletRequest request,
+    public Response issueAccessToken(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                      MultivaluedMap<String, String> paramMap)
             throws OAuthSystemException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            if (MapUtils.isNotEmpty(paramMap)) {
-                paramMap.forEach(params::put);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_TOKEN_REQUEST);
+            if (MapUtils.isNotEmpty(paramMap) && paramMap.containsKey(PROP_CLIENT_ID)) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, paramMap.getFirst(PROP_CLIENT_ID));
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.SUCCESS, "Successfully received token request.",
-                    "receive-token-request", null);
+            diagnosticLogBuilder.resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Successfully received the token request.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-        return issueAccessToken(request, (Map<String, List<String>>) paramMap);
+        return issueAccessToken(request, response, (Map<String, List<String>>) paramMap);
     }
 
-    protected Response issueAccessToken(HttpServletRequest request, Map<String, List<String>> paramMap) throws
+    protected Response issueAccessToken(HttpServletRequest request, HttpServletResponse response,
+                                        Map<String, List<String>> paramMap) throws
             OAuthSystemException, InvalidRequestParentException {
 
         try {
-            startSuperTenantFlow();
+            // Start super tenant flow only if tenant qualified URLs are disabled.
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                startSuperTenantFlow();
+            }
             validateRepeatedParams(request, paramMap);
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
-
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
-            validateOAuthApplication(oauthRequest.getoAuthClientAuthnContext());
-            OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest, httpRequest);
+            OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
+
+            if (!oauthClientAuthnContext.isAuthenticated()
+                    && OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthClientAuthnContext.getErrorCode())) {
+                return handleBasicAuthFailure(oauthClientAuthnContext.getErrorMessage());
+            }
+
+            validateOAuthApplication(oauthClientAuthnContext);
+            OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest,
+                    httpRequest, getHttpServletResponseWrapper(response));
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
                 return handleErrorResponse(oauth2AccessTokenResp);
@@ -151,7 +177,9 @@ public class OAuth2TokenEndpoint {
             throw e;
 
         } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
@@ -321,14 +349,17 @@ public class OAuth2TokenEndpoint {
     }
 
     private OAuth2AccessTokenRespDTO issueAccessToken(CarbonOAuthTokenRequest oauthRequest,
-                                                      HttpServletRequestWrapper httpServletRequestWrapper) {
+                                                      HttpServletRequestWrapper httpServletRequestWrapper,
+                                                      HttpServletResponseWrapper httpServletResponseWrapper) {
 
-        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper);
+        OAuth2AccessTokenReqDTO tokenReqDTO = buildAccessTokenReqDTO(oauthRequest, httpServletRequestWrapper,
+                httpServletResponseWrapper);
         return EndpointUtil.getOAuth2Service().issueAccessToken(tokenReqDTO);
     }
 
     private OAuth2AccessTokenReqDTO buildAccessTokenReqDTO(CarbonOAuthTokenRequest oauthRequest,
-                                                           HttpServletRequestWrapper httpServletRequestWrapper) {
+                                                           HttpServletRequestWrapper httpServletRequestWrapper,
+                                                           HttpServletResponseWrapper httpServletResponseWrapper) {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
@@ -347,6 +378,7 @@ public class OAuth2TokenEndpoint {
         tokenReqDTO.setHttpRequestHeaders(oauthRequest.getHttpRequestHeaders());
         // Set the request wrapper so we can get remote information later.
         tokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
+        tokenReqDTO.setHttpServletResponseWrapper(httpServletResponseWrapper);
 
         // Check the grant type and set the corresponding parameters
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {

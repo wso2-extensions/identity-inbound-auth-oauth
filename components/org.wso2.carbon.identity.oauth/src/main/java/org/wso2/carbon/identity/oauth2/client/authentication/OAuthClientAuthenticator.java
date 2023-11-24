@@ -20,7 +20,9 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.wso2.carbon.identity.core.handler.IdentityHandler;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -65,4 +67,14 @@ public interface OAuthClientAuthenticator extends IdentityHandler {
      */
     String getClientId(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException;
+
+    /**
+     * Retrieve the authentication methods supported by the authenticator.
+     *
+     * @return      Authentication methods supported by the authenticator.
+     */
+    default List<ClientAuthenticationMethodModel> getSupportedClientAuthenticationMethods() {
+
+        return Collections.emptyList();
+    }
 }

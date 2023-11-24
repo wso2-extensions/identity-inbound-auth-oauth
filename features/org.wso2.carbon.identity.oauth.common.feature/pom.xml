@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.28-SNAPSHOT</version>
+        <version>6.11.215-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -83,7 +83,7 @@
                                 <bundleDef>org.json.wso2:json</bundleDef>
                             </bundles>
                             <importFeatures>
-                                <importFeatureDef>org.wso2.carbon.identity.core.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.core.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>
                     </execution>

@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -111,7 +112,7 @@ public class JwksEndpoint {
     }
 
     private String buildResponse(List<CertificateInfo> certInfoList)
-            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
+            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
         JSONArray jwksArray = new JSONArray();
         JSONObject jwksJson = new JSONObject();
@@ -139,7 +140,7 @@ public class JwksEndpoint {
 
     private void populateJWKSArray(List<CertificateInfo> certInfoList, List<JWSAlgorithm> diffAlgorithms,
                                    JSONArray jwksArray, String hashingAlgorithm)
-            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException {
+            throws IdentityOAuth2Exception, ParseException, CertificateEncodingException, JOSEException {
 
         for (CertificateInfo certInfo : certInfoList) {
             for (JWSAlgorithm algorithm : diffAlgorithms) {
@@ -156,7 +157,8 @@ public class JwksEndpoint {
 
     private RSAKey.Builder getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
                                   String kidAlgorithm, String alias)
-            throws ParseException, IdentityOAuth2Exception {
+            throws ParseException, IdentityOAuth2Exception, JOSEException {
+
         RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey());
         if (kidAlgorithm.equals(OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM)) {
             jwk.keyID(OAuth2Util.getKID(certificate, algorithm, getTenantDomain()));
@@ -166,7 +168,7 @@ public class JwksEndpoint {
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
         jwk.x509CertChain(encodedCertList);
-        jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(certificate, alias)));
+        jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
         return jwk;
     }
 
@@ -195,8 +197,9 @@ public class JwksEndpoint {
             jwksArray.add(jwk.build().toJSONObject());
         }
     }
+
     /**
-     * This method read identity.xml and find different signing algorithms
+     * This method read identity.xml and find different signing algorithms.
      *
      * @param accessTokenSignAlgorithm
      * @param config
@@ -242,7 +245,7 @@ public class JwksEndpoint {
     }
 
     /**
-     * This method generates the key store file name from the Domain Name
+     * This method generates the key store file name from the Domain Name.
      *
      * @return key store file name
      */

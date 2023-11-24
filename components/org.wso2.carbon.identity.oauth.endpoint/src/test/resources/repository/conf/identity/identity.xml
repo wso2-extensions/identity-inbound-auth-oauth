@@ -148,6 +148,7 @@
         <OAuth1AuthorizeUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth/authorize-url</OAuth1AuthorizeUrl>
         <OAuth1AccessTokenUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth/access-token</OAuth1AccessTokenUrl>
         <OAuth2AuthzEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/authorize</OAuth2AuthzEPUrl>
+        <OAuth2ParEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/par</OAuth2ParEPUrl>
         <OAuth2TokenEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/token</OAuth2TokenEPUrl>
         <OAuth2RevokeEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/revoke</OAuth2RevokeEPUrl>
         <OAuth2IntrospectEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/introspect</OAuth2IntrospectEPUrl>
@@ -332,6 +333,9 @@
             <PollingInterval>5000</PollingInterval>
             <KeySet>BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789</KeySet>
         </DeviceCodeGrant>
+
+        <UseClientIdAsSubClaimForAppTokens>true</UseClientIdAsSubClaimForAppTokens>
+        <RemoveUsernameFromIntrospectionResponseForAppTokens>true</RemoveUsernameFromIntrospectionResponseForAppTokens>
 
         <!-- Configs related to OAuth2 token persistence -->
         <TokenPersistence>
@@ -660,7 +664,7 @@
             <Context>/oauth2</Context>
             <Context>/scim2</Context>
             <Context>/api/identity/entitlement</Context>
-            <Context>/api/identity/oauth2/dcr/v1.0</Context>
+            <Context>/api/identity/oauth2/dcr/v1.1</Context>
         </WebApp>
         <Servlet>
             <Context>/identity/(.*)</Context>

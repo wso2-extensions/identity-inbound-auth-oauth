@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.collections.map.HashedMap;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -42,6 +43,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -266,6 +268,7 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         if (mockAccessTokenDO) {
             when(OAuth2Util.getAccessTokenIdentifier(any())).thenReturn("DummyIdentifier");
             when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString())).thenReturn(accessTokenDO);
+            when(OAuth2Util.findAccessToken(any(), anyBoolean())).thenReturn(accessTokenDO);
         }
 
         mockStatic(OAuth2ServiceComponentHolder.class);
@@ -314,6 +317,11 @@ public class ClaimUtilTest extends PowerMockIdentityBaseTest {
         when(mockedServiceProvider.getPermissionAndRoleConfig()).thenReturn(mockedPermissionAndRoleConfig);
         when(mockedPermissionAndRoleConfig.getRoleMappings()).thenReturn(roleMappings);
 
+        OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                Mockito.mock(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
+        when(oAuth2ServiceComponentHolderInstance.getTokenProvider())
+                .thenReturn(new DefaultTokenProvider());
         Map<String, Object> claimsMap;
         try {
             claimsMap = ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);

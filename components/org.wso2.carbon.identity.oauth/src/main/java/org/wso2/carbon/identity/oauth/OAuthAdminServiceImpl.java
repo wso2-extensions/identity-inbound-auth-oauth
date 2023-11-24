@@ -16,11 +16,18 @@
 
 package org.wso2.carbon.identity.oauth;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.httpclient.HttpsURL;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.json.JSONObject;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -28,6 +35,10 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
+import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -52,6 +63,7 @@ import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
@@ -61,13 +73,18 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,12 +93,16 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.TARGET_APPLICATION;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
+import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -247,12 +268,14 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
 
+        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDO app = new OAuthAppDO();
         AuthenticatedUser defaultAppOwner = null;
         try {
-            if (tenantAwareLoggedInUsername != null) {
+            if (StringUtils.isNotEmpty(tenantAwareLoggedInUsername)) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
             } else {
                 Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
@@ -272,11 +295,11 @@ public class OAuthAdminServiceImpl {
                     app.setState(APP_STATE_ACTIVE);
                     if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                         app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
-                        app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                        app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                     } else {
                         app.setOauthConsumerKey(application.getOauthConsumerKey());
                         if (StringUtils.isEmpty(application.getOauthConsumerSecret())) {
-                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumber());
+                            app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
                         } else {
                             app.setOauthConsumerSecret(application.getOauthConsumerSecret());
                         }
@@ -310,12 +333,18 @@ public class OAuthAdminServiceImpl {
                         // Set OIDC Config Properties.
                         app.setRequestObjectSignatureValidationEnabled(
                                 application.isRequestObjectSignatureValidationEnabled());
-
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
-                            app.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(application));
-                            app.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((application)));
+                            if (enforceFAPIDCR) {
+                                validateFAPIEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm());
+                            }
+                            app.setIdTokenEncryptionAlgorithm(
+                                    filterEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm(),
+                                            OAuthConstants.ID_TOKEN_ENCRYPTION_ALGORITHM));
+                            app.setIdTokenEncryptionMethod(
+                                    filterEncryptionMethod(application.getIdTokenEncryptionMethod(),
+                                            OAuthConstants.ID_TOKEN_ENCRYPTION_METHOD));
                         }
 
                         app.setBackChannelLogoutUrl(application.getBackChannelLogoutUrl());
@@ -327,24 +356,130 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
-                        validateBindingType(application.getTokenBindingType());
+                        if (enforceFAPIDCR) {
+                            validateFAPIBindingType(application.getTokenBindingType());
+                        } else {
+                            validateBindingType(application.getTokenBindingType());
+                        }
                         app.setTokenBindingType(application.getTokenBindingType());
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                        String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
+                        if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
+                            if (enforceFAPIDCR) {
+                                validateFAPITokenAuthMethods(tokenEndpointAuthMethod);
+                            } else {
+                                filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
+                            }
+                            app.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
+                        }
+                        String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
+                        if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
+                            if (enforceFAPIDCR) {
+                                validateFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
+                            } else {
+                                filterSignatureAlgorithms(tokenEndpointAuthSigningAlgorithm,
+                                      OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
+                            }
+                            app.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSigningAlgorithm);
+                        }
+                        if (StringUtils.isEmpty(application.getSubjectType())) {
+                            // Set default subject type.
+                            application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+                        }
+                        OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
+                                application.getSubjectType());
+                        if (subjectType == null) {
+                            application.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+                        }
+                        if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(application.getSubjectType())) {
+                            if (StringUtils.isNotEmpty(application.getCallbackUrl())) {
+                                List<String> callBackURIList = new ArrayList<>();
+                                // Need to split the redirect uris for validating the host names since it is combined
+                                // into one regular expression.
+                                if (application.getCallbackUrl().startsWith(
+                                        OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                                    callBackURIList = getRedirectURIList(application);
+                                } else {
+                                    callBackURIList.add(application.getCallbackUrl());
+                                }
+                                if (StringUtils.isNotEmpty(application.getSectorIdentifierURI())) {
+                                    validateSectorIdentifierURI(application.getSectorIdentifierURI(), callBackURIList);
+                                    app.setSectorIdentifierURI(application.getSectorIdentifierURI());
+                                } else {
+                                    validateRedirectURIForPPID(callBackURIList);
+                                }
+                            }
+                        }
+                        app.setSubjectType(application.getSubjectType());
+
+                        String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
+                        if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
+                            if (enforceFAPIDCR) {
+                                validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
+                            } else {
+                                filterSignatureAlgorithms(idTokenSignatureAlgorithm,
+                                       OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
+                            }
+                            app.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
+                        }
+                        String requestObjectSignatureAlgorithm = application.getRequestObjectSignatureAlgorithm();
+                        if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
+                            if (enforceFAPIDCR) {
+                                validateFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
+                            } else {
+                                filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
+                                        OAuthConstants.REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION);
+                            }
+                            app.setRequestObjectSignatureValidationEnabled(
+                                    application.isRequestObjectSignatureValidationEnabled());
+                            app.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
+                        }
+                        app.setTlsClientAuthSubjectDN(application.getTlsClientAuthSubjectDN());
+
+                        String requestObjectEncryptionAlgorithm = application.getRequestObjectEncryptionAlgorithm();
+                        if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionAlgorithm())) {
+                            if (enforceFAPIDCR) {
+                                validateFAPIEncryptionAlgorithms(
+                                        application.getRequestObjectEncryptionAlgorithm());
+                            } else {
+                                filterEncryptionAlgorithms(application.getRequestObjectEncryptionAlgorithm(),
+                                        OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
+                            }
+                            app.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+                        }
+                        if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionMethod())) {
+                            app.setRequestObjectEncryptionMethod(filterEncryptionMethod(
+                                    application.getRequestObjectEncryptionMethod(),
+                                    OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD));
+                        }
+                        app.setRequirePushedAuthorizationRequests(application.getRequirePushedAuthorizationRequests());
+                        app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                     }
                     dao.addOAuthApplication(app);
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
-                                " in " +
-                                "tenant domain: " + tenantDomain);
+                                " in tenant domain: " + tenantDomain);
+                    }
+                    if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+                        Optional<String> initiatorId = getInitiatorId();
+                        if (initiatorId.isPresent()) {
+                            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                                    initiatorId.get(), USER,
+                                    app.getOauthConsumerKey(), TARGET_APPLICATION,
+                                    OAuthConstants.LogConstants.CREATE_OAUTH_APPLICATION)
+                                    .data(buildSPData(app));
+                            triggerAuditLogEvent(auditLogBuilder, true);
+                        } else {
+                            LOG.error("Error getting the logged in userId");
+                        }
                     }
                 } else {
                     String message = "No application details in the request. Failed to register OAuth App.";
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug(message);
-                    }
+                    LOG.debug(message);
+
                     throw handleClientError(INVALID_REQUEST, message);
                 }
             } else {
@@ -353,7 +488,7 @@ public class OAuthAdminServiceImpl {
                         LOG.debug("No authenticated user found. Failed to register OAuth App: " +
                                 application.getApplicationName());
                     } else {
-                        LOG.debug("No authenticated user found. Failed to register OAuth App");
+                        LOG.debug("No authenticated user found. Failed to register OAuth App.");
                     }
                 }
                 String message = "No authenticated user found. Failed to register OAuth App.";
@@ -364,6 +499,65 @@ public class OAuthAdminServiceImpl {
                     "Error resolving user. Failed to register OAuth App", e);
         }
         return OAuthUtil.buildConsumerAppDTO(app);
+    }
+
+
+    private Optional<AuthenticatedUser> getLoggedInUser(String tenantDomain) {
+
+        String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
+        return Optional.ofNullable(tenantAwareLoggedInUsername)
+                .filter(StringUtils::isNotEmpty)
+                .map(username -> buildAuthenticatedUser(username, tenantDomain));
+
+    }
+
+    private static Map<String, Object> buildSPData(OAuthAppDO app) {
+
+        if (app == null) {
+            return new HashMap<>();
+        }
+        Gson gson = new Gson();
+        String oauthApp = maskSPData(app);
+        return gson.fromJson(oauthApp, new TypeToken<Map<String, Object>>() {
+        }.getType());
+    }
+
+    private static String maskSPData(OAuthAppDO oAuthAppDO) {
+
+        if (oAuthAppDO == null) {
+            return StringUtils.EMPTY;
+        }
+        try {
+            JSONObject oauthAppJSONObject =
+                    new JSONObject(new ObjectMapper().writeValueAsString(oAuthAppDO));
+            maskClientSecret(oauthAppJSONObject);
+            maskAppOwnerUsername(oauthAppJSONObject);
+            return oauthAppJSONObject.toString();
+        } catch (JsonProcessingException | IdentityException e) {
+            LOG.error("Error while converting service provider object to json.");
+        }
+        return StringUtils.EMPTY;
+    }
+
+    private static void maskAppOwnerUsername(JSONObject oauthAppJSONObject) throws IdentityException {
+
+        JSONObject appOwner = oauthAppJSONObject.optJSONObject("appOwner");
+        if (!LoggerUtils.isLogMaskingEnable || appOwner == null) {
+            return;
+        }
+        String username = (String) appOwner.get("userName");
+        if (StringUtils.isNotBlank(username)) {
+            appOwner.put("userName", LoggerUtils.getMaskedContent(username));
+        }
+    }
+
+    private static void maskClientSecret(JSONObject oauthApp) {
+
+        if (oauthApp.get("oauthConsumerSecret") == null) {
+            return;
+        }
+        String secret = oauthApp.get("oauthConsumerSecret").toString();
+        oauthApp.put("oauthConsumerSecret", LoggerUtils.getMaskedContent(secret));
     }
 
     private void validateAudiences(OAuthConsumerAppDTO application) throws IdentityOAuthClientException {
@@ -409,6 +603,24 @@ public class OAuthAdminServiceImpl {
         }
     }
 
+    /**
+     * FAPI validation to restrict the token binding type to ensure MTLS sender constrained access tokens.
+     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
+     * @param bindingType Token binding type.
+     * @throws IdentityOAuthClientException if binding type is not 'certificate'.
+     */
+    private void validateFAPIBindingType(String bindingType)
+            throws IdentityOAuthClientException {
+
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            return;
+        } else {
+            String msg = String.format("Certificate bound access tokens is required. '%s' binding type is found.",
+                    bindingType);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+    }
+
     private IdentityOAuthClientException handleClientError(Error errorMessage, String msg) {
 
         return new IdentityOAuthClientException(errorMessage.getErrorCode(), msg);
@@ -450,6 +662,8 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
+        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
+                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
@@ -528,18 +742,122 @@ public class OAuthAdminServiceImpl {
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                oauthappdo.setIdTokenEncryptionAlgorithm(filterIdTokenEncryptionAlgorithm(consumerAppDTO));
-                oauthappdo.setIdTokenEncryptionMethod(filterIdTokenEncryptionMethod((consumerAppDTO)));
+                if (enforceFAPIDCR) {
+                    validateFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
+                }
+                oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
+                        consumerAppDTO.getIdTokenEncryptionAlgorithm(), OAuthConstants.ID_TOKEN_ENCRYPTION_ALGORITHM));
+                oauthappdo.setIdTokenEncryptionMethod(filterEncryptionMethod(
+                        consumerAppDTO.getIdTokenEncryptionMethod(), OAuthConstants.ID_TOKEN_ENCRYPTION_METHOD));
             }
 
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
-            validateBindingType(consumerAppDTO.getTokenBindingType());
+            if (enforceFAPIDCR) {
+                validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
+            } else {
+                validateBindingType(consumerAppDTO.getTokenBindingType());
+            }
             oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
+
+            String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
+            if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
+                if (enforceFAPIDCR) {
+                    validateFAPITokenAuthMethods(tokenEndpointAuthMethod);
+                } else {
+                    filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
+                }
+            }
+            oauthappdo.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
+
+            String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
+            if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
+                if (enforceFAPIDCR) {
+                    validateFAPISignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm);
+                } else {
+                    filterSignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm,
+                            OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
+                }
+            }
+            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSignatureAlgorithm);
+
+            if (StringUtils.isEmpty(consumerAppDTO.getSubjectType())) {
+                // Set default subject type if not set.
+                oauthappdo.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+            }
+            OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
+                    consumerAppDTO.getSubjectType());
+            if (subjectType == null) {
+                consumerAppDTO.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+            }
+            if (OAuthConstants.SubjectType.PAIRWISE.getValue().equals(consumerAppDTO.getSubjectType())) {
+                if (StringUtils.isNotEmpty(consumerAppDTO.getCallbackUrl())) {
+                    List<String> callBackURIList = new ArrayList<>();
+                    // Need to split the redirect uris for validating the host names since it is combined
+                    // into one regular expression.
+                    if (consumerAppDTO.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                        callBackURIList = getRedirectURIList(consumerAppDTO);
+                    } else {
+                        callBackURIList.add(consumerAppDTO.getCallbackUrl());
+                    }
+                    if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
+                        validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
+                        oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+                    } else {
+                        validateRedirectURIForPPID(callBackURIList);
+                    }
+                }
+            }
+            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+            oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
+
+            String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
+            if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
+                if (enforceFAPIDCR) {
+                    validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
+                } else {
+                    filterSignatureAlgorithms(idTokenSignatureAlgorithm,
+                            OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
+                }
+            }
+            oauthappdo.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
+
+            String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
+            if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
+                if (enforceFAPIDCR) {
+                    validateFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
+                } else {
+                    filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
+                            OAuthConstants.REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION);
+                }
+            }
+            oauthappdo.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
+            oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
+                    .isRequestObjectSignatureValidationEnabled());
+
+            oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
+
+            String requestObjectEncryptionAlgorithm = consumerAppDTO.getRequestObjectEncryptionAlgorithm();
+            if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
+                if (enforceFAPIDCR) {
+                    validateFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
+                } else {
+                    filterEncryptionAlgorithms(
+                            requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
+                }
+            }
+            oauthappdo.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+            String requestObjectEncryptionMethod = consumerAppDTO.getRequestObjectEncryptionMethod();
+            if (StringUtils.isNotEmpty(requestObjectEncryptionMethod)) {
+                filterEncryptionMethod(requestObjectEncryptionMethod, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD);
+
+            }
+            oauthappdo.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
+            oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
         }
         dao.updateConsumerApplication(oauthappdo);
         AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
@@ -547,6 +865,33 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
         }
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, oauthConsumerKey,
+                        TARGET_APPLICATION, OAuthConstants.LogConstants.UPDATE_OAUTH_APPLICATION)
+                        .data(buildSPData(oauthappdo));
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
+            }
+        }
+    }
+
+    private Optional<String> getInitiatorId() {
+
+        String loggedInUserId = CarbonContext.getThreadLocalCarbonContext().getUserId();
+        if (StringUtils.isNotBlank(loggedInUserId)) {
+            return Optional.of(loggedInUserId);
+        } else {
+            String tenantDomain = getLoggedInTenant();
+            Optional<AuthenticatedUser> loggedInUser = getLoggedInUser(tenantDomain);
+            if (loggedInUser.isPresent()) {
+                return Optional.ofNullable(IdentityUtil.getInitiatorId(loggedInUser.get().getUserName(), tenantDomain));
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -812,10 +1157,24 @@ public class OAuthAdminServiceImpl {
 
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+            handleInternalTokenRevocation(consumerKey, properties);
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
                         "consumerKey: " + consumerKey);
+            }
+
+            if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+                Optional<String> initiatorId = getInitiatorId();
+                if (initiatorId.isPresent()) {
+                    AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                            initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                            OAuthConstants.LogConstants.UPDATE_APP_STATE);
+
+                    triggerAuditLogEvent(auditLogBuilder, true);
+                } else {
+                    LOG.error("Error getting the logged in userId");
+                }
             }
 
         } catch (InvalidOAuthClientException e) {
@@ -837,6 +1196,13 @@ public class OAuthAdminServiceImpl {
         updateAndRetrieveOauthSecretKey(consumerKey);
     }
 
+    private String getLoggedInTenant() {
+
+        return Optional.ofNullable(IdentityTenantUtil.getTenantDomainFromContext())
+                .filter(StringUtils::isNotBlank)
+                .orElseGet(() -> PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+    }
+
     /**
      * Regenerate consumer secret for the application and retrieve application details.
      *
@@ -847,22 +1213,45 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO updateAndRetrieveOauthSecretKey(String consumerKey) throws IdentityOAuthAdminException {
 
         Properties properties = new Properties();
-        String newSecret = OAuthUtil.getRandomNumber();
+        String newSecret = OAuthUtil.getRandomNumberSecure();
+        OAuthConsumerAppDTO oldAppDTO = null;
+
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            oldAppDTO = getOAuthApplicationData(consumerKey);
+        }
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+        handleInternalTokenRevocation(consumerKey, properties);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
-
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            // This API is invoked when regenerating client secret and when activating the app.
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                if (!StringUtils.equalsIgnoreCase(oldAppDTO.getState(), APP_STATE_ACTIVE)) {
+                    AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                            initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                            OAuthConstants.LogConstants.UPDATE_APP_STATE)
+                            .data(Map.of("state", APP_STATE_ACTIVE));
+                    triggerAuditLogEvent(auditLogBuilder, true);
+                }
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                        OAuthConstants.LogConstants.REGENERATE_CLIENT_SECRET);
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
+            }
+        }
         return updatedApplication;
-
     }
 
     void updateAppAndRevokeTokensAndAuthzCodes(String consumerKey,
@@ -941,6 +1330,8 @@ public class OAuthAdminServiceImpl {
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreRemoveOAuthApplicationData(consumerKey);
         }
+        Properties properties = new Properties();
+        properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
@@ -977,7 +1368,18 @@ public class OAuthAdminServiceImpl {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
         }
-
+        handleInternalTokenRevocation(consumerKey, properties);
+        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                        OAuthConstants.LogConstants.DELETE_OAUTH_APPLICATION);
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
+            }
+        }
     }
 
     /**
@@ -1240,7 +1642,7 @@ public class OAuthAdminServiceImpl {
             return revokeRespDTO;
         }
 
-        String tenantDomain = getTenantDomain(consumerKey);
+        String tenantDomain = getLoggedInTenant(consumerKey);
         String applicationName = getApplicationName(consumerKey, tenantDomain);
         List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
         if (accessTokenDOs.size() > 0) {
@@ -1388,7 +1790,7 @@ public class OAuthAdminServiceImpl {
         }
     }
 
-    private String getTenantDomain(String consumerKey) throws IdentityOAuthAdminException {
+    private String getLoggedInTenant(String consumerKey) throws IdentityOAuthAdminException {
 
         String tenantDomain;
         try {
@@ -1641,40 +2043,37 @@ public class OAuthAdminServiceImpl {
     /**
      * Get the IdToken Encryption Method registered by the user and filter the allowed one.
      *
-     * @param application Application user have registered
+     * @param encryptionMethod Encryption method sent in the registration request.
      * @return idTokenEncryptionMethod
      * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
-    private String filterIdTokenEncryptionMethod(OAuthConsumerAppDTO application) throws IdentityOAuthAdminException {
+    private String filterEncryptionMethod(String encryptionMethod, String configName)
+            throws IdentityOAuthAdminException {
 
-        List<String> supportedIdTokenEncryptionMethods = OAuthServerConfiguration.getInstance()
-                .getSupportedIdTokenEncryptionMethods();
-        String idTokenEncryptionMethod = application.getIdTokenEncryptionMethod();
-        if (!supportedIdTokenEncryptionMethods.contains(idTokenEncryptionMethod)) {
-            String msg = String.format("'%s' IdToken Encryption Method is not allowed.", idTokenEncryptionMethod);
+        List<String> supportedEncryptionMethods = IdentityUtil.getPropertyAsList(configName);
+        if (!supportedEncryptionMethods.contains(encryptionMethod)) {
+            String msg = String.format("'%s' Encryption Method is not allowed.", encryptionMethod);
             throw handleClientError(INVALID_REQUEST, msg);
         }
-        return idTokenEncryptionMethod;
+        return encryptionMethod;
     }
 
     /**
      * Get the IdToken Encryption Algorithm registered by the user and filter the allowed one.
      *
-     * @param application Application user have registered
+     * @param algorithm algorithm sent in the registration request.
      * @return idTokenEncryptionAlgorithm
      * @throws IdentityOAuthAdminException Identity OAuthAdmin exception.
      */
-    private String filterIdTokenEncryptionAlgorithm(OAuthConsumerAppDTO application)
+    private String filterEncryptionAlgorithms(String algorithm, String configName)
             throws IdentityOAuthAdminException {
 
-        List<String> supportedIdTokenEncryptionAlgorithms = OAuthServerConfiguration.getInstance()
-                .getSupportedIdTokenEncryptionAlgorithm();
-        String idTokenEncryptionAlgorithm = application.getIdTokenEncryptionAlgorithm();
-        if (!supportedIdTokenEncryptionAlgorithms.contains(idTokenEncryptionAlgorithm)) {
-            String msg = String.format("'%s' IdToken Encryption Method is not allowed.", idTokenEncryptionAlgorithm);
+        List<String> supportedEncryptionAlgorithms = IdentityUtil.getPropertyAsList(configName);
+        if (!supportedEncryptionAlgorithms.contains(algorithm)) {
+            String msg = String.format("'%s' Encryption Algorithm is not allowed.", algorithm);
             throw handleClientError(INVALID_REQUEST, msg);
         }
-        return idTokenEncryptionAlgorithm;
+        return algorithm;
     }
 
     /**
@@ -1774,6 +2173,7 @@ public class OAuthAdminServiceImpl {
         validateScopeName(scope.getName());
         validateRegex(scope.getName());
         validateDisplayName(scope.getDisplayName());
+        validateDescription(scope.getDescription());
     }
 
     /**
@@ -1789,7 +2189,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Check whether scope name is provided or not.
+     * Check whether scope name is empty, contains white spaces and whether the scope name is too long.
      *
      * @param scopeName Scope name.
      * @throws IdentityOAuth2ScopeClientException
@@ -1802,6 +2202,10 @@ public class OAuthAdminServiceImpl {
                     ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SPECIFIED.getMessage());
         }
         validateWhiteSpaces(scopeName);
+        if (scopeName.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_NAME) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_NAME_TOO_LONG.getMessage(), scopeName));
+        }
     }
 
     private void validateRegex(String scopeName) throws IdentityOAuthClientException {
@@ -1834,7 +2238,7 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Check whether display name is provided or empty.
+     * Check whether the display name is provided or empty and whether the display name is too long.
      *
      * @param displayName Display name.
      * @throws IdentityOAuth2ScopeClientException
@@ -1846,6 +2250,25 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST,
                     Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_NOT_SPECIFIED
                             .getMessage());
+        }
+        if (displayName.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DISPLAY_NAME) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_TOO_LONG.getMessage(), displayName));
+        }
+    }
+
+    /**
+     * Check whether the description is too long.
+     *
+     * @param description Description.
+     * @throws IdentityOAuth2ScopeClientException
+     */
+    private void validateDescription(String description) throws IdentityOAuthClientException {
+
+        if (StringUtils.isNotBlank(description) &&
+                description.length() > Oauth2ScopeConstants.MAX_LENGTH_OF_SCOPE_DESCRIPTION) {
+            throw handleClientError(INVALID_REQUEST, String.format(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_TOO_LONG.getMessage(), description));
         }
     }
 
@@ -1876,9 +2299,186 @@ public class OAuthAdminServiceImpl {
 
         try {
             int tenantId = getTenantId(tenantDomain);
-            return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
+            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Notify OAuthApplicationMgtListeners on post consumer app change events which have impact on token revocation.
+     *
+     * @param consumerKey consumer key of the application
+     * @param properties  properties
+     * @throws IdentityOAuthAdminException if an error occurs while handling the internal token revocation
+     */
+    private void handleInternalTokenRevocation(String consumerKey, Properties properties)
+            throws IdentityOAuthAdminException {
+
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPostTokenRevocationOnClientAppEvent(consumerKey, properties);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
+            }
+        }
+    }
+
+    /**
+     * FAPI validation to restrict the token endpoint authentication methods.
+     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2 - 14)
+     * @param authenticationMethod authentication methid used to authenticate to the token endpoint
+     * @throws IdentityOAuthClientException
+     */
+    private void validateFAPITokenAuthMethods(String authenticationMethod) throws IdentityOAuthClientException {
+
+        List<String> allowedAuthMethods = IdentityUtil.getPropertyAsList(
+                OAuthConstants.FAPI_CLIENT_AUTH_METHOD_CONFIGURATION);
+        if (authenticationMethod != null && !allowedAuthMethods.contains(authenticationMethod)) {
+            throw handleClientError(INVALID_REQUEST, "Invalid token endpoint authentication method requested.");
+        }
+    }
+
+    /**
+     * FAPI validation to restrict the signature algorithms.
+     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations
+     * @param signatureAlgorithm signature algorithm used to sign the assertions.
+     * @throws IdentityOAuthClientException
+     */
+    private void validateFAPISignatureAlgorithms(String signatureAlgorithm)
+            throws IdentityOAuthClientException {
+
+        List<String> allowedSignatureAlgorithms = IdentityUtil
+                .getPropertyAsList(OAuthConstants.FAPI_SIGNATURE_ALGORITHM_CONFIGURATION);
+        if (signatureAlgorithm != null && !allowedSignatureAlgorithms.contains(signatureAlgorithm)) {
+            throw handleClientError(INVALID_REQUEST, "Invalid signature algorithm requested");
+        }
+    }
+
+    /**
+     * FAPI validation to restrict the encryption algorithms.
+     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#encryption-algorithm-considerations
+     * @param encryptionAlgorithm
+     * @throws IdentityOAuthClientException
+     */
+    private void validateFAPIEncryptionAlgorithms(String encryptionAlgorithm)
+            throws IdentityOAuthClientException {
+
+        if (encryptionAlgorithm.equals(OAuthConstants.RESTRICTED_ENCRYPTION_ALGORITHM)) {
+            throw handleClientError(INVALID_REQUEST, "Invalid encryption algorithm requested");
+        }
+    }
+
+
+    /**
+     * If there are multiple hostnames in the registered redirect_uris,
+     * the Client MUST register a sector_identifier_uri.
+     * https://openid.net/specs/openid-connect-core-1_0.html#PairwiseAlg
+     * @param redirectURIs list of callback urls sent in the request
+     * @throws IdentityOAuthClientException
+     */
+    private void validateRedirectURIForPPID(List<String> redirectURIs)
+            throws IdentityOAuthClientException {
+
+        if (redirectURIs.size() > 1) {
+            String hostname = URI.create(redirectURIs.get(0)).getHost();
+            for (String redirectURI : redirectURIs) {
+                URI uri = URI.create(redirectURI);
+                if (!uri.getHost().equals(hostname)) {
+                    throw handleClientError(INVALID_REQUEST,
+                            "Sector identifier URI is needed for PPID calculation");
+                }
+            }
+        }
+    }
+
+    /**
+     * The value of the sector_identifier_uri MUST be a URL using the https scheme
+     * The values of the registered redirect_uris MUST be included in the elements of the array.
+     * https://openid.net/specs/openid-connect-core-1_0.html#PairwiseAlg
+     *
+     * @param sectorIdentifierURI sector identifier URI
+     * @param redirectURIs        callBack URLs
+     * @throws IdentityOAuthClientException
+     */
+    private void validateSectorIdentifierURI(String sectorIdentifierURI, List<String> redirectURIs) throws
+            IdentityOAuthClientException {
+
+        URI uri = URI.create(sectorIdentifierURI);
+        String scheme = uri.getScheme();
+        if (!StringUtils.equals(scheme, String.valueOf(HttpsURL.DEFAULT_SCHEME))) {
+            throw handleClientError(INVALID_REQUEST, "Invalid scheme for sector identifier URI");
+        }
+        // Validate whether sectorIdentifierURI points to JSON file containing an array of redirect_uri values.
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.VALIDATE_SECTOR_IDENTIFIER))) {
+            try {
+                List<String> fetchedRedirectURI = new ArrayList<>();
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode redirectURIArray = mapper.readTree(uri.toURL());
+                if (redirectURIArray.isArray()) {
+                    Iterator<JsonNode> itr = redirectURIArray.iterator();
+                    while (itr.hasNext()) {
+                        JsonNode item = itr.next();
+                        fetchedRedirectURI.add(item.asText());
+                    }
+                }
+                if (!fetchedRedirectURI.containsAll(redirectURIs)) {
+                    throw handleClientError(INVALID_REQUEST, "Redirect URI missing in sector " +
+                            "identifier URI set");
+                }
+            } catch (IOException e) {
+                throw handleClientError(INVALID_REQUEST, "Invalid sector identifier URI");
+            }
+        }
+    }
+
+    /**
+     * Get call back URIs as a list
+     * @param application  OAuthConsumerAppDTO
+     * @return list of callback urls
+     */
+    private List<String> getRedirectURIList(OAuthConsumerAppDTO application) {
+
+        List<String> callBackURIList = new ArrayList<>();
+        // Need to split the redirect uris for validating the host names since it is combined
+        // into one regular expression.
+        if (application.getCallbackUrl().startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+            String redirectURI = application.getCallbackUrl();
+            redirectURI = redirectURI.substring(redirectURI.indexOf("(") + 1,
+                    redirectURI.indexOf(")"));
+            callBackURIList = Arrays.asList(redirectURI.split("\\|"));
+        }
+        return callBackURIList;
+    }
+
+    /**
+     * filter allowed signature algorithms
+     *
+     * @param algorithm  algorithm to be validated
+     * @param configName configuration to read allowed algorithms
+     * @throws IdentityOAuthClientException if the algorithm is not allowed
+     */
+    public void filterSignatureAlgorithms(String algorithm, String configName) throws IdentityOAuthClientException {
+
+        List<String> allowedSignatureAlgorithms = IdentityUtil.getPropertyAsList(configName);
+        if (!allowedSignatureAlgorithms.contains(algorithm)) {
+            String msg = String.format("'%s' Signing Algorithm is not allowed.", algorithm);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+    }
+
+    /**
+     * filter allowed token endpoint authentication methods
+     *
+     * @param authMethod authentication method to be validated
+     * @throws IdentityOAuthClientException if the token endpoint authentication method is not allowed
+     */
+    public void filterTokenEndpointAuthMethods(String authMethod) throws IdentityOAuthClientException {
+
+        List<String> authMethods = Arrays.asList(OAuth2Util.getSupportedClientAuthMethods());
+        if (!authMethods.contains(authMethod)) {
+            String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
+            throw handleClientError(INVALID_REQUEST, msg);
         }
     }
 }

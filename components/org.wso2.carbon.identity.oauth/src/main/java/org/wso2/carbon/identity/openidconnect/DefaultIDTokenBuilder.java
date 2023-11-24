@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
@@ -111,6 +112,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
         String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
         String accessToken = tokenRespDTO.getAccessToken();
+        JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
@@ -120,12 +122,19 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
         }
+        // Retrieve application id token signature algorithm
+        if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+            idTokenSignatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                    oAuthAppDO.getIdTokenSignatureAlgorithm());
+        }
 
         long idTokenValidityInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authorizedUser = tokenReqMsgCtxt.getAuthorizedUser();
         String subjectClaim = getSubjectClaim(tokenReqMsgCtxt, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        // Get subject identifier according to the configured subject type.
+        subjectClaim = OIDCClaimUtil.getSubjectClaim(subjectClaim, oAuthAppDO);
 
         String nonceValue = null;
         String idpSessionKey = null;
@@ -194,6 +203,13 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (idpSessionKey != null) {
             jwtClaimsSetBuilder.claim(IDP_SESSION_KEY, idpSessionKey);
         }
+        AccessTokenExtendedAttributes accessTokenExtendedAttributes =
+                tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes();
+        if (accessTokenExtendedAttributes != null && accessTokenExtendedAttributes.getParameters() != null) {
+            for (Map.Entry<String, String> entry : accessTokenExtendedAttributes.getParameters().entrySet()) {
+                jwtClaimsSetBuilder.claim(entry.getKey(), entry.getValue());
+            }
+        }
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(tokenReqMsgCtxt, tokenRespDTO, jwtClaimsSetBuilder);
 
@@ -214,7 +230,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
 
-        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt));
+        return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO, getSigningTenantDomain(tokenReqMsgCtxt),
+                idTokenSignatureAlgorithm);
     }
 
     @Override
@@ -225,16 +242,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
         String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
-
-        // Get subject from Authenticated Subject Identifier
-        AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
-        String subject =
-                getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
-
-        String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
-        String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
-        List<String> amrValues = Collections.emptyList(); //TODO:
-        String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
+        JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
@@ -244,6 +252,23 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
         }
+        // Retrieve application id token signature algorithm
+        if (StringUtils.isNotEmpty(oAuthAppDO.getIdTokenSignatureAlgorithm())) {
+            idTokenSignatureAlgorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(
+                    oAuthAppDO.getIdTokenSignatureAlgorithm());
+        }
+
+        // Get subject from Authenticated Subject Identifier
+        AuthenticatedUser authorizedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
+        String subject =
+                getSubjectClaim(authzReqMessageContext, tokenRespDTO, clientId, spTenantDomain, authorizedUser);
+        // Get subject identifier according to the configured subject type.
+        subject = OIDCClaimUtil.getSubjectClaim(subject, oAuthAppDO);
+
+        String nonceValue = authzReqMessageContext.getAuthorizationReqDTO().getNonce();
+        String acrValue = authzReqMessageContext.getAuthorizationReqDTO().getSelectedAcr();
+        List<String> amrValues = Collections.emptyList(); //TODO:
+        String idpSessionKey = getIdpSessionKey(authzReqMessageContext);
 
         String[] amrValueArray =
                 (String[]) (authzReqMessageContext.getAuthorizationReqDTO().getProperty(OAuthConstants.AMR));
@@ -299,11 +324,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         }
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
-                getSigningTenantDomain(authzReqMessageContext));
+                getSigningTenantDomain(authzReqMessageContext), idTokenSignatureAlgorithm);
     }
 
     private String getIDToken(String clientId, String spTenantDomain, JWTClaimsSet jwtClaimsSet, OAuthAppDO oAuthAppDO,
-                              String signingTenantDomain) throws IdentityOAuth2Exception {
+                              String signingTenantDomain, JWSAlgorithm signatureAlgorithm)
+            throws IdentityOAuth2Exception {
 
         if (oAuthAppDO.isIdTokenEncryptionEnabled()) {
             checkIfPublicCertConfiguredForEncryption(clientId, spTenantDomain);

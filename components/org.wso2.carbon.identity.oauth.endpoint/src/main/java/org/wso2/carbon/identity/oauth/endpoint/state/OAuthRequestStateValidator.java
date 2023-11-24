@@ -31,9 +31,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
@@ -85,6 +83,15 @@ public class OAuthRequestStateValidator {
     private void validateRequest(OAuthMessage oAuthMessage)
             throws InvalidRequestParentException {
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                    .inputParams(oAuthMessage.getRequest().getParameterMap())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         validateRepeatedParameters(oAuthMessage);
 
         if (oAuthMessage.getResultFromLogin() != null && oAuthMessage.getResultFromConsent() != null) {
@@ -93,13 +100,10 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' found in request as parameter and " +
                         "attribute, and both have non NULL objects in cache");
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "invalid 'SessionDataKey' parameter in authorization request",
-                        "validate-input-parameters", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null if diagnostic logs are disabled.
+                diagnosticLogBuilder.resultMessage("Invalid 'SessionDataKey' parameter in authorization request.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST);
@@ -111,13 +115,10 @@ public class OAuthRequestStateValidator {
                 log.debug("Invalid authorization request.\'SessionDataKey\' not found in request as parameter or " +
                         "attribute, and client_id parameter cannot be found in request");
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "invalid 'client_id' and 'SessionDataKey' parameters cannot be found in request",
-                        "validate-input-parameters", null);
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.resultMessage("Invalid 'client_id' and 'SessionDataKey' parameters cannot be " +
+                        "found in request.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new InvalidRequestException("Invalid authorization request", OAuth2ErrorCodes.INVALID_REQUEST,
                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT);
@@ -128,12 +129,10 @@ public class OAuthRequestStateValidator {
                 log.debug(
                         "Session data not found in SessionDataCache for " + oAuthMessage.getSessionDataKeyFromLogin());
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Access denied since user session has timed-out.",
-                        "validate-input-parameters", null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder is null if diagnostic logs are disabled.
+                diagnosticLogBuilder.resultMessage("Access denied since user session has timed-out.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.SESSION_TIME_OUT);
@@ -145,12 +144,9 @@ public class OAuthRequestStateValidator {
                     log.debug("Session data not found in SessionDataCache for " + oAuthMessage
                             .getSessionDataKeyFromConsent());
                 }
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    oAuthMessage.getRequest().getParameterMap().forEach(params::put);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Access denied since user session has timed-out.",
-                            "validate-input-parameters", null);
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder.resultMessage("Access denied since user session has timed-out.");
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw new AccessDeniedException("Session Timed Out", OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes
                         .OAuth2SubErrorCodes.SESSION_TIME_OUT);

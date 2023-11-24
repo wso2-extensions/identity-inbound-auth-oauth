@@ -27,7 +27,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.context.RegistryType;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -44,7 +43,6 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.nio.file.Paths;
-import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -452,14 +450,6 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             return;
         }
         fail("Expected IdentityException was not thrown by isOAuthApplicationAvailable method");
-    }
-
-    @Test
-    public void getConfigSystemRegistryTest() {
-        startTenantFlow();
-        Registry registry = (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().
-                getRegistry(RegistryType.SYSTEM_CONFIGURATION);
-        assertEquals(dcrManagementService.getConfigSystemRegistry(), registry);
     }
 
     private void startTenantFlow() {

@@ -26,6 +26,7 @@ import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,7 +45,7 @@ import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUt
  */
 public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
-    private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
+    private static final String RANDOM_ALG_DRBG = "DRBG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
 
     private static final Log log = LogFactory.getLog(OIDCSessionStateManager.class);
@@ -111,7 +112,13 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
             if (isOrganizationQualifiedRequest()) {
                 cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + loginTenantDomain + "/");
             } else {
-                cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+                if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {
+                    cookie.setPath("/");
+                } else {
+                    cookie.setPath(FrameworkConstants.TENANT_CONTEXT_PREFIX + loginTenantDomain + "/");
+                }
+
             }
         } else {
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
@@ -169,7 +176,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
     private static String generateSaltValue() throws NoSuchAlgorithmException {
 
         byte[] bytes = new byte[16];
-        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_SHA1);
+        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_DRBG);
         secureRandom.nextBytes(bytes);
         return Base64.encodeBase64URLSafeString(bytes);
     }

@@ -36,6 +36,11 @@ public class DiscoveryConstants {
      */
     public static final String AUTHORIZATION_ENDPOINT = "Authorization_endpoint";
     /**
+     * pushed_authorization_request_endpoint
+     * REQUIRED. URL of the OP's OAuth 2.0 Pushed Authorization Request Endpoint [OpenID.Core].
+     */
+    public static final String PUSHED_AUTHORIZATION_REQUEST_ENDPOINT = "Pushed_authorization_request_endpoint";
+    /**
      * token_endpoint
      * URL of the OP's OAuth 2.0 Token Endpoint [OpenID.Core]. This is REQUIRED unless only the Implicit
      * Flow is used.
@@ -352,4 +357,17 @@ public class DiscoveryConstants {
      * as defined in OAuth 2.0 Device Grant [rfc8628]
      */
     public static final String DEVICE_AUTHORIZATION_ENDPOINT = "device_authorization_endpoint";
+
+    /**
+     * web_finger_endpoint
+     * OPTIONAL. URL of the OpenID Connect token discovery endpoint
+     */
+    public static final String WEBFINGER_ENDPOINT = "WebFinger_endpoint";
+
+    /**
+     * tls_client_certificate_bound_access_tokens
+     * OPTIONAL. Boolean value indicating server support for mutual-TLS client certificate-bound access tokens.
+     * If omitted, the default value is false.
+     */
+    public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
 }

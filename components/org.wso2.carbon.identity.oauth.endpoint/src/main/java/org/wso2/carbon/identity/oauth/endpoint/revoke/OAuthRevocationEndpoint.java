@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -100,16 +101,20 @@ public class OAuthRevocationEndpoint {
         if (MapUtils.isNotEmpty(paramMap)) {
             paramMap.forEach((key, value) -> {
                 if (TOKEN_PARAM.equals(key) && CollectionUtils.isNotEmpty(value)) {
-                    params.put("token", value.get(0).replaceAll(".", "*"));
+                    params.put("is token available", "true");
                 } else {
                     params.put(key, value);
                 }
             });
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Successfully received token revocation request.",
-                    "receive" + "-revoke-request", null);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_REVOKE_REQUEST)
+                    .inputParams(params)
+                    .resultMessage("Successfully received token revocation request.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
         }
 
         validateRepeatedParams(request, paramMap);
@@ -119,9 +124,14 @@ public class OAuthRevocationEndpoint {
         String callback = getCallback(paramMap, httpRequest);
         if (isEmpty(token)) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "'token' parameter is missing in the revoke request.",
-                        "validate-input-parameters", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        .inputParams(params)
+                        .resultMessage("'token' parameter is missing in the revoke request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+
             }
             return handleClientFailure(callback);
         }

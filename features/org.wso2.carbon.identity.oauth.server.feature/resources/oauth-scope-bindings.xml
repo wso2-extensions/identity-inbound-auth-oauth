@@ -36,6 +36,11 @@
       <Permission>/permission/protected/server-admin/homepage</Permission>
    </Permissions>
 </Scope>
+<Scope name="internal_organization_admin" displayName="Organization Admin">
+    <Permissions>
+      <Permissions>/permission/admin</Permissions>
+    </Permissions>
+</Scope>
 <Scope name="internal_monitor_metrics" displayName="Monitor internal_monitor_metrics">
     <Permissions>
       <Permission>/permission/admin/monitor/metrics</Permission>
@@ -956,6 +961,21 @@
             <Permission>/permission/admin/manage/identity/groupmgt/update</Permission>
         </Permissions>
     </Scope>
+    <Scope name="internal_guest_mgt_invite_add" displayName="Add Invitation">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/guestmgt/user/invite/add</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_guest_mgt_invite_list" displayName="List Invitation">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/guestmgt/user/invite/list</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_guest_mgt_invite_delete" displayName="Delete Invitation">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/guestmgt/user/invite/delete</Permission>
+        </Permissions>
+    </Scope>
     <Scope name="internal_secret_mgt_add" displayName="Add Secret">
         <Permissions>
             <Permission>/permission/admin/manage/identity/secretmgt/add</Permission>
@@ -974,6 +994,86 @@
     <Scope name="internal_secret_mgt_delete" displayName="Delete Secret">
         <Permissions>
             <Permission>/permission/admin/manage/identity/secretmgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idvp_delete" displayName="Delete IDVP">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/idvp/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idvp_add" displayName="Add IDVP">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/idvp/add</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idvp_view" displayName="View IDVP">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/idvp/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idvp_update" displayName="Update IDVP">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/idvp/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idv_claim_view" displayName="View IDV Claim">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/user/idv/claim/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idv_claim_add" displayName="Add IDV Claim">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/user/idv/claim/add</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idv_claim_update" displayName="Update IDV Claim">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/user/idv/claim/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_idv_claim_verify" displayName="Verify IDV Claim">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/user/idv/claim/verify</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_create" displayName="Create Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_view" displayName="View Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_delete" displayName="Delete Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/delete</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_organization_update" displayName="Update Organization">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/organizationmgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_api_resource_view" displayName="View API Resource">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/apiresourcemgt/view</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_api_resource_create" displayName="Create API Resource">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/apiresourcemgt/create</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_api_resource_update" displayName="Update API Resource">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/apiresourcemgt/update</Permission>
+        </Permissions>
+    </Scope>
+    <Scope name="internal_api_resource_delete" displayName="Delete API Resource">
+        <Permissions>
+            <Permission>/permission/admin/manage/identity/apiresourcemgt/delete</Permission>
         </Permissions>
     </Scope>
 </Scopes>

@@ -25,21 +25,37 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
+import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.ApplicationConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthenticationContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.AuthenticationFailedException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationRequest;
+import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.IdentityEventConstants;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -49,7 +65,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
@@ -62,10 +77,19 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ALLOW_SESSION_CREATION;
+
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -80,6 +104,19 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final String PASSWORD_GRANT_AUTHENTICATOR_NAME = "BASIC";
     private static final String PUBLISH_PASSWORD_GRANT_LOGIN = "OAuth.PublishPasswordGrantLogin";
     private static final String REMOTE_IP_ADDRESS = "remote-ip-address";
+    private static final String PASSWORD_GRANT_POST_AUTHENTICATION_EVENT = "PASSWORD_GRANT_POST_AUTHENTICATION";
+    private static final String OIDC = "oidc";
+    private static final String CLIENT_ID = "client_id";
+    private static final String SP = "sp";
+    private static final String RELYING_PARTY = "relyingParty";
+    private static final String TENANT_DOMAIN = "tenantDomain";
+    private static final String COMMON_AUTH_CALLER_PATH = "commonAuthCallerPath";
+    private static final String AUTH_REQUEST = "authRequest";
+    private static final String SESSION_DATA_KEY = "sessionDataKey";
+    private static final String TYPE = "type";
+    private static final String AUTHENTICATED_USER = "authenticatedUser";
+    private static final String ENABLE_PASSWORD_FLOW_ENHANCEMENTS = "enablePasswordFlowEnhancements";
+
 
     @Override
     public boolean issueRefreshToken() throws IdentityOAuth2Exception {
@@ -107,6 +144,125 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
+    private Optional<AuthenticatedUser>  authenticateUserAtUserStore(OAuth2AccessTokenReqDTO tokenReq, String userId,
+                                                                     AbstractUserStoreManager userStoreManager,
+                                                                     String tenantAwareUserName,
+                                                                     boolean isPublishPasswordGrantLoginEnabled,
+                                                                     String userTenantDomain,
+                                                                     ServiceProvider serviceProvider)
+            throws org.wso2.carbon.user.core.UserStoreException, IdentityOAuth2Exception {
+
+        AuthenticationResult authenticationResult;
+
+        if (userId != null) {
+            authenticationResult = userStoreManager.authenticateWithID(userId, tokenReq.getResourceOwnerPassword());
+        } else {
+            authenticationResult = userStoreManager.authenticateWithID(
+                    UserCoreClaimConstants.USERNAME_CLAIM_URI, tenantAwareUserName,
+                    tokenReq.getResourceOwnerPassword(), UserCoreConstants.DEFAULT_PROFILE);
+        }
+        boolean authenticated = AuthenticationResult.AuthenticationStatus.SUCCESS
+                == authenticationResult.getAuthenticationStatus()
+                && authenticationResult.getAuthenticatedUser().isPresent();
+        if (log.isDebugEnabled()) {
+            log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
+        }
+        if (authenticated) {
+            AuthenticatedUser authenticatedUser =
+                    new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
+            if (isPublishPasswordGrantLoginEnabled) {
+                publishAuthenticationData(tokenReq, true, serviceProvider, authenticatedUser);
+            }
+            return Optional.of(authenticatedUser);
+        }
+
+        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
+                userTenantDomain, userStoreManager, true);
+        if (log.isDebugEnabled()) {
+            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+        }
+        return Optional.empty();
+    }
+
+    private Optional<AuthenticatedUser> authenticateUserAtFramework(OAuth2AccessTokenReqDTO tokenReq,
+                                                                    ServiceProvider serviceProvider)
+            throws IdentityOAuth2Exception {
+
+        HttpServletRequest request = tokenReq.getHttpServletRequestWrapper();
+        HttpServletResponse response = tokenReq.getHttpServletResponseWrapper();
+        try {
+            CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(request);
+            requestWrapper.setParameter(TYPE, OIDC);
+            String tenantDomain = serviceProvider.getTenantDomain();
+            String clientId = null;
+            if (serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs() != null) {
+                for (InboundAuthenticationRequestConfig oauth2config :
+                        serviceProvider.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs()) {
+                    if (oauth2config.getInboundAuthType().equals(OAUTH2)) {
+                        clientId = oauth2config.getInboundAuthKey();
+                        break;
+                    }
+                }
+            }
+            if (clientId == null) {
+                log.error(String.format("Invalid client of application : %s , " +
+                                "trying to authenticate for the user: %s ", serviceProvider.getApplicationName(),
+                        tokenReq.getResourceOwnerUsername()));
+                throw new IdentityOAuth2Exception("Authentication failed for " + tokenReq.getResourceOwnerUsername());
+            }
+
+            AuthenticationRequest authenticationRequest = new AuthenticationRequest();
+            authenticationRequest.setRelyingParty(clientId);
+            // To ensure the authentication result is added to the cache
+            authenticationRequest.setType(OIDC);
+            // To nullify the effect of commonAuthId cookie that will be returned in responses
+            authenticationRequest.setForceAuth(true);
+            authenticationRequest.setCommonAuthCallerPath(request.getRequestURI());
+            authenticationRequest.setTenantDomain(tenantDomain);
+            AuthenticationRequestCacheEntry authenticationRequestCacheEntry =
+                    new AuthenticationRequestCacheEntry(authenticationRequest);
+            requestWrapper.setParameter(RELYING_PARTY, clientId);
+            requestWrapper.setAttribute(SP, serviceProvider.getApplicationName());
+            requestWrapper.setAttribute(AUTH_REQUEST, authenticationRequestCacheEntry);
+            requestWrapper.setParameter(COMMON_AUTH_CALLER_PATH, request.getRequestURI());
+            requestWrapper.setParameter(CLIENT_ID, clientId);
+            requestWrapper.setParameter(TENANT_DOMAIN, tenantDomain);
+            requestWrapper.setParameter(SESSION_DATA_KEY, UUID.randomUUID().toString());
+            requestWrapper.setAttribute(ALLOW_SESSION_CREATION, Boolean.FALSE.toString());
+            CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(response);
+
+            AuthenticationService authenticationService = new AuthenticationService();
+            AuthServiceResponse authServiceResponse = authenticationService.
+                    handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
+
+            if (authServiceResponse.getSessionDataKey() != null && AuthenticatorFlowStatus.SUCCESS_COMPLETED.toString().
+                    equals(authServiceResponse.getFlowStatus().toString())) {
+                String sessionDataKey = authServiceResponse.getSessionDataKey();
+                org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult
+                        authResult = null;
+                AuthenticationResultCacheEntry authResultCacheEntry = FrameworkUtils
+                        .getAuthenticationResultFromCache(sessionDataKey);
+                if (authResultCacheEntry != null) {
+                    authResult = authResultCacheEntry.getResult();
+                    if (authResult.isAuthenticated()) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: true");
+                        }
+                        request.setAttribute(AUTHENTICATED_USER, authResult.getSubject());
+                        return Optional.of(authResult.getSubject());
+                    }
+                }
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: false");
+            }
+        } catch (AuthServiceException e) {
+            log.error("Error occurred while authenticating user: " + tokenReq.getResourceOwnerUsername());
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
+        }
+        return Optional.empty();
+    }
+
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  OAuth2AccessTokenReqDTO tokenReq,
                                                  AuthenticatedUser authenticatedUser) {
@@ -121,7 +277,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         boolean isSaasApp = serviceProvider.isSaasApp();
         boolean isLegacySaaSAuthenticationEnabled = IdentityTenantUtil.isLegacySaaSAuthenticationEnabled();
         String usernameFromRequest = tokenReq.getResourceOwnerUsername();
-        String tenantDomainFromContext = IdentityTenantUtil.getTenantDomainFromContext();
+        String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
 
         if (!isSaasApp) {
             /*
@@ -210,46 +366,37 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
-            AuthenticationResult authenticationResult;
-            if (userId != null) {
-                authenticationResult = userStoreManager.authenticateWithID(userId, tokenReq.getResourceOwnerPassword());
+            Optional<AuthenticatedUser> authenticatedUser;
+            ServiceProviderProperty[] spProps = serviceProvider.getSpProperties();
+            if (spProps != null && Arrays.stream(spProps)
+                    .anyMatch(property -> ENABLE_PASSWORD_FLOW_ENHANCEMENTS.equals(property.getName())
+                            && Boolean.parseBoolean(property.getValue()))) {
+                authenticatedUser = authenticateUserAtFramework(tokenReq, serviceProvider);
             } else {
-                authenticationResult = userStoreManager.authenticateWithID(
-                        UserCoreClaimConstants.USERNAME_CLAIM_URI, tenantAwareUserName,
-                        tokenReq.getResourceOwnerPassword(), UserCoreConstants.DEFAULT_PROFILE);
+                authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
+                        tenantAwareUserName, isPublishPasswordGrantLoginEnabled, userTenantDomain, serviceProvider);
             }
-
-            boolean authenticated = AuthenticationResult.AuthenticationStatus.SUCCESS
-                    == authenticationResult.getAuthenticationStatus()
-                    && authenticationResult.getAuthenticatedUser().isPresent();
+            if (authenticatedUser.isPresent()) {
+                return authenticatedUser.get();
+            }
+            triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
+                    userTenantDomain, userStoreManager, false);
             if (log.isDebugEnabled()) {
-                log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
+                log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
             }
-
-            if (authenticated) {
-
-                AuthenticatedUser authenticatedUser
-                        = new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
-                if (isPublishPasswordGrantLoginEnabled) {
-                    publishAuthenticationData(tokenReq, true, serviceProvider, authenticatedUser);
-                }
-                return authenticatedUser;
-
-            } else {
-                if (isPublishPasswordGrantLoginEnabled) {
-                    publishAuthenticationData(tokenReq, false, serviceProvider);
-                }
-                if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
-                        (tokenReq.getResourceOwnerUsername()))) {
-                    throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
-                }
-                username = tokenReq.getResourceOwnerUsername();
-                if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                    // For tenant qualified urls, no need to send fully qualified username in response.
-                    username = tenantAwareUserName;
-                }
-                throw new IdentityOAuth2Exception("Authentication failed for " + username);
+            if (isPublishPasswordGrantLoginEnabled) {
+                publishAuthenticationData(tokenReq, false, serviceProvider);
             }
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
+                    (tokenReq.getResourceOwnerUsername()))) {
+                throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
+            }
+            username = tokenReq.getResourceOwnerUsername();
+            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                // For tenant qualified urls, no need to send fully qualified username in response.
+                username = tenantAwareUserName;
+            }
+            throw new IdentityOAuth2Exception("Authentication failed for " + username);
         } catch (UserStoreClientException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
@@ -355,7 +502,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                                                         ServiceProvider serviceProvider) {
 
         AuthenticationContext authenticationContext = new AuthenticationContext();
-        String contextId = UUIDGenerator.generateUUID();
+        String contextId = UUID.randomUUID().toString();
         authenticationContext.setContextIdentifier(contextId);
         authenticationContext.setTenantDomain(authenticatedUser.getTenantDomain());
         authenticationContext.setRequestType(OAUTH2);
@@ -451,5 +598,34 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         }
         return userNameWithTenant;
 
+    }
+
+    /**
+     * This method will trigger an event to check whether the password is expired.
+     * @param eventName name of the event
+     * @param username authenticated user
+     * @param tenantDomain tenant domain of the user
+     * @param userStoreManager
+     * @throws IdentityOAuth2Exception if password is expired or any other exceptions
+     */
+    private void triggerPasswordExpiryValidationEvent(String eventName, String username, String tenantDomain,
+                                                      org.wso2.carbon.user.core.UserStoreManager userStoreManager,
+                                                      boolean authenticated) throws IdentityOAuth2Exception {
+
+        IdentityEventService eventService = OAuth2ServiceComponentHolder.getIdentityEventService();
+        Map<String, Object> eventProperties = new HashMap<>();
+        eventProperties.put(IdentityEventConstants.EventProperty.USER_NAME, username);
+        eventProperties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, tenantDomain);
+        eventProperties.put(IdentityEventConstants.EventProperty.USER_STORE_MANAGER, userStoreManager);
+        eventProperties.put(IdentityEventConstants.EventProperty.AUTHENTICATION_STATUS, authenticated);
+
+        Event event = new Event(eventName, eventProperties);
+        try {
+            if (eventService != null) {
+                eventService.handleEvent(event);
+            }
+        } catch (IdentityEventException e) {
+            throw new IdentityOAuth2Exception("Authentication Failed! " + e.getMessage(), e); // Password has expired
+        }
     }
 }

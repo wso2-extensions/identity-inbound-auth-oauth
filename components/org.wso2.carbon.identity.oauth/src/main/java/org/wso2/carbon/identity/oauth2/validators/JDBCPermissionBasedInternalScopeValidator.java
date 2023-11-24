@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -51,13 +51,11 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.user.api.AuthorizationManager;
-import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
-import org.wso2.carbon.user.core.common.User;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -70,7 +68,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static java.util.Objects.nonNull;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getRolesFromFederatedUserAttributes;
 
@@ -87,7 +84,6 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private static final String ROOT = "/";
     private static final String ADMIN_PERMISSION_ROOT = "/permission/admin";
     private static final String EVERYONE_PERMISSION = "everyone_permission";
-    private static final String ATTRIBUTE_SEPARATOR = FrameworkUtils.getMultiAttributeSeparator();
 
     /**
      * Execute Internal scope Validation.
@@ -179,15 +175,19 @@ public class JDBCPermissionBasedInternalScopeValidator {
             AuthorizationManager authorizationManager = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId).getAuthorizationManager();
             String[] allowedResourcesForUser;
-            /*
-            Here we handle scope validation for federated user and local user separately.
-            For local users - user store is used to get user roles.
-            For federated user - get user roles from user attributes.
-            Note that if there is association between a federated user and local user () 'Assert identity using
-            mapped local subject identifier' flag will be set as true. So authenticated user will be associated
-            local user not federated user.
-             */
-            if (authenticatedUser.isFederatedUser()) {
+            if (StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization())) {
+                // Validate organization roles only for B2B users.
+                allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
+                        authenticatedUser.getAccessingOrganization());
+            } else if (authenticatedUser.isFederatedUser()) {
+                /*
+                Here we handle scope validation for federated user and local user separately.
+                For local users - user store is used to get user roles.
+                For federated user - get user roles from user attributes.
+                Note that if there is association between a federated user and local user () 'Assert identity using
+                mapped local subject identifier' flag will be set as true. So authenticated user will be associated
+                local user not federated user.
+                */
                 /*
                 If the role-based authorization feature is enabled & particular applications in the listed under the
                 required application list then retrieve permissions from the FIdp user roles.
@@ -210,16 +210,7 @@ public class JDBCPermissionBasedInternalScopeValidator {
                             getAllowedResourcesForNotAssociatedFederatedUser(authenticatedUser, authorizationManager);
                 }
             } else {
-                Tenant tenant =
-                        OAuthComponentServiceHolder.getInstance().getRealmService().getTenantManager()
-                                .getTenant(tenantId);
-                if (nonNull(tenant) && StringUtils.isNotBlank(tenant.getAssociatedOrganizationUUID()) &&
-                        Utils.useOrganizationRolesForValidation(tenant.getAssociatedOrganizationUUID())) {
-                    allowedResourcesForUser = retrieveUserOrganizationPermission(authenticatedUser,
-                            tenant.getAssociatedOrganizationUUID());
-                } else {
-                    allowedResourcesForUser = getAllowedResourcesOfUser(authenticatedUser, authorizationManager);
-                }
+                allowedResourcesForUser = getAllowedResourcesOfUser(authenticatedUser, authorizationManager);
             }
 
             for (Scope scope : allScopes) {
@@ -377,11 +368,12 @@ public class JDBCPermissionBasedInternalScopeValidator {
      */
     private List<String> getValuesOfGroupsFromUserAttributes(Map<ClaimMapping, String> userAttributes) {
 
+        String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
         if (MapUtils.isNotEmpty(userAttributes)) {
             for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
                 if (entry.getKey().getRemoteClaim() != null) {
                     if (StringUtils.equals(entry.getKey().getRemoteClaim().getClaimUri(), OAuth2Constants.GROUPS)) {
-                        return Arrays.asList(entry.getValue().split(Pattern.quote(ATTRIBUTE_SEPARATOR)));
+                        return Arrays.asList(entry.getValue().split(Pattern.quote(multiAttributeSeparator)));
                     }
                 }
             }
@@ -406,31 +398,31 @@ public class JDBCPermissionBasedInternalScopeValidator {
         return (String[]) ArrayUtils.add(allowedUIResourcesForUser, EVERYONE_PERMISSION);
     }
 
-    private String[] retrieveUserOrganizationPermission(AuthenticatedUser authenticatedUser, String organizationId) {
+    private String[] retrieveUserOrganizationPermission(AuthenticatedUser authenticatedUser, String organizationId)
+            throws UserIdNotFoundException {
 
         //Add permission based on user's organization roles.
         String[] allowedUIResourcesForUser = null;
         if (StringUtils.isNotBlank(organizationId)) {
             try {
-                List<String> organizationPermissions = new ArrayList<>();
-                String authenticatedUserId = null;
-                try {
-                    authenticatedUserId = authenticatedUser.getUserId();
-                } catch (UserIdNotFoundException e) {
-                    // Resolve authenticated resident user.
-                    Optional<User> resolvedUser =
-                            OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
-                                    .resolveUserFromResidentOrganization(
-                                            authenticatedUser.getUserName(), null, organizationId);
-                    if (resolvedUser.isPresent()) {
-                        authenticatedUserId = resolvedUser.get().getUserID();
-                        authenticatedUser.setUserId(authenticatedUserId);
+                String userId;
+                if (authenticatedUser.isFederatedUser()) {
+                    userId = authenticatedUser.getUserName();
+                } else {
+                    userId = authenticatedUser.getUserId();
+                }
+                /* Retrieve the user ID of the shared user if a user association exists. This logic should be executed
+                when accessed organization is different from the user's resident organization. */
+                if (authenticatedUser.getAccessingOrganization() != null && !authenticatedUser
+                        .getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization())) {
+                    Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
+                            .getUserIdOfAssociatedUserByOrgId(userId, organizationId);
+                    if (optionalOrganizationUserId.isPresent()) {
+                        userId = optionalOrganizationUserId.get();
                     }
                 }
-                if (StringUtils.isNotBlank(authenticatedUserId)) {
-                    organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
-                            .getUserOrganizationPermissions(authenticatedUserId, organizationId);
-                }
+                List<String> organizationPermissions = OAuth2ServiceComponentHolder.getRoleManager()
+                        .getUserOrganizationPermissions(userId, organizationId);
                 allowedUIResourcesForUser = organizationPermissions.toArray(new String[0]);
             } catch (OrganizationManagementException e) {
                 log.error("Error while retrieving the organization permissions of the user.");
@@ -471,5 +463,15 @@ public class JDBCPermissionBasedInternalScopeValidator {
     private void endTenantFlow() {
 
         PrivilegedCarbonContext.endTenantFlow();
+    }
+
+    private String resolveTenantDomain(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
+        }
     }
 }

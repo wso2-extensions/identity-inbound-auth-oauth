@@ -50,6 +50,8 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     private String[] authorizedInternalScopes;
 
+    private boolean isConsentedToken;
+
     private Properties properties = new Properties();
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
@@ -81,6 +83,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
      * @return user requested scope list
      */
     public String[] getRequestedScopes() {
+
         return requestedScopes;
     }
 
@@ -88,6 +91,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
      * @param requestedScopes user requested scopes list
      */
     public void setRequestedScopes(String[] requestedScopes) {
+
         this.requestedScopes = requestedScopes;
     }
 
@@ -185,5 +189,15 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
         this.authorizedInternalScopes = authorizedInternalScopes;
+    }
+
+    public boolean isConsentedToken() {
+
+        return isConsentedToken;
+    }
+
+    public void setConsentedToken(boolean consentedToken) {
+
+        isConsentedToken = consentedToken;
     }
 }

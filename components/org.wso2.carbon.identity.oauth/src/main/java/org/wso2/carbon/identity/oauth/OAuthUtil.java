@@ -31,10 +31,12 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -46,9 +48,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.registry.core.utils.UUIDGenerator;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -63,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -78,7 +81,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
 public final class OAuthUtil {
 
     public static final Log LOG = LogFactory.getLog(OAuthUtil.class);
-    private static final String ALGORITHM = "HmacSHA1";
+    private static final String ALGORITHM_SHA1 = "HmacSHA1";
+    private static final String ALGORITHM_SHA256 = "HmacSHA256";
 
     private OAuthUtil() {
 
@@ -92,11 +96,42 @@ public final class OAuthUtil {
      */
     public static String getRandomNumber() throws IdentityOAuthAdminException {
         try {
-            String secretKey = UUIDGenerator.generateUUID();
-            String baseString = UUIDGenerator.generateUUID();
+            String secretKey = UUID.randomUUID().toString();
+            String baseString = UUID.randomUUID().toString();
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM_SHA1);
+            Mac mac = Mac.getInstance(ALGORITHM_SHA1);
+            mac.init(key);
+            byte[] rawHmac = mac.doFinal(baseString.getBytes(Charsets.UTF_8));
+            String random = Base64.encode(rawHmac);
+            // Registry doesn't have support for these character.
+            random = random.replace("/", "_");
+            random = random.replace("=", "a");
+            random = random.replace("+", "f");
+            return random;
+        } catch (Exception e) {
+            throw new IdentityOAuthAdminException("Error when generating a random number.", e);
+        }
+    }
 
-            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM);
-            Mac mac = Mac.getInstance(ALGORITHM);
+    /**
+     * Generates a securer random number using two UUIDs and HMAC-SHA256
+     *
+     * @return generated secure random number
+     * @throws IdentityOAuthAdminException Invalid Algorithm or Invalid Key
+     */
+    public static String getRandomNumberSecure() throws IdentityOAuthAdminException {
+        try {
+            String secretKey = UUID.randomUUID().toString();
+            String baseString = UUID.randomUUID().toString();
+
+            String hmacAlgorithm;
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(IdentityConstants.OAuth.ENABLE_SHA256_PARAMS))) {
+                hmacAlgorithm = ALGORITHM_SHA256;
+            } else {
+                hmacAlgorithm = ALGORITHM_SHA1;
+            }
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), hmacAlgorithm);
+            Mac mac = Mac.getInstance(hmacAlgorithm);
             mac.init(key);
             byte[] rawHmac = mac.doFinal(baseString.getBytes(Charsets.UTF_8));
             String random = Base64.encode(rawHmac);
@@ -151,8 +186,11 @@ public final class OAuthUtil {
         try {
             userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
+            userId = resolveUserIdFromUsername(authorizedUser);
+            if (StringUtils.isEmpty(userId)) {
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                return;
+            }
         }
         clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, authenticatedIDP);
     }
@@ -204,8 +242,11 @@ public final class OAuthUtil {
         try {
             userId = authorizedUser.getUserId();
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
-            return;
+            userId = resolveUserIdFromUsername(authorizedUser);
+            if (StringUtils.isEmpty(userId)) {
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                return;
+            }
         }
         clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
                 authorizedUser.getTenantDomain());
@@ -256,6 +297,23 @@ public final class OAuthUtil {
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
                                        String tokenBindingReference) {
 
+        clearOAuthCache(consumerKey, authorizedUser, scope, tokenBindingReference,
+                OAuthConstants.AuthorizedOrganization.NONE);
+    }
+
+
+    /**
+     * Clear OAuth cache based on the application, authorized user, scope list and token binding reference.
+     *
+     * @param consumerKey            Client id of the application the token issued to.
+     * @param authorizedUser         Authorized user.
+     * @param scope                  Scope list.
+     * @param tokenBindingReference  Token binding reference.
+     * @param authorizedOrganization Authorized organization.
+     */
+    public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser, String scope,
+                                       String tokenBindingReference, String authorizedOrganization) {
+
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
         String userId;
@@ -268,8 +326,8 @@ public final class OAuthUtil {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userId,
-                authenticatedIDP, tokenBindingReference), tenantDomain);
+        clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
+                authenticatedIDP, tokenBindingReference, authorizedOrganization), tenantDomain);
     }
 
 
@@ -455,6 +513,17 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
+        dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
+        dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
+        dto.setSectorIdentifierURI(appDO.getSectorIdentifierURI());
+        dto.setIdTokenSignatureAlgorithm(appDO.getIdTokenSignatureAlgorithm());
+        dto.setRequestObjectSignatureAlgorithm(appDO.getRequestObjectSignatureAlgorithm());
+        dto.setTlsClientAuthSubjectDN(appDO.getTlsClientAuthSubjectDN());
+        dto.setSubjectType(appDO.getSubjectType());
+        dto.setRequestObjectEncryptionAlgorithm(appDO.getRequestObjectEncryptionAlgorithm());
+        dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
+        dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
+        dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         return dto;
     }
 
@@ -495,6 +564,46 @@ public final class OAuthUtil {
     }
 
     /**
+     * This will be called before when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked pre user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     */
+    public static void invokePreRevocationBySystemListeners(String userUUID, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(userUUID, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for pre token revocation by system.", e);
+            }
+        }
+    }
+
+    /**
+     * This will be called after when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked post user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     */
+    public static void invokePostRevocationBySystemListeners(String userUUID, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(userUUID, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for post token revocation by system.", e);
+            }
+        }
+    }
+
+    /**
      * Remove user claims from ClaimCache
      *
      * @param userName
@@ -511,6 +620,46 @@ public final class OAuthUtil {
         if (cacheKey != null) {
             claimCache.clearCacheEntry(cacheKey, userStoreManager.getTenantId());
         }
+        return true;
+    }
+
+    /**
+     * This method will revoke the authorization codes of user.
+     * @param username          username.
+     * @param userStoreManager  userStoreManager.
+     * @return true if revocation is successfull. Else return false
+     * @throws UserStoreException If an error occurred when revoking codes.
+     */
+    public static boolean revokeAuthzCodes(String username, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setTenantDomain(tenantDomain);
+        authenticatedUser.setUserName(username);
+
+        List<AuthzCodeDO> authorizationCodes;
+        try {
+            authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getAuthorizationCodesDataByUser(authenticatedUser);
+            for (AuthzCodeDO authorizationCode : authorizationCodes) {
+                OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(
+                        OAuth2Util.buildCacheKeyStringForAuthzCode(authorizationCode.getConsumerKey(),
+                                authorizationCode.getAuthorizationCode())));
+                OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                        .updateAuthorizationCodeState(authorizationCode.getAuthorizationCode(),
+                                OAuthConstants.AuthorizationCodeState.REVOKED);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = "Error occurred while revoking authorization codes for user: " + username;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(errorMsg);
+            }
+            throw new UserStoreException(errorMsg, e);
+        }
+
         return true;
     }
 
@@ -715,7 +864,7 @@ public final class OAuthUtil {
                 Tenant tenant = OAuthComponentServiceHolder.getInstance().getRealmService()
                         .getTenantManager().getTenant(tenantID);
                 String accessedOrganizationId = tenant.getAssociatedOrganizationUUID();
-                if (accessedOrganizationId == null) {
+                if (StringUtils.isEmpty(accessedOrganizationId)) {
                     user = getUserFromTenant(username, userId, tenantID);
                 } else {
                     Optional<org.wso2.carbon.user.core.common.User> resolvedUser =
@@ -750,9 +899,9 @@ public final class OAuthUtil {
             AbstractUserStoreManager userStoreManager =
                     (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
                             .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
-            if (username != null && userStoreManager.isExistingUser(username)) {
+            if (StringUtils.isNotEmpty(username) && userStoreManager.isExistingUser(username)) {
                 user = getApplicationUser(userStoreManager.getUser(null, username));
-            } else if (userId != null && userStoreManager.isExistingUserWithID(userId)) {
+            } else if (StringUtils.isNotEmpty(userId) && userStoreManager.isExistingUserWithID(userId)) {
                 user = getApplicationUser(userStoreManager.getUser(userId, null));
             }
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
@@ -787,5 +936,31 @@ public final class OAuthUtil {
             username = IdentityUtil.addDomainToName(user.getUserName(), user.getUserStoreDomain());
         }
         return username;
+    }
+
+    /**
+     * Resolves user id from username in scenarios where user id is set as the username in organization specific flows.
+     *
+     * @param authorizedUser authorized user.
+     * @return userId  The user id.
+     */
+    private static String resolveUserIdFromUsername(AuthenticatedUser authorizedUser) {
+
+        String userId = null;
+        if (StringUtils.isNotBlank(authorizedUser.getTenantDomain()) &&
+                StringUtils.isNotBlank(authorizedUser.getUserName())) {
+            try {
+                Optional<org.wso2.carbon.user.core.common.User> resolvedUser = OAuthComponentServiceHolder
+                        .getInstance().getOrganizationUserResidentResolverService()
+                        .resolveUserFromResidentOrganization(
+                                null, authorizedUser.getUserName(), authorizedUser.getTenantDomain());
+                if (resolvedUser.isPresent()) {
+                    userId = resolvedUser.get().getUserID();
+                }
+            } catch (OrganizationManagementException e) {
+                LOG.debug("Error while getting user id from username: " + authorizedUser.getUserName(), e);
+            }
+        }
+        return userId;
     }
 }

@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.listener;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -30,12 +31,14 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheKey;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -86,8 +89,10 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
 
         removeClaimCacheEntry(username, userStoreManager);
-
-        return OAuthUtil.revokeTokens(username, userStoreManager);
+        return OAuth2ServiceComponentHolder.getInstance()
+                .getRevocationProcessor()
+                .revokeTokens(username, userStoreManager) &&
+                OAuthUtil.revokeAuthzCodes(username, userStoreManager);
 
     }
 
@@ -151,7 +156,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        return OAuthUtil.revokeTokens(userName, userStoreManager);
+        return OAuth2ServiceComponentHolder.getInstance()
+                .getRevocationProcessor()
+                .revokeTokens(userName, userStoreManager);
     }
 
     @Override
@@ -161,7 +168,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        return OAuthUtil.revokeTokens(userName, userStoreManager);
+        return OAuth2ServiceComponentHolder.getInstance()
+                .getRevocationProcessor()
+                .revokeTokens(userName, userStoreManager);
     }
 
     @Override
@@ -183,7 +192,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
         if (ArrayUtils.isNotEmpty(deletedRoles)) {
-            OAuthUtil.revokeTokens(userName, userStoreManager);
+            OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(userName, userStoreManager);
         }
         return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
     }
@@ -197,7 +208,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
         if (ArrayUtils.isNotEmpty(deletedInternalRoles)) {
-            OAuthUtil.revokeTokens(userName, userStoreManager);
+            OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(userName, userStoreManager);
         }
         return OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
     }
@@ -250,7 +263,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (CollectionUtils.isNotEmpty(roles)) {
             for (User user : userList) {
                 OAuthUtil.removeUserClaimsFromCache(user.getUsername(), userStoreManager);
-                OAuthUtil.revokeTokens(user.getUsername(), userStoreManager);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .getRevocationProcessor()
+                        .revokeTokens(user.getUsername(), userStoreManager);
             }
         } else {
             if (log.isDebugEnabled()) {
@@ -280,7 +295,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             OAuthUtil.removeUserClaimsFromCache(username, userStoreManager);
         }
         for (String deletedUser : deletedUsers) {
-            OAuthUtil.revokeTokens(deletedUser, userStoreManager);
+            OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(deletedUser, userStoreManager);
         }
         return true;
     }
@@ -292,7 +309,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
         if (errorCode != null && (errorCode.equalsIgnoreCase(UserCoreConstants.ErrorCode.USER_IS_LOCKED))) {
-            return OAuthUtil.revokeTokens(userName, userStoreManager);
+            return OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(userName, userStoreManager);
         }
         return true;
     }
@@ -304,7 +323,9 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
 
         if (errorCode != null && errorCode.equalsIgnoreCase(IdentityCoreConstants.USER_ACCOUNT_DISABLED_ERROR_CODE)) {
-            return OAuthUtil.revokeTokens(userName, userStoreManager);
+            return OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(userName, userStoreManager);
         }
         return true;
     }
@@ -352,6 +373,10 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
 
         if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
+                if (StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
+                                accessTokenDO.getGrantType())) {
+                    continue;
+                }
                 String accessToken = accessTokenDO.getAccessToken();
                 String tokenId = accessTokenDO.getTokenId();
                 AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);

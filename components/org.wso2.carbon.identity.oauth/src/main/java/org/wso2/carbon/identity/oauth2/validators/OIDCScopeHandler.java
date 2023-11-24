@@ -16,7 +16,6 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
@@ -24,9 +23,12 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Scope handler for token requests with openid scope.
@@ -49,15 +51,26 @@ public class OIDCScopeHandler extends OAuth2ScopeHandler {
             // if id_token is allowed for requested grant type.
             return true;
         } else {
-            // Remove openid scope from the token message context.
-            String[] scopes = (String[]) ArrayUtils.removeElement(tokReqMsgCtx.getScope(), OAuthConstants.Scope.OPENID);
-            tokReqMsgCtx.setScope(scopes);
+            // Remove OIDC scopes from the token message context.
+            String[] scopes = tokReqMsgCtx.getScope();
+            List<String> oidcScopes = OAuth2Util.getOIDCScopes(tokReqMsgCtx.getOauth2AccessTokenReqDTO()
+                    .getTenantDomain());
+
+            List<String> filteredScopes = Arrays.stream(scopes)
+                    .filter(scope -> !OAuthConstants.Scope.OPENID.equals(scope))
+                    .filter(scope -> !oidcScopes.contains(scope))
+                    .collect(Collectors.toList());
+
+            tokReqMsgCtx.setScope(filteredScopes.toArray(new String[0]));
+
             if (log.isDebugEnabled()) {
-                log.debug("id_token is not allowed for requested grant type: " + grantType + ". Removing 'openid' " +
-                        "scope.");
+                log.debug("id_token is not allowed for requested grant type: " +
+                        grantType + ". Removing all OIDC scopes registered in the tenant " +
+                         "from requested scopes.");
             }
             // Returning 'true' since we are dropping openid scope and don't need to prevent issuing the token for
             // remaining scopes.
+
             return true;
         }
     }

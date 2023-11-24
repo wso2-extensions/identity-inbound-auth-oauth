@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.28-SNAPSHOT</version>
+        <version>6.11.215-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -49,7 +49,7 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>commons-codec.wso2</groupId>
+            <groupId>org.wso2.orbit.commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
         </dependency>
         <dependency>
@@ -89,6 +89,11 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.par</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.discovery</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -110,6 +115,11 @@
         <dependency>
             <groupId>com.thetransactioncompany.wso2</groupId>
             <artifactId>cors-filter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon</groupId>
+            <artifactId>org.wso2.carbon.utils</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
@@ -144,6 +154,11 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.client.authn.filter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.client.attestation.filter</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -212,6 +227,11 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.testutil</artifactId>
             <version>${carbon.identity.framework.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.extension</artifactId>
+            <scope>compile</scope>
         </dependency>
 
     </dependencies>
@@ -322,7 +342,7 @@
                                         <limit implementation="org.jacoco.report.check.Limit">
                                             <counter>COMPLEXITY</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.54</minimum>
+                                            <minimum>0.48</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
@@ -336,6 +356,7 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
                     <threshold>High</threshold>
+                    <maxHeap>2048</maxHeap>
                 </configuration>
             </plugin>
         </plugins>

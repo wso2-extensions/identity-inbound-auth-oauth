@@ -17,7 +17,9 @@
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.apache.axis2.transport.http.HTTPConstants;
+import org.apache.oltu.oauth2.common.OAuth;
 import org.mockito.Matchers;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterMethod;
@@ -25,15 +27,20 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +79,7 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                         + File.separator + "test"
                         + File.separator + "resources"
                         + File.separator + "conf");
+        when(IdentityUtil.getPropertyAsList(Mockito.anyString())).thenReturn(Arrays.asList("private_key_jwt"));
 
         OAuth2ServiceComponentHolder.addAuthenticationHandler(basicAuthClientAuthenticator);
         OAuth2ServiceComponentHolder.addAuthenticationHandler(sampleClientAuthenticator);
@@ -118,10 +126,10 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                 {headersWithClientIDandSecret, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID, false},
 
                 // Only client id is present with correct encoding for basic auth.
-                {headerWithClientId, new HashMap<String, List>(), false, true, "invalid_client", 1, null, false},
+                {headerWithClientId, new HashMap<String, List>(), false, true, "invalid_client", 0, null, false},
 
                 // Only client secret is present with correct encoding for basic auth.
-                {headersClientSecret, new HashMap<String, List>(), false, true, "invalid_client", 1, null, false},
+                {headersClientSecret, new HashMap<String, List>(), false, true, "invalid_client", 0, null, false},
 
                 // Multiple authenticators are engaged since multiple evaluation criteria are met.
                 {headersWithMultipleCreds, new HashMap<String, List>(), false, true, "invalid_request", 2, CLIENT_ID,
@@ -151,6 +159,13 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
                 (isBasicAuthenticated);
         HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
         setHeaders(httpServletRequest, headers);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(false);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        PowerMockito.when(OAuth2Util.getServiceProvider(Mockito.anyString())).thenReturn(serviceProvider);
+        PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(oAuthAppDO);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
         OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
                 (httpServletRequest, bodyParams);
         assertEquals(oAuthClientAuthnContext.isAuthenticated(), isAuthenticated);
@@ -174,5 +189,72 @@ public class OAuthClientAuthnServiceTest extends PowerMockIdentityBaseTest {
         headers.forEach((key, value) ->
                 PowerMockito.when(request.getHeader(key)).thenReturn(value)
         );
+    }
+
+    @Test
+    public void testAuthenticateForFapiApplicationsWithInvalidAuthenticatorsRegistered() throws Exception {
+
+        HashMap<String, List> bodyParams = new HashMap<String, List>();
+        bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
+        PowerMockito.mockStatic(OAuth2Util.class);
+        HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
+        oAuthAppDO.setFapiConformanceEnabled(true);
+        PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(oAuthAppDO);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+        OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
+                (httpServletRequest, bodyParams);
+        assertEquals(oAuthClientAuthnContext.isAuthenticated(), false);
+        assertEquals(oAuthClientAuthnContext.getErrorCode(), "invalid_request");
+        assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), 0);
+    }
+
+    @DataProvider(name = "testDataForAuthMethodConfiguredInApp")
+    public Object[][] testDataForAuthMethodConfiguredInApp() {
+
+        return new Object[][]{
+                // Authentication method configured for FAPI conformant application.
+                {true},
+                // Authentication method configured for non-FAPI application.
+                {false}
+        };
+    }
+
+    @Test(dataProvider = "testDataForAuthMethodConfiguredInApp")
+    public void testAuthenticateWhenAuthMethodConfiguredInApp(boolean isFapiApp) throws Exception {
+
+        HashMap<String, List> bodyParams = new HashMap<String, List>();
+        bodyParams.put(OAuth.OAUTH_CLIENT_ID, Arrays.asList(CLIENT_ID));
+        PowerMockito.mockStatic(OAuth2Util.class);
+        HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
+        OAuthAppDO oAuthAppDO = new OAuthAppDO();
+        oAuthAppDO.setTokenEndpointAuthMethod("private_key_jwt");
+        oAuthAppDO.setFapiConformanceEnabled(isFapiApp);
+        PowerMockito.when(OAuth2Util.getAppInformationByClientId(Mockito.anyString(), Mockito.anyString()))
+                .thenReturn(oAuthAppDO);
+        PowerMockito.when(OAuth2Util.isFapiConformantApp(Mockito.anyString())).thenReturn(true);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+        OAuthClientAuthenticator oAuthClientAuthenticator = PowerMockito.mock(OAuthClientAuthenticator.class);
+        PowerMockito.when(oAuthClientAuthenticator.getName()).thenReturn("PrivateKeyJWTClientAuthenticator");
+        PowerMockito.when(oAuthClientAuthenticator.isEnabled()).thenReturn(true);
+        PowerMockito.when(oAuthClientAuthenticator.canAuthenticate(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(true);
+        PowerMockito.when(oAuthClientAuthenticator.authenticateClient(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(true);
+        PowerMockito.when(oAuthClientAuthenticator.getClientId(Mockito.any(), Mockito.any(), Mockito.any()))
+                .thenReturn(CLIENT_ID);
+        PowerMockito.when(oAuthClientAuthenticator.getSupportedClientAuthenticationMethods())
+                .thenReturn(Arrays.asList(new ClientAuthenticationMethodModel("private_key_jwt", "Private Key JWT")));
+        OAuthClientAuthnService oAuthClientAuthnService = Mockito.spy(OAuthClientAuthnService.class);
+        PowerMockito.when(oAuthClientAuthnService.getClientAuthenticators()).thenReturn
+                (Arrays.asList(oAuthClientAuthenticator));
+        OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
+                (httpServletRequest, bodyParams);
+        assertEquals(oAuthClientAuthnContext.isAuthenticated(), true);
+        assertEquals(oAuthClientAuthnContext.getErrorCode(), null);
+        assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), 1);
     }
 }

@@ -17,7 +17,10 @@
 */
 package org.wso2.carbon.identity.oauth.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.InboundConfigurationProtocol;
 
 import java.io.Serializable;
 
@@ -31,9 +34,10 @@ import javax.xml.bind.annotation.XmlTransient;
 /**
  * OAuth application data object.
  */
-@XmlRootElement
 @XmlAccessorType(XmlAccessType.FIELD)
-public class OAuthAppDO implements Serializable {
+@XmlRootElement(name = "oAuthAppDO")
+@JsonTypeName("oAuthAppDO")
+public class OAuthAppDO extends InboundConfigurationProtocol implements Serializable {
 
     private static final long serialVersionUID = -6453843721358989519L;
 
@@ -68,11 +72,24 @@ public class OAuthAppDO implements Serializable {
     private String backChannelLogoutUrl;
     private String frontchannelLogoutUrl;
     @XmlTransient
+    @JsonIgnore
     private AuthenticatedUser appOwner;
     private String tokenType;
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
+    private String tokenEndpointAuthMethod;
+    private String tokenEndpointAuthSignatureAlgorithm;
+    private String sectorIdentifierURI;
+    private String idTokenSignatureAlgorithm;
+    private String requestObjectSignatureAlgorithm;
+    private String tlsClientAuthSubjectDN;
+    private boolean requirePushedAuthorizationRequests;
+    private boolean tlsClientCertificateBoundAccessTokens;
+    private String subjectType;
+    private String requestObjectEncryptionAlgorithm;
+    private String requestObjectEncryptionMethod;
+    private boolean fapiConformanceEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -87,6 +104,7 @@ public class OAuthAppDO implements Serializable {
      * @deprecated use {@link #getAppOwner()} instead.
      */
     @Deprecated
+    @JsonIgnore
     public AuthenticatedUser getUser() {
         return this.getAppOwner();
     }
@@ -95,6 +113,7 @@ public class OAuthAppDO implements Serializable {
      * @deprecated use {@link #setAppOwner(AuthenticatedUser)} instead.
      */
     @Deprecated
+    @JsonIgnore
     public void setUser(AuthenticatedUser user) {
         this.setAppOwner(user);
     }
@@ -333,5 +352,123 @@ public class OAuthAppDO implements Serializable {
     public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
+    }
+    public String getTokenEndpointAuthMethod() {
+
+        return tokenEndpointAuthMethod;
+    }
+
+    public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
+
+        this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public String getTokenEndpointAuthSignatureAlgorithm() {
+
+        return tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
+
+        this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public String getSectorIdentifierURI() {
+
+        return sectorIdentifierURI;
+    }
+
+    public void setSectorIdentifierURI(String sectorIdentifierURI) {
+
+        this.sectorIdentifierURI = sectorIdentifierURI;
+    }
+
+    public String getIdTokenSignatureAlgorithm() {
+
+        return idTokenSignatureAlgorithm;
+    }
+
+    public void setIdTokenSignatureAlgorithm(String idTokenSignatureAlgorithm) {
+
+        this.idTokenSignatureAlgorithm = idTokenSignatureAlgorithm;
+    }
+    public String getRequestObjectSignatureAlgorithm() {
+
+        return requestObjectSignatureAlgorithm;
+    }
+
+    public void setRequestObjectSignatureAlgorithm(String requestObjectSignatureAlgorithm) {
+
+        this.requestObjectSignatureAlgorithm = requestObjectSignatureAlgorithm;
+    }
+
+    public String getTlsClientAuthSubjectDN() {
+
+        return tlsClientAuthSubjectDN;
+    }
+
+    public void setTlsClientAuthSubjectDN(String tlsClientAuthSubjectDN) {
+
+        this.tlsClientAuthSubjectDN = tlsClientAuthSubjectDN;
+    }
+
+    public boolean isRequirePushedAuthorizationRequests() {
+
+        return requirePushedAuthorizationRequests;
+    }
+
+    public void setRequirePushedAuthorizationRequests(boolean requirePushedAuthorizationRequests) {
+
+        this.requirePushedAuthorizationRequests = requirePushedAuthorizationRequests;
+    }
+
+    public boolean isTlsClientCertificateBoundAccessTokens() {
+
+        return tlsClientCertificateBoundAccessTokens;
+    }
+
+    public void setTlsClientCertificateBoundAccessTokens(boolean tlsClientCertificateBoundAccessTokens) {
+
+        this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
+    }
+
+    public String getSubjectType() {
+
+        return subjectType;
+    }
+
+    public void setSubjectType(String subjectType) {
+
+        this.subjectType = subjectType;
+    }
+
+    public String getRequestObjectEncryptionAlgorithm() {
+
+        return requestObjectEncryptionAlgorithm;
+    }
+
+    public void setRequestObjectEncryptionAlgorithm(String requestObjectEncryptionAlgorithm) {
+
+        this.requestObjectEncryptionAlgorithm = requestObjectEncryptionAlgorithm;
+    }
+
+    public String getRequestObjectEncryptionMethod() {
+
+        return requestObjectEncryptionMethod;
+    }
+
+    public void setRequestObjectEncryptionMethod(String requestObjectEncryptionMethod) {
+
+        this.requestObjectEncryptionMethod = requestObjectEncryptionMethod;
+    }
+
+    public boolean isFapiConformanceEnabled() {
+
+        return fapiConformanceEnabled;
+    }
+
+    public void setFapiConformanceEnabled(boolean fapiConformant) {
+
+        fapiConformanceEnabled = fapiConformant;
     }
 }

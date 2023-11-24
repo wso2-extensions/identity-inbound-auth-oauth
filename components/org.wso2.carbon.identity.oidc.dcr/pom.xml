@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.28-SNAPSHOT</version>
+        <version>6.11.215-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -148,8 +148,6 @@
 
                             org.wso2.carbon.context; version="${carbon.kernel.imp.pkg.version.range}",
                             org.wso2.carbon.utils.multitenancy;version="${carbon.kernel.imp.pkg.version.range}",
-                            org.wso2.carbon.registry.api;version="${carbon.kernel.registry.imp.pkg.version.range}",
-                            org.wso2.carbon.registry.core.*;version="${carbon.kernel.registry.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common; version="${carbon.identity.framework.imp.pkg.version.range}",

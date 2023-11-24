@@ -23,6 +23,9 @@ public class Oauth2ScopeConstants {
 
     public static final int MAX_FILTER_COUNT = 30;
     public static final int INVALID_SCOPE_ID = -1;
+    public static final int MAX_LENGTH_OF_SCOPE_NAME = 255;
+    public static final int MAX_LENGTH_OF_SCOPE_DISPLAY_NAME = 255;
+    public static final int MAX_LENGTH_OF_SCOPE_DESCRIPTION = 512;
     public static final String SCOPE_ID = "SCOPE_ID";
     public static final String DEFAULT_SCOPE_BINDING = "DEFAULT";
     public static final String PERMISSIONS_BINDING_TYPE = "PERMISSION";
@@ -31,6 +34,7 @@ public class Oauth2ScopeConstants {
     public static final String SCOPE_TYPE_OIDC = "OIDC";
     public static final String CONSOLE_SCOPE_PREFIX = "console:";
     public static final String INTERNAL_SCOPE_PREFIX = "internal_";
+    public static final String INTERNAL_ORG_SCOPE_PREFIX = "internal_org_";
     public static final String CORRELATION_ID_MDC = "Correlation-ID";
 
     /**
@@ -55,6 +59,12 @@ public class Oauth2ScopeConstants {
                 "contain special characters ?,#,/,( or )"),
         ERROR_CODE_INTERNAL_SCOPE_MANAGED_AT_SYSTEM_LEVEL("41012", "The internal scopes are managed at " +
                 "system level"),
+        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_TOO_LONG("41013", "Scope name: %s is too long. The maximum " +
+                "allowed length is 255 characters."),
+        ERROR_CODE_BAD_REQUEST_SCOPE_DISPLAY_NAME_TOO_LONG("41014", "Scope display name: %s is too long. " +
+                "The maximum allowed length is 255 characters."),
+        ERROR_CODE_BAD_REQUEST_SCOPE_DESCRIPTION_TOO_LONG("41015", "Scope description: %s is too " +
+                "long. The maximum allowed length is 512 characters."),
         ERROR_CODE_FAILED_TO_REGISTER_SCOPE("51001", "Error occurred while registering scope %s."),
         ERROR_CODE_FAILED_TO_GET_ALL_SCOPES("51002", "Error occurred while retrieving all available scopes."),
         ERROR_CODE_FAILED_TO_GET_SCOPE_BY_NAME("51003", "Error occurred while retrieving scope %s."),
@@ -79,8 +89,9 @@ public class Oauth2ScopeConstants {
         ERROR_CODE_FAILED_TO_CHECK_ALREADY_USER_CONSENTED("51015", "Error occurred while checking " +
                 "whether user : %s is already consented for all scopes for application : %s in tenant with Id : %d."),
         ERROR_CODE_FAILED_TO_CHECK_EXISTING_CONSENTS_FOR_USER("51016", "Error occurred while checking " +
-                "whether user : %s has an existing consent for app : %s in tenant with id : %d");
-
+                "whether user : %s has an existing consent for app : %s in tenant with id : %d"),
+        ERROR_CODE_FAILED_TO_GET_SCOPE_METADATA("51017", "Error occurred while retrieving scope metadata " +
+                                                        "for scope %s.");
         private final String code;
         private final String message;
 

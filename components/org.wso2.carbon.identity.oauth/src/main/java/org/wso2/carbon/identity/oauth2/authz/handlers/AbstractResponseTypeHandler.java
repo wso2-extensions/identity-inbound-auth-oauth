@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.message.types.ResponseType;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
@@ -39,11 +40,12 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.SCOPE_VALIDATOR;
 
 /**
  * AbstractResponseTypeHandler contains all the common methods of all three basic handlers.
@@ -113,7 +115,33 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
             if (log.isDebugEnabled()) {
                 log.debug("Engaging global scope validator in token issuer flow : " + validator.getName());
             }
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam(SCOPE_VALIDATOR, validator.getName())
+                        .inputParam("scopes (before validation)", oauthAuthzMsgCtx.getApprovedScope())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("Before validating scopes.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             boolean isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID,
+                                oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
+                        .inputParam(SCOPE_VALIDATOR, validator.getName())
+                        .inputParam("scopes (after validation)", oauthAuthzMsgCtx.getApprovedScope())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("After validating scopes.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Scope Validation was" + isGlobalValidScope + "at the global level by : "
                         + validator.getName());
@@ -134,13 +162,13 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                 log.debug("Could not find authorized grant types for client id: " + consumerKey);
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", authzReqDTO.getConsumerKey());
-
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Could not find any configured authorized grant types for the OAuth client.",
-                        "validate-authz-request", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHZ_REQUEST)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                        .resultMessage("Could not find any configured authorized grant types for the OAuth client.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             return false;
         }
@@ -165,15 +193,16 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                     log.debug("Unsupported Grant Type : " + grantType + " for client id : " + consumerKey);
                 }
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", authzReqDTO.getConsumerKey());
-                    params.put("grantType", grantType);
-
-                    Map<String, Object> configs = new HashMap<>();
-                    configs.put("supportedGrantTypes", oAuthAppDO.getGrantTypes());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Un-supported grant type.", "validate-authz-request",
-                            configs);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                            .configParam(OAuthConstants.LogConstants.ConfigKeys.SUPPORTED_GRANT_TYPES,
+                                    oAuthAppDO.getGrantTypes())
+                            .resultMessage("Un-supported grant type.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 return false;
             }

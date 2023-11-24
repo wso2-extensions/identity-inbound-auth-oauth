@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,6 +53,9 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     private static final String oAuth2AuthzEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/authorize";
+    private static final String oAuth2ParEPUrl
+            = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
+            "/oauth2/par";
     private static final String oAuth2TokenEPUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
             "/oauth2/token";
@@ -161,6 +165,16 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
                 .thenReturn(fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getOAuth2AuthzEPUrl(), fillURLPlaceholdersForTest(oAuth2AuthzEPUrl),
+                "Expected value not returned from getter");
+    }
+
+    @Test
+    public void testGetOAuth2ParEPUrl() throws Exception {
+
+        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ParEPUrl))
+                .thenReturn(fillURLPlaceholdersForTest(oAuth2ParEPUrl));
+        Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                        .getOAuth2ParEPUrl(), fillURLPlaceholdersForTest(oAuth2ParEPUrl),
                 "Expected value not returned from getter");
     }
 
@@ -428,6 +442,17 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
 
         Assert.assertFalse(OAuthServerConfiguration.getInstance()
                 .isAccessTokenPartitioningEnabled());
+    }
+
+    @Test
+    public void testGetSupportedTokenEndpointSigningAlgorithms() {
+
+        List<String> supportedTokenEndpointSigningAlgorithms = OAuthServerConfiguration.getInstance()
+                .getSupportedTokenEndpointSigningAlgorithms();
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("PS256"));
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("ES256"));
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("RS256"));
+        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.size() == 3);
     }
 
     private String fillURLPlaceholdersForTest(String url) {

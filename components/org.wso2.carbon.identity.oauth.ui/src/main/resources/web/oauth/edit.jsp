@@ -63,7 +63,7 @@
     String applicationSPName = null;
     OAuthAdminClient client = null;
     String action = null;
-    String grants = null;
+    List<String> grants = null;
     String[] audiences = null;
     String audienceTableStyle = "display:none";
     List<String> allowedScopeValidators = new ArrayList<String>();
@@ -171,12 +171,15 @@
             }
             // setting grants if oauth version 2.0
             if (OAuthConstants.OAuthVersions.VERSION_2.equals(app.getOAuthVersion())) {
-                grants = app.getGrantTypes();
+                String appGrantTypes = app.getGrantTypes();
+                if (appGrantTypes != null) {
+                    grants = new ArrayList<String>(Arrays.asList(appGrantTypes.split(" ")));
+                }
                 if (grants != null) {
                     codeGrant = grants.contains("authorization_code");
                     implicitGrant = grants.contains("implicit");
                 } else {
-                    grants = "";
+                    grants = new ArrayList<String>();
                 }
                 audiences = app.getAudiences();
                 String[] val = app.getScopeValidators();
@@ -184,7 +187,7 @@
                     scopeValidators = Arrays.asList(val);
                 }
             } else {
-                grants = "";
+                grants = new ArrayList<String>();
             }
         }
         

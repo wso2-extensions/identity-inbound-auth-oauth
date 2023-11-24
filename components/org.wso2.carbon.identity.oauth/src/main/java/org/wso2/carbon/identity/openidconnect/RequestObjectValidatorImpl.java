@@ -26,25 +26,28 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.security.cert.Certificate;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
@@ -58,6 +61,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
 
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String OIDC_ID_TOKEN_ISSUER_ID = "OAuth.OpenIDConnect.IDTokenIssuerID";
+    private static final int MILLISECONDS_PER_SECOND = 1000;
+    private static final int MILLISECONDS_PER_HOUR = 3600000;
     private static Log log = LogFactory.getLog(RequestObjectValidatorImpl.class);
 
     @Override
@@ -125,10 +130,34 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                 return false;
             }
         }
-        LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                OAuthConstants.LogConstants.SUCCESS, "Request object validation is successful.",
-                "validate-request-object", null);
+
+        if (isFapiConformant(oAuth2Parameters.getClientId())) {
+            checkFapiMandatedParams(requestObject);
+            if (!isValidNbfExp(requestObject)) {
+                return false;
+            }
+        }
+
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                    .resultMessage("Request object validation is successful.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+        }
         return true;
+    }
+
+    private void checkFapiMandatedParams(RequestObject requestObject) throws RequestObjectException {
+
+        String[] mandatoryParams = {Constants.SCOPE, Constants.NONCE, Constants.REDIRECT_URI};
+        for (String param : mandatoryParams) {
+            if (!isParamPresent(requestObject, param)) {
+                throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
+                        param + " is not present in the request object.");
+            }
+        }
     }
 
     protected boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
@@ -153,15 +182,79 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
                         ", Current Time : " + currentTimeInMillis + ". Token Rejected.";
                 logAndReturnFalse(msg);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("requestObjectExpirationTime", expirationTime);
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Request Object is Expired.", "validate-request-object",
-                            null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                            .inputParam("request object expiration time (ms)", expirationTime)
+                            .resultMessage("Request Object is Expired.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, "Request Object " +
                         "is Expired.");
             }
+        }
+        return true;
+    }
+
+    /**
+     * Validate the request object nbf claim and exp claim according to the FAPI specification.
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">...</a>
+     *
+     * @param requestObject request object
+     * @return true if both claims are valid
+     * @throws RequestObjectException if nbf exp validation fails
+     */
+    protected boolean isValidNbfExp(RequestObject requestObject) throws RequestObjectException {
+
+        Date nbfTime = requestObject.getClaimsSet().getNotBeforeTime();
+        Date expirationTime = requestObject.getClaimsSet().getExpirationTime();
+
+        String errorMsg = null;
+        String errorLog = null;
+        if (nbfTime == null) {
+            errorMsg = "Request Object does not contain Not Before Time.";
+        } else if (expirationTime == null) {
+            errorMsg = "Request Object does not contain Expiration Time.";
+        } else {
+            long timeStampSkewMillis = OAuthServerConfiguration.getInstance()
+                    .getTimeStampSkewInSeconds() * MILLISECONDS_PER_SECOND;
+            long nbfTimeInMillis = nbfTime.getTime();
+            long expirationTimeInMillis = expirationTime.getTime();
+            long currentTimeInMillis = System.currentTimeMillis();
+            // nbf should be older than current time.
+            if ((currentTimeInMillis + timeStampSkewMillis) < nbfTimeInMillis) {
+                errorMsg = "Request Object is not valid yet.";
+                errorLog = String.format("Request Object is not valid yet." +
+                        ", Not Before Time(ms) : %d, TimeStamp Skew : %d, Current Time : %d" + ". Token Rejected.",
+                        nbfTimeInMillis, timeStampSkewMillis, currentTimeInMillis);
+            } else if ((currentTimeInMillis + timeStampSkewMillis) - MILLISECONDS_PER_HOUR > nbfTimeInMillis) {
+                // nbf should not be older than 1 hour from current time
+                errorMsg = "Request Object nbf claim is too old.";
+                errorLog = String.format("Request Object nbf claim is too old." +
+                        ", Not Before Time(ms) : %d, TimeStamp Skew : %d, Current Time : %d" + ". Token Rejected.",
+                        nbfTimeInMillis, timeStampSkewMillis, currentTimeInMillis);
+            } else if (expirationTimeInMillis > nbfTimeInMillis + MILLISECONDS_PER_HOUR) {
+                // exp time should not be older than 1 hour from nbf time
+                errorMsg = "Request Object expiry time is too far in the future than not before time.";
+                errorLog = String.format("Request Object expiry time is too far in the future than not before time." +
+                        ", Expiration Time(ms) : %d, Not Before Time(ms) : %d, Current Time : %d" + ". Token Rejected.",
+                        expirationTimeInMillis, nbfTimeInMillis, currentTimeInMillis);
+            }
+        }
+
+        if (StringUtils.isNotBlank(errorMsg)) {
+            errorLog = StringUtils.isEmpty(errorLog) ? errorMsg : errorLog;
+            logAndReturnFalse(errorLog);
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .resultMessage(errorLog)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
+            throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg);
         }
         return true;
     }
@@ -173,27 +266,32 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         String responseTypeInReqObj = requestObject.getClaimValue(Constants.RESPONSE_TYPE);
         final String errorMsg = "Request Object and Authorization request contains unmatched ";
 
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (!isValidParameter(oauthRequest.getClientId(), clientIdInReqObj)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientIdInRequest", oauthRequest.getClientId());
-                params.put("clientIdInRequestObject", clientIdInReqObj);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, errorMsg + Constants.CLIENT_ID, "validate-request-object",
-                        null);
+            if (diagnosticLogBuilder != null) {
+                // diagnosticLogBuilder will be null if diagnostic logs are disabled.
+                diagnosticLogBuilder.inputParam("client id in request", oauthRequest.getClientId())
+                        .inputParam("client id in request object", clientIdInReqObj)
+                        .resultMessage(errorMsg + Constants.CLIENT_ID);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST, errorMsg + Constants
                     .CLIENT_ID);
         }
 
         if (!isValidParameter(oauthRequest.getResponseType(), responseTypeInReqObj)) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("responseTypeInRequest", oauthRequest.getResponseType());
-                params.put("responseTypeInRequestObject", responseTypeInReqObj);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, errorMsg + Constants.CLIENT_ID, "validate-request-object",
-                        null);
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.inputParam("response type in request", oauthRequest.getResponseType())
+                        .inputParam("response type in request object", responseTypeInReqObj)
+                        .resultMessage(errorMsg + Constants.RESPONSE_TYPE);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new RequestObjectException(RequestObjectException.ERROR_CODE_INVALID_REQUEST,
                     errorMsg + Constants.RESPONSE_TYPE);
@@ -255,13 +353,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
         boolean isValid = StringUtils.isNotEmpty(issuer) && issuer.equals(oAuth2Parameters.getClientId());
         if (!isValid) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("issuer", issuer);
-                params.put("clientId", oAuth2Parameters.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "'issuer' field in request object should match with 'client_id' in request.",
-                        "validate-request-object", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .inputParam("issuer", issuer)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuth2Parameters.getClientId())
+                        .resultMessage("'issuer' field in request object should match with 'client_id' in request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
         }
         return isValid;
@@ -288,15 +387,14 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             }
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("audience", audience);
-
-            Map<String, Object> configs = new HashMap<>();
-            params.put("tokenEndpointUrl", currentAudience);
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.FAILED,
-                    "None of the audiences in request object matched the token endpoint", "validate-request-object",
-                    configs);
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                    .inputParam("audience", audience)
+                    .configParam("token endpoint URL", currentAudience)
+                    .resultMessage("None of the audiences in request object matched the token endpoint.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
         }
         return logAndReturnFalse("None of the audience values matched the tokenEndpoint Alias: " + currentAudience);
     }
@@ -348,18 +446,27 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
      */
     protected boolean isValidRedirectUri(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) {
 
+        boolean isValid;
         String redirectUriInReqObj = requestObject.getClaimValue(Constants.REDIRECT_URI);
-        boolean isValid = StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj,
-                oAuth2Parameters.getRedirectURI());
+        String redirectURI = oAuth2Parameters.getRedirectURI();
+
+        if (StringUtils.isNotEmpty(redirectURI) && redirectURI.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+            String regex = redirectURI.substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
+            isValid = Pattern.matches(regex, redirectUriInReqObj);
+        } else {
+            isValid = StringUtils.isBlank(redirectUriInReqObj) || StringUtils.equals(redirectUriInReqObj, redirectURI);
+        }
+
         if (!isValid) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("redirectUriInRequest", oAuth2Parameters.getRedirectURI());
-                params.put("redirectUriInRequestObject", redirectUriInReqObj);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Redirect URI in request object does not match with redirect URI in request.",
-                        "validate-request-object", null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_REQUEST_OBJECT)
+                        .inputParam("redirect URI in request", oAuth2Parameters.getRedirectURI())
+                        .inputParam("redirect URI in request object", redirectUriInReqObj)
+                        .resultMessage("Redirect URI in request object does not match with redirect URI in request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
         }
         return isValid;
@@ -377,5 +484,18 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
             log.debug(errorMessage);
         }
         return false;
+    }
+
+    private boolean isFapiConformant(String clientId) throws RequestObjectException {
+
+        try {
+            return OAuth2Util.isFapiConformantApp(clientId);
+        } catch (InvalidOAuthClientException e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_CLIENT, "Could not find an existing app for " +
+                    "clientId: " + clientId, e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while obtaining the service " +
+                    "provider for clientId: " + clientId, e);
+        }
     }
 }

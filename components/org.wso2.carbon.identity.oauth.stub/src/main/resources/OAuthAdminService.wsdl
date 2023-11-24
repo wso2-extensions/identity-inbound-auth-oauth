@@ -397,26 +397,39 @@
                     <xs:element minOccurs="0" name="applicationAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="applicationName" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="audiences" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="authorizationResponseSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="backChannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="bypassClientCredentials" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="callbackUrl" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="fapiConformanceEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="frontchannelLogoutUrl" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="grantTypes" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="idTokenEncryptionMethod" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenExpiryTime" type="xs:long"/>
+                    <xs:element minOccurs="0" name="idTokenSignatureAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="jwksURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="renewRefreshTokenEnabled" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requestObjectEncryptionAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requestObjectEncryptionMethod" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="requestObjectSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="requestObjectSignatureValidationEnabled" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="requirePushedAuthorizationRequests" type="xs:boolean"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="sectorIdentifierURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="subjectType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tlsClientAuthSubjectDN" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingValidationEnabled" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="tokenEndpointAuthMethod" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenEndpointAuthSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenRevocationWithIDPSessionTerminationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>

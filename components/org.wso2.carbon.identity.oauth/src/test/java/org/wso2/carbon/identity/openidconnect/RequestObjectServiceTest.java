@@ -25,14 +25,17 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.internal.IdentityCoreServiceDataHolder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -41,7 +44,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @WithCarbonHome
-@WithRealmService
+@WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
+        initUserStoreManager = true, injectToSingletons = {IdentityCoreServiceDataHolder.class})
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
 public class RequestObjectServiceTest extends PowerMockTestCase {
@@ -58,7 +62,7 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
     private List<List<RequestedClaim>> requestedEssentialClaims;
 
     @BeforeClass
-    public void setUp() {
+    public void setUp() throws UserStoreException {
 
         requestObjectService = new RequestObjectService();
         requestedEssentialClaims = new ArrayList<>();
@@ -81,6 +85,8 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
         lstRequestedClams.add(requestedClaimForEmail);
         lstRequestedClams.add(requestedClaimForAddress);
         requestedEssentialClaims.add(lstRequestedClams);
+
+        TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
     }
 
     @Test
@@ -150,7 +156,9 @@ public class RequestObjectServiceTest extends PowerMockTestCase {
             prepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
             prepStmt.setString(17, "refreshToken");
             prepStmt.setString(18, null);
-            prepStmt.setString(19, consumerKey);
+            prepStmt.setString(19, "NONE");
+            prepStmt.setString(20, consumerKey);
+            prepStmt.setInt(21, TestConstants.TENANT_ID);
             prepStmt.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {

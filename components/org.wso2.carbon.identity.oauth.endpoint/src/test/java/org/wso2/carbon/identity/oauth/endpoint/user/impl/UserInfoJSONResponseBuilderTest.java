@@ -31,12 +31,14 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -46,7 +48,6 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.registry.core.service.RegistryService;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -68,11 +69,12 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
  */
-@PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
+@PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class,
         AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class,
         JDBCPersistenceManager.class})
 @PowerMockIgnore({"javax.management.*"})
@@ -89,6 +91,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void setUpTest() throws Exception {
 
         OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+        OAuth2ServiceComponentHolder.getInstance().setTokenProvider(new DefaultTokenProvider());
         userInfoJSONResponseBuilder = new UserInfoJSONResponseBuilder();
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();
@@ -280,6 +283,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
 
         initSingleClaimTest(claimUri, claimValue);
+        setUpRequestObjectService();
         mockDataSource();
         mockObjectsRelatedToTokenValidation();
         mockStatic(FrameworkUtils.class);
@@ -313,13 +317,48 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     public void testSubjectClaim(Map<String, Object> inputClaims,
                                  Object authorizedUser,
                                  boolean appendTenantDomain,
-                                 boolean appendUserStoreDomain,
-                                 String expectedSubjectValue) throws Exception {
+                                 boolean appendUserStoreDomain, boolean isPairwiseSubject,
+                                 String expectedSubjectValue, String expectedPPID) throws Exception {
 
         try {
+            setUpRequestObjectService();
             AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
-            prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain);
+            prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain,
+                    isPairwiseSubject);
             updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
+            when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+            Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            mockDataSource();
+            mockObjectsRelatedToTokenValidation();
+            String responseString =
+                    userInfoJSONResponseBuilder
+                            .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
+
+            Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
+            assertSubjectClaimPresent(claimsInResponse);
+            assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
+    }
+
+    @Test(dataProvider = "subjectClaimDataProvider")
+    public void testSubjectClaimWithAlteredApplicationConfigs(Map<String, Object> inputClaims,
+                                                              Object authorizedUser,
+                                                              boolean appendTenantDomain,
+                                                              boolean appendUserStoreDomain, boolean isPairwiseSubject,
+                                                              String expectedSubjectValue, String expectedPPID)
+            throws Exception {
+
+        try {
+            setUpRequestObjectService();
+            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authzUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain,
+                    isPairwiseSubject);
+            authzUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
+                    applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
+                            IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
 
             when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
@@ -332,7 +371,7 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
             Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
             assertSubjectClaimPresent(claimsInResponse);
-            assertEquals(claimsInResponse.get(sub), expectedSubjectValue);
+            assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
         } finally {
             PrivilegedCarbonContext.endTenantFlow();
         }

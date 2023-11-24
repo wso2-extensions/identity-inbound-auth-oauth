@@ -29,6 +29,7 @@ import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
+import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
@@ -41,6 +42,7 @@ import org.testng.Assert;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
+import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
@@ -66,6 +68,8 @@ public class TestUtils {
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
     public static final String H2_SCRIPT_NAME = "scope_claim.sql";
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
+    private static final String NBF = "nbf";
+    private static final String EXP = "exp";
 
     public static void initiateH2Base() throws SQLException {
 
@@ -140,8 +144,8 @@ public class TestUtils {
         if (JWSAlgorithm.NONE.getName().equals(algorithm)) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
-        return signJWTWithRSA(jwtClaimsSet, privateKey);
+        JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(algorithm);
+        return signJWTWithRSA(jwtClaimsSet, privateKey, jwsAlgorithm);
     }
 
     private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long
@@ -168,7 +172,7 @@ public class TestUtils {
         return jwtClaimsSetBuilder.build();
     }
 
-    public static String buildJWT(String issuer, String subject, String jti, String audience, String algorythm,
+    public static String buildJWT(String issuer, String subject, String jti, String audience, String algorithm,
                                   Key privateKey, long notBeforeMillis, long lifetimeInMillis, long issuedTime)
             throws RequestObjectException {
 
@@ -192,11 +196,11 @@ public class TestUtils {
             jwtClaimsSetBuilder.notBeforeTime(new Date(issuedTime + notBeforeMillis));
         }
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
-        if (JWSAlgorithm.NONE.getName().equals(algorythm)) {
+        if (JWSAlgorithm.NONE.getName().equals(algorithm)) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
-
-        return signJWTWithRSA(jwtClaimsSet, privateKey);
+        JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(algorithm);
+        return signJWTWithRSA(jwtClaimsSet, privateKey, jwsAlgorithm);
     }
 
     /**
@@ -209,7 +213,24 @@ public class TestUtils {
      */
     public static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey)
             throws RequestObjectException {
+
         SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, (RSAPrivateKey) privateKey);
+        return signedJWT.serialize();
+    }
+
+    /**
+     * Sign JWT token from RSA algorithm.
+     *
+     * @param jwtClaimsSet Contains the JWT body.
+     * @param privateKey   Private key.
+     * @param jwsAlgorithm JWS algorithm.
+     * @return signed JWT token.
+     * @throws RequestObjectException
+     */
+    public static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey, JWSAlgorithm jwsAlgorithm)
+            throws RequestObjectException {
+
+        SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, (RSAPrivateKey) privateKey, jwsAlgorithm);
         return signedJWT.serialize();
     }
 
@@ -219,6 +240,21 @@ public class TestUtils {
         try {
             JWSSigner signer = new RSASSASigner(privateKey);
             SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimsSet);
+            signedJWT.sign(signer);
+            return signedJWT;
+        } catch (JOSEException e) {
+            throw new RequestObjectException("error_signing_jwt", "Error occurred while signing JWT.");
+        }
+    }
+
+    private static SignedJWT getSignedJWT(JWTClaimsSet jwtClaimsSet, RSAPrivateKey privateKey,
+                                          JWSAlgorithm jwsAlgorithm)
+            throws RequestObjectException {
+
+        try {
+            JWSSigner signer = new RSASSASigner(privateKey);
+            SignedJWT signedJWT = new SignedJWT(new JWSHeader(jwsAlgorithm), jwtClaimsSet);
+            signer.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
             signedJWT.sign(signer);
             return signedJWT;
         } catch (JOSEException e) {
@@ -281,13 +317,16 @@ public class TestUtils {
         if (JWSAlgorithm.NONE.getName().equals(algorithm)) {
             return getEncryptedJWT((RSAPublicKey) publicKey, jwtClaimsSet);
         } else {
-            return getSignedAndEncryptedJWT(publicKey, (RSAPrivateKey) privateKey, jwtClaimsSet);
+            JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(algorithm);
+            return getSignedAndEncryptedJWT(publicKey, (RSAPrivateKey) privateKey, jwtClaimsSet, jwsAlgorithm);
         }
     }
 
     private static String getSignedAndEncryptedJWT(Key publicKey, RSAPrivateKey privateKey,
-                                                   JWTClaimsSet jwtClaimsSet) throws RequestObjectException {
-        SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, privateKey);
+                                                   JWTClaimsSet jwtClaimsSet, JWSAlgorithm jwsAlgorithm)
+            throws RequestObjectException {
+
+        SignedJWT signedJWT = getSignedJWT(jwtClaimsSet, privateKey, jwsAlgorithm);
         // Create JWE object with signed JWT as payload
         JWEHeader jweHeader = new JWEHeader(JWEAlgorithm.RSA_OAEP_256, EncryptionMethod.A256GCM);
         JWEObject jweObject = new JWEObject(jweHeader, new Payload(signedJWT.serialize()));
@@ -328,6 +367,7 @@ public class TestUtils {
         Map<String, Object> claims2 = new HashMap<>();
         Map<String, Object> claims3 = new HashMap<>();
         Map<String, Object> claims4 = new HashMap<>();
+        Map<String, Object> claims5 = new HashMap<>();
 
         claims1.put(Constants.STATE, "af0ifjsldkj");
         claims1.put(Constants.CLIENT_ID, testClientId);
@@ -354,39 +394,64 @@ public class TestUtils {
         idTokenClaim.put("id_token", givenName);
         claims4.put("claims", idTokenClaim);
 
-        String jsonWebToken1 = buildJWT(testClientId, testClientId, "1000", audience, "RSA265", privateKey, 0,
-                claims1);
+        claims5.put(Constants.STATE, "af0ifjsldkj");
+        claims5.put(Constants.REDIRECT_URI, TestConstants.CALLBACK);
+        claims5.put(Constants.NONCE, "asdrfa");
+        claims5.put(Constants.SCOPE, TestConstants.SCOPE_STRING);
+        claims5.put(NBF, System.currentTimeMillis() / 1000);
+        claims5.put(EXP, System.currentTimeMillis() / 1000 + 3000);
+
+        String jsonWebToken1 = buildJWT(testClientId, testClientId, "1000", audience, JWSAlgorithm.RS256.getName(),
+                privateKey, 0, claims1);
         String jsonWebToken2 = buildJWT(testClientId, testClientId, "1001", audience, "none", privateKey, 0,
                 claims1);
-        String jsonWebToken3 = buildJWT(testClientId, testClientId, "1002", audience, "RSA265", privateKey, 0,
-                claims2);
+        String jsonWebToken3 = buildJWT(testClientId, testClientId, "1002", audience, JWSAlgorithm.RS256.getName(),
+                privateKey, 0, claims2);
         String jsonWebToken4 = buildJWT(testClientId, testClientId, "1003", audience, "none", privateKey, 0,
                 claims2);
         String jsonWebToken5 = buildJWT(testClientId, testClientId, "1004", audience, "none", privateKey, 0,
                 claims3);
-        String jsonWebToken6 = buildJWT(testClientId, testClientId, "1005", audience, "RSA265", privateKey2, 0,
-                claims2);
-        String jsonWebToken7 = buildJWT(testClientId, testClientId, "1000", audience, "RSA265", privateKey, 0,
-                claims4);
+        String jsonWebToken6 = buildJWT(testClientId, testClientId, "1005", audience, JWSAlgorithm.RS256.getName(),
+                privateKey2, 0, claims2);
+        String jsonWebToken7 = buildJWT(testClientId, testClientId, "1000", audience, JWSAlgorithm.RS256.getName(),
+                privateKey, 0, claims4);
         String jsonWebEncryption1 = buildJWE(testClientId, testClientId, "2000", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims1);
         String jsonWebEncryption2 = buildJWE(testClientId, testClientId, "2001", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
+        String jsonWebEncryption3 = buildJWE(testClientId, testClientId, "2001", audience,
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims5);
+        String jsonWebEncryption4 = buildJWE(testClientId, testClientId, "2001", audience,
+                JWSAlgorithm.RS384.getName(), privateKey, publicKey, 0, claims5);
+        String jsonWebEncryption5 = buildJWE(testClientId, testClientId, "2001", audience,
+                JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims5);
+        String jsonWebEncryption6 = buildJWE(testClientId, testClientId, "2001", audience,
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         return new Object[][]{
-                {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted."},
-                {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted."},
-                {jsonWebToken3, claims2, true, false, true, "Valid Request Object, signed, not encrypted."},
-                {jsonWebToken4, claims2, false, false, true, "Valid Request Object, not signed, not encrypted."},
+                {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted.", false},
+                {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted.", false},
+                {jsonWebToken3, claims2, true, false, true, "Valid Request Object, signed, not encrypted.", false},
+                {jsonWebToken4, claims2, false, false, true, "Valid Request Object, not signed, not encrypted.", false},
                 {jsonWebToken5, claims3, false, false, false, "Invalid Request Object, not signed, not encrypted, " +
-                        "mismatching client_id."},
+                        "mismatching client_id.", false},
                 {jsonWebToken6, claims2, true, false, false, "Invalid Request Object, signed but with different key, " +
-                        "not encrypted."},
-                {jsonWebToken7, claims4, true, false, true, "Valid Request Object, signed, not encrypted."},
+                        "not encrypted.", false},
+                {jsonWebToken7, claims4, true, false, true, "Valid Request Object, signed, not encrypted.", false},
                 {"some-request-object", null, false, false, false, "Invalid Request Object string, " +
-                        "signed not encrypted."},
-                {"", null, false, false, false, "Invalid Request Object, signed not encrypted."},
-                {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted."}
+                        "signed not encrypted.", false},
+                {"", null, false, false, false, "Invalid Request Object, signed not encrypted.", false},
+                {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted.", false},
+                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted.", false},
+                // FAPI tests.
+                // For testing, PS256, RS256 and ES256 are assumed as permitted algorithms.
+                {jsonWebEncryption3, claims5, true, true, true, "FAPI Request Object with a permitted signing " +
+                        "algorithm RS256, signed and encrypted.", true},
+                {jsonWebEncryption4, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
+                        "algorithm RS384, signed and encrypted.", true},
+                {jsonWebEncryption5, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
+                        "algorithm NONE, signed and encrypted.", true},
+                {jsonWebEncryption6, claims5, true, true, false, "FAPI Request Object without mandatory parameters " +
+                        "and signed with a permitted signing algorithm RS256, signed and encrypted.", true}
         };
     }
 }

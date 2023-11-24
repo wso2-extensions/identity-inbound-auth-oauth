@@ -1,27 +1,26 @@
 /*
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- *   Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *   WSO2 Inc. licenses this file to you under the Apache License,
- *   Version 2.0 (the "License"); you may not use this file except
- *   in compliance with the License.
- *   You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing,
- *   software distributed under the License is distributed on an
- *   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *   KIND, either express or implied.  See the License for the
- *   specific language governing permissions and limitations
- *   under the License.
- * /
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,8 +36,10 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -47,6 +48,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +56,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IS_EXTENDED_TOKEN;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /*
 NOTE
@@ -97,27 +102,42 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
 
         try {
             String driverName = connection.getMetaData().getDriverName();
+            boolean isMysqlOrMarinaDBOrH2 =
+                    driverName.contains("MySQL") || driverName.contains("MariaDB") || driverName.contains("H2");
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
-                } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
-                } else if (driverName.contains("MS SQL")
-                        || driverName.contains("Microsoft")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
-                } else if (driverName.contains("PostgreSQL")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
-                } else if (driverName.contains("INFORMIX")) {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                if (isAccessTokenExtendedTableExist()) {
+                    if (isMysqlOrMarinaDBOrH2) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MYSQL;
+                    } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_DB2SQL;
+                    } else if (driverName.contains("MS SQL")
+                            || driverName.contains("Microsoft")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_MSSQL;
+                    } else if (driverName.contains("PostgreSQL")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_POSTGRESQL;
+                    } else if (driverName.contains("INFORMIX")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_INFORMIX;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_WITH_EXTENDED_ATTRIBUTES_ORACLE;
+                    }
                 } else {
-                    sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                    if (isMysqlOrMarinaDBOrH2) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MYSQL;
+                    } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_DB2SQL;
+                    } else if (driverName.contains("MS SQL")
+                            || driverName.contains("Microsoft")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_MSSQL;
+                    } else if (driverName.contains("PostgreSQL")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_POSTGRESQL;
+                    } else if (driverName.contains("INFORMIX")) {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_INFORMIX;
+                    } else {
+                        sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_IDP_NAME_ORACLE;
+                    }
                 }
             } else {
-                if (driverName.contains("MySQL")
-                        || driverName.contains("MariaDB")
-                        || driverName.contains("H2")) {
+                if (isMysqlOrMarinaDBOrH2) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_MYSQL;
                 } else if (connection.getMetaData().getDatabaseProductName().contains("DB2")) {
                     sql = SQLQueries.RETRIEVE_ACCESS_TOKEN_VALIDATION_DATA_DB2SQL;
@@ -142,14 +162,16 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
             if (refreshToken != null) {
-                prepStmt.setString(2, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
+                prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
             }
 
             resultSet = prepStmt.executeQuery();
 
             int iterateId = 0;
             List<String> scopes = new ArrayList<>();
+            Map<String, String> extendedParams = new HashMap<>();
             while (resultSet.next()) {
 
                 if (iterateId == 0) {
@@ -163,7 +185,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     int tenantId = resultSet.getInt(3);
                     String userDomain = resultSet.getString(4);
                     String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
-
+                    validationDataDO.setRefreshToken(refreshToken);
                     validationDataDO.setScope(OAuth2Util.buildScopeArray(resultSet.getString(5)));
                     validationDataDO.setRefreshTokenState(resultSet.getString(6));
                     validationDataDO.setIssuedTime(
@@ -176,17 +198,40 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setAccessTokenIssuedTime(
                             resultSet.getTimestamp(13, Calendar.getInstance(TimeZone.getTimeZone(UTC))));
                     validationDataDO.setAccessTokenValidityInMillis(resultSet.getLong(14));
+                    String authorizedOrganization = resultSet.getString(15);
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                        authenticatedIDP = resultSet.getString(15);
+                        authenticatedIDP = resultSet.getString(16);
                     }
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(userName, userDomain, tenantDomain,
                             authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
+                    }
+                    // For B2B users, the users tenant domain and user resident organization should be properly set.
+                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+                        user.setAccessingOrganization(authorizedOrganization);
+                        user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
+                        /* Setting user's tenant domain as app residing tenant domain is not required once console is
+                            registered in each tenant. */
+                        String appResideOrg = getAppTenantDomain();
+                        if (StringUtils.isNotEmpty(appResideOrg)) {
+                            user.setTenantDomain(appResideOrg);
+                        }
+                    }
                     validationDataDO.setAuthorizedUser(user);
 
                 } else {
-                    scopes.add(resultSet.getString(5));
+                    if (!scopes.contains(resultSet.getString(5)) &&
+                            !validationDataDO.getScope()[0].equals(resultSet.getString(5))) {
+                        scopes.add(resultSet.getString(5));
+                    }
+                    if (isAccessTokenExtendedTableExist() && resultSet.getString(17) != null &&
+                            resultSet.getString(18) != null) {
+                        extendedParams.put(resultSet.getString(17), resultSet.getString(18));
+                    }
                 }
 
                 iterateId++;
@@ -197,6 +242,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         scopes.toArray(new String[scopes.size()])));
             }
 
+            if (extendedParams.size() > 0) {
+                extendedParams.remove(IS_EXTENDED_TOKEN);
+                validationDataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(extendedParams));
+            }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when validating a refresh token", e);
         } finally {
@@ -280,6 +329,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(tokenId);
                     validationDataDO.setGrantType(grantType);
                     validationDataDO.setTenantID(tenantId);
+                    validationDataDO.setRefreshToken(refreshToken);
                 } else {
                     scopes.add(resultSet.getString(5));
                 }
@@ -536,6 +586,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         PreparedStatement updateStateStatement = null;
         PreparedStatement revokeActiveTokensStatement = null;
         PreparedStatement deactivateActiveCodesStatement = null;
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
         try {
             connection = IdentityDatabaseUtil.getDBConnection();
             if (OAuthConstants.ACTION_REVOKE.equals(action)) {
@@ -555,6 +606,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         (org.wso2.carbon.identity.oauth.dao.SQLQueries.OAuthAppDAOSQLQueries.UPDATE_APPLICATION_STATE);
                 updateStateStatement.setString(1, newAppState);
                 updateStateStatement.setString(2, consumerKey);
+                updateStateStatement.setInt(3, appTenantId);
                 updateStateStatement.execute();
 
             } else if (OAuthConstants.ACTION_REGENERATE.equals(action)) {
@@ -573,6 +625,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, properties.getProperty(OAuthConstants.OAUTH_APP_NEW_STATE));
                     updateStateStatement.setString(3, consumerKey);
+                    updateStateStatement.setInt(4, appTenantId);
                 } else {
                     // Update the consumer secret of the oauth app when the new app state is not available.
                     updateStateStatement = connection.prepareStatement
@@ -580,6 +633,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                                     UPDATE_OAUTH_SECRET_KEY);
                     updateStateStatement.setString(1, getPersistenceProcessor().getProcessedClientSecret(newSecretKey));
                     updateStateStatement.setString(2, consumerKey);
+                    updateStateStatement.setInt(3, appTenantId);
                 }
                 updateStateStatement.execute();
 
@@ -599,6 +653,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                         revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                         revokeActiveTokensStatement.setString(3, consumerKey);
+                        revokeActiveTokensStatement.setInt(4, appTenantId);
                         int count = revokeActiveTokensStatement.executeUpdate();
                         if (log.isDebugEnabled()) {
                             log.debug("Number of rows being updated : " + count);
@@ -609,7 +664,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
                     revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
                     revokeActiveTokensStatement.setString(3, consumerKey);
-                    revokeActiveTokensStatement.setString(4, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+                    revokeActiveTokensStatement.setInt(4, appTenantId);
+                    revokeActiveTokensStatement.setString(5, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
                     revokeActiveTokensStatement.execute();
                 }
             }
@@ -619,6 +675,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             deactivateActiveCodesStatement = connection.prepareStatement(sqlQuery);
             deactivateActiveCodesStatement.setString(1, OAuthConstants.AuthorizationCodeState.REVOKED);
             deactivateActiveCodesStatement.setString(2, consumerKey);
+            deactivateActiveCodesStatement.setInt(3, appTenantId);
             deactivateActiveCodesStatement.executeUpdate();
 
             IdentityDatabaseUtil.commitTransaction(connection);
@@ -689,6 +746,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, consumerKey);
             ps.setInt(5, tenantId);
+            ps.setInt(6, IdentityTenantUtil.getLoginTenantId());
             ps.executeUpdate();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
@@ -763,4 +821,19 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         return distinctConsumerKeys;
     }
 
+    private String getAppTenantDomain() {
+
+        return IdentityTenantUtil.getTenantDomainFromContext();
+    }
+
+    private String resolveOrganizationId(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving organization ID for the tenant domain: " +
+                    tenantDomain, e);
+        }
+    }
 }

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -51,9 +52,15 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -61,13 +68,19 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -87,7 +100,10 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
  * This class is used to issue access tokens and refresh tokens.
@@ -153,21 +169,44 @@ public class AccessTokenIssuer {
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
+        boolean isCodeRequest = GrantType.AUTHORIZATION_CODE.toString().equals(grantType);
+
+        if (isCodeRequest) {
+
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+            if (authorizationGrantCacheEntry != null &&
+                    authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
+                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
+                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
+                    tokReqMsgCtx.setRefreshTokenvalidityPeriod(
+                            authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+                }
+                tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
+                        authorizationGrantCacheEntry.getAccessTokenExtensionDO());
+            }
+        }
+
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
 
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
 
+        DiagnosticLog.DiagnosticLogBuilder errorDiagnosticLogBuilder = null;
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            errorDiagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
         if (oAuthClientAuthnContext == null) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                if (StringUtils.isNotBlank(tokenReqDTO.getClientSecret())) {
-                    params.put("clientSecret", tokenReqDTO.getClientSecret().replaceAll(".", "*"));
-                }
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "OAuth client authentication failed.", "issue-access-token",
-                        null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("OAuth client authentication failed.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             oAuthClientAuthnContext = new OAuthClientAuthnContext();
             oAuthClientAuthnContext.setAuthenticated(false);
@@ -178,14 +217,12 @@ public class AccessTokenIssuer {
         // Will return an invalid request response if multiple authentication mechanisms are engaged irrespective of
         // whether the grant type is confidential or not.
         if (oAuthClientAuthnContext.isMultipleAuthenticatorsEngaged()) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("clientAuthenticators", oAuthClientAuthnContext.getExecutedAuthenticators());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "The client MUST NOT use more than one authentication method per request.",
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.inputParam("client authenticators",
+                                oAuthClientAuthnContext.getExecutedAuthenticators())
+                        .resultMessage("The client MUST NOT use more than one authentication method per request.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(OAuth2ErrorCodes.INVALID_REQUEST, "The client MUST NOT use more than one " +
                     "authentication method in each", tokenReqDTO);
@@ -201,12 +238,11 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug(errorMsg);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("grantType", grantType);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Unsupported grant type.", "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("Unsupported grant type.")
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType);
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNSUPPORTED_GRANT_TYPE,
                     errorMsg, tokenReqDTO);
@@ -223,12 +259,10 @@ public class AccessTokenIssuer {
 
         if (!isAuthenticated && !oAuthClientAuthnContext.isPreviousAuthenticatorEngaged() && authzGrantHandler
                 .isConfidentialClient()) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Unsupported client authentication method.",
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("Unsupported client authentication method.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(
                     OAuth2ErrorCodes.INVALID_CLIENT,
@@ -238,13 +272,11 @@ public class AccessTokenIssuer {
             return tokenRespDTO;
         }
         if (!isAuthenticated) {
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Client authentication failed. " + oAuthClientAuthnContext.getErrorMessage(),
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.resultMessage("Client authentication failed.")
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, oAuthClientAuthnContext.getErrorMessage());
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(
                     oAuthClientAuthnContext.getErrorCode(),
@@ -269,6 +301,9 @@ public class AccessTokenIssuer {
 
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
 
+        boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
+                .isUseClientIdAsSubClaimForAppTokensEnabled();
+
         if (!isOfTypeApplicationUser) {
             tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
@@ -286,9 +321,16 @@ public class AccessTokenIssuer {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating client for authorization", e);
             }
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, null,
-                    OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-access-token", null);
             error = e.getMessage();
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN)
+                        .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, error)
+                        .resultMessage("System error occurred.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+            }
         }
 
         if (!isAuthorizedClient) {
@@ -297,13 +339,11 @@ public class AccessTokenIssuer {
                 log.debug("Client Id: " + tokenReqDTO.getClientId() + " is not authorized to use grant type: " +
                         grantType);
             }
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("grantType", grantType);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Client is not authorized to use the requested grant type.",
-                        "issue-access-token", null);
+            // errorDiagnosticLogBuilder will be null if diagnostic logs are disabled.
+            if (errorDiagnosticLogBuilder != null) {
+                errorDiagnosticLogBuilder.inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                        .resultMessage("Client is not authorized to use the requested grant type.");
+                LoggerUtils.triggerDiagnosticLogEvent(errorDiagnosticLogBuilder);
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.UNAUTHORIZED_CLIENT, error, tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -369,12 +409,15 @@ public class AccessTokenIssuer {
             }
 
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Invalid scope provided in the request.", "validate-scope",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                                getScopeList(tokenReqDTO.getScope()))
+                        .resultMessage("Invalid scope provided in the request.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_SCOPE, "Invalid Scope!", tokenReqDTO);
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
@@ -391,8 +434,13 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                authorizedUser.setAuthenticatedSubjectIdentifier(
-                        getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()), authorizedUser));
+                if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled) {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
+                } else {
+                    authorizedUser.setAuthenticatedSubjectIdentifier(
+                            getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()),
+                                    authorizedUser));
+                }
             }
 
             tokenRespDTO = authzGrantHandler.issue(tokReqMsgCtx);
@@ -426,16 +474,30 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getAuthorizedUser() + " and scopes: " + tokenRespDTO.getAuthorizedScopes());
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            Map<String, Object> params = new HashMap<>();
-            params.put("clientId", tokenReqDTO.getClientId());
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Access token issued for the application.",
-                    "issue-access-token", null);
+            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN);
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                            tokenRespDTO.getAuthorizedScopes())
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
+                    .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .resultMessage("Access token issued for the application.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            if (tokReqMsgCtx.getAuthorizedUser() != null) {
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
+                        tokReqMsgCtx.getAuthorizedUser().getUserId());
+                String username = tokReqMsgCtx.getAuthorizedUser().getUserName();
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER, LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(username) : username);
+            }
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-
+        Optional<AuthorizationGrantCacheEntry> authorizationGrantCacheEntry = Optional.empty();
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
-            // Should add user attributes to the cache before building the ID token.
-            addUserAttributesAgainstAccessToken(tokenReqDTO, tokenRespDTO);
+
+            authorizationGrantCacheEntry = getAuthzGrantCacheEntryFromAuthzCode(tokenReqDTO);
         }
         if (tokReqMsgCtx.getScope() != null && OAuth2Util.isOIDCAuthzRequest(tokReqMsgCtx.getScope())) {
             if (log.isDebugEnabled()) {
@@ -445,20 +507,29 @@ public class AccessTokenIssuer {
             try {
                 String idToken = builder.buildIDToken(tokReqMsgCtx, tokenRespDTO);
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokenReqDTO.getClientId());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.SUCCESS, "ID token issued for the application.",
-                            "issue-id-token", null);
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.ISSUE_ID_TOKEN);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam("issued claims for id token", tokReqMsgCtx.getProperty(
+                                    ID_TOKEN_USER_CLAIMS_PROP_KEY))
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                            .resultMessage("ID token issued for the application.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 tokenRespDTO.setIDToken(idToken);
             } catch (IDTokenValidationFailureException e) {
                 log.error(e.getMessage());
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    Map<String, Object> params = new HashMap<>();
-                    params.put("clientId", tokenReqDTO.getClientId());
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "System error occurred.", "issue-id-token", null);
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.ISSUE_ID_TOKEN)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                            .resultMessage("System error occurred.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                 }
                 tokenRespDTO = handleError(OAuth2ErrorCodes.SERVER_ERROR, "Server Error", tokenReqDTO);
                 return tokenRespDTO;
@@ -478,12 +549,57 @@ public class AccessTokenIssuer {
             }
         }
 
+        if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
+            Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
+            if (deviceCodeOptional.isPresent()) {
+                String deviceCode = deviceCodeOptional.get();
+                authorizationGrantCacheEntry = getAuthzGrantCacheEntryFromDeviceCode(deviceCode);
+                // Cache entry against the device code has no value beyond the token request.
+                clearCacheEntryAgainstDeviceCode(deviceCode);
+            }
+        }
+        if (authorizationGrantCacheEntry.isPresent()) {
+            cacheUserAttributesAgainstAccessToken(authorizationGrantCacheEntry.get(), tokenRespDTO);
+        }
+
+        if (GrantType.PASSWORD.toString().equals(grantType)) {
+            addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
+        }
+
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
 
         return tokenRespDTO;
+    }
+
+    private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {
+
+        DeviceAuthorizationGrantCacheKey deviceCodeCacheKey =
+                new DeviceAuthorizationGrantCacheKey(deviceCode);
+        DeviceAuthorizationGrantCacheEntry cacheEntry =
+                DeviceAuthorizationGrantCache.getInstance().getValueFromCache(deviceCodeCacheKey);
+        if (cacheEntry != null) {
+            Map<ClaimMapping, String> userAttributes = cacheEntry.getUserAttributes();
+            return Optional.of(new AuthorizationGrantCacheEntry(userAttributes));
+        }
+        return Optional.empty();
+    }
+
+    private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromAuthzCode(OAuth2AccessTokenReqDTO
+                                                                                                tokenReqDTO) {
+
+        AuthorizationGrantCacheKey oldCacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry = null;
+        //checking getUserAttributesId value of cacheKey before retrieve entry from cache as it causes to NPE
+        if (oldCacheKey.getUserAttributesId() != null) {
+            authorizationGrantCacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByCode(oldCacheKey);
+        }
+        if (authorizationGrantCacheEntry != null) {
+            return Optional.of(authorizationGrantCacheEntry);
+        }
+        return Optional.empty();
     }
 
     private boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
@@ -504,43 +620,102 @@ public class AccessTokenIssuer {
             }
             return true;
         }
-
-        List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
-        List<String> requestedAllowedScopes = new ArrayList<>();
-        String[] requestedScopes = tokReqMsgCtx.getScope();
-        List<String> scopesToBeValidated = new ArrayList<>();
-
-        if (requestedScopes != null) {
-            for (String scope : requestedScopes) {
-                if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
-                    requestedAllowedScopes.add(scope);
-                } else {
-                    scopesToBeValidated.add(scope);
+        if (GrantType.REFRESH_TOKEN.toString().equals(grantType)) {
+            /*
+             In the refresh token flow, we have already completed scope validation during the initial token call and
+             issued the token with authorized scopes. Therefore, during the refresh flow we don't need to do the
+             internal scope validation again. But we need to call the grant type specific scope validation handler to
+             issue the token with only the authorized scopes.
+            */
+            AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
+            if (log.isDebugEnabled()) {
+                log.debug("Calling grant type specific scope validation handler for the refresh token grant and " +
+                        "omitting internal scope validation as internal scope validation already done " +
+                        "during the token issuance.");
+            }
+            boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
+            if (isValidScope) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                                    getScopeList(tokReqMsgCtx.getScope()))
+                            .resultMessage("OAuth scope validation is successful.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
                 }
             }
-            tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+            return isValidScope;
         }
-
-        String[] authorizedInternalScopes = new String[0];
         boolean isManagementApp = getServiceProvider(tokenReqDTO).isManagementApp();
-        if (isManagementApp) {
+        List<String> requestedAllowedScopes = new ArrayList<>();
+        String[] authorizedInternalScopes = new String[0];
+        String[] requestedScopes = tokReqMsgCtx.getScope();
+        List<String> authorizedScopes = null;
+        if (AuthzUtil.isLegacyAuthzRuntime() && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                !isManagementApp) {
+            log.debug("Application is not configured as Management App and the grant type is client credentials. " +
+                    "Hence skipping internal scope validation to stop issuing internal scopes for the client : " +
+                    tokenReqDTO.getClientId());
+        } else {
+            if (GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, INTERNAL_LOGIN_SCOPE)) {
+                /*
+                Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                related scopes for client credentials grant.
+                */
+                requestedScopes = (String[]) ArrayUtils.removeElement(requestedScopes, INTERNAL_LOGIN_SCOPE);
+                tokReqMsgCtx.setScope(requestedScopes);
+            }
+            List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
+            List<String> scopesToBeValidated = new ArrayList<>();
+
+            if (ArrayUtils.isNotEmpty(requestedScopes)) {
+                for (String scope : requestedScopes) {
+                    if (OAuth2Util.isAllowedScope(allowedScopes, scope)) {
+                        requestedAllowedScopes.add(scope);
+                    } else {
+                        scopesToBeValidated.add(scope);
+                    }
+                }
+                tokReqMsgCtx.setScope(scopesToBeValidated.toArray(new String[0]));
+            }
+
             if (log.isDebugEnabled()) {
                 log.debug("Handling the internal scope validation.");
             }
-            // Execute Internal SCOPE Validation.
-            JDBCPermissionBasedInternalScopeValidator scopeValidator = new JDBCPermissionBasedInternalScopeValidator();
-            authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
-            // Execute internal console scopes validation.
-            if (IdentityUtil.isSystemRolesEnabled()) {
-                RoleBasedInternalScopeValidator roleBasedInternalScopeValidator = new RoleBasedInternalScopeValidator();
-                String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator.validateScope(tokReqMsgCtx);
-                authorizedInternalScopes = (String[]) ArrayUtils
-                        .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+            // Switch the scope validators dynamically based on the authorization runtime.
+            if (AuthzUtil.isLegacyAuthzRuntime()) {
+                // Execute Internal SCOPE Validation.
+                JDBCPermissionBasedInternalScopeValidator scopeValidator =
+                        new JDBCPermissionBasedInternalScopeValidator();
+                authorizedInternalScopes = scopeValidator.validateScope(tokReqMsgCtx);
+                // Execute internal console scopes validation.
+                if (IdentityUtil.isSystemRolesEnabled()) {
+                    RoleBasedInternalScopeValidator roleBasedInternalScopeValidator =
+                            new RoleBasedInternalScopeValidator();
+                    String[] roleBasedInternalConsoleScopes = roleBasedInternalScopeValidator
+                            .validateScope(tokReqMsgCtx);
+                    authorizedInternalScopes = (String[]) ArrayUtils
+                            .addAll(authorizedInternalScopes, roleBasedInternalConsoleScopes);
+                }
+            } else {
+                // Engage new scope validator
+                authorizedScopes = getAuthorizedScopes(tokReqMsgCtx);
             }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Skipping the internal scope validation as the application is not" +
-                        " configured as Management App");
+            if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
+                    ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
+                List<String> authorizedInternalScopesList = new ArrayList<>(Arrays.asList(authorizedInternalScopes));
+                if (authorizedInternalScopesList.contains(INTERNAL_LOGIN_SCOPE)) {
+                    /*
+                    Remove the internal_login scope from the requested scopes as we need to stop issuing self-service
+                    related scopes for client credentials grant.
+                    */
+                    authorizedInternalScopesList.remove(INTERNAL_LOGIN_SCOPE);
+                    authorizedInternalScopes = authorizedInternalScopesList.toArray(new String[0]);
+                }
             }
         }
 
@@ -549,10 +724,15 @@ public class AccessTokenIssuer {
          Those scopes should not send to the other scopes validators. Thus remove the scopes from the tokReqMsgCtx.
          Will be added to the response after executing the other scope validators.
         */
-        removeInternalScopes(tokReqMsgCtx);
+        if (AuthzUtil.isLegacyAuthzRuntime()) {
+            removeInternalScopes(tokReqMsgCtx);
 
-        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
-        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+            // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+            tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+        } else {
+            removeAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
+        }
+
 
         boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
         if (isDropUnregisteredScopes) {
@@ -569,19 +749,34 @@ public class AccessTokenIssuer {
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             // Add authorized internal scopes to the request for sending in the response.
-            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            if (AuthzUtil.isLegacyAuthzRuntime()) {
+                addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            } else {
+                addAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
+            }
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("clientId", tokenReqDTO.getClientId());
-                params.put("requestedScopes", getScopeList(tokenReqDTO.getScope()));
-                params.put("authorizedScopes", getScopeList(tokReqMsgCtx.getScope()));
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.SUCCESS, "OAuth scope validation is successful.", "validate-scope",
-                        null);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION)
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_SCOPES,
+                                getScopeList(tokenReqDTO.getScope()))
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
+                                getScopeList(tokReqMsgCtx.getScope()))
+                        .resultMessage("OAuth scope validation is successful.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
             }
         }
         return isValidScope;
+    }
+
+    private List<String> getAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        DefaultOAuth2ScopeValidator scopeValidator = new DefaultOAuth2ScopeValidator();
+        return scopeValidator.validateScope(tokReqMsgCtx);
     }
 
     private List<String> getScopeList(String[] scopes) {
@@ -650,7 +845,7 @@ public class AccessTokenIssuer {
                 subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception("User id not found for user: "
-                        + authenticatedUser.getLoggableUserId(), e);
+                        + authenticatedUser.getLoggableMaskedUserId(), e);
             }
             if (log.isDebugEnabled()) {
                 log.debug("No subject claim defined for service provider: " + serviceProvider.getApplicationName()
@@ -707,9 +902,13 @@ public class AccessTokenIssuer {
         AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager) IdentityTenantUtil
                 .getRealm(authenticatedUser.getTenantDomain(), authenticatedUser.toFullQualifiedUsername())
                 .getUserStoreManager();
-
-        return userStoreManager
-                .getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
+        if (OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled() &&
+                !userStoreManager.isExistingUserWithID(authenticatedUser.getUserId())) {
+            // Fetch the user realm's user store manager corresponds to the tenant domain where the userID exists.
+            userStoreManager = getUserStoreManagerFromRealmOfUserResideOrganization(authenticatedUser.getTenantDomain(),
+                    authenticatedUser.getUserId()).orElse(userStoreManager);
+        }
+        return userStoreManager.getUserClaimValueWithID(authenticatedUser.getUserId(), subjectClaimUri, null);
     }
 
     private String getSubjectClaimUriInLocalDialect(ServiceProvider serviceProvider) {
@@ -751,12 +950,32 @@ public class AccessTokenIssuer {
                                              String[] authorizedInternalScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
+        if (scopes == null) {
+            scopes = new String[0];
+        }
+        if (authorizedInternalScopes == null) {
+            authorizedInternalScopes = new String[0];
+        }
         tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), Arrays.stream(authorizedInternalScopes))
                 .distinct().toArray(String[]::new));
     }
 
+    private void addAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> authorizedScopes) {
+
+        String[] scopes = tokReqMsgCtx.getScope();
+        if (scopes == null) {
+            scopes = new String[0];
+        }
+        if (authorizedScopes == null) {
+            authorizedScopes = new ArrayList<>();
+        }
+        tokReqMsgCtx.setScope(Stream.concat(Arrays.stream(scopes), authorizedScopes.stream())
+                .distinct().toArray(String[]::new));
+    }
+
     private void addRequestedOIDCScopes(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                             String[] requestedOIDCScopes) {
+                                        String[] requestedOIDCScopes) {
+
         if (tokReqMsgCtx.getScope() == null) {
             tokReqMsgCtx.setScope(new String[0]);
         }
@@ -764,8 +983,8 @@ public class AccessTokenIssuer {
         scopesToReturn.addAll(Arrays.asList(requestedOIDCScopes));
         String[] scopes = scopesToReturn.toArray(new String[0]);
         tokReqMsgCtx.setScope(scopes);
-
     }
+
     private void addAllowedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, String[] allowedScopes) {
 
         String[] scopes = tokReqMsgCtx.getScope();
@@ -783,6 +1002,20 @@ public class AccessTokenIssuer {
         for (String scope : tokReqMsgCtx.getScope()) {
             if (!scope.startsWith(INTERNAL_SCOPE_PREFIX) && !scope.startsWith(CONSOLE_SCOPE_PREFIX) && !scope
                     .equalsIgnoreCase(SYSTEM_SCOPE)) {
+                scopes.add(scope);
+            }
+        }
+        tokReqMsgCtx.setScope(scopes.toArray(new String[0]));
+    }
+
+    private void removeAuthorizedScopes(OAuthTokenReqMessageContext tokReqMsgCtx, List<String> authorizedScopes) {
+
+        if (tokReqMsgCtx.getScope() == null || authorizedScopes == null) {
+            return;
+        }
+        List<String> scopes = new ArrayList<>();
+        for (String scope : tokReqMsgCtx.getScope()) {
+            if (!authorizedScopes.contains(scope) && !scope.equalsIgnoreCase(SYSTEM_SCOPE)) {
                 scopes.add(scope);
             }
         }
@@ -828,6 +1061,10 @@ public class AccessTokenIssuer {
 
         Optional<String> tokenBindingValueOptional = tokenBinder.getTokenBindingValue(tokenReqDTO);
         if (!tokenBindingValueOptional.isPresent()) {
+            if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(tokenBinder.getBindingType())) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "TLS certificate not found in the request.");
+            }
             throw new IdentityOAuth2Exception(
                     "Token binding reference cannot be retrieved form the token binder: " + tokenBinder
                             .getBindingType());
@@ -899,35 +1136,42 @@ public class AccessTokenIssuer {
     }
 
     /**
-     * Copies the cache entry against the authorization code and adds an entry against the access token. This is done to
-     * reuse the calculated user claims for subsequent usages such as user info calls.
+     * Copies the cache entry against the authorization code/device code and adds an entry against the access token.
+     * This is done to reuse the calculated user claims for subsequent usages such as user info calls.
      *
-     * @param tokenReqDTO
+     * @param authorizationGrantCacheEntry
      * @param tokenRespDTO
      */
-    private void addUserAttributesAgainstAccessToken(OAuth2AccessTokenReqDTO tokenReqDTO,
-                                                     OAuth2AccessTokenRespDTO tokenRespDTO) {
+    private void cacheUserAttributesAgainstAccessToken(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+                                                       OAuth2AccessTokenRespDTO tokenRespDTO) {
 
-        AuthorizationGrantCacheKey oldCacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
-        //checking getUserAttributesId value of cacheKey before retrieve entry from cache as it causes to NPE
-        if (oldCacheKey.getUserAttributesId() != null) {
-            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
-                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(oldCacheKey);
-            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-            if (authorizationGrantCacheEntry != null) {
-                authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-                if (log.isDebugEnabled()) {
-                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                        log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
-                                DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
-                    } else {
-                        log.debug("Adding AuthorizationGrantCache entry for the access token");
-                    }
-                }
-                authorizationGrantCacheEntry.setValidityPeriod(
-                        TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
-                AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+        AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
+        authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
+                        DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
+            } else {
+                log.debug("Adding AuthorizationGrantCache entry for the access token");
             }
+        }
+        authorizationGrantCacheEntry.setValidityPeriod(
+                TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+    }
+
+    private void addUserAttributesAgainstAccessTokenForPasswordGrant(OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                           OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getAuthorizedUser() != null) {
+            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    new AuthorizationGrantCacheEntry(tokReqMsgCtx.getAuthorizedUser().getUserAttributes());
+            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
         }
     }
 
@@ -940,9 +1184,25 @@ public class AccessTokenIssuer {
         }
     }
 
+    private void clearCacheEntryAgainstDeviceCode(String deviceCode) {
+
+        DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
+        DeviceAuthorizationGrantCache.getInstance().clearCacheEntry(cacheKey);
+    }
+
     private String getAuthorizationCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
 
         return tokenReqDTO.getAuthorizationCode();
+    }
+
+    private Optional<String> getDeviceCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        return Arrays.stream(tokenReqDTO.getRequestParameters())
+                .filter(parameter -> Constants.DEVICE_CODE.equals(parameter.getKey())
+                        && parameter.getValue() != null
+                        && parameter.getValue().length > 0)
+                .map(parameter -> parameter.getValue()[0])
+                .findFirst();
     }
 
     /**
@@ -1014,5 +1274,36 @@ public class AccessTokenIssuer {
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    /**
+     * If the user is not found in the given tenant domain, check the user existence from ancestor organizations and
+     * provide the correct user store manager from the user realm.
+     *
+     * @param tenantDomain The tenant domain of the authenticated user.
+     * @param userId The ID of the authenticated user.
+     * @return User store manager of the user reside organization.
+     */
+    private Optional<AbstractUserStoreManager> getUserStoreManagerFromRealmOfUserResideOrganization(String tenantDomain,
+                                                                                                    String userId) {
+
+        try {
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            Optional<String> userResideOrgId = OAuth2ServiceComponentHolder.getOrganizationUserResidentResolverService()
+                    .resolveResidentOrganization(userId, organizationId);
+            if (!userResideOrgId.isPresent()) {
+                return Optional.empty();
+            }
+            String userResideTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(userResideOrgId.get());
+            int tenantId = OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantManager()
+                    .getTenantId(userResideTenantDomain);
+            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
+            return Optional.of(
+                    (AbstractUserStoreManager) realmService.getTenantUserRealm(tenantId).getUserStoreManager());
+        } catch (OrganizationManagementException | UserStoreException e) {
+            return Optional.empty();
+        }
     }
 }

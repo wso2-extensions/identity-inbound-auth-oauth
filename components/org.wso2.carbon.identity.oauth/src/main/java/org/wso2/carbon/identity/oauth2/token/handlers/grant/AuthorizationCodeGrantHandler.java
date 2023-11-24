@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -45,9 +46,9 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.HashMap;
-import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
@@ -97,7 +98,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             throws IdentityOAuth2Exception {
         OAuth2AccessTokenRespDTO tokenResp = super.issue(tokReqMsgCtx);
         String authzCode = retrieveAuthzCode(tokReqMsgCtx);
-
         deactivateAuthzCode(tokReqMsgCtx, tokenResp.getTokenId(), authzCode);
         clearAuthzCodeCache(tokReqMsgCtx, authzCode);
         return tokenResp;
@@ -125,13 +125,15 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         " is not matching with persisted callback url " + callbackUrlFromPersistedAuthzCode);
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                Map<String, Object> params = new HashMap<>();
-                params.put("callbackUrlInRequest", callbackUrlFromRequest);
-                Map<String, Object> configs = new HashMap<>();
-                configs.put("applicationCallbackUrl", callbackUrlFromPersistedAuthzCode);
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Received callback URL does not match with the persisted.",
-                        "validate-input-parameters", configs);
+                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS)
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.CALLBACK_URI, callbackUrlFromRequest)
+                        .configParam(OAuthConstants.LogConstants.ConfigKeys.REGISTERED_CALLBACK_URI,
+                                callbackUrlFromPersistedAuthzCode)
+                        .resultMessage("Received callback URL does not match with the persisted.")
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
             }
             throw new IdentityOAuth2Exception("Callback url mismatch");
         }
@@ -295,7 +297,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             userId = authzCodeDO.getAuthorizedUser().getUserId();
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("User id not found for user: "
-                    + authzCodeDO.getAuthorizedUser().getLoggableUserId(), e);
+                    + authzCodeDO.getAuthorizedUser().getLoggableMaskedUserId(), e);
         }
         String accessToken = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokenByTokenId(tokenId);
@@ -375,10 +377,13 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private boolean validateAuthzCodeFromRequest(AuthzCodeDO authzCodeBean, String clientId, String authzCode)
             throws IdentityOAuth2Exception {
 
-        Map<String, Object> params = new HashMap<>();
-        params.put("clientId", clientId);
-        params.put("authorizationCode", authzCode);
-
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_CODE);
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId)
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        }
         if (authzCodeBean == null) {
             // If no auth code details available, cannot proceed with Authorization code grant
             if (log.isDebugEnabled()) {
@@ -386,10 +391,12 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                         "and couldn't find persisted data for authorization code: " + authzCode);
             }
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED,
-                        "Invalid authorization code received. Couldn't find persisted data for authorization code.",
-                        "validate-authz-code", null);
+                diagnosticLogBuilder.resultMessage("Invalid authorization code received. Couldn't find persisted data" +
+                                " for authorization code.")
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new IdentityOAuth2Exception("Invalid authorization code received from token request");
         }
@@ -397,9 +404,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (isInactiveAuthzCode(authzCodeBean)) {
             clearTokenCache(authzCodeBean, clientId);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                        OAuthConstants.LogConstants.FAILED, "Inactive authorization code received.",
-                        "validate-authz-code", null);
+                diagnosticLogBuilder.resultMessage("Inactive authorization code received.")
+                        .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw new IdentityOAuth2Exception("Inactive authorization code received from token request");
         }
@@ -407,23 +415,25 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         if (isAuthzCodeExpired(authzCodeBean) || isAuthzCodeRevoked(authzCodeBean)) {
             if (isAuthzCodeExpired(authzCodeBean)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Expired authorization code received.",
-                            "validate-authz-code", null);
+                    diagnosticLogBuilder.resultMessage("Expired authorization code received.")
+                            .inputParam("authorization code", authzCode)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             } else if (isAuthzCodeRevoked(authzCodeBean)) {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                            OAuthConstants.LogConstants.FAILED, "Revoked authorization code received.",
-                            "validate-authz-code", null);
+                    diagnosticLogBuilder.resultMessage("Revoked authorization code received.")
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZATION_CODE, authzCode)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
             }
             throw new IdentityOAuth2Exception("Expired or Revoked authorization code received from token request");
         }
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            LoggerUtils.triggerDiagnosticLogEvent(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, params,
-                    OAuthConstants.LogConstants.SUCCESS, "Authorization code validation is successful.",
-                    "validate-authz-code", null);
+            diagnosticLogBuilder.resultMessage("Authorization code validation is successful.")
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
         return true;
     }

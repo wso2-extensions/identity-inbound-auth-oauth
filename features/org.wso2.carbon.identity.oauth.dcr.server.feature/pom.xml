@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>6.11.28-SNAPSHOT</version>
+        <version>6.11.215-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -170,12 +170,12 @@
                             </bundles>
                             <importFeatures>
                                 <importFeatureDef>org.wso2.carbon.core:compatible:${carbon.kernel.feature.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.core:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.core.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.oauth.common:compatible:${project.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.idp.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.security.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.application.mgt.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:compatible:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.idp.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.security.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.application.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>
                     </execution>

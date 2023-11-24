@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -87,6 +87,7 @@ public final class OAuthConstants {
     public static final String OAUTH_SAML2_ASSERTION = "SAML2Assertion";
     public static final long UNASSIGNED_VALIDITY_PERIOD = -1L;
     public static final String ACCESS_TOKEN_STORE_TABLE = "IDN_OAUTH2_ACCESS_TOKEN";
+    public static final String ACCESS_TOKEN_STORE_ATTRIBUTES_TABLE = "IDN_OAUTH2_ACCESS_TOKEN_ATTRIBUTES";
     public static final int OAUTH_AUTHZ_CB_HANDLER_DEFAULT_PRIORITY = 1;
     public static final String DEFAULT_KEY_ALIAS = "Security.KeyStore.KeyAlias";
 
@@ -100,8 +101,69 @@ public final class OAuthConstants {
     // OAuth client authenticator properties
     public static final String CLIENT_AUTH_CREDENTIAL_VALIDATION = "StrictClientCredentialValidation";
     public static final String ACCESS_TOKEN = "accessToken";
+    public static final String ACCESS_TOKEN_RESPONSE_PARAM = "access_token";
+    public static final String EXPIRES_IN = "expires_in";
+    public static final String TOKEN_TYPE = "token_type";
     public static final String ID_TOKEN = "id_token";
+    public static final String CODE = "code";
     public static final String USERINFO = "userinfo";
+    public static final String AUTHENTICATED_IDPS = "AuthenticatedIdPs";
+    public static final String SESSION_STATE = "session_state";
+    public static final String STATE = "state";
+    public static final String AUTHENTICATOR_IDP_SPLITTER = ":";
+
+    public static final String SECTOR_IDENTIFIER_URI = "sector_identifier_uri";
+    public static final String SUBJECT_TYPE = "subject_type";
+
+    public static final String READ_AMR_VALUE_FROM_IDP = "OAuth.ReplaceDefaultAMRValuesWithIDPSentValues";
+
+    public static final String CNF = "cnf";
+    public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
+    public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    public static final String END_CERT = "-----END CERTIFICATE-----";
+    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
+    public static final String CONFIG_NOT_FOUND = "CONFIG_NOT_FOUND";
+    public static final String X5T_S256 = "x5t#S256";
+
+    public static final String ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE = "OAuth.OpenIDConnect." +
+            "EnableTLSCertificateBoundAccessTokensViaBindingType";
+
+    /**
+     * Enum for OIDC supported subject types.
+     */
+    public enum SubjectType {
+
+        PUBLIC("public"),
+        PAIRWISE("pairwise");
+
+        private final String subjectType;
+
+        SubjectType(String subjectType) {
+        
+            this.subjectType = subjectType;
+        }
+
+        @Override
+        public String toString() {
+
+            return subjectType;
+        }
+
+        public String getValue() {
+
+            return subjectType;
+        }
+
+        public static SubjectType fromValue(String text) {
+
+            for (SubjectType subType : SubjectType.values()) {
+                if (String.valueOf(subType.subjectType).equals(text)) {
+                    return subType;
+                }
+            }
+            return null;
+        }
+    }
     public static final String AUTHZ_CODE = "AuthorizationCode";
 
     //Constants for reading EndpointConfig.properties
@@ -115,6 +177,8 @@ public final class OAuthConstants {
     public static final String OAUTH_PKCE_CODE_CHALLENGE_METHOD = "code_challenge_method";
     public static final String OAUTH_PKCE_S256_CHALLENGE = "S256";
     public static final String OAUTH_PKCE_PLAIN_CHALLENGE = "plain";
+    //OAuth PKCE request attribute
+    public static final String PKCE_UNSUPPORTED_FLOW  = "pkce_unsupported_flow";
     //Response types
     public static final String NONE = "none";
     public static final String TOKEN = "token";
@@ -122,6 +186,7 @@ public final class OAuthConstants {
     public static final String CODE_IDTOKEN = "code id_token";
     public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
     public static final String IDTOKEN_TOKEN = "id_token token";
+    public static final String SCOPE = "scope";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
@@ -150,6 +215,8 @@ public final class OAuthConstants {
     public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
+    public static final String RESTRICT_UNASSIGNED_SCOPES = "restrict.unassigned.scopes";
+
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
 
     //Oauth2 sp expire time configuration.
@@ -163,6 +230,44 @@ public final class OAuthConstants {
 
     // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
+    public static final String PAR_EXPIRY_TIME = "OAuth.PAR.ExpiryTime";
+
+    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG =
+            "OAuth.JWT.RenewTokenWithoutRevokingExisting.AllowedGrantTypes.AllowedGrantType";
+    public static final String RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG =
+            "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
+    public static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
+
+    public static final String REQUEST_BINDING_TYPE = "request";
+    public static final String ORG_ID = "org_id";
+    public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
+    public static final String ENABLE_DCR_FAPI_ENFORCEMENT = "OAuth.DCRM.EnableFAPIEnforcement";
+    public static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";
+    public static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
+            "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
+    public static final String VALIDATE_SECTOR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
+    public static final String TOKEN_EP_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedTokenEndpointSigningAlgorithms.SupportedTokenEndpointSigningAlgorithm";
+    public static final String ID_TOKEN_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedIDTokenSigningAlgorithms.SupportedIDTokenSigningAlgorithm";
+    public static final String REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
+            ".SupportedRequestObjectSigningAlgorithms.SupportedRequestObjectSigningAlgorithm";
+    public static final String ID_TOKEN_ENCRYPTION_ALGORITHM = "OAuth.OpenIDConnect." +
+            "SupportedIDTokenEncryptionAlgorithms.SupportedIDTokenEncryptionAlgorithm";
+    public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "OAuth.OpenIDConnect." +
+            "SupportedRequestObjectEncryptionAlgorithms.SupportedRequestObjectEncryptionAlgorithm";
+    public static final String ID_TOKEN_ENCRYPTION_METHOD = "OAuth.OpenIDConnect.SupportedIDTokenEncryptionMethods." +
+            "SupportedIDTokenEncryptionMethod";
+    public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "OAuth.OpenIDConnect." +
+            "SupportedRequestObjectEncryptionMethods.SupportedRequestObjectEncryptionMethod";
+    public static final String IS_PUSH_AUTHORIZATION_REQUEST = "isPushAuthorizationRequest";
+
+
+    public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
+    public static final String PRIVATE_KEY_JWT = "private_key_jwt";
+    public static final String TLS_CLIENT_AUTH = "tls_client_auth";
+    public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
 
     private OAuthConstants() {
 
@@ -182,6 +287,8 @@ public final class OAuthConstants {
         public static final String JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer";
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
+        public static final String ORGANIZATION_SWITCH = "organization_switch";
+        public static final String ORGANIZATION_SWITCH_CC = "organization_switch_cc";
 
         private GrantTypes() {
 
@@ -240,6 +347,7 @@ public final class OAuthConstants {
         public static final String REQUEST_URI = "request_uri";
         public static final String STATE = "state";
         public static final String RESPONSE_TYPE = "response_type";
+        public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
 
         private OAuth20Params() {
@@ -287,13 +395,14 @@ public final class OAuthConstants {
         public static final String OAUTH20_ACCESS_TOKEN_URL = "/token";
         public static final String OAUTH20_AUTHORIZE_TOKEN_URL = "/authorize";
         public static final String OAUTH2_AUTHZ_EP_URL = "oauth2/authorize";
+        public static final String OAUTH2_PAR_EP_URL = "oauth2/par";
         public static final String OAUTH2_TOKEN_EP_URL = "oauth2/token";
-        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.0/register";
+        public static final String OAUTH2_DCR_EP_URL = "/api/identity/oauth2/dcr/v1.1/register";
         public static final String OAUTH2_JWKS_EP_URL = "/oauth2/jwks";
         public static final String  OAUTH2_DISCOVERY_EP_URL = "/oauth2/oidcdiscovery";
         public static final String OAUTH2_USER_INFO_EP_URL = "oauth2/userinfo";
         public static final String OAUTH2_REVOKE_EP_URL = "oauth2/revoke";
-        public static final String OIDC_WEB_FINGER_EP_URL = ".well-know/webfinger";
+        public static final String OIDC_WEB_FINGER_EP_URL = ".well-known/webfinger";
         public static final String OAUTH2_INTROSPECT_EP_URL = "oauth2/introspect";
         public static final String OIDC_CONSENT_EP_URL = "/authenticationendpoint/oauth2_consent.do";
         public static final String OAUTH2_CONSENT_EP_URL = "/authenticationendpoint/oauth2_authz.do";
@@ -358,6 +467,7 @@ public final class OAuthConstants {
 
         public static final String APP_STATE_ACTIVE = "ACTIVE";
         public static final String APP_STATE_REVOKED = "REVOKED";
+        public static final String APP_STATE_DELETED = "DELETED";
 
         private OauthAppStates() {
 
@@ -382,6 +492,25 @@ public final class OAuthConstants {
                     "unsupported_client_authentication_method";
 
             private TokenResponse() {
+
+            }
+        }
+
+        /**
+         * Define Authorization request constants with i18n keys which will be mapped to the error
+         * message in the frontend.
+         */
+        public static class AuthorizationResponsei18nKey {
+
+            public static final String CALLBACK_NOT_MATCH = "callback.not.match";
+            public static final String APPLICATION_NOT_FOUND = "application.not.found";
+            public static final String INVALID_REDIRECT_URI = "invalid.redirect.uri";
+            public static final String INVALID_REQUEST_URI = "par.invalid.request.uri";
+            public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
+            public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
+            public static final String INVALID_RESPONSE_TYPE_FOR_QUERY_JWT = "invalid.response.type.for.query.jwt";
+
+            private AuthorizationResponsei18nKey() {
 
             }
         }
@@ -438,6 +567,7 @@ public final class OAuthConstants {
         public static final String MAX_AGE = "max_age";
         // OIDC Specification : http://openid.net/specs/openid-connect-core-1_0.html
         public static final String C_HASH = "c_hash";
+        public static final String S_HASH = "s_hash";
         public static final String SESSION_ID_CLAIM = "sid";
         public static final String REALM = "realm";
         public static final String TENANT = "tenant";
@@ -474,6 +604,18 @@ public final class OAuthConstants {
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
+        public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
+        public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
+        public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
+        public static final String REQUEST_OBJECT_SIGNATURE_ALGORITHM = "requestObjectSigningAlg";
+        public static final String TLS_SUBJECT_DN = "tlsClientAuthSubjectDn";
+        public static final String IS_PUSH_AUTH = "requirePushAuthorizationRequest";
+        public static final String IS_CERTIFICATE_BOUND_ACCESS_TOKEN = "tlsClientCertificateBoundAccessToken";
+        public static final String SUBJECT_TYPE = "subjectType";
+        public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
+        public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
+        public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
 
         private OIDCConfigProperties() {
 
@@ -501,6 +643,8 @@ public final class OAuthConstants {
         public static final String SHA1 = "SHA-1";
         public static final String KID_HASHING_ALGORITHM = SHA256;
         public static final String PREVIOUS_KID_HASHING_ALGORITHM = SHA1;
+        public static final String PS256 = "PS256";
+        public static final String ES256 = "ES256";
 
         private SignatureAlgorithms() {
 
@@ -516,6 +660,14 @@ public final class OAuthConstants {
     }
 
     /**
+     * Define authorized organization default value.
+     */
+    public static class AuthorizedOrganization {
+
+        public static final String NONE = "NONE";
+    }
+
+    /**
      * Define logging constants.
      */
     public static class LogConstants {
@@ -525,5 +677,106 @@ public final class OAuthConstants {
         public static final String SUCCESS = "SUCCESS";
         public static final String CLIENT_ID = "client id";
         public static final String TENANT_DOMAIN = "tenant domain";
+        public static final String CREATE_OAUTH_APPLICATION = "CREATE OAUTH APPLICATION";
+        public static final String UPDATE_OAUTH_APPLICATION = "UPDATE OAUTH APPLICATION";
+        public static final String DELETE_OAUTH_APPLICATION = "DELETE OAUTH APPLICATION";
+        public static final String REGENERATE_CLIENT_SECRET = "REGENERATE CLIENT SECRET";
+        public static final String UPDATE_APP_STATE = "UPDATE APP STATE";
+
+        /**
+         * Define action IDs for diagnostic logs.
+         */
+        public static class ActionIDs {
+
+            public static final String SCOPE_VALIDATION = "validate-scope";
+            public static final String ISSUE_ACCESS_TOKEN = "issue-access-token";
+            public static final String ISSUE_ID_TOKEN = "issue-id-token";
+            public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
+            public static final String ISSUE_AUTHZ_CODE = "issue-authz-code";
+            public static final String RECEIVE_CONSENT_RESPONSE = "receive-consent-response";
+            public static final String RECEIVE_TOKEN_REQUEST = "receive-token-request";
+            public static final String RECEIVE_AUTHENTICATION_RESPONSE = "receive-authn-response";
+            public static final String VALIDATE_AUTHENTICATION_RESPONSE = "validate-authn-status";
+            public static final String RECEIVE_AUTHORIZATION_RESPONSE = "receive-authz-request";
+            public static final String HANDLE_AUTHORIZATION = "handle-authorization";
+            public static final String VALIDATE_SCOPES_BEFORE_CONSENT = "validate-scopes-before-consent";
+            public static final String HAND_OVER_TO_FRAMEWORK = "hand-over-to-framework";
+            public static final String PERSIST_OAUTH_SCOPE_CONSENT = "persist-oauth-scope-consent";
+            public static final String GENERATE_CONSENT_CLAIMS = "generate-consent-claims";
+            public static final String HANDLE_REQUEST = "handle-request";
+            public static final String BUILD_REQUEST = "build-request";
+            public static final String RETRIEVE_PARAMETERS = "retrieve-parameters";
+            public static final String VALIDATE_AUTHZ_REQUEST = "validate-authz-request";
+            public static final String VALIDATE_INPUT_PARAMS = "validate-input-parameters";
+            public static final String VALIDATE_OAUTH_CLIENT = "validate-oauth-client";
+            public static final String REVOKE_TOKEN = "revoke-token";
+            public static final String VALIDATE_TOKEN_BINDING = "validate-token-binding";
+            public static final String VALIDATE_PKCE = "validate-pkce";
+            public static final String VALIDATE_JWT_ACCESS_TOKEN = "validate-jwt-access-token";
+            public static final String VALIDATE_REFRESH_TOKEN = "validate-refresh-token";
+            public static final String VALIDATE_ACCESS_TOKEN = "validate-access-token";
+            public static final String PARSE_REQUEST_OBJECT = "parse-request-object";
+            public static final String VALIDATE_REQUEST_OBJECT_SIGNATURE = "validate-request-object-signature";
+            public static final String VALIDATE_REQUEST_OBJECT = "validate-request-object";
+            public static final String HAND_OVER_TO_CONSENT_SERVICE = "hand-over-to-consent-service";
+            public static final String PROCESS_CONSENT = "process-consent";
+            public static final String OVERRIDE_AUTHZ_PARAMS = "override-authz-parameters";
+            public static final String REMOVE_USER_CONSENT = "remove-user-consent";
+            public static final String PROMPT_CONSENT_PAGE = "prompt-consent-page";
+            public static final String VALIDATE_USER_SESSION = "validate-user-session";
+            public static final String VALIDATE_ID_TOKEN_HINT = "validate-id-token-hint";
+            public static final String VALIDATE_EXISTING_CONSENT = "validate-existing-consent";
+            public static final String GENERATE_INTROSPECTION_RESPONSE = "generate-introspect-response";
+            public static final String RECEIVE_REVOKE_REQUEST = "receive-revoke-request";
+        }
+
+        /**
+         * Define common and reusable Input keys for diagnostic logs.
+         */
+        public static class InputKeys {
+
+            public static final String RESPONSE_TYPE = "response type";
+            public static final String SCOPE_VALIDATOR = "scope validator";
+            public static final String REQUESTED_SCOPES = "requested scopes";
+            public static final String AUTHORIZED_SCOPES = "authorized scopes";
+            public static final String GRANT_TYPE = "grant type";
+            public static final String AUTHORIZATION_CODE = "authorization code";
+            public static final String REQUEST_BUILDER = "request builder";
+            public static final String REQUEST_URI_REF = "request uri reference";
+            public static final String REDIRECT_URI = "redirect URI";
+            public static final String CALLBACK_URI = "callback URI";
+            public static final String PROMPT = "prompt";
+            public static final String APP_STATE = "app state";
+        }
+
+        /**
+         * Define common and reusable Configuration keys for diagnostic logs.
+         */
+        public static class ConfigKeys {
+
+            public static final String SUPPORTED_GRANT_TYPES = "supported grant types";
+            public static final String CALLBACK_URI = "callback URI";
+            public static final String REGISTERED_CALLBACK_URI = "registered callback URI";
+            public static final String REQUEST_OBJECT_SIGNATURE_VALIDATION_ENABLED =
+                    "request object signature validation enabled";
+
+        }
     }
+
+    /**
+     * Response Mode constants.
+     */
+    public static class ResponseModes {
+
+        public static final String DEFAULT = "default";
+        public static final String QUERY = "query";
+        public static final String FRAGMENT = "fragment";
+        public static final String FORM_POST = "form_post";
+        public static final String JWT = "jwt";
+        public static final String QUERY_JWT = "query.jwt";
+        public static final String FRAGMENT_JWT = "fragment.jwt";
+        public static final String FORM_POST_JWT = "form_post.jwt";
+        public static final String DIRECT = "direct"; // Used for API based authentication.
+    }
+
 }

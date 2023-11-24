@@ -24,6 +24,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
@@ -262,4 +263,23 @@ public class OpenIDConnectServiceComponent {
         OpenIDConnectServiceComponentHolder.getInstance().setSsoConsentService(null);
     }
 
+    @Reference(
+            name = "approles.resolver.service",
+            service = ApplicationRolesResolver.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAppRolesResolverService"
+    )
+    protected void setAppRolesResolverService(ApplicationRolesResolver applicationRolesResolver) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting Application Roles Resolver.");
+        }
+        OpenIDConnectServiceComponentHolder.getInstance().addApplicationRolesResolver(applicationRolesResolver);
+    }
+
+    protected void unsetAppRolesResolverService(ApplicationRolesResolver applicationRolesResolver) {
+
+        OpenIDConnectServiceComponentHolder.getInstance().removeApplicationRolesResolver(applicationRolesResolver);
+    }
 }

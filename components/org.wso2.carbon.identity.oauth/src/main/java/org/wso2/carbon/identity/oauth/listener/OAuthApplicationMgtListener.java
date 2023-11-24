@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth.listener;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 
+import java.util.Properties;
+
 /**
  * Listener interface for OAuth application management CRUD operations.
  */
@@ -64,4 +66,17 @@ public interface OAuthApplicationMgtListener {
      * @throws IdentityOAuthAdminException in case of failure.
      */
     void doPreRemoveOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException;
+
+    /**
+     * Handles token revocation related to client app events such as consumer secret regeneration,
+     * client secret revocation, client app deletion, and consumer app state updates.
+     *
+     * @param consumerKey The consumer key associated with the client app.
+     * @param properties  Additional properties or data related to the client app event.
+     * @throws IdentityOAuthAdminException If an error occurs during token revocation processing.
+     */
+    default void doPostTokenRevocationOnClientAppEvent(String consumerKey, Properties properties)
+            throws IdentityOAuthAdminException {
+        // Default method implementation.
+    }
 }

@@ -21,35 +21,45 @@ import org.apache.commons.lang.BooleanUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthScopeCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.model.UserApplicationScopeConsentDO;
+import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadata;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.
-        ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_BAD_REQUEST_SCOPE_NAME_NOT_SATIFIED_THE_REGEX;
 
 /**
  * OAuth2ScopeService use for scope handling
  */
-public class OAuth2ScopeService {
+public class OAuth2ScopeService implements ScopeMetadataService {
+
     private static final Log log = LogFactory.getLog(OAuth2ScopeService.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
+
+    private static final String OAuth2ScopeResourceName = "OAuth 2.0 Scopes";
 
     /**
      * Register a scope with the bindings
@@ -822,5 +832,43 @@ public class OAuth2ScopeService {
         consentToBeAdded.setApprovedScopes(approvedScopes);
         consentToBeAdded.setDeniedScopes(disapprovedScopes);
         return consentToBeAdded;
+    }
+
+    @Override
+    public List<OAuth2Resource> getMetadata(List<String> scopes) throws IdentityOAuth2ScopeServerException {
+
+        List<ScopeMetadata> scopesArray = new ArrayList<>();
+        for (String scopeName : scopes) {
+            try {
+                Scope scope = getScope(scopeName);
+                ScopeMetadata scopeMetadata = new ScopeMetadata(scope.getName(), scope.getDisplayName(),
+                        scope.getDescription());
+                scopesArray.add(scopeMetadata);
+            } catch (IdentityOAuth2ScopeException e) {
+                if (e instanceof IdentityOAuth2ScopeServerException) {
+                    throw Oauth2ScopeUtils.generateServerException(Oauth2ScopeConstants.ErrorMessages.
+                            ERROR_CODE_FAILED_TO_GET_SCOPE_METADATA, e);
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("No scope found with name: " + scopeName);
+                }
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new
+                            DiagnosticLog.DiagnosticLogBuilder(OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.SCOPE_VALIDATION);
+                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.SCOPE, scopeName)
+                            .resultMessage("No scope found for the provided scope name.")
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
+            }
+        }
+        if (scopesArray.isEmpty()) {
+            return new ArrayList<>();
+        } else {
+            OAuth2Resource resource = new OAuth2Resource(OAuth2ScopeResourceName, OAuth2ScopeResourceName, scopesArray);
+            return Collections.singletonList(resource);
+        }
     }
 }

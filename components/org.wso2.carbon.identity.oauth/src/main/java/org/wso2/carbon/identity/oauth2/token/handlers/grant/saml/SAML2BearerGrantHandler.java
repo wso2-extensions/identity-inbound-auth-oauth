@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2012, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2012, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -43,7 +43,6 @@ import org.w3c.dom.NodeList;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.context.RegistryType;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -60,7 +59,6 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationManag
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
-import org.wso2.carbon.identity.core.persistence.IdentityPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -79,7 +77,6 @@ import org.wso2.carbon.identity.saml.common.util.UnmarshallUtils;
 import org.wso2.carbon.identity.saml.common.util.exception.IdentityUnmarshallingException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.UniqueIDUserStoreManager;
@@ -1013,10 +1010,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
             privilegedCarbonContext.setTenantDomain(tenantDomain);
 
             IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
-            IdentityPersistenceManager persistenceManager = IdentityPersistenceManager.getPersistanceManager();
-            Registry registry = (Registry) PrivilegedCarbonContext.getThreadLocalCarbonContext().getRegistry
-                    (RegistryType.SYSTEM_CONFIGURATION);
-            return persistenceManager.getServiceProvider(registry, issuerName);
+            return OAuth2ServiceComponentHolder.getInstance().getSamlSSOServiceProviderManager()
+                    .getServiceProvider(issuerName, tenantId);
         } catch (IdentityException e) {
             throw new IdentityOAuth2Exception("Error occurred while validating existence of SAML service provider " +
                     "'" + issuerName + "' that issued the assertion in the tenant domain '" + tenantDomain + "'");

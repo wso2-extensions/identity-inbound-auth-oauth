@@ -40,8 +40,8 @@ import static org.powermock.api.mockito.PowerMockito.whenNew;
                   NTLMAuthenticationGrantHandler.class })
 
 @PowerMockIgnore({ "com.google.common.cache.*" })
-//to run this test class you need to ensure that a JDK that targets x64 architecture is installed
-//JDK targets aarch64 (ARM), the architecture used by an M1 Mac will throw an UnsatisfiedLinkError
+/* To run this test class you need to ensure that a JDK that targets x64 architecture is installed.
+If the installed JDK targets the aarch64 (ARM) architecture, the test will fail with an UnsatisfiedLinkError. */
 public class NTLMAuthenticationGrantHandlerTest extends PowerMockIdentityBaseTest {
 
     private static final String SECURITY_PACKAGE = "Negotiate";

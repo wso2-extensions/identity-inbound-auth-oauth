@@ -3,6 +3,7 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 
 import io.swagger.annotations.*;
 import com.fasterxml.jackson.annotation.*;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.validation.constraints.NotNull;
 
@@ -66,7 +67,7 @@ public class ErrorDTO  {
     
     sb.append("  error: ").append(error).append("\n");
     sb.append("  error_description: ").append(errorDescription).append("\n");
-    if (!ref.isEmpty()) {
+    if (StringUtils.isNotEmpty(ref)) {
       sb.append("  traceId: ").append(ref).append("\n");
     }
     sb.append("}\n");

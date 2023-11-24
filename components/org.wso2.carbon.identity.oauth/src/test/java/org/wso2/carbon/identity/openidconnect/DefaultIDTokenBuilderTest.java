@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
@@ -69,6 +70,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.secret.mgt.core.IdPSecretsProcessor;
+import org.wso2.carbon.identity.secret.mgt.core.SecretsProcessor;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
@@ -90,6 +93,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -139,6 +143,13 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         configuration.put("SSOService.ArtifactResolutionEndpoint", "https://localhost:9443/samlartresolve");
         configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
+        SecretsProcessor<IdentityProvider> identityProviderSecretsProcessor = mock(
+                IdPSecretsProcessor.class);
+        IdpMgtServiceComponentHolder.getInstance().setIdPSecretsProcessorService(identityProviderSecretsProcessor);
+        when(identityProviderSecretsProcessor.encryptAssociatedSecrets(anyObject())).thenAnswer(
+                invocation -> invocation.getArguments()[0]);
+        when(identityProviderSecretsProcessor.decryptAssociatedSecrets(anyObject())).thenAnswer(
+                invocation -> invocation.getArguments()[0]);
         IdentityProviderManager.getInstance().addResidentIdP(idp, SUPER_TENANT_DOMAIN_NAME);
         defaultIDTokenBuilder =  new DefaultIDTokenBuilder();
 
@@ -501,6 +512,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
                 .setUserRealm(realmService.getTenantUserRealm(SUPER_TENANT_ID));
         IdpMgtServiceComponentHolder.getInstance().setRealmService(realmService);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+        TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
     }
 
     private String getEssentialClaims() {

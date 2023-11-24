@@ -98,6 +98,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                             .get(IdentityEventConstants.EventProperty.USER_STORE_MANAGER);
             try {
                 revokeTokensOfLockedUser(username, userStoreManager);
+                revokeCodesOfLockedUser(username, userStoreManager);
                 revokeTokensOfDisabledUser(username, userStoreManager);
                 OAuthUtil.removeUserClaimsFromCache(username, userStoreManager);
             } catch (UserStoreException e) {
@@ -106,7 +107,8 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 throw new IdentityEventException(errorMsg);
             }
 
-        } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_EVENT.equals(event.getEventName())) {
+        } else if (IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
+            IdentityEventConstants.Event.POST_UPDATE_USER_LIST_OF_ROLE_V2_EVENT.equals(event.getEventName())) {
 
             Object userIdList = event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
@@ -118,7 +120,9 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName())) {
+                IdentityEventConstants.Event.PRE_DELETE_ROLE_V2_EVENT.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_UPDATE_PERMISSIONS_FOR_ROLE_V2_EVENT.equals(event.getEventName())) {
 
             String roleId = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.ROLE_ID);
@@ -218,7 +222,23 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("User %s is locked. Hence revoking user's access tokens.", userName));
             }
-            OAuthUtil.revokeTokens(userName, userStoreManager);
+            OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(userName, userStoreManager);
+        }
+    }
+
+    private void revokeCodesOfLockedUser(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String errorCode =
+                (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
+
+        if (UserCoreConstants.ErrorCode.USER_IS_LOCKED.equalsIgnoreCase(errorCode)) {
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("User %s is locked. Hence revoking user's authorization codes.", userName));
+            }
+            OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
         }
     }
 
@@ -231,7 +251,9 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("User %s is disabled. Hence revoking user's access tokens.", userName));
             }
-            OAuthUtil.revokeTokens(userName, userStoreManager);
+            OAuth2ServiceComponentHolder.getInstance()
+                    .getRevocationProcessor()
+                    .revokeTokens(userName, userStoreManager);
         }
     }
 
@@ -252,7 +274,9 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 for (String userId : userIDList) {
                     try {
                         userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
-                        OAuthUtil.revokeTokens(userName, userStoreManager);
+                        OAuth2ServiceComponentHolder.getInstance()
+                                .getRevocationProcessor()
+                                .revokeTokens(userName, userStoreManager);
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
                         OAuth2ServiceComponentHolder.getUserSessionManagementService()
                                 .terminateSessionsByUserId(userId);
