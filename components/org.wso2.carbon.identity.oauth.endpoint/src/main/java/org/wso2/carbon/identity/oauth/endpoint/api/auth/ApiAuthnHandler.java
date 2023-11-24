@@ -214,6 +214,7 @@ public class ApiAuthnHandler {
         param.setConfidential(paramMetadata.isConfidential());
         param.setOrder(paramMetadata.getParamOrder());
         param.setI18nKey(paramMetadata.getI18nKey());
+        param.setDisplayName(paramMetadata.getDisplayName());
 
         return param;
     }
