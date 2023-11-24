@@ -295,25 +295,27 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
 
-        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
+        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstAuthorizationCode(
+                getAuthorizationCode(requestMsgCtx));
         if (log.isDebugEnabled()) {
-            log.debug("Retrieving claims cached against access_token for user: " + requestMsgCtx.getAuthorizedUser());
+            log.debug("Retrieving claims cached against authorization_code for user: " +
+                    requestMsgCtx.getAuthorizedUser());
         }
         if (isEmpty(userAttributes)) {
             if (log.isDebugEnabled()) {
-                log.debug("No claims cached against the access_token for user: " + requestMsgCtx.getAuthorizedUser() +
-                        ". Retrieving claims cached against the authorization code.");
+                log.debug("No claims cached against the authorization_code for user: " + requestMsgCtx.
+                        getAuthorizedUser() + ". Retrieving claims cached against the access_token.");
             }
-            userAttributes = getUserAttributesCachedAgainstAuthorizationCode(getAuthorizationCode(requestMsgCtx));
+            userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
             if (log.isDebugEnabled()) {
-                log.debug("Retrieving claims cached against authorization_code for user: " +
+                log.debug("Retrieving claims cached against access_token for user: " +
                         requestMsgCtx.getAuthorizedUser());
             }
         }
         // Check for claims cached against the device code.
         if (isEmpty(userAttributes)) {
             if (log.isDebugEnabled()) {
-                log.debug("No claims cached against the authorization_code for user: " +
+                log.debug("No claims cached against the access_token for user: " +
                         requestMsgCtx.getAuthorizedUser() + ". Retrieving claims cached against the device code.");
             }
             userAttributes = getUserAttributesCachedAgainstDeviceCode(getDeviceCode(requestMsgCtx));
