@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
@@ -355,7 +356,11 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
-                        validateBindingType(application.getTokenBindingType());
+                        if (enforceFAPIDCR) {
+                            validateFAPIBindingType(application.getTokenBindingType());
+                        } else {
+                            validateBindingType(application.getTokenBindingType());
+                        }
                         app.setTokenBindingType(application.getTokenBindingType());
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
@@ -598,6 +603,24 @@ public class OAuthAdminServiceImpl {
         }
     }
 
+    /**
+     * FAPI validation to restrict the token binding type to ensure MTLS sender constrained access tokens.
+     * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
+     * @param bindingType Token binding type.
+     * @throws IdentityOAuthClientException if binding type is not 'certificate'.
+     */
+    private void validateFAPIBindingType(String bindingType)
+            throws IdentityOAuthClientException {
+
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+            return;
+        } else {
+            String msg = String.format("Certificate bound access tokens is required. '%s' binding type is found.",
+                    bindingType);
+            throw handleClientError(INVALID_REQUEST, msg);
+        }
+    }
+
     private IdentityOAuthClientException handleClientError(Error errorMessage, String msg) {
 
         return new IdentityOAuthClientException(errorMessage.getErrorCode(), msg);
@@ -731,7 +754,11 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
-            validateBindingType(consumerAppDTO.getTokenBindingType());
+            if (enforceFAPIDCR) {
+                validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
+            } else {
+                validateBindingType(consumerAppDTO.getTokenBindingType());
+            }
             oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
