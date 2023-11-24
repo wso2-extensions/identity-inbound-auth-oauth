@@ -91,7 +91,9 @@ public class OAuth2ParEndpoint {
 
         try {
             Map<String, String> parameters = transformParams(params);
-            // Wrap the request with the parameters obtained from the PAR endpoint.
+            /* Wrap the request with the parameters obtained from the PAR endpoint.
+            This is to avoid the request body parameters dropping from the http servlet request when the content type
+            'application/x-www-form-urlencoded;charset=utf-8' is sent in request headers.*/
             HttpServletRequestWrapper httpRequest = new OAuthParRequestWrapper(request, parameters);
             checkClientAuthentication(httpRequest);
             handleValidation(httpRequest, params);
