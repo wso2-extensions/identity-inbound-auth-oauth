@@ -754,7 +754,11 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
-            validateBindingType(consumerAppDTO.getTokenBindingType());
+            if (enforceFAPIDCR) {
+                validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
+            } else {
+                validateBindingType(consumerAppDTO.getTokenBindingType());
+            }
             oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
             oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
