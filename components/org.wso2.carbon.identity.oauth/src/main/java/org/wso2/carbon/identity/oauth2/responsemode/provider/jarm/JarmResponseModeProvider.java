@@ -134,8 +134,11 @@ public abstract class JarmResponseModeProvider extends AbstractResponseModeProvi
 
         jwtClaimsSet.claim(EXPIRATION_TIME, expirationTime);
 
-        if (StringUtils.isNotBlank(authorizationResponseDTO.getSessionState())) {
+        if (StringUtils.isNotBlank(authorizationResponseDTO.getState())) {
             jwtClaimsSet.claim(STATE, authorizationResponseDTO.getState());
+        }
+        if (StringUtils.isNotBlank(authorizationResponseDTO.getSessionState())) {
+            jwtClaimsSet.claim(SESSION_STATE, authorizationResponseDTO.getSessionState());
         }
 
         return jwtClaimsSet.build();
