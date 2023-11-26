@@ -875,6 +875,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest extends PowerMockTestCase {
                 thenReturn(authorizationGrantCacheEntry);
         when(authorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class))).
                 thenReturn(authorizationGrantCacheEntry);
+        when(authorizationGrantCache.getValueFromCacheByTokenId(any(AuthorizationGrantCacheKey.class), any())).
+                thenReturn(authorizationGrantCacheEntry);
     }
 
     @Test

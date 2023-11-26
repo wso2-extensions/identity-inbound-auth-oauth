@@ -861,8 +861,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 log.debug("Retrieving user attributes cached against access token.");
             }
         }
-
-        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+        AuthorizationGrantCacheKey cacheKey = null;
+        if (accessToken != null) {
+            cacheKey = new AuthorizationGrantCacheKey(accessToken);
+        }
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByTokenId(cacheKey, tokenId);
 
