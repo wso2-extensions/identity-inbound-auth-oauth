@@ -59,6 +59,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -344,12 +345,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 }
                 RefreshTokenValidationDataDO refreshTokenValidationDataDO =
                         (RefreshTokenValidationDataDO) previousAccessTokenObject;
-                if (refreshTokenValidationDataDO.getAccessToken() == null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("No access token found in the refresh token validation data for user : " +
-                                requestMsgCtx.getAuthorizedUser() + ". Retrieving claims from refresh token Id.");
-                    }
-                }
                 userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken(),
                         refreshTokenValidationDataDO.getTokenId());
                 requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
@@ -850,9 +845,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * Get user attribute cached against the access token.
      *
      * @param accessToken Access token
+     * @param tokenId     Token Id
      * @return User attributes cached against the access token
      */
     private Map<ClaimMapping, String> getUserAttributesFromCacheUsingToken(String accessToken, String tokenId) {
+
+        AuthorizationGrantCacheKey cacheKey = null;
+        AuthorizationGrantCacheEntry cacheEntry;
         if (log.isDebugEnabled()) {
             if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
                 log.debug("Retrieving user attributes cached against access token: " + accessToken + " token Id : "
@@ -861,13 +860,20 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 log.debug("Retrieving user attributes cached against access token.");
             }
         }
-        AuthorizationGrantCacheKey cacheKey = null;
+        // access token can be null if token is not persisted.
         if (accessToken != null) {
             cacheKey = new AuthorizationGrantCacheKey(accessToken);
         }
-        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
-                .getValueFromCacheByTokenId(cacheKey, tokenId);
-
+        if (tokenId != null) {
+            cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(cacheKey, tokenId);
+        } else {
+            /*
+             * If token id is not available, we need to retrieve the cache entry using the access token. Internally,
+             * if not available in cache, to retrieve user attributes from session store we will query the token id
+             * from the database using the access token.
+             */
+            cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+        }
         return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
     }
 
