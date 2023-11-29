@@ -160,7 +160,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
         if (userAttributes.isEmpty() && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUser(requestMsgCtx.getAuthorizedUser()))) {
+                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
@@ -237,6 +237,17 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
         }
 
+        // User consent checking is skipped for API based authentication flow.
+        if (isApiBasedAuthFlow(accessToken, authorizationCode)) {
+            if (log.isDebugEnabled()) {
+                String msg = "Filtering user claims based on user consent skipped due api based auth flow. Returning " +
+                        "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
+                log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
+                        clientId, spTenantDomain));
+            }
+            return filteredUserClaimsByOIDCScopes;
+        }
+
         // Restrict the claims based on user consent given
         return getUserConsentedClaims(filteredUserClaimsByOIDCScopes, authenticatedUser, grantType, clientId,
                 spTenantDomain, isConsentedToken);
@@ -284,25 +295,27 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private Map<ClaimMapping, String> getCachedUserAttributes(OAuthTokenReqMessageContext requestMsgCtx) {
 
-        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
+        Map<ClaimMapping, String> userAttributes = getUserAttributesCachedAgainstAuthorizationCode(
+                getAuthorizationCode(requestMsgCtx));
         if (log.isDebugEnabled()) {
-            log.debug("Retrieving claims cached against access_token for user: " + requestMsgCtx.getAuthorizedUser());
+            log.debug("Retrieving claims cached against authorization_code for user: " +
+                    requestMsgCtx.getAuthorizedUser());
         }
         if (isEmpty(userAttributes)) {
             if (log.isDebugEnabled()) {
-                log.debug("No claims cached against the access_token for user: " + requestMsgCtx.getAuthorizedUser() +
-                        ". Retrieving claims cached against the authorization code.");
+                log.debug("No claims cached against the authorization_code for user: " + requestMsgCtx.
+                        getAuthorizedUser() + ". Retrieving claims cached against the access_token.");
             }
-            userAttributes = getUserAttributesCachedAgainstAuthorizationCode(getAuthorizationCode(requestMsgCtx));
+            userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
             if (log.isDebugEnabled()) {
-                log.debug("Retrieving claims cached against authorization_code for user: " +
+                log.debug("Retrieving claims cached against access_token for user: " +
                         requestMsgCtx.getAuthorizedUser());
             }
         }
         // Check for claims cached against the device code.
         if (isEmpty(userAttributes)) {
             if (log.isDebugEnabled()) {
-                log.debug("No claims cached against the authorization_code for user: " +
+                log.debug("No claims cached against the access_token for user: " +
                         requestMsgCtx.getAuthorizedUser() + ". Retrieving claims cached against the device code.");
             }
             userAttributes = getUserAttributesCachedAgainstDeviceCode(getDeviceCode(requestMsgCtx));
@@ -644,14 +657,20 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Check whether the authorized user is an organization SSO user.
+     * Check whether an organization SSO user is trying to switch the organization.
      *
      * @param authorizedUser authorized user from the token request.
-     * @return true if the authorized user is an organization SSO user.
+     * @return true if an organization SSO user is trying to switch the organization.
      */
-    private boolean isOrganizationSsoUser(AuthenticatedUser authorizedUser) {
+    private boolean isOrganizationSsoUserSwitchingOrganization(AuthenticatedUser authorizedUser) {
 
-        return authorizedUser.isFederatedUser() && StringUtils.isNotEmpty(authorizedUser.getUserResidentOrganization());
+        String accessingOrganization = authorizedUser.getAccessingOrganization();
+        String userResidentOrganization = authorizedUser.getUserResidentOrganization();
+        /* A federated user with resident organization is considered as an organization SSO user. When the accessing
+           organization is different to the resident organization, it means the user is trying to switch the
+           organization. */
+        return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
+                (accessingOrganization);
     }
 
     /**
@@ -940,5 +959,25 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return true;
         }
         return StringUtils.contains(claimValue, multiAttributeSeparator);
+    }
+
+    private boolean isApiBasedAuthFlow(String accessToken, String authorizationCode) {
+
+        if (StringUtils.isNotEmpty(authorizationCode)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
+            if (cacheEntry != null) {
+                return cacheEntry.isApiBasedAuthRequest();
+            }
+        } else if (StringUtils.isNotEmpty(accessToken)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+            if (cacheEntry != null) {
+                return cacheEntry.isApiBasedAuthRequest();
+            }
+        }
+        return false;
     }
 }

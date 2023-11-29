@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuth2TokenResponse;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.List;
@@ -177,6 +178,7 @@ public class OAuth2TokenEndpoint {
             throw e;
 
         } finally {
+            UserCoreUtil.setDomainInThreadLocal(null);
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                 PrivilegedCarbonContext.endTenantFlow();
             }

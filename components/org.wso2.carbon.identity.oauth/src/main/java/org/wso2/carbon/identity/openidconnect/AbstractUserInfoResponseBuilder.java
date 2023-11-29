@@ -134,8 +134,20 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         Map<String, Object> filteredClaimsFromRequestObject = filterClaimsFromRequestObject(userClaims, accessToken);
         userClaimsFilteredByScope.putAll(filteredClaimsFromRequestObject);
 
-        // Filter the user claims based on user consent
         AuthenticatedUser authenticatedUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
+
+        // User consent checking is skipped for API based authentication flow.
+        if (isApiBasedAuthFlow(accessToken)) {
+            if (log.isDebugEnabled()) {
+                String msg = "Filtering user claims based on user consent skipped due api based auth flow. Returning " +
+                        "original user claims for user:%s, for clientId:%s of tenantDomain:%s";
+                log.debug(String.format(msg, authenticatedUser.toFullQualifiedUsername(),
+                        clientId, spTenantDomain));
+            }
+            return userClaimsFilteredByScope;
+        }
+
+        // Filter the user claims based on user consent
         return getUserClaimsFilteredByConsent(tokenResponse, userClaimsFilteredByScope, authenticatedUser, clientId,
                 spTenantDomain);
     }
@@ -335,4 +347,15 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         return new ArrayList<>();
     }
 
+    private boolean isApiBasedAuthFlow(String accessToken) {
+
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+        AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByToken(cacheKey);
+
+        if (cacheEntry != null) {
+            return cacheEntry.isApiBasedAuthRequest();
+        }
+        return false;
+    }
 }

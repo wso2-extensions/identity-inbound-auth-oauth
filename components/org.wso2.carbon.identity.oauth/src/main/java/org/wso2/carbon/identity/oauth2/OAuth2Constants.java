@@ -40,7 +40,7 @@ public class OAuth2Constants {
     public static final boolean DEFAULT_PERSIST_ENABLED = true;
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
     public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
-
+    public static final String OAUTH_ENABLE_REVOKE_TOKEN_HEADERS = "OAuth.EnableRevokeTokenHeadersInResponse";
 
     /**
      * Constants for global role based scope issuer.

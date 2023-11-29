@@ -79,6 +79,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private boolean isRequestObjectFlow;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
+    private boolean isApiBasedAuthRequest;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -325,5 +326,15 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setAccessTokenExtensionDO(AccessTokenExtendedAttributes accessTokenExtendedAttributes) {
 
         this.accessTokenExtendedAttributes = accessTokenExtendedAttributes;
+    }
+
+    public boolean isApiBasedAuthRequest() {
+
+        return isApiBasedAuthRequest;
+    }
+
+    public void setApiBasedAuthRequest(boolean apiBasedAuthRequest) {
+
+        isApiBasedAuthRequest = apiBasedAuthRequest;
     }
 }

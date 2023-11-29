@@ -156,9 +156,10 @@ public class OAuthAppDAO {
                     String processedClientSecret =
                             persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
 
+                    String templatedCallbackUrl = consumerAppDO.getCallbackUrl();
                     if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName())) {
-                        consumerAppDO.setCallbackUrl(
-                                ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(consumerAppDO.getCallbackUrl()));
+                        templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(
+                                templatedCallbackUrl);
                     }
 
                     String dbProductName = connection.getMetaData().getDatabaseProductName();
@@ -173,7 +174,7 @@ public class OAuthAppDAO {
                         prepStmt.setString(5, userStoreDomain);
                         prepStmt.setString(6, consumerAppDO.getApplicationName());
                         prepStmt.setString(7, consumerAppDO.getOauthVersion());
-                        prepStmt.setString(8, consumerAppDO.getCallbackUrl());
+                        prepStmt.setString(8, templatedCallbackUrl);
                         prepStmt.setString(9, consumerAppDO.getGrantTypes());
                         prepStmt.setString(10, consumerAppDO.isPkceMandatory() ? "1" : "0");
                         prepStmt.setString(11, consumerAppDO.isPkceSupportPlain() ? "1" : "0");
@@ -551,7 +552,6 @@ public class OAuthAppDAO {
                 if (!appExists) {
                     handleRequestForANonExistingConsumerKey(consumerKey);
                 }
-                connection.commit();
             }
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error while retrieving the app information", e);
@@ -720,14 +720,14 @@ public class OAuthAppDAO {
 
         boolean isUserValidForOwnerUpdate = validateUserForOwnerUpdate(oauthAppDO);
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String templatedCallbackUrl = oauthAppDO.getCallbackUrl();
             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthAppDO.getApplicationName())) {
-                oauthAppDO.setCallbackUrl(
-                        ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(oauthAppDO.getCallbackUrl()));
+                templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(templatedCallbackUrl);
             }
             String sqlQuery = getSqlQuery(isUserValidForOwnerUpdate);
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
                 prepStmt.setString(1, oauthAppDO.getApplicationName());
-                prepStmt.setString(2, oauthAppDO.getCallbackUrl());
+                prepStmt.setString(2, templatedCallbackUrl);
                 prepStmt.setString(3, oauthAppDO.getGrantTypes());
 
                 if (isUserValidForOwnerUpdate) {
