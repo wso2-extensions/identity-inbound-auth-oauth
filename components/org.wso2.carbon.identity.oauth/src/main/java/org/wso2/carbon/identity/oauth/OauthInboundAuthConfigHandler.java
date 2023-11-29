@@ -19,8 +19,9 @@
 package org.wso2.carbon.identity.oauth;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -42,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.StandardInboundProtocols.OAUTH2;
@@ -53,6 +55,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
  */
 public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConfigHandler {
     
+    private static final Log log = LogFactory.getLog(OauthInboundAuthConfigHandler.class);
     private static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
     
     @Override
@@ -124,8 +127,7 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
         
         // First we identify whether this is a insert or update.
         try {
-            String currentClientId = InboundFunctions.getInboundAuthKey(application,
-                    FrameworkConstants.StandardInboundProtocols.OAUTH2);
+            Optional<String> optionalInboundAuthKey = InboundFunctions.getInboundAuthKey(application, OAUTH2);
             
             // Retrieve the existing CORS origins for the application.
             existingCORSOrigins = OAuthComponentServiceHolder.getInstance().getCorsManagementService()
@@ -137,10 +139,10 @@ public class OauthInboundAuthConfigHandler implements ApplicationInboundAuthConf
             OAuthComponentServiceHolder.getInstance().getCorsManagementService().setCORSOrigins(
                     application.getApplicationResourceId(), corsOrigins, tenantDomain);
             
-            if (currentClientId != null) {
+            if (optionalInboundAuthKey.isPresent()) {
                 // Update an existing application.
                 OAuthConsumerAppDTO oauthApp = OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()
-                        .getOAuthApplicationData(currentClientId);
+                        .getOAuthApplicationData(optionalInboundAuthKey.get());
                 
                 if (!StringUtils.equals(oauthApp.getOauthConsumerKey(), consumerAppDTO.getOauthConsumerKey())) {
                     throw new IdentityOAuthClientException("Invalid ClientID provided for update.");

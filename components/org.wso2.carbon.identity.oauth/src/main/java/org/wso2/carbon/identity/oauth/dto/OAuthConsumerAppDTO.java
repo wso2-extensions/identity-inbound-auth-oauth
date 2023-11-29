@@ -18,11 +18,15 @@
 
 package org.wso2.carbon.identity.oauth.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.axis2.databinding.annotation.IgnoreNullElement;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
 
 import java.util.List;
 import java.util.Map;
+
+import javax.xml.bind.annotation.XmlTransient;
 
 /**
  * OAuth consumer app dto.
@@ -71,7 +75,15 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String jwksURI;
     private boolean fapiConformanceEnabled;
     // CORS orgin related properties. This will be used by the CORS management service
+    @IgnoreNullElement
+    @XmlTransient
+    @JsonIgnore
     private List<String> allowedOrigins = null;
+    
+    // This will be used to store data for audit logs. This will not be persisted in the database.
+    @IgnoreNullElement
+    @XmlTransient
+    @JsonIgnore
     private Map<String, Object> auditLogData;
 
     public String getJwksURI() {
