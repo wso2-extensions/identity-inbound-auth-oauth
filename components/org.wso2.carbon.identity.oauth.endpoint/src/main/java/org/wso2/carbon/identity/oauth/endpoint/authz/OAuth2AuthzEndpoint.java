@@ -102,6 +102,7 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -4460,7 +4461,9 @@ public class OAuth2AuthzEndpoint {
                                     "Error while extracting query params from provided url.", e);
                         }
                         if (isRedirectToClient(location)) {
-                            String jsonPayload = new Gson().toJson(queryParams);
+                            SuccessCompleteAuthResponse successCompleteAuthResponse =
+                                    new SuccessCompleteAuthResponse(queryParams);
+                            String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
                         } else {
