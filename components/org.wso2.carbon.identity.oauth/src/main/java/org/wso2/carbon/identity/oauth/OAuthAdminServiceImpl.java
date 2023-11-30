@@ -356,7 +356,7 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
-                        if (enforceFAPIDCR) {
+                        if (enforceFAPIDCR && application.isFapiConformanceEnabled()) {
                             validateFAPIBindingType(application.getTokenBindingType());
                         } else {
                             validateBindingType(application.getTokenBindingType());
