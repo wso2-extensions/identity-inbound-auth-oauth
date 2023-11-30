@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -49,6 +50,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OIDC_ROLE_CLAIM_URI;
@@ -156,12 +158,28 @@ public class AuthzUtil {
             return new ArrayList<>();
         }
 
+        roleNames = getRoleNamesAssociatedWithApp(appId, tenantDomain).stream().filter(roleNames::contains)
+                .collect(Collectors.toCollection(ArrayList::new));
+
         String allowedAppAudience = getApplicationAllowedAudience(appId, tenantDomain);
         if (ORGANIZATION.equalsIgnoreCase(allowedAppAudience)) {
 
             return getRoleIdsFromNames(roleNames, ORGANIZATION, getOrganizationId(tenantDomain), tenantDomain);
         }
         return getRoleIdsFromNames(roleNames, APPLICATION, appId, tenantDomain);
+    }
+
+    private static List<String> getRoleNamesAssociatedWithApp(String appId, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getName)
+                    .collect(Collectors.toCollection(ArrayList::new));
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while fetching the role names associated for the app " +
+                    "with ID: " + appId, e);
+        }
     }
 
     /**
@@ -346,8 +364,8 @@ public class AuthzUtil {
                         .getRoleIdByName(roleName, roleAudience, roleAudienceId, tenantDomain));
             }
         } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role ids of  list of role anme : "
-                    + StringUtils.join(roleNames, ",") + "tenant domain : " + tenantDomain, e);
+            throw new IdentityOAuth2Exception("Error while retrieving role IDs of list of role name : "
+                    + StringUtils.join(roleNames, ",") + " tenant domain : " + tenantDomain, e);
         }
         return roleIds;
     }
