@@ -918,11 +918,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
             jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
             if (tokenReqMessageContext != null) {
-                jwtClaimsSetBuilder.claim(OAuth2Constants.TOKEN_ID,
-                        tokenReqMessageContext.getProperty(OAuth2Constants.TOKEN_ID));
+                jwtClaimsSetBuilder.claim(OAuth2Constants.USER_SESSION_ID,
+                        tokenReqMessageContext.getProperty(OAuth2Constants.USER_SESSION_ID));
             } else {
-                jwtClaimsSetBuilder.claim(OAuth2Constants.TOKEN_ID,
-                        authAuthzReqMessageContext.getProperty(OAuth2Constants.TOKEN_ID));
+                jwtClaimsSetBuilder.claim(OAuth2Constants.USER_SESSION_ID,
+                        authAuthzReqMessageContext.getProperty(OAuth2Constants.USER_SESSION_ID));
             }
         }
     }

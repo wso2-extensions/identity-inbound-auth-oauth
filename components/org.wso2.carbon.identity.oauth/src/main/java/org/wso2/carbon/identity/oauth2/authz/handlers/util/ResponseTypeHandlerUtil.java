@@ -633,7 +633,7 @@ public class ResponseTypeHandlerUtil {
         newTokenBean.setTokenType(OAuthConstants.UserType.APPLICATION_USER);
         String tokenId = UUID.randomUUID().toString();
         newTokenBean.setTokenId(tokenId);
-        oauthAuthzMsgCtx.addProperty(OAuth2Constants.TOKEN_ID, tokenId);
+        oauthAuthzMsgCtx.addProperty(OAuth2Constants.USER_SESSION_ID, tokenId);
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
         newTokenBean.setValidityPeriod(validityPeriodInMillis / SECOND_TO_MILLISECONDS_FACTOR);
