@@ -173,6 +173,7 @@ public class OAuthServerConfiguration {
     private Map<String, TokenIssuerDO> supportedTokenIssuers = new HashMap<>();
     private List<String> supportedTokenTypes = new ArrayList<>();
     private List<String> publicClientSupportedGrantTypes = new ArrayList<>();
+    private List<String> publicClientNotSupportedGrantTypes = new ArrayList<>();
     private Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
     private String[] supportedClaims = null;
     private boolean isFapiCiba = false;
@@ -2253,6 +2254,28 @@ public class OAuthServerConfiguration {
                         refreshTokenAllowedGrantTypes.put(grantTypeName, isRefreshAllowed);
                     }
                 }
+                /* Read the public client allowed grant types for all grant types.
+                 * Grant types added with PublicClientAllowed property and value set to true will be added to
+                 * publicClientSupportedGrantTypes list and value set to false will be added to
+                 * publicClientNotSupportedGrantTypes. All default grant types will have the property set to either the
+                 * value.
+                 * If the property is not mentioned in the custom grant type configuration, the grant type will not be
+                 * added to either lists. So, if the custom grant type is added to the array configuration of allowed,
+                 * grant types, it will get added to the publicClientSupportedGrantTypes list.
+                 */
+                OMElement publicClientAllowedElement = supportedGrantTypeElement
+                        .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.PUBLIC_CLIENT_ALLOWED));
+                String publicClientAllowed = null;
+                if (publicClientAllowedElement != null) {
+                    publicClientAllowed = publicClientAllowedElement.getText();
+                }
+                if (StringUtils.isNotEmpty(publicClientAllowed)) {
+                    if (Boolean.parseBoolean(publicClientAllowed)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    } else {
+                        publicClientNotSupportedGrantTypes.add(grantTypeName);
+                    }
+                }
             }
         } else {
             // if this element is not present, assume the default case.
@@ -2290,7 +2313,10 @@ public class OAuthServerConfiguration {
             while (iterator.hasNext()) {
                 OMElement publicClientSupportedGrantName = (OMElement) iterator.next();
                 if (publicClientSupportedGrantName != null) {
-                    publicClientSupportedGrantTypes.add(publicClientSupportedGrantName.getText());
+                    String grantTypeName = publicClientSupportedGrantName.getText();
+                    if (!publicClientNotSupportedGrantTypes.contains(grantTypeName)) {
+                        publicClientSupportedGrantTypes.add(grantTypeName);
+                    }
                 }
             }
         }
@@ -3439,6 +3465,7 @@ public class OAuthServerConfiguration {
         private static final String GRANT_TYPE_VALIDATOR_IMPL_CLASS = "GrantTypeValidatorImplClass";
         private static final String RESPONSE_TYPE_VALIDATOR_IMPL_CLASS = "ResponseTypeValidatorImplClass";
         private static final String TOKEN_TYPE_IMPL_CLASS = "TokenTypeImplClass";
+        private static final String PUBLIC_CLIENT_ALLOWED = "PublicClientAllowed";
         // Supported Client Authentication Methods
         private static final String CLIENT_AUTH_HANDLERS = "ClientAuthHandlers";
         private static final String CLIENT_AUTH_HANDLER_IMPL_CLASS = "ClientAuthHandler";
