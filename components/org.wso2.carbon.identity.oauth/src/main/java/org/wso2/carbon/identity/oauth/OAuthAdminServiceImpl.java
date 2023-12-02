@@ -268,8 +268,6 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
 
-        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDO app = new OAuthAppDO();
@@ -293,6 +291,7 @@ public class OAuthAdminServiceImpl {
                     app.setCallbackUrl(application.getCallbackUrl());
 
                     app.setState(APP_STATE_ACTIVE);
+                    boolean enforceFAPIDCR = application.isFapiConformanceEnabled();
                     if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                         app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
                         app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
@@ -356,7 +355,7 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
-                        if (enforceFAPIDCR && application.isFapiConformanceEnabled()) {
+                        if (enforceFAPIDCR) {
                             validateFAPIBindingType(application.getTokenBindingType());
                         } else {
                             validateBindingType(application.getTokenBindingType());
