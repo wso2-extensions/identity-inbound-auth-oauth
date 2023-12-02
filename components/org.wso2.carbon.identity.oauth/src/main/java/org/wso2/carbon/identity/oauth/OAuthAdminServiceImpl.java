@@ -661,8 +661,6 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
-        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
@@ -740,6 +738,7 @@ public class OAuthAdminServiceImpl {
 
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
+            boolean enforceFAPIDCR = consumerAppDTO.isFapiConformanceEnabled();
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
                 if (enforceFAPIDCR) {
                     validateFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
