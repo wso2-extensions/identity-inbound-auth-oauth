@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.endpoint.api.auth;
 
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AdditionalData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
@@ -28,11 +27,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponseData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
-import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Authenticator;
@@ -43,6 +37,7 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Message;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Param;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.StepTypeEnum;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -56,11 +51,9 @@ import java.util.Map;
  */
 public class ApiAuthnHandler {
 
-    private static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
     private static final String ADDITIONAL_DATA_REDIRECT_URL = "redirectUrl";
     private static final String AUTHENTICATION_EP = "/oauth2/authn";
     private static final String AUTHENTICATION_EP_LINK_NAME = "authentication";
-    private static final String TENANT_CONTEXT_PATH_COMPONENT = "/t/%s";
     private static final String HTTP_POST = "POST";
     private static final String MESSAGE = "message";
     private static final String DOT_SEPARATOR = ".";
@@ -218,35 +211,16 @@ public class ApiAuthnHandler {
         return param;
     }
 
-    private List<Link> buildLinks() throws AuthServiceException {
+    private List<Link> buildLinks() {
 
         List<Link> links = new ArrayList<>();
         Link authnEpLink = new Link();
         authnEpLink.setName(AUTHENTICATION_EP_LINK_NAME);
-        String endpoint = AUTHENTICATION_EP;
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            endpoint = String.format(TENANT_CONTEXT_PATH_COMPONENT, getTenantDomainFromContext()) + AUTHENTICATION_EP;
-        }
-        String href;
-        try {
-            href = ServiceURLBuilder.create().addPath(endpoint).build().getAbsolutePublicURL();
-        } catch (URLBuilderException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
-                    "Error occurred while building links", e);
-        }
+        String href = OAuth2Util.buildServiceUrl(AUTHENTICATION_EP, null);
         authnEpLink.setHref(href);
         authnEpLink.setMethod(HTTP_POST);
         links.add(authnEpLink);
         return links;
-    }
-
-    private String getTenantDomainFromContext() {
-
-        String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        if (IdentityUtil.threadLocalProperties.get().get(TENANT_NAME_FROM_CONTEXT) != null) {
-            tenantDomain = (String) IdentityUtil.threadLocalProperties.get().get(TENANT_NAME_FROM_CONTEXT);
-        }
-        return tenantDomain;
     }
 
     private String buildAuthenticatorId(String authenticator, String idp) {
