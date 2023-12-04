@@ -34,4 +34,7 @@
     <Scope id="groups" displayName="Groups" description="View groups the user belongs to.">
         <Claim>groups</Claim>
     </Scope>
+    <Scope id="roles" displayName="Roles" description="View the roles assigned to the user.">
+        <Claim>roles</Claim>
+    </Scope>
 </Scopes>
