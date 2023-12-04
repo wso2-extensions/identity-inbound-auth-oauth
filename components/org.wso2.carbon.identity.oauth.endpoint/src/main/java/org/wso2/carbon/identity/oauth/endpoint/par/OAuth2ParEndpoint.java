@@ -26,11 +26,15 @@ import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONObject;
+import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
+import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
+import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
 import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
@@ -62,6 +66,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
@@ -96,6 +101,19 @@ public class OAuth2ParEndpoint {
             'application/x-www-form-urlencoded;charset=utf-8' is sent in request headers.*/
             HttpServletRequestWrapper httpRequest = new OAuthParRequestWrapper(request, parameters);
             checkClientAuthentication(httpRequest);
+
+            // Perform attestation validation if it's an api based auth request.
+            if (OAuth2Util.isApiBasedAuthenticationFlow(httpRequest)) {
+                ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
+                if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
+                    return handleAttestationFailureResponse(clientAttestationContext);
+                }
+
+                if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
+                    return handleUnsupportedGrantForApiBasedAuth();
+                }
+            }
+
             handleValidation(httpRequest, params);
             ParAuthData parAuthData =
                     getParAuthService().handleParAuthRequest(parameters);
@@ -376,5 +394,32 @@ public class OAuth2ParEndpoint {
         } else if (!OAuthConstants.OAUTH_PKCE_S256_CHALLENGE.equals(codeChallengeMethod)) {
             throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, "Unsupported PKCE Challenge Method.");
         }
+    }
+
+    private ClientAttestationContext getClientAttestationContext(HttpServletRequest request) {
+
+        ClientAttestationContext clientAttestationContext;
+        Object clientAttestationContextObj = request.getAttribute(CLIENT_ATTESTATION_CONTEXT);
+        if (clientAttestationContextObj instanceof ClientAttestationContext) {
+            clientAttestationContext = (ClientAttestationContext) clientAttestationContextObj;
+        } else {
+            clientAttestationContext = new ClientAttestationContext();
+            clientAttestationContext.setAttestationEnabled(false);
+            clientAttestationContext.setAttested(false);
+        }
+        return clientAttestationContext;
+    }
+
+    private Response handleAttestationFailureResponse(ClientAttestationContext clientAttestationContext) {
+
+        return ApiAuthnUtils.buildResponseForAuthorizationFailure(
+                clientAttestationContext.getValidationFailureMessage(), log);
+    }
+
+    private Response handleUnsupportedGrantForApiBasedAuth() {
+
+        return ApiAuthnUtils.buildResponseForClientError(
+                new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                        "App native authentication is only supported with code response type."), log);
     }
 }
