@@ -307,18 +307,6 @@ public class OAuth2AuthzEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException {
 
-        // Perform request authentication for API based auth flow.
-        if (isApiBasedAuthenticationFlow(request)) {
-            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
-            if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return handleAuthFailureResponse(oAuthClientAuthnContext);
-            }
-
-            ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
-            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
-                return handleAttestationFailureResponse(clientAttestationContext);
-            }
-        }
         OAuthMessage oAuthMessage;
 
         // TODO: 2021-01-22 Check for the flag in request.
@@ -335,6 +323,23 @@ public class OAuth2AuthzEndpoint {
         } catch (IdentityException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleIdentityException(request, e);
+        }
+
+        // Perform request authentication for API based auth flow.
+        if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
+            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
+            if (!oAuthClientAuthnContext.isAuthenticated()) {
+                return handleAuthFailureResponse(oAuthClientAuthnContext);
+            }
+
+            ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
+            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
+                return handleAttestationFailureResponse(clientAttestationContext);
+            }
+
+            if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
+                return handleUnsupportedGrantForApiBasedAuth();
+            }
         }
 
         try {
@@ -4397,13 +4402,7 @@ public class OAuth2AuthzEndpoint {
             return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
         }
 
-        return isApiBasedAuthenticationFlow(oAuthMessage.getRequest());
-    }
-
-    private boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
-
-        return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
-                request.getParameter(RESPONSE_MODE));
+        return OAuth2Util.isApiBasedAuthenticationFlow(oAuthMessage.getRequest());
     }
 
     private boolean isApiBasedAuthenticationFlow(OAuth2Parameters oAuth2Parameters) {
@@ -4615,5 +4614,12 @@ public class OAuth2AuthzEndpoint {
 
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(
                 clientAttestationContext.getValidationFailureMessage(), log);
+    }
+
+    private Response handleUnsupportedGrantForApiBasedAuth() {
+
+        return ApiAuthnUtils.buildResponseForClientError(
+                new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                        "App native authentication is only supported with code response type."), log);
     }
 }
