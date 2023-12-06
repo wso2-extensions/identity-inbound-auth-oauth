@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
+import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
@@ -95,9 +96,12 @@ import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -138,6 +142,7 @@ import javax.servlet.http.HttpServletResponseWrapper;
 import javax.ws.rs.core.MultivaluedMap;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.apache.oltu.oauth2.common.utils.OAuthUtils.isEmpty;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils.getRedirectURL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
@@ -536,11 +541,143 @@ public class EndpointUtil {
                 redirectUri = getErrorPageURL(request, errorCode, errorMessage, appName);
             } else {
                 String state = retrieveStateForErrorURL(request, oAuth2Parameters);
-                redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
+                oAuth2Parameters.setState(state);
+                oAuth2Parameters.setRedirectURI(redirectUri);
+                validateReqObjAndFetchParms(request, oAuth2Parameters);
+                AuthorizationResponseDTO authorizationResponseDTO = getAuthResponseDTO(oAuth2Parameters);
+                try {
+                    if (!isEmpty(errorMessage)) {
+                        errorMessage = URLEncoder.encode(errorMessage, "UTF-8");
+                    }
+                    authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND, errorMessage, errorCode);
+                    ResponseModeProvider responseModeProvider = getResponseModeProvider(authorizationResponseDTO);
+                    if (ResponseModeProvider.AuthResponseType.REDIRECTION.equals
+                            (responseModeProvider.getAuthResponseType())) {
+                        return responseModeProvider.getAuthResponseRedirectUrl
+                                (authorizationResponseDTO);
+                    } else {
+                        return responseModeProvider.getAuthResponseBuilderEntity(authorizationResponseDTO);
+                    }
+                } catch (OAuthProblemException | UnsupportedEncodingException e) {
+                    redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
+                }
             }
             return redirectUri;
         }
 
+    }
+
+    private static void validateReqObjAndFetchParms(HttpServletRequest request, OAuth2Parameters oauth2Params) {
+        RequestObject requestObject = null;
+
+        if (oauth2Params.getResponseMode() == null) {
+            oauth2Params.setResponseMode(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_MODE));
+        }
+
+        if (oauth2Params.getResponseType() == null) {
+            oauth2Params.setResponseType(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+        }
+
+        if (oauth2Params.getClientId() == null) {
+            oauth2Params.setClientId(request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+        }
+
+        if (StringUtils.isNotBlank(request.getParameter(OAuthConstants.OAuth20Params.REQUEST))) {
+
+            try {
+                // if valid request object exists, get the response mode from the request object.
+                RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
+                        .getRequestObjectValidator();
+                RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
+                        .getRequestObjectBuilders().get(OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER);
+                requestObject = requestObjectBuilder.buildRequestObject(request
+                        .getParameter(OAuthConstants.OAuth20Params.REQUEST), oauth2Params);
+                OIDCRequestObjectUtil.validateRequestObjectSignature(oauth2Params, requestObject,
+                        requestObjectValidator);
+            } catch (RequestObjectException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Error while building request object", e);
+                }
+            }
+        }
+
+        if (requestObject != null) {
+            JWTClaimsSet claimsSet = requestObject.getClaimsSet();
+            oauth2Params.setClientId(claimsSet.getClaim(OAuthConstants.OAuth20Params.CLIENT_ID) != null ?
+                    claimsSet.getClaim(OAuthConstants.OAuth20Params.CLIENT_ID).toString() : oauth2Params.getClientId());
+            oauth2Params.setState(claimsSet.getClaim(OAuthConstants.OAuth20Params.STATE) != null ?
+                    claimsSet.getClaim(OAuthConstants.OAuth20Params.STATE).toString() : oauth2Params.getState());
+            oauth2Params.setResponseMode(
+                    claimsSet.getClaim(OAuthConstants.OAuth20Params.RESPONSE_MODE) != null ?
+                            claimsSet.getClaim(OAuthConstants.OAuth20Params.RESPONSE_MODE).toString() :
+                            oauth2Params.getResponseMode());
+            oauth2Params.setResponseType(
+                    claimsSet.getClaim(OAuthConstants.OAuth20Params.RESPONSE_TYPE) != null ?
+                            claimsSet.getClaim(OAuthConstants.OAuth20Params.RESPONSE_TYPE).toString() :
+                            oauth2Params.getResponseType());
+        }
+
+    }
+
+    /**
+     * This method creates and returns AuthorizationResponseDTO instance.
+     * @param oauth2Params Oauth2 params
+     * @return AuthorizationResponseDTO DTO
+     */
+    private static AuthorizationResponseDTO getAuthResponseDTO(OAuth2Parameters oauth2Params) {
+
+        AuthorizationResponseDTO authorizationResponseDTO = new AuthorizationResponseDTO();
+
+        authorizationResponseDTO.setClientId(oauth2Params.getClientId());
+        authorizationResponseDTO.setSigningTenantDomain(oauth2Params.getTenantDomain());
+        authorizationResponseDTO.setRedirectUrl(oauth2Params.getRedirectURI());
+        authorizationResponseDTO.setState(oauth2Params.getState());
+        authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
+        authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
+
+        return authorizationResponseDTO;
+    }
+
+    /**
+     * This returns the ResponseModeProvider that can handle a given authorize response.
+     * @param authorizationResponseDTO AuthorizationResponseDTO instance
+     * @return ResponseModeProvider
+     */
+    private static ResponseModeProvider getResponseModeProvider(AuthorizationResponseDTO authorizationResponseDTO)
+            throws OAuthProblemException {
+
+        validateResponseModeWithResponseType(authorizationResponseDTO);
+        Map<String, ResponseModeProvider> responseModeProviders =
+                OAuth2ServiceComponentHolder.getResponseModeProviders();
+        for (Map.Entry<String, ResponseModeProvider> entry : responseModeProviders.entrySet()) {
+            ResponseModeProvider responseModeProvider = entry.getValue();
+            if (responseModeProvider.canHandle(authorizationResponseDTO)) {
+                return responseModeProvider;
+            }
+        }
+        return OAuth2ServiceComponentHolder.getResponseModeProvider(OAuthConstants.ResponseModes.DEFAULT);
+    }
+
+    private static void validateResponseModeWithResponseType(AuthorizationResponseDTO authorizationResponseDTO)
+            throws OAuthProblemException {
+
+        String responseType = authorizationResponseDTO.getResponseType();
+        String responseMode = authorizationResponseDTO.getResponseMode();
+
+        // Response mode query.jwt should not be used in conjunction with the response types token and/or id_token.
+        if (hasIDTokenOrTokenInResponseType(responseType) &&
+                OAuthConstants.ResponseModes.QUERY_JWT.equals(responseMode)) {
+
+            throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                    OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_RESPONSE_TYPE_FOR_QUERY_JWT);
+        }
+    }
+
+    private static boolean hasIDTokenOrTokenInResponseType(String responseType) {
+
+        return StringUtils.isNotBlank(responseType)
+                && (responseType.toLowerCase().contains(OAuthConstants.ID_TOKEN)
+                || responseType.toLowerCase().contains(OAuthConstants.TOKEN));
     }
 
     /**
