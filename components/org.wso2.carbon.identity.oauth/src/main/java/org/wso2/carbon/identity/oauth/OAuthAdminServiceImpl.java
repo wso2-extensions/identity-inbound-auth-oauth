@@ -1265,29 +1265,6 @@ public class OAuthAdminServiceImpl {
                 String token = detailToken.getAccessToken();
                 accessTokens[countToken] = token;
                 countToken++;
-
-                OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
-                OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
-
-                String scope = buildScopeString(detailToken.getScope());
-                String authorizedUser = detailToken.getAuthzUser().getUserId();
-                String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
-                boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-                String cacheKeyString;
-                if (isUsernameCaseSensitive) {
-                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
-                } else {
-                    cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope + ":"
-                            + authenticatedIDP;
-                }
-                OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
-                OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
-                String tokenBindingRef = NONE;
-                if (detailToken.getTokenBinding() != null) {
-                    tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
-                }
-                OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
-                        OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef);
             }
 
             if (LOG.isDebugEnabled()) {
@@ -1310,7 +1287,7 @@ public class OAuthAdminServiceImpl {
                             consumerKey, properties, authorizationCodes.toArray(
                                     new String[0]), accessTokens);
 
-        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException | UserIdNotFoundException e) {
+        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
         }
@@ -1330,6 +1307,15 @@ public class OAuthAdminServiceImpl {
         }
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
+
+        Set<AccessTokenDO> activeDetailedTokens;
+        try {
+            activeDetailedTokens = OAuthTokenPersistenceFactory
+                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error in updating oauth app & revoking access tokens and authz " +
+                    "codes for OAuth App with consumerKey: " + consumerKey, e);
+        }
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
@@ -1363,8 +1349,12 @@ public class OAuthAdminServiceImpl {
         // Remove client credentials from cache.
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+
+        // Remove all active tokens and authorization codes from the cache.
+        clearTokenCacheEntry(consumerKey, activeDetailedTokens);
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
+            LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: "
+                    + consumerKey);
         }
         handleInternalTokenRevocation(consumerKey, properties);
         if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
@@ -2477,6 +2467,46 @@ public class OAuthAdminServiceImpl {
         if (!authMethods.contains(authMethod)) {
             String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
             throw handleClientError(INVALID_REQUEST, msg);
+        }
+    }
+
+    private static void clearTokensFromCache(String consumerKey, AccessTokenDO detailToken, String token)
+            throws IdentityOAuthAdminException {
+
+        OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
+        OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
+
+        String scope = buildScopeString(detailToken.getScope());
+        String authorizedUser;
+        try {
+            authorizedUser = detailToken.getAuthzUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw handleError("Error when obtaining the user ID.", e);
+        }
+        String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        String cacheKeyString;
+        if (isUsernameCaseSensitive) {
+            cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
+        } else {
+            cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope + ":"
+                    + authenticatedIDP;
+        }
+        OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
+        OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
+        String tokenBindingRef = NONE;
+        if (detailToken.getTokenBinding() != null) {
+            tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
+        }
+        OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
+                OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef);
+    }
+
+    private static void clearTokenCacheEntry(String consumerKey, Set<AccessTokenDO> activeDetailedTokens)
+            throws IdentityOAuthAdminException {
+
+        for (AccessTokenDO detailToken : activeDetailedTokens) {
+            clearTokensFromCache(consumerKey, detailToken, detailToken.getAccessToken());
         }
     }
 }
