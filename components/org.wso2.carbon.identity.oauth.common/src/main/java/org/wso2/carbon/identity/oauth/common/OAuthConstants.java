@@ -262,6 +262,7 @@ public final class OAuthConstants {
     public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "OAuth.OpenIDConnect." +
             "SupportedRequestObjectEncryptionMethods.SupportedRequestObjectEncryptionMethod";
     public static final String IS_PUSH_AUTHORIZATION_REQUEST = "isPushAuthorizationRequest";
+    public static final String ALLOWED_SCOPES_PROPERTY = "allowedScopes";
 
 
     public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
