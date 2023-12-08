@@ -543,9 +543,9 @@ public class EndpointUtil {
                 String state = retrieveStateForErrorURL(request, oAuth2Parameters);
                 oAuth2Parameters.setState(state);
                 oAuth2Parameters.setRedirectURI(redirectUri);
-                validateReqObjAndFetchParms(request, oAuth2Parameters);
-                AuthorizationResponseDTO authorizationResponseDTO = getAuthResponseDTO(oAuth2Parameters);
                 try {
+                    validateReqObjAndFetchParms(request, oAuth2Parameters);
+                    AuthorizationResponseDTO authorizationResponseDTO = getAuthResponseDTO(oAuth2Parameters);
                     if (!isEmpty(errorMessage)) {
                         errorMessage = URLEncoder.encode(errorMessage, "UTF-8");
                     }
@@ -558,7 +558,7 @@ public class EndpointUtil {
                     } else {
                         return responseModeProvider.getAuthResponseBuilderEntity(authorizationResponseDTO);
                     }
-                } catch (OAuthProblemException | UnsupportedEncodingException e) {
+                } catch (OAuthProblemException | UnsupportedEncodingException | RequestObjectException e) {
                     redirectUri = getUpdatedRedirectURL(request, redirectUri, errorCode, errorMessage, state, appName);
                 }
             }
@@ -567,7 +567,8 @@ public class EndpointUtil {
 
     }
 
-    private static void validateReqObjAndFetchParms(HttpServletRequest request, OAuth2Parameters oauth2Params) {
+    private static void validateReqObjAndFetchParms(HttpServletRequest request, OAuth2Parameters oauth2Params)
+            throws RequestObjectException {
         RequestObject requestObject = null;
 
         if (oauth2Params.getResponseMode() == null) {
@@ -584,21 +585,14 @@ public class EndpointUtil {
 
         if (StringUtils.isNotBlank(request.getParameter(OAuthConstants.OAuth20Params.REQUEST))) {
 
-            try {
-                // if valid request object exists, get the response mode from the request object.
-                RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
-                        .getRequestObjectValidator();
-                RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
-                        .getRequestObjectBuilders().get(OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER);
-                requestObject = requestObjectBuilder.buildRequestObject(request
-                        .getParameter(OAuthConstants.OAuth20Params.REQUEST), oauth2Params);
-                OIDCRequestObjectUtil.validateRequestObjectSignature(oauth2Params, requestObject,
-                        requestObjectValidator);
-            } catch (RequestObjectException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while building request object", e);
-                }
-            }
+            RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
+                    .getRequestObjectValidator();
+            RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
+                    .getRequestObjectBuilders().get(OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER);
+            requestObject = requestObjectBuilder.buildRequestObject(request
+                    .getParameter(OAuthConstants.OAuth20Params.REQUEST), oauth2Params);
+            OIDCRequestObjectUtil.validateRequestObjectSignature(oauth2Params, requestObject,
+                    requestObjectValidator);
         }
 
         if (requestObject != null) {
