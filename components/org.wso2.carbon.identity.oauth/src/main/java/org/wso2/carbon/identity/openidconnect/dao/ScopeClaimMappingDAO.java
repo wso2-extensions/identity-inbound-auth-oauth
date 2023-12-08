@@ -22,8 +22,10 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.openidconnect.model.ScopeAdditionResult;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Interface used in openid connect to handle all the scope claim mapping related db operations.
@@ -68,8 +70,21 @@ public interface ScopeClaimMappingDAO {
      * @param scope    Scope.
      * @param tenantId Tenant ID.
      * @throws IdentityOAuth2Exception If an error occurs when adding a scope.
+     * @deprecated use {@link #addNewScope(ScopeDTO, int)} instead.
      */
+    @Deprecated
     void addScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception;
+
+    /**
+     * Generate OPBrowserState Cookie Value.
+     *
+     * @return OPBrowserState Cookie Value.
+     */
+    default ScopeAdditionResult addNewScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception {
+
+        return new ScopeAdditionResult();
+    }
+
 
     /**
      * To retrieve all persisted oidc scopes with mapped claims.

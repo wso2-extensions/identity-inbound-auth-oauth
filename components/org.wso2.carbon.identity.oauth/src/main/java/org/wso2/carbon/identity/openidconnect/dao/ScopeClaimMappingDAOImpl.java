@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.util.JdbcUtils;
+import org.wso2.carbon.identity.openidconnect.model.ScopeAdditionResult;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
@@ -120,7 +121,9 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
      * @param scope    Scope.
      * @param tenantId Tenant Id.
      * @throws IdentityOAuth2Exception If an error occurs when adding a scope.
+     * @deprecated use {@link #addNewScope(ScopeDTO, int)} instead.
      */
+    @Deprecated
     @Override
     public void addScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception {
 
@@ -158,6 +161,58 @@ public class ScopeClaimMappingDAOImpl implements ScopeClaimMappingDAO {
                             Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE.getMessage(),
                             scope.getName()));
         }
+    }
+
+    /**
+     * To add OIDC scope for a specific tenant.
+     *
+     * @param scope    Scope.
+     * @param tenantId Tenant Id.
+     * @throws IdentityOAuth2Exception If an error occurs when adding a scope.
+     */
+    @Override
+    public ScopeAdditionResult addNewScope(ScopeDTO scope, int tenantId) throws IdentityOAuth2Exception {
+
+        // We maintain the scope name as unique. We won't allow registering same scope name across OAuth2 and OIDC
+        // scope endpoints. Hence we need to validate scope name exists or not across these two endpoints. If scope
+        // name is exist will throw conflict error.
+        ScopeAdditionResult scopeAdditionResult = new ScopeAdditionResult();
+        if (!isScopeExist(scope.getName(), tenantId, true)) {
+            JdbcTemplate jdbcTemplate = JdbcUtils.getNewTemplate();
+            try {
+                int scopeClaimMappingId = jdbcTemplate.executeInsert(SQLQueries.STORE_IDN_OAUTH2_SCOPE,
+                        (preparedStatement -> {
+                            preparedStatement.setString(1, scope.getName());
+                            preparedStatement.setString(2, scope.getDisplayName());
+                            preparedStatement.setString(3, scope.getDescription());
+                            preparedStatement.setInt(4, tenantId);
+                            preparedStatement.setString(5, Oauth2ScopeConstants.SCOPE_TYPE_OIDC);
+                        }), null, true, Oauth2ScopeConstants.SCOPE_ID);
+                if (scopeClaimMappingId > 0 && ArrayUtils.isNotEmpty(scope.getClaim())) {
+                    Set<String> claimsSet = new HashSet<>(Arrays.asList(scope.getClaim()));
+                    insertClaims(tenantId, scopeClaimMappingId, claimsSet);
+                }
+                if (log.isDebugEnabled() && ArrayUtils.isNotEmpty(scope.getClaim())) {
+                    log.debug(String.format("The scope %s and the claims %s are successfully inserted for the tenant:" +
+                            " %s", scope.getName(), Arrays.asList(scope.getClaim()), tenantId));
+                }
+                scopeAdditionResult.setSuccess(true);
+            } catch (DataAccessException e) {
+                String errorMessage = "Error while persisting scopes for the tenant: " + tenantId;
+                scopeAdditionResult.setSuccess(false);
+                scopeAdditionResult.setErrorMessage(errorMessage);
+                throw new IdentityOAuth2Exception(errorMessage, e);
+            }
+        } else {
+            log.warn(String.format("Scope %s already exist in tenant %s.", scope.getName(), tenantId));
+            scopeAdditionResult.setSuccess(false);
+            scopeAdditionResult.setErrorMessage(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE.getMessage());
+            scopeAdditionResult.setErrorMessage(Oauth2ScopeConstants.ErrorMessages.
+                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE.getCode());
+
+        }
+        return scopeAdditionResult;
     }
 
     @Override
