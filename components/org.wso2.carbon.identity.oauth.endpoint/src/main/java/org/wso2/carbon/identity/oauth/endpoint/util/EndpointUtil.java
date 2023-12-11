@@ -957,20 +957,20 @@ public class EndpointUtil {
         if (entry.getQueryString().contains(REQUEST_URI) && params != null) {
             // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
             // to be used in storing consent data
-            queryStringBuilder.append("&" + PROP_REDIRECT_URI + "=").append(URLEncoder.encode(params.getRedirectURI(),
-                    UTF_8));
+            queryStringBuilder.append('&').append(PROP_REDIRECT_URI).append('=')
+                    .append(URLEncoder.encode(params.getRedirectURI(), UTF_8));
         }
 
         if (params != null) {
-            queryStringBuilder.append("&" + PROP_OIDC_SCOPE + "=").append(URLEncoder.encode(
-                    StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8));
+            queryStringBuilder.append('&').append(PROP_OIDC_SCOPE).append('=')
+                    .append(URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8));
         }
         if (entry.getAuthzReqMsgCtx() != null) {
             String[] filteredAllowedScopes = (String[]) entry.getAuthzReqMsgCtx()
                     .getProperty(OAuthConstants.ALLOWED_SCOPES_PROPERTY);
             if (ArrayUtils.isNotEmpty(filteredAllowedScopes)) {
-                queryStringBuilder.append("&" + PROP_CONSENT_SKIP_SCOPE + "=").append(URLEncoder.encode(
-                        StringUtils.join(filteredAllowedScopes, " "), UTF_8));
+                queryStringBuilder.append('&').append(PROP_CONSENT_SKIP_SCOPE).append('=')
+                        .append(URLEncoder.encode(StringUtils.join(filteredAllowedScopes, " "), UTF_8));
             }
         }
         String queryString = queryStringBuilder.toString();
