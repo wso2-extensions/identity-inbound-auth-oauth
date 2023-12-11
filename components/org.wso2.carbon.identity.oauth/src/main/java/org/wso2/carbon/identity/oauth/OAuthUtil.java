@@ -467,7 +467,7 @@ public final class OAuthUtil {
             handleError(message, exception);
         }
         if (exception instanceof IdentityOAuth2ClientException) {
-            return new IdentityOAuthClientException(exception.getErrorCode(), message, exception);
+            return new IdentityOAuthClientException(exception.getErrorCode(), message);
         } else if (exception instanceof IdentityOAuth2ServerException) {
             return new IdentityOAuthServerException(exception.getErrorCode(), message, exception);
         } else {
