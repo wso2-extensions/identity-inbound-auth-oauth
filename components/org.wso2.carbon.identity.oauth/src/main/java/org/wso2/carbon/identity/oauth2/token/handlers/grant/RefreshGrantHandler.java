@@ -115,22 +115,36 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         AccessTokenDO accessTokenBean = getRefreshTokenGrantProcessor()
                 .createAccessTokenBean(tokReqMsgCtx, tokenReq, validationBean, getTokenType());
-        // sets accessToken, refreshToken and validity data
-        setTokenData(accessTokenBean, tokReqMsgCtx, validationBean, tokenReq, accessTokenBean.getIssuedTime());
-        persistNewToken(tokReqMsgCtx, accessTokenBean, tokenReq.getClientId());
-        if (log.isDebugEnabled()) {
-            log.debug("Persisted an access token for the refresh token, " +
-                    "Client ID : " + tokenReq.getClientId() +
-                    ", Authorized user : " + tokReqMsgCtx.getAuthorizedUser() +
-                    ", Timestamp : " + accessTokenBean.getIssuedTime() +
-                    ", Validity period (s) : " + accessTokenBean.getValidityPeriod() +
-                    ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
-                    ", Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE +
-                    " and User Type : " + getTokenType());
-        }
 
-        setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
-        addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
+        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
+        String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        String authorizedUserId;
+        try {
+            authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User id is not available for user: "
+                    + tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
+        }
+        String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
+        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
+            // sets accessToken, refreshToken and validity data
+            setTokenData(accessTokenBean, tokReqMsgCtx, validationBean, tokenReq, accessTokenBean.getIssuedTime());
+            persistNewToken(tokReqMsgCtx, accessTokenBean, tokenReq.getClientId());
+
+            if (log.isDebugEnabled()) {
+                log.debug("Persisted an access token for the refresh token, " +
+                        "Client ID : " + tokenReq.getClientId() +
+                        ", Authorized user : " + tokReqMsgCtx.getAuthorizedUser() +
+                        ", Timestamp : " + accessTokenBean.getIssuedTime() +
+                        ", Validity period (s) : " + accessTokenBean.getValidityPeriod() +
+                        ", Scope : " + OAuth2Util.buildScopeString(tokReqMsgCtx.getScope()) +
+                        ", Token State : " + OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE +
+                        " and User Type : " + getTokenType());
+            }
+
+            setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
+            addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
+        }
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
 
