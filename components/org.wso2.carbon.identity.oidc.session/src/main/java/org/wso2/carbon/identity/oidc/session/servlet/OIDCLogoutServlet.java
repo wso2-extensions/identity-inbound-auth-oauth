@@ -357,7 +357,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             return getRedirectURL(redirectURL, request);
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             String msg;
-            if (e.getErrorCode().equals(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN)) {
+            if (OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN.equals(e.getErrorCode())) {
                 msg = e.getMessage();
             } else {
                 msg = "Error occurred while getting application information. Client id not found.";
