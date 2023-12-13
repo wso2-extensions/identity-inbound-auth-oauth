@@ -5159,4 +5159,54 @@ public class OAuth2Util {
         return StringUtils.equals(OAuthConstants.CODE,
                 request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
     }
+
+    /**
+     * Resolve Console application callback url for a specific tenant based on the callback url configured in toml.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Console callback url.
+     */
+    public static String getConsoleCallbackFromServerConfig(String tenantDomain) {
+
+        String callbackUrl = IdentityUtil.getProperty(OAuth2Constants.CONSOLE_CALLBACK_URL_FROM_SERVER_CONFIGS);
+        if (StringUtils.isNotBlank(callbackUrl)) {
+            // If callback is a regex pattern, return it as it is.
+            if (callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                return callbackUrl;
+            }
+
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                callbackUrl = callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "");
+            } else {
+                callbackUrl = callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain);
+            }
+            return callbackUrl;
+        }
+        return null;
+    }
+
+    /**
+     * Resolve MyAccount application callback url for a specific tenant based on the callback url configured in toml.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return MyAccount callback url.
+     */
+    public static String getMyAccountCallbackFromServerConfig(String tenantDomain) {
+
+        String callbackUrl = IdentityUtil.getProperty(OAuth2Constants.MY_ACCOUNT_CALLBACK_URL_FROM_SERVER_CONFIGS);
+        if (StringUtils.isNotBlank(callbackUrl)) {
+            // If callback is a regex pattern, return it as it is.
+            if (callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                return callbackUrl;
+            }
+
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                callbackUrl = callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "");
+            } else {
+                callbackUrl = callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain);
+            }
+            return callbackUrl;
+        }
+        return null;
+    }
 }

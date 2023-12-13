@@ -41,6 +41,9 @@ public class OAuth2Constants {
     public static final String OAUTH_TOKEN_PERSISTENCE_ENABLE = "OAuth.TokenPersistence.Enable";
     public static final String OAUTH_CODE_PERSISTENCE_ENABLE = "OAuth.EnableAuthCodePersistence";
     public static final String OAUTH_ENABLE_REVOKE_TOKEN_HEADERS = "OAuth.EnableRevokeTokenHeadersInResponse";
+    public static final String CONSOLE_CALLBACK_URL_FROM_SERVER_CONFIGS = "Console.CallbackURL";
+    public static final String MY_ACCOUNT_CALLBACK_URL_FROM_SERVER_CONFIGS = "MyAccount.CallbackURL";
+    public static final String TENANT_DOMAIN_PLACEHOLDER = "{TENANT_DOMAIN}";
 
     /**
      * Constants for global role based scope issuer.
