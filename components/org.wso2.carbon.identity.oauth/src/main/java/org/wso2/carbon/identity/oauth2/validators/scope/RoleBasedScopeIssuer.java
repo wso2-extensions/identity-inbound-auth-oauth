@@ -102,11 +102,16 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     private static final String ISSUER_PREFIX = "default";
     OAuthServerConfiguration oAuthServerConfiguration = OAuthServerConfiguration.getInstance();
     private static final String REFRESH_TOKEN_GRANT_TYPE = "refresh_token";
+    private static final String ROLE_BASED_SCOPE_ISSUER_ENABLED =
+            "OAuth.GlobalScopeValidators.RoleBasedScopeIssuer.Enable";
 
     @Override
     public boolean validateScope(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) throws
             IdentityOAuth2Exception {
 
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(ROLE_BASED_SCOPE_ISSUER_ENABLED))) {
+            return true;
+        }
         List<String> authScopes = getScopes(oAuthAuthzReqMessageContext);
         oAuthAuthzReqMessageContext.setApprovedScope(authScopes.toArray(new String[0]));
         return true;
@@ -116,6 +121,9 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     public boolean validateScope(OAuthTokenReqMessageContext oAuthTokenReqMessageContext) throws
             IdentityOAuth2Exception {
 
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(ROLE_BASED_SCOPE_ISSUER_ENABLED))) {
+            return true;
+        }
         String grantType = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         boolean isRefreshRequest = OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType);
         boolean isFederatedUser = oAuthTokenReqMessageContext.getAuthorizedUser().isFederatedUser();
@@ -131,6 +139,9 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     public boolean validateScope(OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext) throws
             IdentityOAuth2Exception {
 
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(ROLE_BASED_SCOPE_ISSUER_ENABLED))) {
+            return true;
+        }
         AccessTokenDO accessTokenDO = (AccessTokenDO) oAuth2TokenValidationMessageContext.getProperty(ACCESS_TOKEN_DO);
         if (accessTokenDO == null) {
             return false;
