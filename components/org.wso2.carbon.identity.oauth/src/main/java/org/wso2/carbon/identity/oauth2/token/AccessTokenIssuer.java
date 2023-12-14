@@ -1079,7 +1079,8 @@ public class AccessTokenIssuer {
         if (OAuth2Constants.TokenBinderType.CLIENT_INSTANCE.equals(tokenBinder.getBindingType()) &&
                 tokenBindingValueOptional.get().length() >= MAX_ALLOWED_LENGTH) {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Token binding reference length exceeds limit for the token binder: " + tokenBinder.getBindingType());
+                        "Token binding reference length exceeds limit for the token binder: "
+                                + tokenBinder.getBindingType());
         }
 
         String tokenBindingValue = tokenBindingValueOptional.get();
