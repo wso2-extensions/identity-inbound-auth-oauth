@@ -97,6 +97,7 @@ import java.util.stream.Stream;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
@@ -1065,9 +1066,20 @@ public class AccessTokenIssuer {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "TLS certificate not found in the request.");
             }
+            if (OAuth2Constants.TokenBinderType.CLIENT_INSTANCE.equals(tokenBinder.getBindingType())) {
+                // Treat as 'None' token binding requests.
+                tokReqMsgCtx.setTokenBinding(null);
+                return;
+            }
             throw new IdentityOAuth2Exception(
                     "Token binding reference cannot be retrieved form the token binder: " + tokenBinder
                             .getBindingType());
+        }
+
+        if (OAuth2Constants.TokenBinderType.CLIENT_INSTANCE.equals(tokenBinder.getBindingType()) &&
+                tokenBindingValueOptional.get().length() >= MAX_ALLOWED_LENGTH) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Token binding reference length exceeds limit for the token binder: " + tokenBinder.getBindingType());
         }
 
         String tokenBindingValue = tokenBindingValueOptional.get();

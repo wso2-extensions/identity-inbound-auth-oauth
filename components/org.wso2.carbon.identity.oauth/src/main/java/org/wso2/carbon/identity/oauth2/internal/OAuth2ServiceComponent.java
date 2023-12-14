@@ -77,10 +77,7 @@ import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadat
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
-import org.wso2.carbon.identity.oauth2.token.bindings.impl.CertificateBasedTokenBinder;
-import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
-import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
-import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.*;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
@@ -266,6 +263,10 @@ public class OAuth2ServiceComponent {
                 CertificateBasedTokenBinder certificateBasedTokenBinder = new CertificateBasedTokenBinder();
                 bundleContext.registerService(TokenBinderInfo.class.getName(), certificateBasedTokenBinder, null);
             }
+
+            // Client instance based access token binder.
+            ClientInstanceTokenBinder clientInstanceTokenBinder = new ClientInstanceTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), clientInstanceTokenBinder, null);
 
             bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),
                     new DeviceFlowResponseTypeRequestValidator(), null);
