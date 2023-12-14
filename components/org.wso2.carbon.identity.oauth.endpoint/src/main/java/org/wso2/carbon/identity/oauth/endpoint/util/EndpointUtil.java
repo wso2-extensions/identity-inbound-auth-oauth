@@ -40,6 +40,7 @@ import org.owasp.encoder.Encode;
 import org.slf4j.MDC;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
@@ -95,11 +96,13 @@ import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
@@ -162,6 +165,7 @@ public class EndpointUtil {
     private static final String PROP_RESPONSE_TYPE = "response_type";
     private static final String PROP_SCOPE = "scope";
     private static final String PROP_OIDC_SCOPE = "requested_oidc_scopes";
+    private static final String PROP_CONSENT_SKIP_SCOPE = "consent_skip_scopes";
     private static final String PROP_ERROR = "error";
     private static final String PROP_ERROR_DESCRIPTION = "error_description";
     private static final String PROP_REDIRECT_URI = "redirect_uri";
@@ -948,19 +952,28 @@ public class EndpointUtil {
     private static String getQueryString(OAuth2Parameters params, SessionDataCacheEntry entry) throws
             UnsupportedEncodingException, OAuthSystemException {
 
-        String queryString;
-        queryString = entry.getQueryString();
-        if (queryString.contains(REQUEST_URI) && params != null) {
+        StringBuilder queryStringBuilder = new StringBuilder();
+        queryStringBuilder.append(entry.getQueryString());
+        if (entry.getQueryString().contains(REQUEST_URI) && params != null) {
             // When request_uri requests come without redirect_uri, we need to append it to the SPQueryParams
             // to be used in storing consent data
-            queryString = queryString +
-                    "&" + PROP_REDIRECT_URI + "=" + URLEncoder.encode(params.getRedirectURI(), UTF_8);
+            queryStringBuilder.append('&').append(PROP_REDIRECT_URI).append('=')
+                    .append(URLEncoder.encode(params.getRedirectURI(), UTF_8));
         }
 
         if (params != null) {
-            queryString = queryString + "&" + PROP_OIDC_SCOPE +
-                    "=" + URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8);
+            queryStringBuilder.append('&').append(PROP_OIDC_SCOPE).append('=')
+                    .append(URLEncoder.encode(StringUtils.join(getRequestedOIDCScopes(params), " "), UTF_8));
         }
+        if (entry.getAuthzReqMsgCtx() != null) {
+            String[] filteredAllowedScopes = (String[]) entry.getAuthzReqMsgCtx()
+                    .getProperty(OAuthConstants.ALLOWED_SCOPES_PROPERTY);
+            if (ArrayUtils.isNotEmpty(filteredAllowedScopes)) {
+                queryStringBuilder.append('&').append(PROP_CONSENT_SKIP_SCOPE).append('=')
+                        .append(URLEncoder.encode(StringUtils.join(filteredAllowedScopes, " "), UTF_8));
+            }
+        }
+        String queryString = queryStringBuilder.toString();
         entry.setQueryString(queryString);
         queryString = URLEncoder.encode(queryString, UTF_8);
         return queryString;
@@ -1272,7 +1285,7 @@ public class EndpointUtil {
     private static Set<String> dropUnregisteredScopes(OAuth2Parameters params) throws OAuthSystemException {
 
         Set<String> requestedScopes = new HashSet<>(params.getScopes());
-        Set<String> registeredScopes = getRegisteredScopes(requestedScopes);
+        Set<String> registeredScopes = getRegisteredScopes(requestedScopes, params.getTenantDomain());
         List<String> allowedScopesFromConfig = oauthServerConfiguration.getAllowedScopes();
         Set<String> filteredScopes = new HashSet<>();
 
@@ -1300,16 +1313,43 @@ public class EndpointUtil {
         return filteredScopes;
     }
 
-    private static Set<String> getRegisteredScopes(Set<String> requestedScopes) throws OAuthSystemException {
+    private static Set<String> getRegisteredScopes(Set<String> requestedScopes, String tenantDomain)
+            throws OAuthSystemException {
 
         try {
             String requestedScopesStr = StringUtils.join(requestedScopes, " ");
             Set<String> registeredScopes = new HashSet<>();
             Set<Scope> registeredScopeSet = oAuth2ScopeService.getScopes(null, null, true, requestedScopesStr);
             registeredScopeSet.forEach(scope -> registeredScopes.add(scope.getName()));
+            if (!AuthzUtil.isLegacyAuthzRuntime()) {
+                List<String> registeredAPIScopes = getRegisteredAPIScopes(requestedScopes, tenantDomain);
+                registeredScopes.addAll(registeredAPIScopes);
+            }
             return registeredScopes;
-        } catch (IdentityOAuth2ScopeServerException e) {
+        } catch (IdentityOAuth2ScopeServerException | IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error occurred while retrieving registered scopes.", e);
+        }
+    }
+
+    /**
+     * Get Scopes of registered API.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Registered scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving internal scopes for tenant domain.
+     */
+    private static List<String> getRegisteredAPIScopes(Set<String> requestedScopes, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            List<org.wso2.carbon.identity.application.common.model.Scope> scopes = OAuth2ServiceComponentHolder
+                    .getInstance().getApiResourceManager().getScopesByTenantDomain(tenantDomain, null);
+            return scopes.stream().map(org.wso2.carbon.identity.application.common.model.Scope::getName)
+                    .filter(requestedScopes::contains)
+                    .collect(Collectors.toList());
+        } catch (APIResourceMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving internal scopes for tenant domain : "
+                    + tenantDomain, e);
         }
     }
 

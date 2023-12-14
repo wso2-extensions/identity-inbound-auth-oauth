@@ -488,6 +488,7 @@ public class AuthorizationHandlerManager {
         String[] scopes = authzReqMsgCtx.getApprovedScope();
         String[] scopesToReturn = (String[]) ArrayUtils.addAll(scopes, allowedScopes);
         authzReqMsgCtx.setApprovedScope(scopesToReturn);
+        authzReqMsgCtx.addProperty(OAuthConstants.ALLOWED_SCOPES_PROPERTY, allowedScopes);
     }
 
     private void removeInternalScopes(OAuthAuthzReqMessageContext authzReqMsgCtx) {

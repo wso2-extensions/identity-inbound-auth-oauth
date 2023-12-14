@@ -4437,6 +4437,16 @@ public class OAuth2AuthzEndpoint {
                 AuthServiceResponse authServiceResponse = (AuthServiceResponse) oAuthMessage.getRequest()
                         .getAttribute(AUTH_SERVICE_RESPONSE);
 
+                if (authServiceResponse.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
+                    if (authServiceResponse.getErrorInfo().isPresent()) {
+                        throw new AuthServiceClientException(authServiceResponse.getErrorInfo().get().getErrorCode(),
+                                authServiceResponse.getErrorInfo().get().getErrorDescription());
+                    } else {
+                        throw new AuthServiceClientException(
+                                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.message());
+                    }
+                }
+
                 AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
