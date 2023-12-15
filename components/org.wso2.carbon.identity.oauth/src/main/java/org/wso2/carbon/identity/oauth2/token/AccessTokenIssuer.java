@@ -1066,7 +1066,7 @@ public class AccessTokenIssuer {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "TLS certificate not found in the request.");
             }
-            if (OAuth2Constants.TokenBinderType.CLIENT_INSTANCE.equals(tokenBinder.getBindingType())) {
+            if (OAuth2Constants.TokenBinderType.CLIENT_REQUEST.equals(tokenBinder.getBindingType())) {
                 // Treat as 'None' token binding requests.
                 tokReqMsgCtx.setTokenBinding(null);
                 return;
@@ -1076,7 +1076,7 @@ public class AccessTokenIssuer {
                             .getBindingType());
         }
 
-        if (OAuth2Constants.TokenBinderType.CLIENT_INSTANCE.equals(tokenBinder.getBindingType()) &&
+        if (OAuth2Constants.TokenBinderType.CLIENT_REQUEST.equals(tokenBinder.getBindingType()) &&
                 tokenBindingValueOptional.get().length() >= MAX_ALLOWED_LENGTH) {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Token binding reference length exceeds limit");

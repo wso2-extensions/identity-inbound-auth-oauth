@@ -212,7 +212,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_INSTANCE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -1733,7 +1733,7 @@ public class OAuth2AuthzEndpoint {
             String tokenBindingValue = null;
             if (tokenBinderOptional.isPresent()) {
                 TokenBinder tokenBinder = tokenBinderOptional.get();
-                if (!tokenBinder.getBindingType().equals(CLIENT_INSTANCE)) {
+                if (!tokenBinder.getBindingType().equals(CLIENT_REQUEST)) {
                     tokenBindingValue = tokenBinder.getOrGenerateTokenBindingValue(oAuthMessage.getRequest());
                     tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue);
                     if (LoggerUtils.isDiagnosticLogsEnabled()) {

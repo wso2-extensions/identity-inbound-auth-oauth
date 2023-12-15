@@ -31,7 +31,7 @@ public class OAuth2Constants {
         public static final String SSO_SESSION_BASED_TOKEN_BINDER = "sso-session";
         public static final String COOKIE_BASED_TOKEN_BINDER = "cookie";
         public static final String CERTIFICATE_BASED_TOKEN_BINDER = "certificate";
-        public static final String CLIENT_INSTANCE = "client-instance";
+        public static final String CLIENT_REQUEST = "client-request";
 
     }
     public static final String GROUPS = "groups";

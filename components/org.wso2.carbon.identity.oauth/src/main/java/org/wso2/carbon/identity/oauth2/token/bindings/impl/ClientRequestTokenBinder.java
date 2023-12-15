@@ -31,15 +31,15 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_INSTANCE;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 
 
 /**
- * Client Instance Reference binding to the token.
+ * Client Request binding to the token.
  */
-public class ClientInstanceTokenBinder extends AbstractTokenBinder {
+public class ClientRequestTokenBinder extends AbstractTokenBinder {
 
-    private static final String CLIENT_INSTANCE_REF = "clientInstanceRef";
+    private static final String CLIENT_INSTANCE_REF = "tokenBindingReference";
 
     @Override
     public Optional<String> getTokenBindingValue(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO) {
@@ -69,7 +69,7 @@ public class ClientInstanceTokenBinder extends AbstractTokenBinder {
     @Override
     public String getBindingType() {
 
-        return CLIENT_INSTANCE;
+        return CLIENT_REQUEST;
     }
 
     @Override
