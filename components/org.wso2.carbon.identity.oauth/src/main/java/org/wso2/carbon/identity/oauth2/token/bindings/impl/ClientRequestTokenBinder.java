@@ -57,13 +57,13 @@ public class ClientRequestTokenBinder extends AbstractTokenBinder {
     @Override
     public String getDisplayName() {
 
-        return "Client Instance";
+        return "Client Request";
     }
 
     @Override
     public String getDescription() {
 
-        return "Client Instance Token Binding";
+        return "Client Request Token Binding";
     }
 
     @Override
@@ -97,20 +97,12 @@ public class ClientRequestTokenBinder extends AbstractTokenBinder {
     @Override
     public boolean isValidTokenBinding(Object request, String bindingReference) {
 
-        /*
-         * As the token binding reference is same as the device code, the token call implementation
-         * will validate the device code. So no need to revalidate here.
-         */
         return true;
     }
 
     @Override
     public boolean isValidTokenBinding(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String bindingReference) {
 
-        /*
-         * As the token binding reference is same as the device code, the token call implementation
-         * will validate the device code. So no need to revalidate here.
-         */
         return true;
     }
 }
