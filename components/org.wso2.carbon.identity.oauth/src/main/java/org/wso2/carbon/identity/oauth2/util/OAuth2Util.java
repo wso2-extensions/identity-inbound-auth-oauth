@@ -5176,7 +5176,8 @@ public class OAuth2Util {
             }
 
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                callbackUrl = callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "");
+                callbackUrl = "regexp=(" + callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain)
+                        + "|" + callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "") + ")";
             } else {
                 callbackUrl = callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain);
             }
@@ -5201,7 +5202,8 @@ public class OAuth2Util {
             }
 
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                callbackUrl = callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "");
+                callbackUrl = "regexp=(" + callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain)
+                        + "|" + callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "") + ")";
             } else {
                 callbackUrl = callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain);
             }
