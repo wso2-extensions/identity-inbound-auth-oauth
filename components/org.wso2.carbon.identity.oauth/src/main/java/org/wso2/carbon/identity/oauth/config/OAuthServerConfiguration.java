@@ -316,6 +316,7 @@ public class OAuthServerConfiguration {
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
+    private Boolean roleBasedScopeIssuerEnabledConfig = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -510,6 +511,29 @@ public class OAuthServerConfiguration {
 
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
+
+        // Read config for RoleBasedScopeIssuer in GlobalScopeValidators enabled.
+        parseRoleBasedScopeIssuerEnabled(oauthElem);
+    }
+
+    /**
+     * Parse role based scope issuer enabled configuration under global scope validators.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseRoleBasedScopeIssuerEnabled(OMElement oauthConfigElem) {
+
+        OMElement globalScopeValidatorsElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.GLOBAL_SCOPE_VALIDATORS));
+        if (globalScopeValidatorsElem != null) {
+            OMElement roleBasedScopeIssuerEnabledElem = oauthConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.ROLE_BASED_SCOPE_ISSUER_ENABLED));
+            if (roleBasedScopeIssuerEnabledElem != null) {
+                OMElement enableElem = oauthConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.ENABLE));
+                roleBasedScopeIssuerEnabledConfig = Boolean.parseBoolean(enableElem.getText().trim());
+            }
+        }
     }
 
     /**
@@ -705,6 +729,11 @@ public class OAuthServerConfiguration {
     public String getDeviceAuthzEPUrl() {
 
         return deviceAuthzEPUrl;
+    }
+
+    public boolean isRoleBasedScopeIssuerEnabled() {
+
+        return roleBasedScopeIssuerEnabledConfig;
     }
 
     public boolean isSkipOIDCClaimsForClientCredentialGrant() {
@@ -3847,6 +3876,9 @@ public class OAuthServerConfiguration {
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";
         private static final String FILTERED_CLAIM = "FilteredClaim";
+        private static final String GLOBAL_SCOPE_VALIDATORS = "GlobalScopeValidators";
+        private static final String ROLE_BASED_SCOPE_ISSUER_ENABLED = "RoleBasedScopeIssuer";
+        private static final String ENABLE = "enable";
 
         private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
 
