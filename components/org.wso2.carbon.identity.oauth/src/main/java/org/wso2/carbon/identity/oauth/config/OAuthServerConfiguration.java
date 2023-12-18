@@ -3878,7 +3878,7 @@ public class OAuthServerConfiguration {
         private static final String FILTERED_CLAIM = "FilteredClaim";
         private static final String GLOBAL_SCOPE_VALIDATORS = "GlobalScopeValidators";
         private static final String ROLE_BASED_SCOPE_ISSUER_ENABLED = "RoleBasedScopeIssuer";
-        private static final String ENABLE = "enable";
+        private static final String ENABLE = "Enable";
 
         private static final String DROP_UNREGISTERED_SCOPES = "DropUnregisteredScopes";
 
