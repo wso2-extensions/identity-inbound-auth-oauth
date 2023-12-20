@@ -217,7 +217,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         /* Setting user's tenant domain as app residing tenant domain is not required once console is
                             registered in each tenant. */
                         String appResideOrg = getAppTenantDomain();
-                        if (StringUtils.isNotEmpty(appResideOrg)) {
+                        if (StringUtils.isNotEmpty(appResideOrg) && user.isFederatedUser()) {
                             user.setTenantDomain(appResideOrg);
                         }
                     }
