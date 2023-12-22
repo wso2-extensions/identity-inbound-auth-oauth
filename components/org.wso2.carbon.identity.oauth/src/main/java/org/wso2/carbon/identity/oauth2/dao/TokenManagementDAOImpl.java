@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -210,16 +209,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                             resultSet.getString(18) != null) {
                         extendedParams.put(resultSet.getString(17), resultSet.getString(18));
                     }
-                    // For B2B users, the users tenant domain and user resident organization should be properly set.
                     if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                         user.setAccessingOrganization(authorizedOrganization);
                         user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
-                        /* Setting user's tenant domain as app residing tenant domain is not required once console is
-                            registered in each tenant. */
-                        String appResideOrg = getAppTenantDomain();
-                        if (StringUtils.isNotEmpty(appResideOrg) && user.isFederatedUser()) {
-                            user.setTenantDomain(appResideOrg);
-                        }
+                    }
+                    /* Tenant domain of the application is set as the authenticated user tenant domain for the
+                       users whose identity is managed by an organization. */
+                    if (user.isOrganizationUser()) {
+                        user.setTenantDomain(IdentityTenantUtil.getTenantDomainFromContext());
                     }
                     validationDataDO.setAuthorizedUser(user);
 
@@ -819,11 +816,6 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             log.debug("Found authorized clients " + consumerKeys.toString() + " for user: " + authzUser.toString());
         }
         return distinctConsumerKeys;
-    }
-
-    private String getAppTenantDomain() {
-
-        return IdentityTenantUtil.getTenantDomainFromContext();
     }
 
     private String resolveOrganizationId(String tenantDomain) throws IdentityOAuth2Exception {

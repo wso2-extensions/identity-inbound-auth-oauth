@@ -160,7 +160,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
         if (userAttributes.isEmpty() && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
+                || isOrganizationUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
@@ -657,20 +657,17 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * Check whether an organization SSO user is trying to switch the organization.
+     * Check whether a user managed by an organization is trying to switch to another organization.
      *
      * @param authorizedUser authorized user from the token request.
-     * @return true if an organization SSO user is trying to switch the organization.
+     * @return true if an organization user is trying to switch to another organization.
      */
-    private boolean isOrganizationSsoUserSwitchingOrganization(AuthenticatedUser authorizedUser) {
+    private boolean isOrganizationUserSwitchingOrganization(AuthenticatedUser authorizedUser) {
 
-        String accessingOrganization = authorizedUser.getAccessingOrganization();
-        String userResidentOrganization = authorizedUser.getUserResidentOrganization();
-        /* A federated user with resident organization is considered as an organization SSO user. When the accessing
-           organization is different to the resident organization, it means the user is trying to switch the
-           organization. */
-        return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
-                (accessingOrganization);
+        /* For an organization user, when accessing organization is different to the resident organization,
+           it means the user is trying to switch to different organization. */
+        return authorizedUser.isOrganizationUser() &&
+                !authorizedUser.getUserResidentOrganization().equals(authorizedUser.getAccessingOrganization());
     }
 
     /**

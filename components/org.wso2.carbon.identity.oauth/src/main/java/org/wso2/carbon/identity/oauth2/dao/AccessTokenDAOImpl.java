@@ -3114,12 +3114,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
                                 user.setAccessingOrganization(authorizedOrganization);
                                 user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
-                                /* Tenant domain of the application is set as the authenticated user tenant domain
-                                for the organization SSO login users. */
-                                if (user.isFederatedUser()) {
-                                    user.setTenantDomain(
-                                            OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
-                                }
+                            }
+                            /* Tenant domain of the application is set as the authenticated user tenant domain for the
+                                users whose identity is managed by an organization. */
+                            if (user.isOrganizationUser()) {
+                                user.setTenantDomain(OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
                             }
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
