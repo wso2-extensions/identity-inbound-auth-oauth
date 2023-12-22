@@ -1079,7 +1079,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      * @param tokReqMsgCtx OAuthTokenReqMessageContext.
      * @return token binding reference.
      */
-    private String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    protected String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         if (tokReqMsgCtx.getTokenBinding() == null) {
             if (log.isDebugEnabled()) {

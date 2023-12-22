@@ -102,6 +102,7 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -211,6 +212,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -306,18 +308,6 @@ public class OAuth2AuthzEndpoint {
     public Response authorize(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws URISyntaxException, InvalidRequestParentException {
 
-        // Perform request authentication for API based auth flow.
-        if (isApiBasedAuthenticationFlow(request)) {
-            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
-            if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return handleAuthFailureResponse(oAuthClientAuthnContext);
-            }
-
-            ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
-            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
-                return handleAttestationFailureResponse(clientAttestationContext);
-            }
-        }
         OAuthMessage oAuthMessage;
 
         // TODO: 2021-01-22 Check for the flag in request.
@@ -334,6 +324,23 @@ public class OAuth2AuthzEndpoint {
         } catch (IdentityException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return handleIdentityException(request, e);
+        }
+
+        // Perform request authentication for API based auth flow.
+        if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
+            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
+            if (!oAuthClientAuthnContext.isAuthenticated()) {
+                return handleAuthFailureResponse(oAuthClientAuthnContext);
+            }
+
+            ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
+            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
+                return handleAttestationFailureResponse(clientAttestationContext);
+            }
+
+            if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
+                return handleUnsupportedGrantForApiBasedAuth();
+            }
         }
 
         try {
@@ -1726,17 +1733,19 @@ public class OAuth2AuthzEndpoint {
             String tokenBindingValue = null;
             if (tokenBinderOptional.isPresent()) {
                 TokenBinder tokenBinder = tokenBinderOptional.get();
-                tokenBindingValue = tokenBinder.getOrGenerateTokenBindingValue(oAuthMessage.getRequest());
-                tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue);
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "generate-token-binding-value")
-                            .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
-                            .inputParam("token binding value", tokenBindingValue)
-                            .configParam("token binder type", tokenBinder.getBindingType())
-                            .resultMessage("Successfully generated token binding value.")
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                            .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+                if (!tokenBinder.getBindingType().equals(CLIENT_REQUEST)) {
+                    tokenBindingValue = tokenBinder.getOrGenerateTokenBindingValue(oAuthMessage.getRequest());
+                    tokenBinder.setTokenBindingValueForResponse(oAuthMessage.getResponse(), tokenBindingValue);
+                    if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                        LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE, "generate-token-binding-value")
+                                .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getClientId())
+                                .inputParam("token binding value", tokenBindingValue)
+                                .configParam("token binder type", tokenBinder.getBindingType())
+                                .resultMessage("Successfully generated token binding value.")
+                                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                                .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
+                    }
                 }
             }
             setAuthorizationCode(oAuthMessage, authzRespDTO, builder, tokenBindingValue, oauth2Params,
@@ -4396,13 +4405,7 @@ public class OAuth2AuthzEndpoint {
             return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
         }
 
-        return isApiBasedAuthenticationFlow(oAuthMessage.getRequest());
-    }
-
-    private boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
-
-        return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
-                request.getParameter(RESPONSE_MODE));
+        return OAuth2Util.isApiBasedAuthenticationFlow(oAuthMessage.getRequest());
     }
 
     private boolean isApiBasedAuthenticationFlow(OAuth2Parameters oAuth2Parameters) {
@@ -4434,6 +4437,16 @@ public class OAuth2AuthzEndpoint {
                 AuthServiceResponse authServiceResponse = (AuthServiceResponse) oAuthMessage.getRequest()
                         .getAttribute(AUTH_SERVICE_RESPONSE);
 
+                if (authServiceResponse.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
+                    if (authServiceResponse.getErrorInfo().isPresent()) {
+                        throw new AuthServiceClientException(authServiceResponse.getErrorInfo().get().getErrorCode(),
+                                authServiceResponse.getErrorInfo().get().getErrorDescription());
+                    } else {
+                        throw new AuthServiceClientException(
+                                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.message());
+                    }
+                }
+
                 AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
@@ -4460,7 +4473,9 @@ public class OAuth2AuthzEndpoint {
                                     "Error while extracting query params from provided url.", e);
                         }
                         if (isRedirectToClient(location)) {
-                            String jsonPayload = new Gson().toJson(queryParams);
+                            SuccessCompleteAuthResponse successCompleteAuthResponse =
+                                    new SuccessCompleteAuthResponse(queryParams);
+                            String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
                         } else {
@@ -4612,5 +4627,12 @@ public class OAuth2AuthzEndpoint {
 
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(
                 clientAttestationContext.getValidationFailureMessage(), log);
+    }
+
+    private Response handleUnsupportedGrantForApiBasedAuth() {
+
+        return ApiAuthnUtils.buildResponseForClientError(
+                new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                        "App native authentication is only supported with code response type."), log);
     }
 }

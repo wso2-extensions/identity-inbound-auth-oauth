@@ -5135,4 +5135,28 @@ public class OAuth2Util {
         }
         return true;
     }
+
+    /**
+     * Check whether the request is an API based authentication request.
+     *
+     * @param request HttpServletRequest
+     * @return True if the request is an API based authentication request.
+     */
+    public static boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
+
+        return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_MODE));
+    }
+
+    /**
+     * Check whether the invoked grant supports API based authentication.
+     *
+     * @param request HttpServletRequest
+     * @return True if the grant supports API based authentication.
+     */
+    public static boolean isApiBasedAuthSupportedGrant(HttpServletRequest request) {
+
+        return StringUtils.equals(OAuthConstants.CODE,
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+    }
 }

@@ -207,6 +207,91 @@ public class ClaimsUtil {
     }
 
     /**
+     * Obtain the SP requested claims from the claims sent in the token.
+     *
+     * @param requestMsgCtx Token request message context.
+     * @param userClaims    Claims in OIDC dialect.
+     * @return              SP requested claims which are available in the userClaims.
+     * @throws IdentityApplicationManagementException   Identity Application Management Exception.
+     * @throws IdentityException                        Identity Exception.
+     */
+    private static Map<String, String> getSPRequestedClaimsInOIDCDialect(OAuthTokenReqMessageContext requestMsgCtx,
+                                                                 Map<String, String> userClaims) throws
+            IdentityApplicationManagementException, IdentityException {
+
+        Map<String, String> mappedAppClaims = new HashMap<>();
+
+        if (log.isDebugEnabled()) {
+            StringBuilder claims = new StringBuilder();
+            for (String key : userClaims.keySet()) {
+                claims.append(key).append(",");
+            }
+            log.debug("Obtaining requested claims for user: " + requestMsgCtx
+                    .getAuthorizedUser() + ", client id:" + requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId()
+                    + ", converting claims: " + claims.toString());
+        }
+
+        ServiceProvider serviceProvider = getServiceProvider(requestMsgCtx);
+
+        if (serviceProvider == null) {
+            return mappedAppClaims;
+        }
+        ClaimMapping[] spClaimMappings = serviceProvider.getClaimConfig().getClaimMappings();
+        if (spClaimMappings == null || !(spClaimMappings.length > 0)) {
+            return mappedAppClaims;
+        }
+
+        List<String> requestedLocalClaims = getRequestedLocalClaims(spClaimMappings);
+
+        String spTenantDomain = requestMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        Map<String, String> spToLocalClaimMappings = ClaimMetadataHandler.getInstance()
+                .getMappingsMapFromOtherDialectToCarbon(SP_DIALECT, null, spTenantDomain, false);
+
+        for (Map.Entry<String, String> oidcToLocalClaimMapping : spToLocalClaimMappings.entrySet()) {
+            String value = userClaims.get(oidcToLocalClaimMapping.getKey());
+            if (value != null && requestedLocalClaims.contains(oidcToLocalClaimMapping.getValue())) {
+                mappedAppClaims.put(oidcToLocalClaimMapping.getKey(), value);
+                if (log.isDebugEnabled() &&
+                        IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                    log.debug("Mapped claim: key -  " + oidcToLocalClaimMapping.getKey() + " value -" + value);
+                }
+            }
+        }
+
+        if (log.isDebugEnabled()) {
+            StringBuilder claimUris = new StringBuilder();
+            for (String key : mappedAppClaims.keySet()) {
+                claimUris.append(key).append(",");
+            }
+            log.debug("Converted user claims from local dialect to OIDC dialect for user: " + requestMsgCtx
+                    .getAuthorizedUser() + ", client id:" + requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId()
+                    + ", converted claim urls: " + claimUris.toString());
+        }
+
+        return mappedAppClaims;
+    }
+
+    /**
+     * Get the requested local claims in the SP.
+     *
+     * @param spClaimMappings   Claim mappings in the SP.
+     * @return                  Requested local claims in the SP.
+     */
+    private static List<String> getRequestedLocalClaims(ClaimMapping[] spClaimMappings) {
+
+        List<String> requestedLocalClaims = new ArrayList<>();
+        for (ClaimMapping mapping : spClaimMappings) {
+            if (mapping.isRequested()) {
+                requestedLocalClaims.add(mapping.getLocalClaim().getClaimUri());
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Requested number of local claims: " + requestedLocalClaims.size());
+        }
+        return requestedLocalClaims;
+    }
+
+    /**
      * Handle claims from identity provider based on claim configurations.
      *
      * @param identityProvider Identity Provider
@@ -261,17 +346,15 @@ public class ClaimsUtil {
                 }
             }
         } else {
-            claimsAfterIdpMapping = attributes;
-
             if (isUserClaimsInTokenLoggable()) {
                 if (log.isDebugEnabled()) {
                     log.debug("IDP claims do not exist for, identity provider, " + identityProvider
                             .getIdentityProviderName() + ", hence directly copying custom claims, " +
-                            claimsAfterIdpMapping.toString());
+                            attributes.toString());
                 }
             }
             if (isSPRequestedClaimsExist(tokenReqMsgCtx)) {
-                claimsAfterSPMapping = ClaimsUtil.convertClaimsToOIDCDialect(tokenReqMsgCtx, claimsAfterIdpMapping);
+                claimsAfterSPMapping = ClaimsUtil.getSPRequestedClaimsInOIDCDialect(tokenReqMsgCtx, attributes);
                 if (isUserClaimsInTokenLoggable()) {
                     if (log.isDebugEnabled()) {
                         log.debug("IDP claims do not exist but SP Claim mappings exists for, identity provider, "

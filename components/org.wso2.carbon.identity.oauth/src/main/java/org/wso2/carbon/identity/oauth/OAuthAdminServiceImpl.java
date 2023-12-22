@@ -268,8 +268,6 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
 
-        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDO app = new OAuthAppDO();
@@ -293,6 +291,7 @@ public class OAuthAdminServiceImpl {
                     app.setCallbackUrl(application.getCallbackUrl());
 
                     app.setState(APP_STATE_ACTIVE);
+                    boolean isFAPIConformanceEnabled = application.isFapiConformanceEnabled();
                     if (StringUtils.isEmpty(application.getOauthConsumerKey())) {
                         app.setOauthConsumerKey(OAuthUtil.getRandomNumber());
                         app.setOauthConsumerSecret(OAuthUtil.getRandomNumberSecure());
@@ -336,7 +335,7 @@ public class OAuthAdminServiceImpl {
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
-                            if (enforceFAPIDCR) {
+                            if (isFAPIConformanceEnabled) {
                                 validateFAPIEncryptionAlgorithms(application.getIdTokenEncryptionAlgorithm());
                             }
                             app.setIdTokenEncryptionAlgorithm(
@@ -356,7 +355,7 @@ public class OAuthAdminServiceImpl {
                         }
                         app.setBypassClientCredentials(application.isBypassClientCredentials());
                         app.setRenewRefreshTokenEnabled(application.getRenewRefreshTokenEnabled());
-                        if (enforceFAPIDCR) {
+                        if (isFAPIConformanceEnabled) {
                             validateFAPIBindingType(application.getTokenBindingType());
                         } else {
                             validateBindingType(application.getTokenBindingType());
@@ -367,7 +366,7 @@ public class OAuthAdminServiceImpl {
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
                         String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
-                            if (enforceFAPIDCR) {
+                            if (isFAPIConformanceEnabled) {
                                 validateFAPITokenAuthMethods(tokenEndpointAuthMethod);
                             } else {
                                 filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
@@ -376,7 +375,7 @@ public class OAuthAdminServiceImpl {
                         }
                         String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
-                            if (enforceFAPIDCR) {
+                            if (isFAPIConformanceEnabled) {
                                 validateFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(tokenEndpointAuthSigningAlgorithm,
@@ -416,7 +415,7 @@ public class OAuthAdminServiceImpl {
 
                         String idTokenSignatureAlgorithm = application.getIdTokenSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
-                            if (enforceFAPIDCR) {
+                            if (isFAPIConformanceEnabled) {
                                 validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(idTokenSignatureAlgorithm,
@@ -426,7 +425,7 @@ public class OAuthAdminServiceImpl {
                         }
                         String requestObjectSignatureAlgorithm = application.getRequestObjectSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
-                            if (enforceFAPIDCR) {
+                            if (isFAPIConformanceEnabled) {
                                 validateFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
@@ -440,7 +439,7 @@ public class OAuthAdminServiceImpl {
 
                         String requestObjectEncryptionAlgorithm = application.getRequestObjectEncryptionAlgorithm();
                         if (StringUtils.isNotEmpty(application.getRequestObjectEncryptionAlgorithm())) {
-                            if (enforceFAPIDCR) {
+                            if (isFAPIConformanceEnabled) {
                                 validateFAPIEncryptionAlgorithms(
                                         application.getRequestObjectEncryptionAlgorithm());
                             } else {
@@ -612,7 +611,7 @@ public class OAuthAdminServiceImpl {
     private void validateFAPIBindingType(String bindingType)
             throws IdentityOAuthClientException {
 
-        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) || bindingType == null) {
             return;
         } else {
             String msg = String.format("Certificate bound access tokens is required. '%s' binding type is found.",
@@ -662,8 +661,6 @@ public class OAuthAdminServiceImpl {
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
 
-        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
@@ -741,8 +738,9 @@ public class OAuthAdminServiceImpl {
 
             // Validate IdToken Encryption configurations.
             oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
+            boolean isFAPIConformanceEnabled = consumerAppDTO.isFapiConformanceEnabled();
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
-                if (enforceFAPIDCR) {
+                if (isFAPIConformanceEnabled) {
                     validateFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
                 }
                 oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
@@ -754,7 +752,7 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
             oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
             oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
-            if (enforceFAPIDCR) {
+            if (isFAPIConformanceEnabled) {
                 validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
             } else {
                 validateBindingType(consumerAppDTO.getTokenBindingType());
@@ -766,7 +764,7 @@ public class OAuthAdminServiceImpl {
 
             String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
             if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
-                if (enforceFAPIDCR) {
+                if (isFAPIConformanceEnabled) {
                     validateFAPITokenAuthMethods(tokenEndpointAuthMethod);
                 } else {
                     filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
@@ -776,7 +774,7 @@ public class OAuthAdminServiceImpl {
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
-                if (enforceFAPIDCR) {
+                if (isFAPIConformanceEnabled) {
                     validateFAPISignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(tokenEndpointAuthSignatureAlgorithm,
@@ -817,7 +815,7 @@ public class OAuthAdminServiceImpl {
 
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
             if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
-                if (enforceFAPIDCR) {
+                if (isFAPIConformanceEnabled) {
                     validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(idTokenSignatureAlgorithm,
@@ -828,7 +826,7 @@ public class OAuthAdminServiceImpl {
 
             String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
-                if (enforceFAPIDCR) {
+                if (isFAPIConformanceEnabled) {
                     validateFAPISignatureAlgorithms(requestObjectSignatureAlgorithm);
                 } else {
                     filterSignatureAlgorithms(requestObjectSignatureAlgorithm,
@@ -843,7 +841,7 @@ public class OAuthAdminServiceImpl {
 
             String requestObjectEncryptionAlgorithm = consumerAppDTO.getRequestObjectEncryptionAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
-                if (enforceFAPIDCR) {
+                if (isFAPIConformanceEnabled) {
                     validateFAPIEncryptionAlgorithms(requestObjectEncryptionAlgorithm);
                 } else {
                     filterEncryptionAlgorithms(
@@ -1267,29 +1265,6 @@ public class OAuthAdminServiceImpl {
                 String token = detailToken.getAccessToken();
                 accessTokens[countToken] = token;
                 countToken++;
-
-                OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
-                OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
-
-                String scope = buildScopeString(detailToken.getScope());
-                String authorizedUser = detailToken.getAuthzUser().getUserId();
-                String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
-                boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
-                String cacheKeyString;
-                if (isUsernameCaseSensitive) {
-                    cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
-                } else {
-                    cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope + ":"
-                            + authenticatedIDP;
-                }
-                OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
-                OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
-                String tokenBindingRef = NONE;
-                if (detailToken.getTokenBinding() != null) {
-                    tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
-                }
-                OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
-                        OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef);
             }
 
             if (LOG.isDebugEnabled()) {
@@ -1312,7 +1287,7 @@ public class OAuthAdminServiceImpl {
                             consumerKey, properties, authorizationCodes.toArray(
                                     new String[0]), accessTokens);
 
-        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException | UserIdNotFoundException e) {
+        } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
             throw handleError("Error in updating oauth app & revoking access tokens and authz " +
                     "codes for OAuth App with consumerKey: " + consumerKey, e);
         }
@@ -1332,6 +1307,15 @@ public class OAuthAdminServiceImpl {
         }
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
+
+        Set<AccessTokenDO> activeDetailedTokens;
+        try {
+            activeDetailedTokens = OAuthTokenPersistenceFactory
+                    .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(consumerKey);
+        } catch (IdentityOAuth2Exception e) {
+            throw handleError("Error in updating oauth app & revoking access tokens and authz " +
+                    "codes for OAuth App with consumerKey: " + consumerKey, e);
+        }
 
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
@@ -1365,8 +1349,12 @@ public class OAuthAdminServiceImpl {
         // Remove client credentials from cache.
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
+
+        // Remove all active tokens and authorization codes from the cache.
+        clearTokenCacheEntry(consumerKey, activeDetailedTokens);
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: " + consumerKey);
+            LOG.debug("Client credentials are removed from the cache for OAuth App with consumerKey: "
+                    + consumerKey);
         }
         handleInternalTokenRevocation(consumerKey, properties);
         if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
@@ -2479,6 +2467,46 @@ public class OAuthAdminServiceImpl {
         if (!authMethods.contains(authMethod)) {
             String msg = String.format("'%s' Token endpoint authentication method is not allowed.", authMethod);
             throw handleClientError(INVALID_REQUEST, msg);
+        }
+    }
+
+    private static void clearTokensFromCache(String consumerKey, AccessTokenDO detailToken, String token)
+            throws IdentityOAuthAdminException {
+
+        OAuthCacheKey cacheKeyToken = new OAuthCacheKey(token);
+        OAuthCache.getInstance().clearCacheEntry(cacheKeyToken);
+
+        String scope = buildScopeString(detailToken.getScope());
+        String authorizedUser;
+        try {
+            authorizedUser = detailToken.getAuthzUser().getUserId();
+        } catch (UserIdNotFoundException e) {
+            throw handleError("Error when obtaining the user ID.", e);
+        }
+        String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
+        boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);
+        String cacheKeyString;
+        if (isUsernameCaseSensitive) {
+            cacheKeyString = consumerKey + ":" + authorizedUser + ":" + scope + ":" + authenticatedIDP;
+        } else {
+            cacheKeyString = consumerKey + ":" + authorizedUser.toLowerCase() + ":" + scope + ":"
+                    + authenticatedIDP;
+        }
+        OAuthCacheKey cacheKeyUser = new OAuthCacheKey(cacheKeyString);
+        OAuthCache.getInstance().clearCacheEntry(cacheKeyUser);
+        String tokenBindingRef = NONE;
+        if (detailToken.getTokenBinding() != null) {
+            tokenBindingRef = detailToken.getTokenBinding().getBindingReference();
+        }
+        OAuthUtil.clearOAuthCache(consumerKey, detailToken.getAuthzUser(),
+                OAuth2Util.buildScopeString(detailToken.getScope()), tokenBindingRef);
+    }
+
+    private static void clearTokenCacheEntry(String consumerKey, Set<AccessTokenDO> activeDetailedTokens)
+            throws IdentityOAuthAdminException {
+
+        for (AccessTokenDO detailToken : activeDetailedTokens) {
+            clearTokensFromCache(consumerKey, detailToken, detailToken.getAccessToken());
         }
     }
 }
