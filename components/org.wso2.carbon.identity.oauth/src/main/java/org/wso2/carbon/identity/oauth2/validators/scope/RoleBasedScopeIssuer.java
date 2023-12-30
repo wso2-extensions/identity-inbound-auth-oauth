@@ -107,6 +107,9 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     public boolean validateScope(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) throws
             IdentityOAuth2Exception {
 
+        if (!OAuthServerConfiguration.getInstance().isRoleBasedScopeIssuerEnabled()) {
+            return true;
+        }
         List<String> authScopes = getScopes(oAuthAuthzReqMessageContext);
         oAuthAuthzReqMessageContext.setApprovedScope(authScopes.toArray(new String[0]));
         return true;
@@ -116,6 +119,9 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     public boolean validateScope(OAuthTokenReqMessageContext oAuthTokenReqMessageContext) throws
             IdentityOAuth2Exception {
 
+        if (!OAuthServerConfiguration.getInstance().isRoleBasedScopeIssuerEnabled()) {
+            return true;
+        }
         String grantType = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         boolean isRefreshRequest = OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType);
         boolean isFederatedUser = oAuthTokenReqMessageContext.getAuthorizedUser().isFederatedUser();
@@ -131,6 +137,9 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
     public boolean validateScope(OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext) throws
             IdentityOAuth2Exception {
 
+        if (!OAuthServerConfiguration.getInstance().isRoleBasedScopeIssuerEnabled()) {
+            return true;
+        }
         AccessTokenDO accessTokenDO = (AccessTokenDO) oAuth2TokenValidationMessageContext.getProperty(ACCESS_TOKEN_DO);
         if (accessTokenDO == null) {
             return false;

@@ -31,6 +31,7 @@ public class OAuth2Constants {
         public static final String SSO_SESSION_BASED_TOKEN_BINDER = "sso-session";
         public static final String COOKIE_BASED_TOKEN_BINDER = "cookie";
         public static final String CERTIFICATE_BASED_TOKEN_BINDER = "certificate";
+        public static final String CLIENT_REQUEST = "client-request";
 
     }
     public static final String GROUPS = "groups";
@@ -44,6 +45,8 @@ public class OAuth2Constants {
     public static final String CONSOLE_CALLBACK_URL_FROM_SERVER_CONFIGS = "Console.CallbackURL";
     public static final String MY_ACCOUNT_CALLBACK_URL_FROM_SERVER_CONFIGS = "MyAccount.CallbackURL";
     public static final String TENANT_DOMAIN_PLACEHOLDER = "{TENANT_DOMAIN}";
+
+    public static final int MAX_ALLOWED_LENGTH = 256;
 
     /**
      * Constants for global role based scope issuer.

@@ -611,7 +611,7 @@ public class OAuthAdminServiceImpl {
     private void validateFAPIBindingType(String bindingType)
             throws IdentityOAuthClientException {
 
-        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType)) {
+        if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(bindingType) || bindingType == null) {
             return;
         } else {
             String msg = String.format("Certificate bound access tokens is required. '%s' binding type is found.",

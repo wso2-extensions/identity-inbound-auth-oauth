@@ -78,6 +78,7 @@ import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.handlers.TokenBindingExpiryEventHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CertificateBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.bindings.impl.ClientRequestTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
@@ -266,6 +267,10 @@ public class OAuth2ServiceComponent {
                 CertificateBasedTokenBinder certificateBasedTokenBinder = new CertificateBasedTokenBinder();
                 bundleContext.registerService(TokenBinderInfo.class.getName(), certificateBasedTokenBinder, null);
             }
+
+            // Client instance based access token binder.
+            ClientRequestTokenBinder clientRequestTokenBinder = new ClientRequestTokenBinder();
+            bundleContext.registerService(TokenBinderInfo.class.getName(), clientRequestTokenBinder, null);
 
             bundleContext.registerService(ResponseTypeRequestValidator.class.getName(),
                     new DeviceFlowResponseTypeRequestValidator(), null);
