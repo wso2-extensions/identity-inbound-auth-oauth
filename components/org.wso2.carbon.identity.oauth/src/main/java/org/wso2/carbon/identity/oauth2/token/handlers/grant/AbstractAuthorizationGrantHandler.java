@@ -337,8 +337,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
                     newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
+            String maskedToken = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(newAccessToken) :
+                    newAccessToken;
             throw new IdentityOAuth2Exception(
-                    "Error occurred while storing new access token : " + newAccessToken, e);
+                    "Error occurred while storing new access token : " + maskedToken, e);
         }
     }
 

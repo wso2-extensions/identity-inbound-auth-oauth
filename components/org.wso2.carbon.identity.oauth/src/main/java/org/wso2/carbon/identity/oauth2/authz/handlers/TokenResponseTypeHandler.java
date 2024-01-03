@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -408,8 +409,10 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
                     refreshToken = newAccessTokenDO.getRefreshToken();
                 }
             } catch (IdentityException e) {
+                String maskedToken = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(accessToken) :
+                        accessToken;
                 throw new IdentityOAuth2Exception(
-                        "Error occurred while storing new access token : " + accessToken, e);
+                        "Error occurred while storing new access token : " + maskedToken, e);
             }
             tokenDO = newAccessTokenDO;
             if (log.isDebugEnabled()) {
