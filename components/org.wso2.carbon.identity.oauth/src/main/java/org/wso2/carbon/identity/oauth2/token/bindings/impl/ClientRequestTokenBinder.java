@@ -39,14 +39,14 @@ import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CL
  */
 public class ClientRequestTokenBinder extends AbstractTokenBinder {
 
-    private static final String CLIENT_INSTANCE_REF = "tokenBindingReference";
+    private static final String TOKEN_BINDING_ID = "tokenBindingId";
 
     @Override
     public Optional<String> getTokenBindingValue(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO) {
 
         RequestParameter[] parameters = oAuth2AccessTokenReqDTO.getRequestParameters();
         for (RequestParameter parameter : parameters) {
-            if (CLIENT_INSTANCE_REF.equals(parameter.getKey())
+            if (TOKEN_BINDING_ID.equals(parameter.getKey())
                     && StringUtils.isNotBlank(parameter.getValue()[0])) {
                         return Optional.ofNullable(parameter.getValue()[0]);
             }
