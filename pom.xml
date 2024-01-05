@@ -1029,7 +1029,7 @@
         <carbon.database.utils.version>2.0.11</carbon.database.utils.version>
 
         <!--Identity Apps-->
-        <authentication.portal.version>1.0.51</authentication.portal.version>
+        <authentication.portal.version>1.6.180</authentication.portal.version>
     </properties>
 
 </project>
