@@ -168,6 +168,9 @@ public class DefaultOAuth2ScopeValidator {
         the approved scope list. */
         List<String> approvedScopes = new ArrayList<>(requestedOIDCScopes);
         requestedScopes = removeOIDCScopes(requestedScopes, requestedOIDCScopes);
+        if (requestedScopes.isEmpty()) {
+            return approvedScopes;
+        }
         if (requestedScopes.contains(SYSTEM_SCOPE)) {
             requestedScopes.addAll(getInternalScopes(tenantDomain));
             requestedScopes.addAll(getConsoleScopes(tenantDomain));
