@@ -77,8 +77,8 @@ public class RequestObjectValidatorUtil {
                     oAuth2Parameters.getTenantDomain());
             String algorithm = oAuthAppDO.getRequestObjectSignatureAlgorithm();
             if (StringUtils.isNotEmpty(algorithm) && !algorithm.equals(jwt.getHeader().getAlgorithm().getName())) {
-                throw new RequestObjectException("Request Object signature verification failed. Invalid signature " +
-                        "algorithm.", OAuth2ErrorCodes.INVALID_REQUEST);
+                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Request Object signature verification failed. Invalid signature algorithm.");
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while retrieving Oauth application "
@@ -100,12 +100,12 @@ public class RequestObjectValidatorUtil {
         String clientId = oAuth2Parameters.getClientId();
 
         if (!isValidSignatureAlgorithm(clientId, alg)) {
-            throw new RequestObjectException("Request Object signature verification failed. Invalid signature " +
-                    "algorithm.", OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Request Object signature verification failed. Invalid signature algorithm.");
         }
         if (isFapiConformant(clientId) && !isValidFAPISignatureAlgorithm(clientId, alg)) {
-            throw new RequestObjectException("Request Object signature verification failed. Invalid signature " +
-                    "algorithm.", OAuth2ErrorCodes.INVALID_REQUEST);
+            throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Request Object signature verification failed. Invalid signature algorithm.");
         }
         if (certificate == null) {
             if (log.isDebugEnabled()) {
@@ -144,8 +144,8 @@ public class RequestObjectValidatorUtil {
         try {
             spProperties = OAuth2Util.getServiceProvider(clientId).getSpProperties();
         } catch (IdentityOAuth2Exception e) {
-            throw new RequestObjectException("Error while getting the service provider for client ID " + clientId,
-                    OAuth2ErrorCodes.SERVER_ERROR, e);
+            throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR,
+                    "Error while getting the service provider for client ID " + clientId, e);
         }
 
         if (spProperties != null) {
@@ -183,7 +183,9 @@ public class RequestObjectValidatorUtil {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
                 String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
-                throw new RequestObjectException(errorMessage, OAuth2ErrorCodes.SERVER_ERROR, e);
+                String errorDetail = e.getCause() != null && StringUtils.isNotBlank(e.getCause().getMessage()) ?
+                        ": " + e.getCause().getMessage() : StringUtils.EMPTY;
+                throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, errorMessage + errorDetail, e);
             }
         } else {
             log.warn("JWKS URI is empty");

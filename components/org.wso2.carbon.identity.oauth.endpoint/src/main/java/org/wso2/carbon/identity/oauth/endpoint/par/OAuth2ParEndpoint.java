@@ -283,6 +283,8 @@ public class OAuth2ParEndpoint {
         if (!validationResponse.isValidClient()) {
             if (OAuth2ErrorCodes.INVALID_CLIENT.equals(validationResponse.getErrorCode())) {
                 throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, validationResponse.getErrorMsg());
+            } else if (OAuth2ErrorCodes.INVALID_CALLBACK.equals(validationResponse.getErrorCode())) {
+                throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST, validationResponse.getErrorMsg());
             }
             throw new ParClientException(validationResponse.getErrorCode(), validationResponse.getErrorMsg());
         }
@@ -395,7 +397,8 @@ public class OAuth2ParEndpoint {
             if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
                 throw new ParCoreException(e.getErrorCode(), e.getMessage(), e);
             }
-            throw new ParClientException(e.getErrorCode(), e.getMessage(), e);
+            throw new ParClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT,
+                    e.getMessage(), e);
         }
     }
 
