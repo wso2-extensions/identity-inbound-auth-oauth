@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthRequestException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.par.common.ParConstants;
@@ -48,6 +49,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
+import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.HashMap;
@@ -67,9 +70,12 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
@@ -96,6 +102,14 @@ public class OAuth2ParEndpoint {
 
         try {
             Map<String, String> parameters = transformParams(params);
+
+            // Validate signature and override request object parameters.
+            // Todo : This is a temporary fix until the PAR endpoint is refactored to allow sending PAR requests without
+            //  duplicates of oauth2 parameters outside the request object.
+            if (StringUtils.isNotBlank(parameters.get(REQUEST))) {
+                overrideOAuh2Params(parameters);
+            }
+
             /* Wrap the request with the parameters obtained from the PAR endpoint.
             This is to avoid the request body parameters dropping from the http servlet request when the content type
             'application/x-www-form-urlencoded;charset=utf-8' is sent in request headers.*/
@@ -122,6 +136,34 @@ public class OAuth2ParEndpoint {
             return handleParClientException(e);
         } catch (ParCoreException e) {
             return handleParCoreException(e);
+        }
+    }
+
+    private void overrideOAuh2Params(Map<String, String> parameters) throws ParClientException {
+
+        RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
+                .getRequestObjectBuilders().get(OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER);
+        RequestObjectValidator requestObjectValidator = OAuthServerConfiguration.getInstance()
+                .getRequestObjectValidator();
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        try {
+            RequestObject requestObject =
+                    requestObjectBuilder.buildRequestObject(parameters.get(REQUEST), oAuth2Parameters);
+            // Set client id and tenant domain required for signature validation.
+            String clientId = requestObject.getClaimValue(CLIENT_ID);
+            oAuth2Parameters.setClientId(clientId);
+            oAuth2Parameters.setTenantDomain(getSPTenantDomainFromClientId(clientId));
+            // Validate request object signature to ensure request object is not tampered.
+            OIDCRequestObjectUtil.validateRequestObjectSignature(oAuth2Parameters, requestObject,
+                    requestObjectValidator);
+            // Override oauth2 parameter values from request object.
+            parameters.put(CLIENT_ID, clientId);
+            parameters.put(REDIRECT_URI, requestObject.getClaimValue(REDIRECT_URI));
+            parameters.put(SCOPE, requestObject.getClaimValue(SCOPE));
+            parameters.put(RESPONSE_TYPE, requestObject.getClaimValue(RESPONSE_TYPE));
+        } catch (RequestObjectException e) {
+            throw new ParClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT,
+                    e.getMessage(), e);
         }
     }
 
