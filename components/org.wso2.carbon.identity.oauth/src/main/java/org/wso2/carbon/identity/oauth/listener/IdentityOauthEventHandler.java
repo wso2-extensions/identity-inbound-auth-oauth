@@ -38,10 +38,10 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
-import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
-import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
-import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -112,11 +112,13 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
 
             Object userIdList = event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
+            String roleId = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.ROLE_ID);
             List<String> deletedUserIDList;
 
             if (userIdList instanceof List<?>) {
                 deletedUserIDList = (List<String>) userIdList;
-                terminateSession(deletedUserIDList);
+                terminateSession(deletedUserIDList, roleId);
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
@@ -129,14 +131,14 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             try {
-                RoleManagementService roleManagementService =
-                        OAuthComponentServiceHolder.getInstance().getRoleManagementService();
+                RoleManagementService roleV2ManagementService =
+                        OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
                 // Users can be either directly linked to roles or groups.
                 // Get the users directly linked to roles.
-                List<UserBasicInfo> userListOfRole = roleManagementService.getUserListOfRole(roleId, tenantDomain);
+                List<UserBasicInfo> userListOfRole = roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
 
                 // Get the users directly linked to group associated with the role.
-                List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
+                List<GroupBasicInfo> groupListOfRole = roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
                 List<User> userListOfGroup = new ArrayList<>();
                 for (GroupBasicInfo group : groupListOfRole) {
                     String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
@@ -151,7 +153,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 for (User user : userListOfGroup) {
                     userIdList.add(user.getUserID());
                 }
-                terminateSession(userIdList);
+                terminateSession(userIdList, roleId);
 
             } catch (IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
@@ -263,7 +265,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
      * @param userIDList            List of user IDs
      * @throws IdentityEventException
      */
-    private void terminateSession(List<String> userIDList) throws IdentityEventException {
+    private void terminateSession(List<String> userIDList, String roleId) throws IdentityEventException {
 
         try {
             UserStoreManager userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
@@ -276,7 +278,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                         userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
                         OAuth2ServiceComponentHolder.getInstance()
                                 .getRevocationProcessor()
-                                .revokeTokens(userName, userStoreManager);
+                                .revokeTokens(userName, userStoreManager, roleId);
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
                         OAuth2ServiceComponentHolder.getUserSessionManagementService()
                                 .terminateSessionsByUserId(userId);

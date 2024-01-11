@@ -27,6 +27,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -333,6 +334,25 @@ public class OAuthServiceComponent {
     }
 
     @Reference(
+            name = "org.wso2.carbon.identity.role.v2.mgt.core.internal.RoleManagementServiceComponent",
+            service = org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRoleV2ManagementService"
+    )
+    private void setRoleV2ManagementService(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setRoleV2ManagementService(roleV2ManagementService);
+    }
+
+    private void unsetRoleV2ManagementService(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService) {
+
+        OAuthComponentServiceHolder.getInstance().setRoleV2ManagementService(null);
+    }
+
+    @Reference(
             name = "organization.user.resident.resolver.service",
             service = OrganizationUserResidentResolverService.class,
             cardinality = ReferenceCardinality.MANDATORY,
@@ -375,5 +395,34 @@ public class OAuthServiceComponent {
 
         OAuthComponentServiceHolder.getInstance().setOrganizationManager(null);
         log.debug("Unset organization management service.");
+    }
+
+    @Reference(
+            name = "application.mgt.service",
+            service = ApplicationManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetApplicationManagementService"
+    )
+    protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting ApplicationManagement Service");
+        }
+        OAuthComponentServiceHolder.getInstance().
+                setApplicationManagementService(applicationManagementService);
+    }
+
+    /**
+     * Unsets ApplicationManagement Service.
+     *
+     * @param applicationManagementService An instance of ApplicationManagementService
+     */
+    protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting ApplicationManagement.");
+        }
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(null);
     }
 }
