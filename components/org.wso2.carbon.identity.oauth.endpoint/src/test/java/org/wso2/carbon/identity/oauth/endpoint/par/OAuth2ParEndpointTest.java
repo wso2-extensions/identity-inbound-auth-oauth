@@ -209,9 +209,6 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         requestParams13.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
                 new String[]{"Invalid-code-challenge-method"});
 
-        Map<String, String[]> requestParams14 = new HashMap<>();
-        requestParams14.put(OAuthConstants.OAuth20Params.REQUEST, new String[]{"dummyRequest"});
-
         MultivaluedMap<String, String> paramMap1 = new MultivaluedHashMap<>();
         paramMap1.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         paramMap1.add(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
@@ -230,7 +227,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.claim(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         jwtClaimsSetBuilder.claim(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
-        jwtClaimsSetBuilder.claim(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE);
+        jwtClaimsSetBuilder.claim(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE_ID_TOKEN);
         jwtClaimsSetBuilder.claim(OAuthConstants.OAuth20Params.SCOPE, "openid");
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String requestJwt = new PlainJWT(jwtClaimsSet).serialize();
@@ -306,8 +303,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 // FAPI request with response type code, response mode query.jwt. Will return bad request error.
                 {requestParams10, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
                         OAuth2ErrorCodes.INVALID_REQUEST, false, true},
-                // FAPI request with response type code id_token, response mode query.jwt. Return bad request error.
-                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST, "", false,
+                // FAPI request with response type code id_token, response mode query.jwt. Will return success
+                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false,
                         true},
                 // FAPI request without code challenge. Will return bad request error.
                 {requestParams11, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
@@ -319,7 +316,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 {requestParams13, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
                         OAuth2ErrorCodes.INVALID_REQUEST, false, true},
                 // PAR request without duplicate oauth parameters. Will return success.
-                {requestParams14, paramMap5, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false}
+                {new HashMap<>(), paramMap5, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false}
         };
     }
 
