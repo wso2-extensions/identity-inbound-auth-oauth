@@ -304,8 +304,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 {requestParams10, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
                         OAuth2ErrorCodes.INVALID_REQUEST, false, true},
                 // FAPI request with response type code id_token, response mode query.jwt. Will return success
-                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false,
-                        true},
+                {requestParams11, paramMap4, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, true},
                 // FAPI request without code challenge. Will return bad request error.
                 {requestParams11, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
                         OAuth2ErrorCodes.INVALID_REQUEST, false, true},
