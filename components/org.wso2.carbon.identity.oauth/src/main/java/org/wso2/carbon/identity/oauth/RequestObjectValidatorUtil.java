@@ -183,9 +183,7 @@ public class RequestObjectValidatorUtil {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
                 String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
-                String errorDetail = e.getCause() != null && StringUtils.isNotBlank(e.getCause().getMessage()) ?
-                        ": " + e.getCause().getMessage() : StringUtils.EMPTY;
-                throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, errorMessage + errorDetail, e);
+                throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, errorMessage, e);
             }
         } else {
             log.warn("JWKS URI is empty");

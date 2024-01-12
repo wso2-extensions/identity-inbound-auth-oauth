@@ -103,11 +103,13 @@ public class OAuth2ParEndpoint {
         try {
             Map<String, String> parameters = transformParams(params);
 
-            // Validate signature and override request object parameters.
-            // Todo : This is a temporary fix until the PAR endpoint is refactored to allow sending PAR requests without
-            //  duplicates of oauth2 parameters outside the request object.
-            if (StringUtils.isNotBlank(parameters.get(REQUEST))) {
-                overrideOAuh2Params(parameters);
+            /* Validate signature and override request object parameters.
+            Until the JAR(rfc 9101) specification is implemented, this is added as a workaround to allow sending PAR
+            requests without duplicates of oauth2 parameters inside and outside the request object.
+            Extracting parameters from request object will happen only if required parameters are not present outside
+            request object. Error scenarios due to missing parameters will be handled in handleValidation logic. */
+            if (!containsRequiredParameters(parameters) && StringUtils.isNotBlank(parameters.get(REQUEST))) {
+                extractParamsFromRequestObject(parameters);
             }
 
             /* Wrap the request with the parameters obtained from the PAR endpoint.
@@ -139,7 +141,7 @@ public class OAuth2ParEndpoint {
         }
     }
 
-    private void overrideOAuh2Params(Map<String, String> parameters) throws ParClientException {
+    private void extractParamsFromRequestObject(Map<String, String> parameters) throws ParClientException {
 
         RequestObjectBuilder requestObjectBuilder = OAuthServerConfiguration.getInstance()
                 .getRequestObjectBuilders().get(OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER);
@@ -165,6 +167,12 @@ public class OAuth2ParEndpoint {
             throw new ParClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_OBJECT,
                     e.getMessage(), e);
         }
+    }
+
+    private boolean containsRequiredParameters(Map<String, String> parameters) {
+
+        return parameters.containsKey(CLIENT_ID) && parameters.containsKey(REDIRECT_URI) &&
+                parameters.containsKey(SCOPE) && parameters.containsKey(RESPONSE_TYPE);
     }
 
     private Map<String, String> transformParams(MultivaluedMap<String, String> params) {
