@@ -724,6 +724,24 @@ public final class OAuthUtil {
     }
 
     /**
+     * This method will retrieve the role details of the given role id.
+     * @param roleId        Role Id.
+     * @param tenantDomain  Tenant domain.
+     * @return Role.
+     */
+    private static Role getRole(String roleId, String tenantDomain) throws UserStoreException {
+
+        try {
+            RoleManagementService roleV2ManagementService =
+                    OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+            return roleV2ManagementService.getRole(roleId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            String errorMessage = "Error occurred while retrieving role of id : " + roleId;
+            throw new UserStoreException(errorMessage, e);
+        }
+    }
+
+    /**
      * Initiate token revocation process for the associated clientIds for the given user.
      * @param clientIds          Set of clientIds
      * @param authenticatedUser  Authenticated User object of the user.
@@ -854,24 +872,26 @@ public final class OAuthUtil {
         }
 
         // Get details about the role to identify the audience and associated applications.
+        Set<String> clientIds = null;
         Role role;
-        try {
-            RoleManagementService roleV2ManagementService =
-                    OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
-            role = roleV2ManagementService.getRole(roleId, tenantDomain);
-        } catch (IdentityRoleManagementException e) {
-            String errorMessage = "Error occurred while retrieving role of id : " + roleId;
-            throw new UserStoreException(errorMessage, e);
+        boolean getClientIdsFromUser = false;
+        if (roleId != null) {
+            role = getRole(roleId, tenantDomain);
+            if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
+                // Get clientIds of associated applications for the specific application role.
+                clientIds = getClientIdsOfAssociatedApplications(role, tenantDomain);
+            } else {
+                // Get all the distinct client Ids authorized by this user since this is an organization role.
+                getClientIdsFromUser = true;
+            }
+        } else {
+            // Get all the distinct client Ids authorized by this user since no role is specified.
+            getClientIdsFromUser = true;
         }
 
-        Set<String> clientIds;
-        if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
-            // Get clientIds of associated applications for the specific application role.
-            clientIds = getClientIdsOfAssociatedApplications(role, tenantDomain);
-        } else {
+        if (getClientIdsFromUser) {
+            // Get all the distinct client Ids authorized by this user
             try {
-                // Get all the distinct client Ids authorized by this user.
-                // This is applicable for organization roles as well.
                 clientIds = OAuthTokenPersistenceFactory.getInstance()
                         .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
             } catch (IdentityOAuth2Exception e) {
@@ -891,48 +911,16 @@ public final class OAuthUtil {
     }
 
     /**
-     * This method will revoke the accesstokens of user.
+     * This method will revoke the access tokens of user.
      * @param username username.
      * @param userStoreManager userStoreManager.
-     * @return true if revocation is successfull. Else return false
-     * @throws UserStoreException
+     * @return true if revocation is successful. Else return false
      */
     public static boolean revokeTokens(String username, UserStoreManager userStoreManager) throws UserStoreException {
 
-        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        AuthenticatedUser authenticatedUser = buildAuthenticatedUser(username, userStoreDomain, tenantDomain);
-
-        /* This userStoreDomain variable is used for access token table partitioning. So it is set to null when access
-        token table partitioning is not enabled.*/
-        userStoreDomain = null;
-        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
-            try {
-                userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authenticatedUser);
-            } catch (IdentityOAuth2Exception e) {
-                LOG.error("Error occurred while getting user store domain for User ID : " + authenticatedUser, e);
-                throw new UserStoreException(e);
-            }
-        }
-
-        Set<String> clientIds;
-        try {
-            // get all the distinct client Ids authorized by this user
-            clientIds = OAuthTokenPersistenceFactory.getInstance()
-                    .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
-        } catch (IdentityOAuth2Exception e) {
-            LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
-            throw new UserStoreException(e);
-        }
-        boolean isErrorOnRevokingTokens;
-        isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedUser, userStoreDomain, username);
-
-        // Throw exception if there was any error found in revoking tokens.
-        if (isErrorOnRevokingTokens) {
-            throw new UserStoreException("Error occurred while revoking Access Tokens of the user " + username);
-        }
-        return true;
+        return revokeTokens(username, userStoreManager, null);
     }
+
 
     private static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
 
