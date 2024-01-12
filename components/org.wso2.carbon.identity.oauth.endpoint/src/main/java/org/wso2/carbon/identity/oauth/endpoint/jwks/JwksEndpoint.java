@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.security.KeyStore;
@@ -251,8 +252,7 @@ public class JwksEndpoint {
      */
     private String generateKSNameFromDomainName(String tenantDomain) {
 
-        String ksName = tenantDomain.trim().replace(".", "-");
-        return (ksName + ".jks");
+        return KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
     }
 
     /**

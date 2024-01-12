@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
@@ -65,7 +66,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 @PrepareForTest({CarbonUtils.class, IdentityTenantUtil.class, IdentityUtil.class, OAuthServerConfiguration.class,
-        KeyStoreManager.class, OAuth2Util.class, FrameworkUtils.class})
+        KeyStoreManager.class, OAuth2Util.class, FrameworkUtils.class, KeystoreUtils.class})
 public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
     @Mock
@@ -130,6 +131,10 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
                 "Z5RKDWCCq4ZuXl6wVsUz1iE61suO5yWi8=");
     }
 
+    private void prepareForGetKeyStorePath() throws Exception {
+        mockStatic(KeystoreUtils.class);
+        when(KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
+    }
     @DataProvider(name = "provideTenantDomain")
     public Object[][] provideTenantDomain() {
 
@@ -146,6 +151,7 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
 
         Path keystorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
                 "security", "wso2carbon.jks");
+        prepareForGetKeyStorePath();
         mockOAuthServerConfiguration();
         mockStatic(CarbonUtils.class);
         when(CarbonUtils.getServerConfiguration()).thenReturn(serverConfiguration);
