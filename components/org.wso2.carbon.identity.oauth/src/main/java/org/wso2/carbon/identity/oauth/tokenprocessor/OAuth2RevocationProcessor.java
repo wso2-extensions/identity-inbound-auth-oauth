@@ -62,4 +62,15 @@ public interface OAuth2RevocationProcessor {
      * @throws UserStoreException If an error occurs while revoking tokens for users.
      */
     boolean revokeTokens(String username, UserStoreManager userStoreManager) throws UserStoreException;
+
+    /**
+     * Handle indirect token revocation for internal user events.
+     *
+     * @param username         User on which the event occurred.
+     * @param userStoreManager User store manager.
+     * @param roleId           Role id of the relevant role.
+     * @return true if revocation is successful. Else return false.
+     * @throws UserStoreException If an error occurs while revoking tokens for users.
+     */
+    boolean revokeTokens(String username, UserStoreManager userStoreManager, String roleId) throws UserStoreException;
 }

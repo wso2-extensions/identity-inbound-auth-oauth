@@ -112,17 +112,17 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
 
             Object userIdList = event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
+            String roleId = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.ROLE_ID);
             List<String> deletedUserIDList;
 
             if (userIdList instanceof List<?>) {
                 deletedUserIDList = (List<String>) userIdList;
-                terminateSession(deletedUserIDList);
+                terminateSession(deletedUserIDList, roleId);
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.PRE_DELETE_ROLE_V2_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.POST_UPDATE_PERMISSIONS_FOR_ROLE_V2_EVENT.equals(event.getEventName())) {
+                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName())) {
 
             String roleId = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.ROLE_ID);
@@ -134,7 +134,6 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 // Users can be either directly linked to roles or groups.
                 // Get the users directly linked to roles.
                 List<UserBasicInfo> userListOfRole = roleManagementService.getUserListOfRole(roleId, tenantDomain);
-
                 // Get the users directly linked to group associated with the role.
                 List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
                 List<User> userListOfGroup = new ArrayList<>();
@@ -151,9 +150,46 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 for (User user : userListOfGroup) {
                     userIdList.add(user.getUserID());
                 }
-                terminateSession(userIdList);
+                terminateSession(userIdList, null);
 
             } catch (IdentityRoleManagementException e) {
+                String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
+                throw new IdentityEventException(errorMsg);
+            }
+
+        } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_V2_EVENT.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_UPDATE_PERMISSIONS_FOR_ROLE_V2_EVENT.equals(event.getEventName())) {
+
+            String roleId = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.ROLE_ID);
+            String tenantDomain = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
+            try {
+                org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService =
+                        OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+                // Users can be either directly linked to roles or groups.
+                // Get the users directly linked to roles.
+                List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfRole =
+                        roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
+                // Get the users directly linked to group associated with the role.
+                List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfRole =
+                        roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
+                List<User> userListOfGroup = new ArrayList<>();
+                for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfRole) {
+                    String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
+                    String groupName = UserCoreUtil.removeDomainFromName(group.getName());
+                    updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
+                }
+
+                List<String> userIdList = new ArrayList<>();
+                for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo : userListOfRole) {
+                    userIdList.add(userBasicInfo.getId());
+                }
+                for (User user : userListOfGroup) {
+                    userIdList.add(user.getUserID());
+                }
+                terminateSession(userIdList, roleId);
+            } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
                 throw new IdentityEventException(errorMsg);
             }
@@ -263,7 +299,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
      * @param userIDList            List of user IDs
      * @throws IdentityEventException
      */
-    private void terminateSession(List<String> userIDList) throws IdentityEventException {
+    private void terminateSession(List<String> userIDList, String roleId) throws IdentityEventException {
 
         try {
             UserStoreManager userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
@@ -276,7 +312,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                         userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
                         OAuth2ServiceComponentHolder.getInstance()
                                 .getRevocationProcessor()
-                                .revokeTokens(userName, userStoreManager);
+                                .revokeTokens(userName, userStoreManager, roleId);
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
                         OAuth2ServiceComponentHolder.getUserSessionManagementService()
                                 .terminateSessionsByUserId(userId);
