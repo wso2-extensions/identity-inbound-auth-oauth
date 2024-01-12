@@ -38,10 +38,10 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
-import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo;
+import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
+import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -122,23 +122,20 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.PRE_DELETE_ROLE_V2_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName()) ||
-                IdentityEventConstants.Event.POST_UPDATE_PERMISSIONS_FOR_ROLE_V2_EVENT.equals(event.getEventName())) {
+                IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName())) {
 
             String roleId = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.ROLE_ID);
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             try {
-                RoleManagementService roleV2ManagementService =
-                        OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+                RoleManagementService roleManagementService =
+                        OAuthComponentServiceHolder.getInstance().getRoleManagementService();
                 // Users can be either directly linked to roles or groups.
                 // Get the users directly linked to roles.
-                List<UserBasicInfo> userListOfRole = roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
-
+                List<UserBasicInfo> userListOfRole = roleManagementService.getUserListOfRole(roleId, tenantDomain);
                 // Get the users directly linked to group associated with the role.
-                List<GroupBasicInfo> groupListOfRole = roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
+                List<GroupBasicInfo> groupListOfRole = roleManagementService.getGroupListOfRole(roleId, tenantDomain);
                 List<User> userListOfGroup = new ArrayList<>();
                 for (GroupBasicInfo group : groupListOfRole) {
                     String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
@@ -153,9 +150,46 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 for (User user : userListOfGroup) {
                     userIdList.add(user.getUserID());
                 }
-                terminateSession(userIdList, roleId);
+                terminateSession(userIdList, null);
 
             } catch (IdentityRoleManagementException e) {
+                String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
+                throw new IdentityEventException(errorMsg);
+            }
+
+        } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_V2_EVENT.equals(event.getEventName()) ||
+                IdentityEventConstants.Event.POST_UPDATE_PERMISSIONS_FOR_ROLE_V2_EVENT.equals(event.getEventName())) {
+
+            String roleId = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.ROLE_ID);
+            String tenantDomain = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
+            try {
+                org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService =
+                        OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+                // Users can be either directly linked to roles or groups.
+                // Get the users directly linked to roles.
+                List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfRole =
+                        roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
+                // Get the users directly linked to group associated with the role.
+                List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfRole =
+                        roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
+                List<User> userListOfGroup = new ArrayList<>();
+                for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfRole) {
+                    String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
+                    String groupName = UserCoreUtil.removeDomainFromName(group.getName());
+                    updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
+                }
+
+                List<String> userIdList = new ArrayList<>();
+                for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo : userListOfRole) {
+                    userIdList.add(userBasicInfo.getId());
+                }
+                for (User user : userListOfGroup) {
+                    userIdList.add(user.getUserID());
+                }
+                terminateSession(userIdList, roleId);
+            } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
                 throw new IdentityEventException(errorMsg);
             }
