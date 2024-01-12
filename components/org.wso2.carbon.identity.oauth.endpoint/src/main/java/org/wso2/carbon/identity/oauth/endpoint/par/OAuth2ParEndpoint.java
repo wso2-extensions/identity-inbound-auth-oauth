@@ -107,7 +107,8 @@ public class OAuth2ParEndpoint {
             Until the JAR(rfc 9101) specification is implemented, this is added as a workaround to allow sending PAR
             requests without duplicates of oauth2 parameters inside and outside the request object.
             Extracting parameters from request object will happen only if required parameters are not present outside
-            request object. Error scenarios due to missing parameters will be handled in handleValidation logic. */
+            request object. Only the request object signature validation is performed here prior to overriding the
+            parameters. Request validations will be handled in handleValidation logic. */
             if (!containsRequiredParameters(parameters) && StringUtils.isNotBlank(parameters.get(REQUEST))) {
                 extractParamsFromRequestObject(parameters);
             }
