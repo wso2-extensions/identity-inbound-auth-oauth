@@ -19,10 +19,14 @@
 package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -38,6 +42,7 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Default implementation of @RefreshTokenProcessor responsible for handling refresh token persistence logic.
@@ -183,5 +188,45 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
             throw new IdentityOAuth2Exception("No previous access tokens found");
         }
         return accessTokenBeans;
+    }
+
+    public void addUserAttributesToCache(AccessTokenDO accessTokenBean, OAuthTokenReqMessageContext msgCtx) {
+
+        RefreshTokenValidationDataDO oldAccessToken =
+                (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
+        if (oldAccessToken.getAccessToken() == null) {
+            return;
+        }
+        AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
+                .getAccessToken());
+        if (log.isDebugEnabled()) {
+            log.debug("Getting AuthorizationGrantCacheEntry using access token id: " + accessTokenBean.getTokenId());
+        }
+        AuthorizationGrantCacheEntry grantCacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
+                        oldAccessToken.getTokenId());
+
+        if (grantCacheEntry != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Getting user attributes cached against the previous access token with access token id: " +
+                        oldAccessToken.getTokenId());
+            }
+            AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
+                    .getAccessToken());
+
+            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
+                grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
+            } else {
+                grantCacheEntry.setTokenId(null);
+            }
+
+            grantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
+
+            // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
+            AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
+                    oldAccessToken.getTokenId());
+            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+        }
     }
 }
