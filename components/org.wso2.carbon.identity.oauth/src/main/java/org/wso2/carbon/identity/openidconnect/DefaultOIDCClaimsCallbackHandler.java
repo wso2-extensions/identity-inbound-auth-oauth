@@ -344,7 +344,13 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 }
                 RefreshTokenValidationDataDO refreshTokenValidationDataDO =
                         (RefreshTokenValidationDataDO) previousAccessTokenObject;
-                userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken());
+                if (refreshTokenValidationDataDO.getAccessToken() != null) {
+                    userAttributes = getUserAttributesCachedAgainstToken(refreshTokenValidationDataDO.getAccessToken());
+                } else if (refreshTokenValidationDataDO.getTokenId() != null) {
+                    userAttributes = getUserAttributesCachedAgainstTokenId(refreshTokenValidationDataDO.getTokenId());
+                } else {
+                    userAttributes = new HashMap<>();
+                }
                 requestMsgCtx.addProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS,
                         isTokenHasCustomUserClaims(refreshTokenValidationDataDO));
             }
@@ -390,6 +396,28 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userAttributes = getUserAttributesFromCacheUsingToken(accessToken);
         }
         return userAttributes;
+    }
+
+    /**
+     * Get the user attributes cached against the token ID when access token is not persisted.
+     *
+     * @param tokenId Token Id
+     * @return Map of user attributes
+     */
+    private Map<ClaimMapping, String> getUserAttributesCachedAgainstTokenId(String tokenId) {
+        AuthorizationGrantCacheEntry cacheEntry;
+        if (log.isDebugEnabled()) {
+            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                log.debug("Retrieving user attributes cached against access token Id : "
+                        + tokenId);
+            } else {
+                log.debug("Retrieving user attributes cached against access token Id.");
+            }
+        }
+        // Since access token is not persisted, we are passing null as the grant cache key. User attributes will
+        // be cached against the token id in session store.
+        cacheEntry = AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(null, tokenId);
+        return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
     }
 
     private Map<ClaimMapping, String> getUserAttributesCachedAgainstDeviceCode(String deviceCode) {
