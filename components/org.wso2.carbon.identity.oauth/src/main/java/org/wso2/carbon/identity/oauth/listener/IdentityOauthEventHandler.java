@@ -114,11 +114,13 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                     .get(IdentityEventConstants.EventProperty.DELETE_USER_ID_LIST);
             String roleId = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.ROLE_ID);
+            String tenantDomain = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             List<String> deletedUserIDList;
 
             if (userIdList instanceof List<?>) {
                 deletedUserIDList = (List<String>) userIdList;
-                terminateSession(deletedUserIDList, roleId);
+                terminateSession(deletedUserIDList, roleId, tenantDomain);
             }
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
@@ -150,7 +152,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 for (User user : userListOfGroup) {
                     userIdList.add(user.getUserID());
                 }
-                terminateSession(userIdList, null);
+                terminateSession(userIdList, null, tenantDomain);
 
             } catch (IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
@@ -188,7 +190,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 for (User user : userListOfGroup) {
                     userIdList.add(user.getUserID());
                 }
-                terminateSession(userIdList, roleId);
+                terminateSession(userIdList, roleId, tenantDomain);
             } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
                 throw new IdentityEventException(errorMsg);
@@ -293,23 +295,43 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         }
     }
 
+    private UserStoreManager getUserStoreManager(int tenantId) throws org.wso2.carbon.user.api.UserStoreException {
+
+        UserStoreManager userStoreManager;
+        userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
+                .getUserRealm().getUserStoreManager();
+        /* In scenarios like tenant creation, the usersStoreManager gets resolved to the super tenant since the
+        tenant is not fully created yet. Hence, we need to get the userStoreManager from the tenant user realm.*/
+        if (userStoreManager != null && userStoreManager.getTenantId() != tenantId) {
+            userStoreManager = (UserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                    .getTenantUserRealm(tenantId).getUserStoreManager();
+        }
+        return userStoreManager;
+    }
+
     /**
      * To revoke access tokens and terminate sessions of given list of user IDs.
      *
      * @param userIDList            List of user IDs
      * @throws IdentityEventException
      */
-    private void terminateSession(List<String> userIDList, String roleId) throws IdentityEventException {
+    private void terminateSession(List<String> userIDList, String roleId, String tenantDomain)
+            throws IdentityEventException {
 
         try {
-            UserStoreManager userStoreManager = (UserStoreManager) CarbonContext.getThreadLocalCarbonContext()
-                    .getUserRealm().getUserStoreManager();
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            UserStoreManager userStoreManager = getUserStoreManager(tenantId);
 
             String userName;
             if (CollectionUtils.isNotEmpty(userIDList)) {
                 for (String userId : userIDList) {
                     try {
                         userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
+                        if (userName == null) {
+                            log.warn("User name is null for user id: " + userId + ". Hence skipping " +
+                                    "token revocation and session termination processes.");
+                            continue;
+                        }
                         OAuth2ServiceComponentHolder.getInstance()
                                 .getRevocationProcessor()
                                 .revokeTokens(userName, userStoreManager, roleId);
