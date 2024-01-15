@@ -31,7 +31,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONArray;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -39,7 +38,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.json.JSONObject;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -74,7 +72,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
@@ -516,7 +513,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private JWTClaimsSet handleCnf(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenReqMessageContext) {
 
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
-        Map<String, Object> userClaimsInOIDCDialect = new HashMap<>();
         String mtlsAuthHeaderName = IdentityUtil.getProperty(MTLS_AUTH_HEADER);
         if (mtlsAuthHeaderName != null) {
             HttpRequestHeader[] requestHeaders =
@@ -546,37 +542,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     String certThumbprintString = certThumbprint.toString();
                     JSONObject json = new JSONObject();
                     json.put(CNF_CLAIM, certThumbprintString);
-                    userClaimsInOIDCDialect.put(CNF, Collections.singletonMap(CNF_CLAIM, certThumbprint));
+                    jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(CNF_CLAIM, certThumbprint));
                 }
-            }
-        }
-        return setClaimsToJwtClaimSet(jwtClaimsSetBuilder, userClaimsInOIDCDialect);
-    }
-
-    private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String,
-            Object> userClaimsInOIDCDialect) {
-
-        JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
-        for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
-            String claimValue = claimEntry.getValue().toString();
-            String claimKey = claimEntry.getKey();
-            if (claimValue.contains(FrameworkUtils.getMultiAttributeSeparator())) {
-                JSONArray claimValues = new JSONArray();
-                String[] split = claimValue.split(Pattern.quote(FrameworkUtils.getMultiAttributeSeparator()));
-                for (String attributeValue : split) {
-                    if (StringUtils.isNotBlank(attributeValue)) {
-                        claimValues.add(attributeValue);
-                    }
-                }
-                if (jwtClaimsSet.getClaim(claimKey) != null) {
-                    continue;
-                }
-                jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimValues);
-            } else {
-                if (jwtClaimsSet.getClaim(claimKey) != null) {
-                    continue;
-                }
-                jwtClaimsSetBuilder.claim(claimEntry.getKey(), claimEntry.getValue());
             }
         }
         return jwtClaimsSetBuilder.build();
