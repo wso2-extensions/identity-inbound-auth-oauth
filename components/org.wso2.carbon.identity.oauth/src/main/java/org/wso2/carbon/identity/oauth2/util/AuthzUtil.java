@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -50,7 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IDP_MAPPED_USER_ROLES;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.ORGANIZATION;
@@ -143,7 +143,7 @@ public class AuthzUtil {
             return new ArrayList<>();
         }
         for (Map.Entry<ClaimMapping, String> entry : claimMappingStringMap.entrySet()) {
-            if (IDP_MAPPED_USER_ROLES.equals(entry.getKey().getLocalClaim().getClaimUri())) {
+            if (FrameworkConstants.IDP_MAPPED_USER_ROLES.equals(entry.getKey().getLocalClaim().getClaimUri())) {
                 roleNamesString = entry.getValue();
                 break;
             }

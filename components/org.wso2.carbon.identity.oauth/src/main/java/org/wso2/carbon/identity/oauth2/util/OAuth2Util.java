@@ -246,7 +246,6 @@ public class OAuth2Util {
     public static final String OIDC_ROLE_CLAIM_URI = "roles";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
-    public static final String IDP_MAPPED_USER_ROLES = "identityProviderMappedUserRoles";
 
     /*
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token, in the format
