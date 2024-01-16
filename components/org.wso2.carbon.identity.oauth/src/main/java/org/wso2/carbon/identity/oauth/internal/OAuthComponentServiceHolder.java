@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
@@ -61,11 +62,13 @@ public class OAuthComponentServiceHolder {
     private List<ScopeValidationHandler> scopeValidationHandlers = new ArrayList<>();
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
+    private org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private OrganizationManager organizationManager;
     private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
     private AccessTokenDAO accessTokenDAOService;
     private TokenManagementDAO tokenManagementDAOService;
+    private ApplicationManagementService applicationManagementService;
 
     /**
      * Get the list of scope validator implementations available.
@@ -261,6 +264,27 @@ public class OAuthComponentServiceHolder {
     }
 
     /**
+     * Set RoleManagementService instance.
+     *
+     * @param roleManagementService RoleManagementService instance.
+     */
+    public void setRoleV2ManagementService(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        this.roleV2ManagementService = roleManagementService;
+    }
+
+    /**
+     * Get RoleManagementService instance.
+     *
+     * @return RoleManagementService instance.
+     */
+    public org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService getRoleV2ManagementService() {
+
+        return roleV2ManagementService;
+    }
+
+    /**
      * Get OrganizationUserResidentResolverService instance.
      *
      * @return OrganizationUserResidentResolverService instance.
@@ -369,5 +393,25 @@ public class OAuthComponentServiceHolder {
     public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
 
         this.tokenManagementDAOService = tokenManagementDAOService;
+    }
+
+    /**
+     * Get ApplicationManagementService instance.
+     *
+     * @return ApplicationManagementService {@link ApplicationManagementService} instance.
+     */
+    public ApplicationManagementService getApplicationManagementService() {
+
+        return applicationManagementService;
+    }
+
+    /**
+     * Set ApplicationManagementService instance.
+     *
+     * @param applicationManagementService {@link ApplicationManagementService} instance.
+     */
+    public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
+
+        this.applicationManagementService = applicationManagementService;
     }
 }
