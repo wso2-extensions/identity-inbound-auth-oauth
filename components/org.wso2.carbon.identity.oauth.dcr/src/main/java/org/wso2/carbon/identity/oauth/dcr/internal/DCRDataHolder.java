@@ -19,6 +19,9 @@
 package org.wso2.carbon.identity.oauth.dcr.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.oauth.dcr.dao.DCRConfigurationDAO;
+import org.wso2.carbon.identity.oauth.dcr.dao.DCRConfigurationDAOImpl;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -40,6 +43,8 @@ public class DCRDataHolder {
     private List<RegistrationHandler> registrationHandlerList = new ArrayList<>();
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
     private List<TokenBinder> tokenBinders = new ArrayList<>();
+    private ConfigurationManager configurationManager;
+    private DCRConfigurationDAO dcrConfigurationDAO = new DCRConfigurationDAOImpl();
 
     private DCRDataHolder() {
 
@@ -99,4 +104,21 @@ public class DCRDataHolder {
 
         this.tokenBinders.remove(tokenBinder);
     }
+
+    public ConfigurationManager getConfigurationManager() {
+        return configurationManager;
+    }
+
+    public void setConfigurationManager(ConfigurationManager configurationManager) {
+        this.configurationManager = configurationManager;
+    }
+
+    public DCRConfigurationDAO getDCRConfigurationDAO() {
+        return dcrConfigurationDAO;
+    }
+
+    public void setDCRConfigurationDAO(DCRConfigurationDAO dcrConfigurationDAO) {
+        this.dcrConfigurationDAO = dcrConfigurationDAO;
+    }
+
 }

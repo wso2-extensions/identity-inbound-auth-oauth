@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
+import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -233,7 +234,7 @@ public class DCRMService {
             // Validate software statement assertion signature.
             if (StringUtils.isNotEmpty(updateRequest.getSoftwareStatement())) {
                 try {
-                    validateSSASignature(updateRequest.getSoftwareStatement());
+                    validateSSASignature(updateRequest.getSoftwareStatement(), tenantDomain);
                 } catch (IdentityOAuth2Exception e) {
                     throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                             DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
@@ -448,7 +449,7 @@ public class DCRMService {
         // Validate software statement assertion signature.
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
-                validateSSASignature(registrationRequest.getSoftwareStatement());
+                validateSSASignature(registrationRequest.getSoftwareStatement(), tenantDomain);
             } catch (IdentityOAuth2Exception e) {
                 throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                         DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
@@ -651,8 +652,9 @@ public class DCRMService {
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
-            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
+            DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance().getDCRConfigurationDAO()
+                    .getDCRConfigurationByTenantDomain(tenantDomain);
+            boolean enableFAPIDCR = dcrConfiguration.isFAPIEnforced();
             if (enableFAPIDCR) {
                 // Add FAPI conformant property to Oauth application.
                 oAuthConsumerApp.setFapiConformanceEnabled(true);
@@ -1001,9 +1003,12 @@ public class DCRMService {
      * @throws DCRMClientException
      * @throws IdentityOAuth2Exception
      */
-    private void validateSSASignature(String softwareStatement) throws DCRMClientException, IdentityOAuth2Exception {
+    private void validateSSASignature(String softwareStatement, String tenantDomain) throws DCRMClientException,
+            IdentityOAuth2Exception, DCRMServerException {
 
-        String jwksURL = IdentityUtil.getProperty(SSA_VALIDATION_JWKS);
+        DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance().getDCRConfigurationDAO()
+                .getDCRConfigurationByTenantDomain(tenantDomain);
+        String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {
                 SignedJWT signedJWT = SignedJWT.parse(softwareStatement);

@@ -95,4 +95,12 @@ public class DCRMConstants {
     }
 
     public static final String OAUTH2 = "oauth2";
+
+    public static final String DCR_CONFIG_RESOURCE_TYPE_NAME = "FAPI";
+
+    public static final String DCR_CONFIG_RESOURCE_NAME = "DCR";
+
+    public static final String ENABLE_FAPI_ENFORCEMENT = "enableFapiEnforcement";
+    public static final String CLIENT_AUTHENTICATION_REQUIRED = "clientAuthenticationRequired";
+    public static final String SSA_JWKS = "ssaJwks";
 }
