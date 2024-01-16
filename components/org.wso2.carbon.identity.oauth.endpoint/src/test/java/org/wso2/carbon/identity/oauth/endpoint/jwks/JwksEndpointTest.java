@@ -83,6 +83,8 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     private static final String CERT_THUMB_PRINT = "generatedCertThrumbPrint";
     private static final String ALG = "RS256";
     private static final String USE = "sig";
+    private static final String ENABLE_X5T_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5TInResponse";
+
     private static final JSONArray X5C_ARRAY = new JSONArray();
     private static final String X5T = "YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5MmVjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjY" +
             "yZmZlYzkwNzY0YjU4NQ";
@@ -200,6 +202,8 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         if ("foo.com".equals(tenantDomain)) {
             when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
         }
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(ENABLE_X5T_IN_RESPONSE)).thenReturn("true");
         when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
                 "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
         mockStatic(KeyStoreManager.class);

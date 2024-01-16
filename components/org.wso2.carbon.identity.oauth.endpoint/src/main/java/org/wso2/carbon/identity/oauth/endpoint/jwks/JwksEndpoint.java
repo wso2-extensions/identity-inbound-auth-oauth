@@ -68,6 +68,7 @@ public class JwksEndpoint {
     private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
     private static final String KEYS = "keys";
     private static final String ADD_PREVIOUS_VERSION_KID = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID";
+    private static final String ENABLE_X5T_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5TInResponse";
 
     @GET
     @Path(value = "/jwks")
@@ -168,7 +169,9 @@ public class JwksEndpoint {
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
         jwk.x509CertChain(encodedCertList);
-        jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_X5T_IN_RESPONSE))) {
+            jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+        }
         return jwk;
     }
 
