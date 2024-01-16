@@ -50,8 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IDP_MAPPED_USER_ROLES;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OIDC_ROLE_CLAIM_URI;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.ORGANIZATION;
 import static org.wso2.carbon.user.core.UserCoreConstants.APPLICATION_DOMAIN;
@@ -143,7 +143,7 @@ public class AuthzUtil {
             return new ArrayList<>();
         }
         for (Map.Entry<ClaimMapping, String> entry : claimMappingStringMap.entrySet()) {
-            if (OIDC_ROLE_CLAIM_URI.equals(entry.getKey().getLocalClaim().getClaimUri())) {
+            if (IDP_MAPPED_USER_ROLES.equals(entry.getKey().getLocalClaim().getClaimUri())) {
                 roleNamesString = entry.getValue();
                 break;
             }
