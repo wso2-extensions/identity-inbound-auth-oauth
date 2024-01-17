@@ -254,6 +254,11 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
      */
     private String getBindingRefFromCommonAuthCookie(HttpServletRequest request) {
 
+        if (Boolean.TRUE.equals(request.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES))) {
+            // The session id is a sha256Hex of the commonAuthId cookie value.
+            return request.getParameter(FrameworkConstants.RequestParams.SESSION_ID);
+        }
+
         Cookie[] cookies = request.getCookies();
 
         if (ArrayUtils.isEmpty(cookies)) {
