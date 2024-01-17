@@ -213,6 +213,7 @@ public final class OAuthConstants {
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
     public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
+    public static final String RESOURCE_ACCESS_CONTROL_V2_CONFIG_PATH = "resource-access-control-v2.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String RESTRICT_UNASSIGNED_SCOPES = "restrict.unassigned.scopes";
