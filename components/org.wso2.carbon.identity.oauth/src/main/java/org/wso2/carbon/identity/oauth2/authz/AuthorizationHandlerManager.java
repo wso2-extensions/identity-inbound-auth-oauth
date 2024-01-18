@@ -290,17 +290,18 @@ public class AuthorizationHandlerManager {
             removeInternalScopesFromRequestedScopes(authzReqMsgCtx);
             // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
             authzReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+            // Drop unregistered scopes before global scope validators.
+            boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+            if (isDropUnregisteredScopes) {
+                if (log.isDebugEnabled()) {
+                    log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
+                }
+                dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
+            }
         } else {
             // Engage new scope validator
             authorizedScopes = getAuthorizedScopes(authzReqMsgCtx);
             removeAuthorizedScopesFromRequestedScopes(authzReqMsgCtx, authorizedScopes);
-        }
-        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
-        if (isDropUnregisteredScopes) {
-            if (log.isDebugEnabled()) {
-                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
-            }
-            dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
         }
         //Validate scopes using global scope validators.
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
