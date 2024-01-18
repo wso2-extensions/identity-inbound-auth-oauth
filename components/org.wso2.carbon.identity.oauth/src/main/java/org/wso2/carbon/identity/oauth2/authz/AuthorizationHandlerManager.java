@@ -302,6 +302,7 @@ public class AuthorizationHandlerManager {
             // Engage new scope validator
             authorizedScopes = getAuthorizedScopes(authzReqMsgCtx);
             removeAuthorizedScopesFromRequestedScopes(authzReqMsgCtx, authorizedScopes);
+            authzReqMsgCtx.getAuthorizationReqDTO().setScopes(new String[0]);
         }
         //Validate scopes using global scope validators.
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
