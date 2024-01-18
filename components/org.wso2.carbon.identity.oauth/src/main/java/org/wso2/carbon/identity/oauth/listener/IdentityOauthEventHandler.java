@@ -336,14 +336,8 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                                 .getRevocationProcessor()
                                 .revokeTokens(userName, userStoreManager, roleId);
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
-                        OAuth2ServiceComponentHolder.getUserSessionManagementService()
-                                .terminateSessionsByUserId(userId);
                     } catch (UserSessionException e) {
                         String errorMsg = "Error occurred while revoking access token for user Id: " + userId;
-                        log.error(errorMsg, e);
-                        throw new IdentityEventException(errorMsg, e);
-                    } catch (SessionManagementException e) {
-                        String errorMsg = "Failed to terminate active sessions of user Id: " + userId;
                         log.error(errorMsg, e);
                         throw new IdentityEventException(errorMsg, e);
                     }
