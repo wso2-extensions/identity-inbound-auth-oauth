@@ -31,6 +31,8 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Ide
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
+import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtService;
+import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
@@ -81,6 +83,8 @@ public class DCRServiceComponent {
                     new UnRegistrationHandler(), null);
             componentContext.getBundleContext().registerService(DCRMService.class.getName(),
                     new DCRMService(), null);
+            componentContext.getBundleContext().registerService(DCRConfigurationMgtService.class.getName(),
+                    new DCRConfigurationMgtServiceImpl(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }

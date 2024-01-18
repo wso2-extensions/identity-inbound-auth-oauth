@@ -11,6 +11,7 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
 
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.
         ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.oauth.dcr.DCRConfigErrorMessage.ERROR_CODE_DCR_CONFIG_RETRIEVE;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_TYPE_NAME;
@@ -80,7 +81,8 @@ public class DCRConfigurationDAOImpl implements DCRConfigurationDAO {
         try {
             return getConfigurationManager().getResource(resourceTypeName, resourceName);
         } catch (ConfigurationManagementException e) {
-            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode()) ||
+                    ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
                 return null;
             } else {
                 throw e;
