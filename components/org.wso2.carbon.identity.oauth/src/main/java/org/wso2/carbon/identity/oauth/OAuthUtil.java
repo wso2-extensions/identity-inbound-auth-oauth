@@ -30,7 +30,10 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -51,6 +54,11 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -59,6 +67,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -467,7 +476,7 @@ public final class OAuthUtil {
             handleError(message, exception);
         }
         if (exception instanceof IdentityOAuth2ClientException) {
-            return new IdentityOAuthClientException(exception.getErrorCode(), message, exception);
+            return new IdentityOAuthClientException(exception.getErrorCode(), message);
         } else if (exception instanceof IdentityOAuth2ServerException) {
             return new IdentityOAuthServerException(exception.getErrorCode(), message, exception);
         } else {
@@ -664,42 +673,85 @@ public final class OAuthUtil {
     }
 
     /**
-     * This method will revoke the accesstokens of user.
-     * @param username username.
-     * @param userStoreManager userStoreManager.
-     * @return true if revocation is successfull. Else return false
-     * @throws UserStoreException
+     * This method can be used to build the AuthenticatedUser object.
+     * @param username          username.
+     * @param userStoreDomain   userStoreDomain.
+     * @return AuthenticatedUser.
      */
-    public static boolean revokeTokens(String username, UserStoreManager userStoreManager) throws UserStoreException {
+    private static AuthenticatedUser buildAuthenticatedUser(String username, String userStoreDomain,
+                                                            String tenantDomain) {
 
-        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
-        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserName(username);
+        return authenticatedUser;
+    }
 
-        /* This userStoreDomain variable is used for access token table partitioning. So it is set to null when access
-        token table partitioning is not enabled.*/
-        userStoreDomain = null;
-        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+    /**
+     * Get clientIds of associated application of an application role.
+     * @param role          Role object.
+     * @param tenantDomain  Tenant domain.
+     * @return Set of clientIds of associated applications.
+     */
+    private static Set<String> getClientIdsOfAssociatedApplications(Role role, String tenantDomain) {
+
+        ApplicationManagementService applicationManagementService =
+                OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
+        List<AssociatedApplication> associatedApplications = role.getAssociatedApplications();
+        Set<String> clientIds = new HashSet<>();
+        associatedApplications.forEach(associatedApplication -> {
             try {
-                userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authenticatedUser);
-            } catch (IdentityOAuth2Exception e) {
-                LOG.error("Error occurred while getting user store domain for User ID : " + authenticatedUser, e);
-                throw new UserStoreException(e);
+                ServiceProvider application = applicationManagementService
+                        .getApplicationByResourceId(associatedApplication.getId(), tenantDomain);
+                if (application == null || application.getInboundAuthenticationConfig() == null) {
+                    return;
+                }
+                Arrays.stream(application.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs())
+                        .forEach(inboundAuthenticationRequestConfig -> {
+                            if (ApplicationConstants.StandardInboundProtocols.OAUTH2.equals(
+                                    inboundAuthenticationRequestConfig.getInboundAuthType())) {
+                                clientIds.add(inboundAuthenticationRequestConfig.getInboundAuthKey());
+                            }
+                        });
+            } catch (IdentityApplicationManagementException e) {
+                String errorMessage = "Error occurred while retrieving application of id : " +
+                        associatedApplication.getId();
+                LOG.error(errorMessage);
             }
-        }
+        });
+        return clientIds;
+    }
 
-        Set<String> clientIds;
+    /**
+     * This method will retrieve the role details of the given role id.
+     * @param roleId        Role Id.
+     * @param tenantDomain  Tenant domain.
+     * @return Role.
+     */
+    private static Role getRole(String roleId, String tenantDomain) throws UserStoreException {
+
         try {
-            // get all the distinct client Ids authorized by this user
-            clientIds = OAuthTokenPersistenceFactory.getInstance()
-                    .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
-        } catch (IdentityOAuth2Exception e) {
-            LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
-            throw new UserStoreException(e);
+            RoleManagementService roleV2ManagementService =
+                    OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+            return roleV2ManagementService.getRole(roleId, tenantDomain);
+        } catch (IdentityRoleManagementException e) {
+            String errorMessage = "Error occurred while retrieving role of id : " + roleId;
+            throw new UserStoreException(errorMessage, e);
         }
+    }
+
+    /**
+     * Initiate token revocation process for the associated clientIds for the given user.
+     * @param clientIds          Set of clientIds
+     * @param authenticatedUser  Authenticated User object of the user.
+     * @param userStoreDomain    User store domain of the user.
+     * @param username           Username.
+     * @return True if token revocation is successful. Else return false.
+     */
+    private static boolean processTokenRevocation(Set<String> clientIds, AuthenticatedUser authenticatedUser,
+                                                  String userStoreDomain, String username) {
+
         boolean isErrorOnRevokingTokens = false;
         for (String clientId : clientIds) {
             try {
@@ -790,12 +842,85 @@ public final class OAuthUtil {
             }
         }
 
+        return isErrorOnRevokingTokens;
+    }
+
+    /**
+     * This method will revoke the access tokens of user.
+     * @param username username.
+     * @param userStoreManager userStoreManager.
+     * @param roleId roleId.
+     * @return true if revocation is successful. Else return false.
+     */
+    public static boolean revokeTokens(String username, UserStoreManager userStoreManager, String roleId)
+            throws UserStoreException {
+
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        AuthenticatedUser authenticatedUser = buildAuthenticatedUser(username, userStoreDomain, tenantDomain);
+
+        /* This userStoreDomain variable is used for access token table partitioning. So it is set to null when access
+        token table partitioning is not enabled.*/
+        userStoreDomain = null;
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+            try {
+                userStoreDomain = OAuth2Util.getUserStoreForFederatedUser(authenticatedUser);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error occurred while getting user store domain for User ID : " + authenticatedUser, e);
+                throw new UserStoreException(e);
+            }
+        }
+
+        // Get details about the role to identify the audience and associated applications.
+        Set<String> clientIds = null;
+        Role role;
+        boolean getClientIdsFromUser = false;
+        if (roleId != null) {
+            role = getRole(roleId, tenantDomain);
+            if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
+                // Get clientIds of associated applications for the specific application role.
+                clientIds = getClientIdsOfAssociatedApplications(role, tenantDomain);
+            } else {
+                // Get all the distinct client Ids authorized by this user since this is an organization role.
+                getClientIdsFromUser = true;
+            }
+        } else {
+            // Get all the distinct client Ids authorized by this user since no role is specified.
+            getClientIdsFromUser = true;
+        }
+
+        if (getClientIdsFromUser) {
+            // Get all the distinct client Ids authorized by this user
+            try {
+                clientIds = OAuthTokenPersistenceFactory.getInstance()
+                        .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
+                throw new UserStoreException(e);
+            }
+        }
+
+        boolean isErrorOnRevokingTokens;
+        isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedUser, userStoreDomain, username);
+
         // Throw exception if there was any error found in revoking tokens.
         if (isErrorOnRevokingTokens) {
             throw new UserStoreException("Error occurred while revoking Access Tokens of the user " + username);
         }
         return true;
     }
+
+    /**
+     * This method will revoke the access tokens of user.
+     * @param username username.
+     * @param userStoreManager userStoreManager.
+     * @return true if revocation is successful. Else return false
+     */
+    public static boolean revokeTokens(String username, UserStoreManager userStoreManager) throws UserStoreException {
+
+        return revokeTokens(username, userStoreManager, null);
+    }
+
 
     private static void revokeTokens(List<AccessTokenDO> accessTokens) throws IdentityOAuth2Exception {
 

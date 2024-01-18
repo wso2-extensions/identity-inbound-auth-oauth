@@ -56,4 +56,11 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
 
         return OAuthUtil.revokeTokens(username, userStoreManager);
     }
+
+    @Override
+    public boolean revokeTokens(String username, UserStoreManager userStoreManager, String roleId)
+            throws UserStoreException {
+
+        return OAuthUtil.revokeTokens(username, userStoreManager, roleId);
+    }
 }

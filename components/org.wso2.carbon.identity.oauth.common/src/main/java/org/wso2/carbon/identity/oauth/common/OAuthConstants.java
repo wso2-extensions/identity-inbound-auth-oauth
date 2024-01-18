@@ -127,6 +127,7 @@ public final class OAuthConstants {
 
     public static final String ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE = "OAuth.OpenIDConnect." +
             "EnableTLSCertificateBoundAccessTokensViaBindingType";
+    public static final String IS_API_BASED_LOGOUT_WITHOUT_COOKIES = "isAPIBasedLogoutWithoutCookies";
 
     /**
      * Enum for OIDC supported subject types.
@@ -213,6 +214,7 @@ public final class OAuthConstants {
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
     public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
+    public static final String RESOURCE_ACCESS_CONTROL_V2_CONFIG_PATH = "resource-access-control-v2.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String RESTRICT_UNASSIGNED_SCOPES = "restrict.unassigned.scopes";
@@ -262,6 +264,7 @@ public final class OAuthConstants {
     public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "OAuth.OpenIDConnect." +
             "SupportedRequestObjectEncryptionMethods.SupportedRequestObjectEncryptionMethod";
     public static final String IS_PUSH_AUTHORIZATION_REQUEST = "isPushAuthorizationRequest";
+    public static final String ALLOWED_SCOPES_PROPERTY = "allowedScopes";
 
 
     public static final String IS_THIRD_PARTY_APP = "isThirdPartyApp";
@@ -402,7 +405,7 @@ public final class OAuthConstants {
         public static final String  OAUTH2_DISCOVERY_EP_URL = "/oauth2/oidcdiscovery";
         public static final String OAUTH2_USER_INFO_EP_URL = "oauth2/userinfo";
         public static final String OAUTH2_REVOKE_EP_URL = "oauth2/revoke";
-        public static final String OIDC_WEB_FINGER_EP_URL = ".well-know/webfinger";
+        public static final String OIDC_WEB_FINGER_EP_URL = ".well-known/webfinger";
         public static final String OAUTH2_INTROSPECT_EP_URL = "oauth2/introspect";
         public static final String OIDC_CONSENT_EP_URL = "/authenticationendpoint/oauth2_consent.do";
         public static final String OAUTH2_CONSENT_EP_URL = "/authenticationendpoint/oauth2_authz.do";

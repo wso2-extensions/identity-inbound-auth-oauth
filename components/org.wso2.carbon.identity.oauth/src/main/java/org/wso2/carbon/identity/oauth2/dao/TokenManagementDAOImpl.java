@@ -185,7 +185,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     int tenantId = resultSet.getInt(3);
                     String userDomain = resultSet.getString(4);
                     String tenantDomain = OAuth2Util.getTenantDomain(tenantId);
-
+                    validationDataDO.setRefreshToken(refreshToken);
                     validationDataDO.setScope(OAuth2Util.buildScopeArray(resultSet.getString(5)));
                     validationDataDO.setRefreshTokenState(resultSet.getString(6));
                     validationDataDO.setIssuedTime(
@@ -217,7 +217,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                         /* Setting user's tenant domain as app residing tenant domain is not required once console is
                             registered in each tenant. */
                         String appResideOrg = getAppTenantDomain();
-                        if (StringUtils.isNotEmpty(appResideOrg)) {
+                        if (StringUtils.isNotEmpty(appResideOrg) && user.isFederatedUser()) {
                             user.setTenantDomain(appResideOrg);
                         }
                     }
@@ -329,6 +329,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
                     validationDataDO.setTokenId(tokenId);
                     validationDataDO.setGrantType(grantType);
                     validationDataDO.setTenantID(tenantId);
+                    validationDataDO.setRefreshToken(refreshToken);
                 } else {
                     scopes.add(resultSet.getString(5));
                 }

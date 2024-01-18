@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -64,6 +65,7 @@ public class OAuthComponentServiceHolder {
     private List<ScopeValidationHandler> scopeValidationHandlers = new ArrayList<>();
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
+    private org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private OrganizationManager organizationManager;
     private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
@@ -268,6 +270,27 @@ public class OAuthComponentServiceHolder {
     }
 
     /**
+     * Set RoleManagementService instance.
+     *
+     * @param roleManagementService RoleManagementService instance.
+     */
+    public void setRoleV2ManagementService(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        this.roleV2ManagementService = roleManagementService;
+    }
+
+    /**
+     * Get RoleManagementService instance.
+     *
+     * @return RoleManagementService instance.
+     */
+    public org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService getRoleV2ManagementService() {
+
+        return roleV2ManagementService;
+    }
+
+    /**
      * Get OrganizationUserResidentResolverService instance.
      *
      * @return OrganizationUserResidentResolverService instance.
@@ -395,32 +418,32 @@ public class OAuthComponentServiceHolder {
 
         this.applicationManagementService = applicationManagementService;
     }
-    
+
     /**
      * Get OAuthProtocolApplicationService instance.
      * @return OAuthProtocolApplicationService instance.
      */
     public OauthInboundAuthConfigHandler getOAuthInboundConfigHandler() {
-        
+
         return oauthInboundAuthConfigHandler;
     }
-    
+
     /**
      * Set OAuthProtocolApplicationService instance.
      * @param oauthInboundAuthConfigHandler OAuthProtocolApplicationService instance.
      */
     public void setOAuthInboundConfigHandler(OauthInboundAuthConfigHandler oauthInboundAuthConfigHandler) {
-        
+
         this.oauthInboundAuthConfigHandler = oauthInboundAuthConfigHandler;
     }
-    
+
     public CORSManagementService getCorsManagementService() {
-        
+
         return corsManagementService;
     }
-    
+
     public void setCorsManagementService(CORSManagementService corsManagementService) {
-        
+
         this.corsManagementService = corsManagementService;
     }
 }

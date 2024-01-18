@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
@@ -43,6 +44,19 @@ public class M2MScopeValidationHandler implements ScopeValidationHandler {
     public List<String> validateScopes(List<String> requestedScopes, List<String> appAuthorizedScopes,
                                        ScopeValidationContext scopeValidationContext)
             throws ScopeValidationHandlerException {
+
+       if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(scopeValidationContext.getGrantType())) {
+           List<String> internalOrgScopes = appAuthorizedScopes.stream()
+                   .filter(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX))
+                   .collect(Collectors.toList());
+           List<String> customScopes = requestedScopes.stream()
+                   .filter(scope -> !scope.startsWith(Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX))
+                   .collect(Collectors.toList());
+           customScopes.removeIf(scope -> scope.contains(Oauth2ScopeConstants.SYSTEM_SCOPE) ||
+                   scope.contains(Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX));
+           internalOrgScopes.addAll(customScopes);
+           return requestedScopes.stream().filter(internalOrgScopes::contains).collect(Collectors.toList());
+       }
 
         return requestedScopes.stream().filter(appAuthorizedScopes::contains).collect(Collectors.toList());
     }

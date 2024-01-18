@@ -49,8 +49,9 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
     private static final List<String> PROXY_ENDPOINT_LIST = Arrays.asList("/oauth2/token", "/oauth2/revoke",
-            "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par");
+            "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par", "/oauth2/authorize");
     private OAuthClientAuthnService oAuthClientAuthnService;
+    private static final String SLASH = "/";
 
     public OAuthClientAuthenticatorProxy() {
 
@@ -106,6 +107,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     private boolean canHandle(Message message) {
 
         String requestPath = (String) message.get(Message.REQUEST_URI);
+        requestPath = removeTrailingSlash(requestPath);
         return PROXY_ENDPOINT_LIST.stream().anyMatch(requestPath::equalsIgnoreCase);
     }
 
@@ -141,4 +143,11 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
                 oAuthClientAuthnContext);
     }
 
+    private String removeTrailingSlash(String url) {
+
+        if (url != null && url.endsWith(SLASH)) {
+            return url.substring(0, url.length() - 1);
+        }
+        return url;
+    }
 }

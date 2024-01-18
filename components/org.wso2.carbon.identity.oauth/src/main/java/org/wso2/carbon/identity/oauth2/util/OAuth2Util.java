@@ -5122,4 +5122,93 @@ public class OAuth2Util {
         }
         return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
     }
+
+    /**
+     * Check if revoke token headers is enabled.
+     *
+     * @return True if oauth code persistence is enabled.
+     */
+    public static boolean isRevokeTokenHeadersEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_ENABLE_REVOKE_TOKEN_HEADERS) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_ENABLE_REVOKE_TOKEN_HEADERS));
+        }
+        return true;
+    }
+
+    /**
+     * Check whether the request is an API based authentication request.
+     *
+     * @param request HttpServletRequest
+     * @return True if the request is an API based authentication request.
+     */
+    public static boolean isApiBasedAuthenticationFlow(HttpServletRequest request) {
+
+        return StringUtils.equals(OAuthConstants.ResponseModes.DIRECT,
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_MODE));
+    }
+
+    /**
+     * Check whether the invoked grant supports API based authentication.
+     *
+     * @param request HttpServletRequest
+     * @return True if the grant supports API based authentication.
+     */
+    public static boolean isApiBasedAuthSupportedGrant(HttpServletRequest request) {
+
+        return StringUtils.equals(OAuthConstants.CODE,
+                request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+    }
+
+    /**
+     * Resolve Console application callback url for a specific tenant based on the callback url configured in toml.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Console callback url.
+     */
+    public static String getConsoleCallbackFromServerConfig(String tenantDomain) {
+
+        String callbackUrl = IdentityUtil.getProperty(OAuth2Constants.CONSOLE_CALLBACK_URL_FROM_SERVER_CONFIGS);
+        if (StringUtils.isNotBlank(callbackUrl)) {
+            // If callback is a regex pattern, return it as it is.
+            if (callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                return callbackUrl;
+            }
+
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                callbackUrl = "regexp=(" + callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain)
+                        + "|" + callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "") + ")";
+            } else {
+                callbackUrl = callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain);
+            }
+            return callbackUrl;
+        }
+        return null;
+    }
+
+    /**
+     * Resolve MyAccount application callback url for a specific tenant based on the callback url configured in toml.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return MyAccount callback url.
+     */
+    public static String getMyAccountCallbackFromServerConfig(String tenantDomain) {
+
+        String callbackUrl = IdentityUtil.getProperty(OAuth2Constants.MY_ACCOUNT_CALLBACK_URL_FROM_SERVER_CONFIGS);
+        if (StringUtils.isNotBlank(callbackUrl)) {
+            // If callback is a regex pattern, return it as it is.
+            if (callbackUrl.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
+                return callbackUrl;
+            }
+
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+                callbackUrl = "regexp=(" + callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain)
+                        + "|" + callbackUrl.replace("/t/" + OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, "") + ")";
+            } else {
+                callbackUrl = callbackUrl.replace(OAuth2Constants.TENANT_DOMAIN_PLACEHOLDER, tenantDomain);
+            }
+            return callbackUrl;
+        }
+        return null;
+    }
 }

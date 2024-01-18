@@ -29,6 +29,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
@@ -387,7 +388,7 @@ public class OAuthServiceComponent {
     }
 
     @Reference(
-            name = "org.wso2.carbon.identity.application.mgt.service",
+            name = "application.mgt.service",
             service = ApplicationManagementService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
@@ -395,28 +396,23 @@ public class OAuthServiceComponent {
     )
     protected void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
-        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+        if (log.isDebugEnabled()) {
+            log.debug("Setting ApplicationManagement Service");
+        }
+        OAuthComponentServiceHolder.getInstance().
+                setApplicationManagementService(applicationManagementService);
     }
 
+    /**
+     * Unsets ApplicationManagement Service.
+     *
+     * @param applicationManagementService An instance of ApplicationManagementService
+     */
     protected void unsetApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting ApplicationManagement.");
+        }
         OAuthComponentServiceHolder.getInstance().setApplicationManagementService(null);
-    }
-    
-    @Reference(
-            name = "org.wso2.carbon.identity.application.cors.mgt.service",
-            service = CORSManagementService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetApplicationCORSManagementService"
-    )
-    protected void setApplicationCORSManagementService(CORSManagementService corsManagementService) {
-        
-        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
-    }
-    
-    protected void unsetApplicationCORSManagementService(CORSManagementService corsManagementService) {
-        
-        OAuthComponentServiceHolder.getInstance().setCorsManagementService(null);
     }
 }

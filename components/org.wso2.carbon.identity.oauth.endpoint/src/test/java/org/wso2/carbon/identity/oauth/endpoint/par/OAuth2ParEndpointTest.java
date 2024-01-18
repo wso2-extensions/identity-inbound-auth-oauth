@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.par;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -35,11 +36,13 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -47,11 +50,14 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
+import org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -187,6 +193,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, new String[]{"code-challenge-string"});
         requestParams11.put(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD,
                 new String[]{OAuthConstants.OAUTH_PKCE_S256_CHALLENGE});
+        requestParams11.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{"openid"});
 
         Map<String, String[]> requestParams12 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
@@ -217,9 +224,21 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         paramMap3.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE);
         paramMap3.add(OAuthConstants.OAuth20Params.SCOPE, null);
 
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+        jwtClaimsSetBuilder.claim(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
+        jwtClaimsSetBuilder.claim(OAuth.OAUTH_REDIRECT_URI, APP_REDIRECT_URL);
+        jwtClaimsSetBuilder.claim(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE_ID_TOKEN);
+        jwtClaimsSetBuilder.claim(OAuthConstants.OAuth20Params.SCOPE, "openid");
+        JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
+        String requestJwt = new PlainJWT(jwtClaimsSet).serialize();
+
         MultivaluedMap<String, String> paramMap4 = new MultivaluedHashMap<>();
         paramMap4.add(OAuth.OAUTH_CLIENT_ID, CLIENT_ID_VALUE);
         paramMap4.add(OAuth.OAUTH_RESPONSE_TYPE, RESPONSE_TYPE_CODE_ID_TOKEN);
+        paramMap4.add(OAuthConstants.OAuth20Params.REQUEST, requestJwt);
+
+        MultivaluedMap<String, String> paramMap5 = new MultivaluedHashMap<>();
+        paramMap5.add(OAuthConstants.OAuth20Params.REQUEST, requestJwt);
 
         OAuthClientAuthnContext oAuthClientAuthnContext1 = new OAuthClientAuthnContext();
         oAuthClientAuthnContext1.setAuthenticated(true);
@@ -256,7 +275,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with invalid redirect uri. Will return bad request error
                 {requestParams7, new MultivaluedHashMap<>(), oAuthClientAuthnContext1,
-                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_CALLBACK, false, false},
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
                 // Request with request uri provided. Will return bad request error
                 {requestParams1, paramMap2, oAuthClientAuthnContext1,
                         HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, false, false},
@@ -294,7 +313,9 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         OAuth2ErrorCodes.INVALID_REQUEST, false, true},
                 // FAPI request with invalid code challenge method. Will return bad request error.
                 {requestParams13, paramMap1, oAuthClientAuthnContext1, HttpServletResponse.SC_BAD_REQUEST,
-                        OAuth2ErrorCodes.INVALID_REQUEST, false, true}
+                        OAuth2ErrorCodes.INVALID_REQUEST, false, true},
+                // PAR request without duplicate oauth parameters. Will return success.
+                {new HashMap<>(), paramMap5, oAuthClientAuthnContext1, HttpServletResponse.SC_CREATED, "", false, false}
         };
     }
 
@@ -325,7 +346,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         spy(EndpointUtil.class);
         doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
         doCallRealMethod().when(oAuth2Service).validateInputParameters(request);
-        doCallRealMethod().when(oAuth2Service).validateClientInfo(request);
+        doCallRealMethod().when(oAuth2Service).validateClientInfo(any(OAuthParRequestWrapper.class));
         doReturn(parAuthService).when(EndpointUtil.class, "getParAuthService");
         if (testOAuthSystemException) {
             doThrow(new OAuthSystemException()).when(EndpointUtil.class, "getOAuthAuthzRequest", any());
@@ -414,15 +435,19 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         mockStatic(OAuthServerConfiguration.class);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getSupportedResponseTypeValidators()).thenReturn(
-                new HashMap<String, Class<? extends OAuthValidator<HttpServletRequest>>>() {{
-                    put(paramMap.getFirst(OAuth.OAUTH_RESPONSE_TYPE), CodeValidator.class);
-                }});
+        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
+        responseTypeValidators.put(OAuthConstants.CODE, CodeValidator.class);
+        responseTypeValidators.put(OAuthConstants.CODE_IDTOKEN, CodeTokenResponseValidator.class);
+        when(oAuthServerConfiguration.getSupportedResponseTypeValidators()).thenReturn(responseTypeValidators);
 
         when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
         when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
         when(oAuthServerConfiguration.getOAuthAuthzRequestClassName())
                 .thenReturn("org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest");
+        when(oAuthServerConfiguration.getRequestObjectBuilders()).thenReturn(
+                new HashMap<String, RequestObjectBuilder>() {{
+                    put("request_param_value_builder", new RequestParamRequestObjectBuilder());
+                }});
     }
 }
