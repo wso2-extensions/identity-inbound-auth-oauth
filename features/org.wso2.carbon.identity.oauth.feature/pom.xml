@@ -40,11 +40,6 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.ui.feature</artifactId>
-            <type>zip</type>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth.common.feature</artifactId>
             <type>zip</type>
         </dependency>
@@ -74,8 +69,6 @@
                             <includedFeatures>
                                 <includedFeatureDef>
                                     org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.server.feature
-                                </includedFeatureDef>
-                                <includedFeatureDef>org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.ui.feature
                                 </includedFeatureDef>
                                 <includedFeatureDef>
                                     org.wso2.carbon.identity.inbound.auth.oauth2:org.wso2.carbon.identity.oauth.common.feature
