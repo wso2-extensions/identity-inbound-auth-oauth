@@ -438,6 +438,9 @@ public class OAuth2ServiceComponent {
         boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
                 OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
         OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
+        boolean restrictApimRestApiScopes = Boolean.parseBoolean(System.getProperty(
+                OAuthConstants.RESTRICT_APIM_REST_API_SCOPES));
+        OAuth2ServiceComponentHolder.setRestrictApimRestApiScopes(restrictApimRestApiScopes);
         if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
             initializeLegacyScopeToNewScopeMappings();
         }

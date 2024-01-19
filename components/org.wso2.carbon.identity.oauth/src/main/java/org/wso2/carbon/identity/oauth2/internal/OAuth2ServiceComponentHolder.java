@@ -101,6 +101,7 @@ public class OAuth2ServiceComponentHolder {
     private static List<String> jwtRenewWithoutRevokeAllowedGrantTypes = new ArrayList<>();
     private static ConsentServerConfigsManagementService consentServerConfigsManagementService;
     private static boolean restrictUnassignedScopes;
+    private static boolean restrictApimRestApiScopes;
     private static ConfigurationContextService configurationContextService;
     private List<JWTAccessTokenClaimProvider> jwtAccessTokenClaimProviders = new ArrayList<>();
     private final List<OAuthAuthorizationRequestBuilder> oAuthAuthorizationRequestBuilders = new ArrayList<>();
@@ -549,6 +550,14 @@ public class OAuth2ServiceComponentHolder {
     public static void setRestrictUnassignedScopes(boolean restrictUnassignedScopes) {
 
         OAuth2ServiceComponentHolder.restrictUnassignedScopes = restrictUnassignedScopes;
+    }
+
+    public static boolean isRestrictApimRestApiScopes() {
+        return restrictApimRestApiScopes;
+    }
+
+    public static void setRestrictApimRestApiScopes(boolean restrictApimRestApiScopes) {
+        OAuth2ServiceComponentHolder.restrictApimRestApiScopes = restrictApimRestApiScopes;
     }
 
     public static ConfigurationContextService getConfigurationContextService() {
