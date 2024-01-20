@@ -1972,6 +1972,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
                             userDomain, OAuth2Util.getTenantDomain(tenentId), authenticatedIDP);
+                    user.setAuthenticatedSubjectIdentifier(rs.getString(7));
                     AccessTokenDO aTokenDetail = new AccessTokenDO();
                     aTokenDetail.setAccessToken(token);
                     aTokenDetail.setConsumerKey(consumerKey);
