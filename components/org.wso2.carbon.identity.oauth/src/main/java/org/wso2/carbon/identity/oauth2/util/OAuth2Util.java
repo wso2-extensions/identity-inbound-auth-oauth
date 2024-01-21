@@ -329,6 +329,11 @@ public class OAuth2Util {
      */
     public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
 
+    /**
+     * Config for hexifying the jwks certificate thumbprint.
+     */
+    public static final String JWKS_IS_HEXIFY_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint.IsHexifyRequired";
+
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
@@ -3277,9 +3282,13 @@ public class OAuth2Util {
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
-            String publicCertThumbprint = hexify(digestInBytes);
+            // According to the RFC7515#section-4.1.8 converting bytes into hex is not required.
+            // Added the config for the backward compatibility.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_HEXIFY_REQUIRED))) {
+                digestInBytes = hexify(digestInBytes).getBytes(Charsets.UTF_8);
+            }
             String thumbprint = new String(new Base64(0, null, true).
-                    encode(publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+                    encode(digestInBytes), Charsets.UTF_8);
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Thumbprint value: %s calculated for Certificate: %s using algorithm: %s",
                         thumbprint, certificate, digestValue.getAlgorithm()));
