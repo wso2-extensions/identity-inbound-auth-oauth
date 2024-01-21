@@ -2501,12 +2501,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         String thumbPrint = OAuth2Util.getThumbPrint(certificate);
         String rsa256Thumbprint = "50:f0:ed:a5:89:8a:f3:a1:15:c2:c5:08:19:49:56:e7:e1:14:fe:23:47:43:e9:d2:2f:70:9a:" +
                 "e7:cb:80:1b:bd";
-        String[] rsa256ThumbprintValues = rsa256Thumbprint.split(":");
-        byte[] bytes = new byte[rsa256ThumbprintValues.length];
-        for (int i = 0; i < rsa256ThumbprintValues.length; i++) {
-            bytes[i] = Integer.valueOf(rsa256ThumbprintValues[i], 16).byteValue();
-        }
-        assertEquals(thumbPrint, Base64URL.encode(bytes).toString());
+        assertEquals(thumbPrint, Base64URL.encode(rsa256Thumbprint.replaceAll(":", "")).toString());
     }
 
     @DataProvider(name = "FAPI status data provider")
