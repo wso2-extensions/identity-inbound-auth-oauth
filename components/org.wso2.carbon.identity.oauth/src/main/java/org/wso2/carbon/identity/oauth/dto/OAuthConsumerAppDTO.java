@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.axis2.databinding.annotation.IgnoreNullElement;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfigurationDTO;
@@ -26,11 +27,15 @@ import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfi
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 /**
  * OAuth consumer app dto.
  */
+@XmlAccessorType(XmlAccessType.FIELD)
 public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     private String oauthConsumerKey;
@@ -74,7 +79,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String requestObjectEncryptionMethod;
     private String jwksURI;
     private boolean fapiConformanceEnabled;
-    // CORS orgin related properties. This will be used by the CORS management service
+
+    // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
     @XmlTransient
     @JsonIgnore
