@@ -161,6 +161,7 @@ public class JwksEndpoint {
     private RSAKey.Builder getJWK(JWSAlgorithm algorithm, List<Base64> encodedCertList, X509Certificate certificate,
                                   String kidAlgorithm, String alias)
             throws ParseException, IdentityOAuth2Exception, JOSEException {
+
         RSAKey.Builder jwk = new RSAKey.Builder((RSAPublicKey) certificate.getPublicKey());
         if (kidAlgorithm.equals(OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM)) {
             jwk.keyID(OAuth2Util.getKID(certificate, algorithm, getTenantDomain()));
