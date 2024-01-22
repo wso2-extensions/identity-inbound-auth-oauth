@@ -1196,9 +1196,7 @@ public class EndpointUtil {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
-                    if (AuthzUtil.isLegacyAuthzRuntime()) {
-                        allowedScopes = dropUnregisteredScopes(params);
-                    }
+                    allowedScopes = dropUnregisteredScopes(params);
                 }
                 for (String scope : allowedScopes) {
                     allowedRegisteredScopes.add(scope);
