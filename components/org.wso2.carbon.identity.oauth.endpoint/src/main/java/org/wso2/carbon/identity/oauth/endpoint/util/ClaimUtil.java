@@ -142,7 +142,7 @@ public class ClaimUtil {
                 ClaimMapping[] requestedLocalClaimMappings = serviceProvider.getClaimConfig().getClaimMappings();
                 String subjectClaimURI = getSubjectClaimUri(serviceProvider, requestedLocalClaimMappings);
 
-                if (subjectClaimURI != null) {
+                if (StringUtils.isNotEmpty(subjectClaimURI)) {
                     claimURIList.add(subjectClaimURI);
                 }
 
