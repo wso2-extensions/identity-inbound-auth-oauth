@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64;
@@ -68,6 +69,8 @@ public class JwksEndpoint {
     private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
     private static final String KEYS = "keys";
     private static final String ADD_PREVIOUS_VERSION_KID = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID";
+    public static final String JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
+            ".IsThumbprintHexifyRequired";
 
     @GET
     @Path(value = "/jwks")
@@ -168,7 +171,12 @@ public class JwksEndpoint {
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
         jwk.x509CertChain(encodedCertList);
-        jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+        if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))) {
+            JWK parsedJWK = JWK.parse(certificate);
+            jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+        } else {
+            jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+        }
         return jwk;
     }
 
