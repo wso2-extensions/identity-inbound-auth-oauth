@@ -92,7 +92,7 @@ public class ParAuthServiceImpl implements ParAuthService {
 
         Optional<ParRequestDO> optionalParRequestDO = parMgtDAO.getRequestData(uuid);
         if (!optionalParRequestDO.isPresent()) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+            throw new ParClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI,
                     OAuthConstants.OAuthError.AuthorizationResponsei18nKey.INVALID_REQUEST_URI);
         }
 
@@ -121,7 +121,7 @@ public class ParAuthServiceImpl implements ParAuthService {
         long currentTimeInMillis = Calendar.getInstance(TimeZone.getTimeZone(ParConstants.UTC)).getTimeInMillis();
 
         if (currentTimeInMillis > expiresIn) {
-            throw new ParClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+            throw new ParClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_REQUEST_URI,
                     OAuthConstants.OAuthError.AuthorizationResponsei18nKey.REQUEST_URI_EXPIRED);
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2023-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -171,8 +172,9 @@ public class DefaultOAuth2ScopeValidator {
         if (requestedScopes.isEmpty()) {
             return approvedScopes;
         }
+        List<String> internalScopes = getInternalScopes(tenantDomain);
         if (requestedScopes.contains(SYSTEM_SCOPE)) {
-            requestedScopes.addAll(getInternalScopes(tenantDomain));
+            requestedScopes.addAll(internalScopes);
             requestedScopes.addAll(getConsoleScopes(tenantDomain));
         }
         List<AuthorizedScopes> authorizedScopesList = getAuthorizedScopes(appId, tenantDomain);
@@ -221,6 +223,13 @@ public class DefaultOAuth2ScopeValidator {
         }
         scopes.addAll(intersection);
         approvedScopes.addAll(scopes);
+        if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
+            /*
+            This will add the new scopes mapped to the legacy scopes to the approved scopes list. This is supported for
+            the backward compatibility.
+            */
+            addNewScopesMappedToLegacyScopes(approvedScopes, internalScopes);
+        }
         return approvedScopes;
     }
 
@@ -435,4 +444,41 @@ public class DefaultOAuth2ScopeValidator {
         }
     }
 
+    /**
+     * This method adds the new scopes mapped to the legacy scopes to the approved scopes list.
+     *
+     * @param approvedScopes Approved scopes list.
+     * @param internalScopes Internal scopes list.
+     */
+    private void addNewScopesMappedToLegacyScopes(List<String> approvedScopes, List<String> internalScopes) {
+
+        Set<String> approvedIntenalScopes = approvedScopes.stream().filter(internalScopes::contains)
+                .collect(Collectors.toSet());
+        Map<String, Set<String>> legacyScopeToNewScopeMap = OAuth2ServiceComponentHolder.getInstance()
+                .getLegacyScopesToNewScopesMap();
+        Map<String, Set<String>> legacyMultipleScopeToNewScopeMap = OAuth2ServiceComponentHolder.getInstance()
+                .getLegacyMultipleScopesToNewScopesMap();
+        Set<String> mappedScopes = new HashSet<>();
+
+        // This handles the single legacy scope is mapped to single or multiple new scopes case.
+        for (String approvedIntenalScope : approvedIntenalScopes) {
+            if (legacyScopeToNewScopeMap.containsKey(approvedIntenalScope)) {
+                mappedScopes.addAll(legacyScopeToNewScopeMap.get(approvedIntenalScope));
+            }
+        }
+        // This handles the collection of legacy scopes is mapped to single or multiple new scopes case.
+        for (Map.Entry<String, Set<String>> entry : legacyMultipleScopeToNewScopeMap.entrySet()) {
+            String[] scopes = entry.getKey().split(",");
+            List<String> scopeList = Arrays.asList(scopes);
+            if (approvedIntenalScopes.containsAll(scopeList)) {
+                mappedScopes.addAll(entry.getValue());
+            }
+        }
+        // Add the mapped scopes to the approved scopes.
+        for (String scope : mappedScopes) {
+            if (!approvedIntenalScopes.contains(scope)) {
+                approvedScopes.add(scope);
+            }
+        }
+    }
 }

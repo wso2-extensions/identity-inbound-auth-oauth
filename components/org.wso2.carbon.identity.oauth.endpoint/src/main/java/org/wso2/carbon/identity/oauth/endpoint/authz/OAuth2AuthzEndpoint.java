@@ -3919,7 +3919,7 @@ public class OAuth2AuthzEndpoint {
                                         oAuth2Parameters.getLoginTenantDomain());
                     }
                     // Storing the oidc session id.
-                    storeSidClaim(authorizationResponseDTO, oAuthMessage, sessionStateObj);
+                    storeSidClaim(authorizationResponseDTO, oAuthMessage, previousSessionState);
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug(String.format(
