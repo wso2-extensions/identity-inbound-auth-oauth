@@ -142,12 +142,12 @@ public class ClaimUtil {
                 ClaimMapping[] requestedLocalClaimMappings = serviceProvider.getClaimConfig().getClaimMappings();
                 String subjectClaimURI = getSubjectClaimUri(serviceProvider, requestedLocalClaimMappings);
 
-                if (subjectClaimURI != null) {
+                if (StringUtils.isNotBlank(subjectClaimURI)) {
                     claimURIList.add(subjectClaimURI);
                 }
 
                 boolean isSubjectClaimInRequested = false;
-                if (subjectClaimURI != null || ArrayUtils.isNotEmpty(requestedLocalClaimMappings)) {
+                if (StringUtils.isNotBlank(subjectClaimURI) || ArrayUtils.isNotEmpty(requestedLocalClaimMappings)) {
                     if (requestedLocalClaimMappings != null) {
                         for (ClaimMapping claimMapping : requestedLocalClaimMappings) {
                             if (claimMapping.isRequested()) {
