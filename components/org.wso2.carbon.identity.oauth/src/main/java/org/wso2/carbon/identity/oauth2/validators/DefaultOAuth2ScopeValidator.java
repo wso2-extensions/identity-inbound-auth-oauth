@@ -96,7 +96,7 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
-                        .getAuthorizationReqDTO().getUser(), appId, null, tenantDomain);
+                        .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         return authorizedScopes;
@@ -129,12 +129,12 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        String userType = tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE).toString();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
-                .getAuthorizedUser(), appId, grantType, tenantDomain);
+                .getAuthorizedUser(), appId, grantType, userType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)
-                || OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(grantType)) {
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
             authorizedScopes.remove(OPENID_SCOPE);
         }
@@ -148,12 +148,13 @@ public class DefaultOAuth2ScopeValidator {
      * @param authenticatedUser Authenticated user.
      * @param appId             App ID.
      * @param grantType         Grant type.
+     * @param userType          User type.
      * @param tenantDomain      Tenant domain.
      * @return Authorized scopes.
      * @throws IdentityOAuth2Exception if any error occurs during getting authorized scopes.
      */
     private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
-                                             String appId, String grantType, String tenantDomain)
+                                             String appId, String grantType, String userType, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         // Filter OIDC scopes and add to approved scopes list.
@@ -188,6 +189,7 @@ public class DefaultOAuth2ScopeValidator {
             scopeValidationContext.setAppId(appId);
             scopeValidationContext.setPolicyId(policyId);
             scopeValidationContext.setGrantType(grantType);
+            scopeValidationContext.setUserType(userType);
             for (ScopeValidationHandler scopeValidationHandler : scopeValidationHandlers) {
                 if (scopeValidationHandler.canHandle(scopeValidationContext)) {
                     scopeValidationContext.setValidatedScopesByHandler(validatedScopesByHandler);

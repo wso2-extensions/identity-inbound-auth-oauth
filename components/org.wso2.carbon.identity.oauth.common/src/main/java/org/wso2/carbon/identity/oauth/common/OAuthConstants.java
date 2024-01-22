@@ -291,7 +291,6 @@ public final class OAuthConstants {
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
-        public static final String ORGANIZATION_SWITCH_CC = "organization_switch_cc";
 
         private GrantTypes() {
 
