@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +42,7 @@ import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
@@ -73,6 +75,7 @@ import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeReq
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
+import org.wso2.carbon.identity.oauth2.model.ResourceAccessControlKey;
 import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -113,8 +116,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.xml.namespace.QName;
 import javax.xml.stream.XMLInputFactory;
@@ -146,6 +154,12 @@ public class OAuth2ServiceComponent {
     private static final String DESCRIPTION = "description";
     private static final String PERMISSION = "Permission";
     private static final String CLAIM = "Claim";
+    private static final String RESOURCE_ACCESS_CONTROL = "ResourceAccessControl";
+    private static final String RESOURCE = "Resource";
+    private static final String CONTEXT = "context";
+    private static final String HTTP_METHOD = "http-method";
+    private static final String SECURED = "secured";
+    private static final String SCOPES = "Scopes";
     private BundleContext bundleContext;
 
     @Reference(
@@ -424,6 +438,9 @@ public class OAuth2ServiceComponent {
         boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
                 OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
         OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
+        if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
+            initializeLegacyScopeToNewScopeMappings();
+        }
     }
 
     /**
@@ -1115,6 +1132,168 @@ public class OAuth2ServiceComponent {
             }
         }
         return permissions;
+    }
+
+    private static void initializeLegacyScopeToNewScopeMappings() {
+
+        Map<ResourceAccessControlKey, List<String>> legacyResourceScopes = loadLegacyResourceScopes();
+        Map<ResourceAccessControlKey, List<String>> newResourceScopes = loadNewResourceScopes();
+        Map<String, Set<String>> mappedScopes = new HashMap<>();
+        Map<String, Set<String>> mappedMultipleScopes = new HashMap<>();
+
+        for (Map.Entry<ResourceAccessControlKey, List<String>> entry : legacyResourceScopes.entrySet()) {
+            ResourceAccessControlKey resourceAccessControlKey = entry.getKey();
+            List<String> legacyScopes = entry.getValue();
+            List<String> newScopes = newResourceScopes.get(resourceAccessControlKey);
+            if (CollectionUtils.isEmpty(legacyScopes) || CollectionUtils.isEmpty(newScopes)) {
+                continue;
+            }
+            if (legacyScopes.size() == 1) {
+                // This will add the scope mappings related to resources protected by single legacy scope.
+                String legacyScope = legacyScopes.get(0);
+                if (newScopes.contains(legacyScope)) {
+                    continue;
+                }
+                if (mappedScopes.get(legacyScope) != null) {
+                    mappedScopes.get(legacyScope).addAll(newScopes);
+                } else {
+                    mappedScopes.put(legacyScope, new HashSet<>(newScopes));
+                }
+            } else {
+                // This will add the scope mappings related to resources protected by multiple legacy scopes.
+                String legacyScopeKey = legacyScopes.stream().sorted().collect(Collectors.joining(","));
+                String newScopesString = newScopes.stream().sorted().collect(Collectors.joining(","));
+                if (legacyScopeKey.equals(newScopesString)) {
+                    continue;
+                }
+                if (mappedMultipleScopes.get(legacyScopeKey) != null) {
+                    mappedMultipleScopes.get(legacyScopeKey).addAll(newScopes);
+                } else {
+                    mappedMultipleScopes.put(legacyScopeKey, new HashSet<>(newScopes));
+                }
+            }
+        }
+        OAuth2ServiceComponentHolder.getInstance().setLegacyScopesToNewScopesMap(mappedScopes);
+        OAuth2ServiceComponentHolder.getInstance().setLegacyMultipleScopesToNewScopesMap(mappedMultipleScopes);
+    }
+
+    /**
+     * Load legacy resource scopes from identity.xml.
+     *
+     * @return Map of resource access control key and scopes.
+     */
+    private static Map<ResourceAccessControlKey, List<String>> loadLegacyResourceScopes() {
+
+        Map<ResourceAccessControlKey, List<String>> resourceAccessControlMap = new HashMap<>();
+        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
+        String filePath = Paths.get(configDirPath, IDENTITY_PATH, IdentityCoreConstants.IDENTITY_CONFIG).toString();
+
+        XMLStreamReader parser = null;
+        try (InputStream stream = new FileInputStream(filePath)) {
+            parser = XMLInputFactory.newInstance().createXMLStreamReader(stream);
+            StAXOMBuilder builder = new StAXOMBuilder(parser);
+            OMElement documentElement = builder.getDocumentElement();
+            Iterator iterator = documentElement.getChildElements();
+            while (iterator.hasNext()) {
+                OMElement omElement = (OMElement) iterator.next();
+                if (RESOURCE_ACCESS_CONTROL.equals(omElement.getLocalName())) {
+                    Iterator resourceIterator = omElement.getChildElements();
+                    while (resourceIterator.hasNext()) {
+                        OMElement resourceElement = (OMElement) resourceIterator.next();
+                        if (RESOURCE.equals(resourceElement.getLocalName())) {
+                            processResourceElement(resourceElement, resourceAccessControlMap);
+                        }
+                    }
+                }
+            }
+        } catch (XMLStreamException e) {
+            log.warn("Error while streaming identity config.", e);
+        } catch (IOException e) {
+            log.warn("Error while loading identity config.", e);
+        } finally {
+            try {
+                if (parser != null) {
+                    parser.close();
+                }
+            } catch (XMLStreamException e) {
+                log.error("Error while closing XML stream", e);
+            }
+        }
+
+        return resourceAccessControlMap;
+    }
+
+    /**
+     * Load new resource scopes from resource-access-control-v2.xml.
+     *
+     * @return Map of resource access control key and scopes.
+     */
+    private static Map<ResourceAccessControlKey, List<String>> loadNewResourceScopes() {
+
+        Map<ResourceAccessControlKey, List<String>> resourceAccessControlMap = new HashMap<>();
+        String configDirPath = CarbonUtils.getCarbonConfigDirPath();
+        String filePath = Paths.get(configDirPath, IDENTITY_PATH,
+                OAuthConstants.RESOURCE_ACCESS_CONTROL_V2_CONFIG_PATH).toString();
+
+        XMLStreamReader parser = null;
+        try (InputStream stream = new FileInputStream(filePath)) {
+            parser = XMLInputFactory.newInstance().createXMLStreamReader(stream);
+            StAXOMBuilder builder = new StAXOMBuilder(parser);
+            OMElement documentElement = builder.getDocumentElement();
+            Iterator iterator = documentElement.getChildElements();
+            while (iterator.hasNext()) {
+                OMElement resourceElement = (OMElement) iterator.next();
+                if (RESOURCE.equals(resourceElement.getLocalName())) {
+                    processResourceElement(resourceElement, resourceAccessControlMap);
+                }
+            }
+        } catch (XMLStreamException e) {
+            log.warn("Error while streaming resource access control v2 config.", e);
+        } catch (IOException e) {
+            log.warn("Error while loading resource access control v2 config.", e);
+        } finally {
+            try {
+                if (parser != null) {
+                    parser.close();
+                }
+            } catch (XMLStreamException e) {
+                log.error("Error while closing XML stream", e);
+            }
+        }
+
+        return resourceAccessControlMap;
+    }
+
+    /**
+     * Process resource element and populate the map.
+     *
+     * @param resourceElement  Resource element.
+     * @param resourceScopeMap Resource scope map.
+     */
+    private static void processResourceElement(OMElement resourceElement,
+                                               Map<ResourceAccessControlKey, List<String>> resourceScopeMap) {
+
+        String context = resourceElement.getAttributeValue(new QName(CONTEXT));
+        String httpMethod = resourceElement.getAttributeValue(new QName(HTTP_METHOD));
+        boolean secured = Boolean.parseBoolean(resourceElement.getAttributeValue(new QName(SECURED)));
+
+        if (secured) {
+            ResourceAccessControlKey key = new ResourceAccessControlKey();
+            key.setEndpointRegex(context);
+            key.setHttpMethod(httpMethod);
+
+            List<String> scopes = new ArrayList<>();
+            Iterator childIterator = resourceElement.getChildElements();
+            while (childIterator.hasNext()) {
+                OMElement childElement = (OMElement) childIterator.next();
+                if (SCOPES.equals(childElement.getLocalName())) {
+                    scopes.add(childElement.getText());
+                }
+            }
+            if (CollectionUtils.isNotEmpty(scopes)) {
+                resourceScopeMap.put(key, scopes);
+            }
+        }
     }
 
     @Reference(

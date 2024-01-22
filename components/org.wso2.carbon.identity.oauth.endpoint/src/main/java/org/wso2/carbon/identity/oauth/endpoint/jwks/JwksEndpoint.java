@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.security.KeyStore;
@@ -69,6 +71,8 @@ public class JwksEndpoint {
     private static final String KEYS = "keys";
     private static final String ADD_PREVIOUS_VERSION_KID = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID";
     private static final String ENABLE_X5T_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5TInResponse";
+    public static final String JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
+            ".IsThumbprintHexifyRequired";
 
     @GET
     @Path(value = "/jwks")
@@ -169,8 +173,14 @@ public class JwksEndpoint {
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
         jwk.x509CertChain(encodedCertList);
+      
         if (Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_X5T_IN_RESPONSE))) {
-            jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+          if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))) {
+              JWK parsedJWK = JWK.parse(certificate);
+              jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());
+          } else {
+              jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
+          }
         }
         return jwk;
     }
@@ -254,8 +264,7 @@ public class JwksEndpoint {
      */
     private String generateKSNameFromDomainName(String tenantDomain) {
 
-        String ksName = tenantDomain.trim().replace(".", "-");
-        return (ksName + ".jks");
+        return KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
     }
 
     /**

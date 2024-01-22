@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.openidconnect.model;
 
+import org.wso2.carbon.utils.security.KeystoreUtils;
+
 /**
  * Constants for openid connect.
  */
@@ -57,6 +59,7 @@ public class Constants {
 
     public static final String FULL_STOP_DELIMITER = ".";
     public static final String DASH_DELIMITER = "-";
-    public static final String KEYSTORE_FILE_EXTENSION = ".jks";
+    public static final String KEYSTORE_FILE_EXTENSION = KeystoreUtils.getExtensionByFileType(
+            KeystoreUtils.StoreFileType.defaultFileType());
     public static final String REQUEST_OBJECT_SIGNING_ALG = "request_object_signing_alg";
 }

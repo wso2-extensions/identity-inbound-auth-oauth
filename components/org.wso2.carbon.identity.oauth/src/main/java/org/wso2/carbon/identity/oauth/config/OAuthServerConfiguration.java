@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -166,6 +166,7 @@ public class OAuthServerConfiguration {
     private boolean allowCrossTenantIntrospection = true;
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
+    private boolean useLegacyScopesAsAliasForNewScopes = false;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -514,6 +515,9 @@ public class OAuthServerConfiguration {
 
         // Read config for RoleBasedScopeIssuer in GlobalScopeValidators enabled.
         parseRoleBasedScopeIssuerEnabled(oauthElem);
+
+        // Read config for using legacy scopes as alias for new scopes.
+        parseUseLegacyScopesAsAliasForNewScopes(oauthElem);
     }
 
     /**
@@ -3577,6 +3581,32 @@ public class OAuthServerConfiguration {
         return removeUsernameFromIntrospectionResponseForAppTokens;
     }
 
+    /**
+     * Parse the UseLegacyScopesAsAliasForNewScopes configuration that used to use legacy scopes as alias for
+     * new scopes.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUseLegacyScopesAsAliasForNewScopes(OMElement oauthConfigElem) {
+
+        OMElement useLegacyScopesAsAliasForNewScopesElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES));
+        if (useLegacyScopesAsAliasForNewScopesElem != null) {
+            useLegacyScopesAsAliasForNewScopes = Boolean.parseBoolean(useLegacyScopesAsAliasForNewScopesElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property UseLegacyScopesAsAliasForNewScopes for the OAuth configuration in
+     * identity.xml.
+     *
+     * @return true if the UseLegacyScopesAsAliasForNewScopes is enabled.
+     */
+    public boolean isUseLegacyScopesAsAliasForNewScopesEnabled() {
+
+        return useLegacyScopesAsAliasForNewScopes;
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -3904,6 +3934,7 @@ public class OAuthServerConfiguration {
                 "SkipOIDCClaimsForClientCredentialGrant";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
+        private static final String USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES = "UseLegacyScopesAsAliasForNewScopes";
     }
 
 }
