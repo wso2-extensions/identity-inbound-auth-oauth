@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
-import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
