@@ -27,6 +27,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.common.model.Scope;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -68,6 +71,8 @@ public class DefaultOAuth2ScopeValidator {
     private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
 
     private static final String NO_POLICY_HANDLER = "NoPolicyScopeValidationHandler";
+
+    private static final String IS_LEGACY_APP = "isLegacyApp";
 
     /**
      * Validate scope.
@@ -226,11 +231,18 @@ public class DefaultOAuth2ScopeValidator {
         scopes.addAll(intersection);
         approvedScopes.addAll(scopes);
         if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
-            /*
-            This will add the new scopes mapped to the legacy scopes to the approved scopes list. This is supported for
-            the backward compatibility.
-            */
-            addNewScopesMappedToLegacyScopes(approvedScopes, internalScopes);
+            List<String> approvedIntenalScopes = approvedScopes.stream().filter(internalScopes::contains)
+                    .collect(Collectors.toList());
+            if (!approvedIntenalScopes.isEmpty()) {
+                // Check whether the application is a legacy application that needs backward compatibility.
+                if (isLegacyApp(appId, tenantDomain)) {
+                /*
+                This will add the new scopes mapped to the legacy scopes to the approved scopes list. This is supported
+                for the backward compatibility.
+                */
+                    addNewScopesMappedToLegacyScopes(approvedScopes, internalScopes);
+                }
+            }
         }
         return approvedScopes;
     }
@@ -482,5 +494,38 @@ public class DefaultOAuth2ScopeValidator {
                 approvedScopes.add(scope);
             }
         }
+    }
+
+    /**
+     * Check whether the application is a legacy application that needs backward compatibility.
+     *
+     * @param appId        Application ID.
+     * @param tenantDomain Tenant domain.
+     * @return True if the application is a legacy application.
+     * @throws IdentityOAuth2Exception If an error occurred while checking whether the app is a legacy app.
+     */
+    private boolean isLegacyApp(String appId, String tenantDomain) throws IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationManagementService =
+                OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
+        try {
+            ServiceProvider serviceProvider =
+                    applicationManagementService.getApplicationByResourceId(appId, tenantDomain);
+            if (serviceProvider != null) {
+                ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+                if (serviceProviderProperties != null) {
+                    for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                        if (IS_LEGACY_APP.equals(serviceProviderProperty.getName()) &&
+                                Boolean.parseBoolean(serviceProviderProperty.getValue())) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving service provider for app id : " + appId +
+                    " tenant domain : " + tenantDomain, e);
+        }
+        return false;
     }
 }
