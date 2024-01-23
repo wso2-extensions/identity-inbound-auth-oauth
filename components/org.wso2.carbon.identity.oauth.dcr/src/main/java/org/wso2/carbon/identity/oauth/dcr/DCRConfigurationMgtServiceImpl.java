@@ -23,7 +23,6 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         validateTenantDomain(tenantDomain);
 
         return DCRDataHolder.getInstance()
-                .getDCRConfigurationDAO()
                 .getDCRConfigurationByTenantDomain(tenantDomain);
     }
 
@@ -35,7 +34,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
 
         validateTenantDomain(tenantDomain);
 
-        DCRDataHolder.getInstance().getDCRConfigurationDAO()
+        DCRDataHolder.getInstance()
                 .setDCRConfigurationByTenantDomain(dcrConfigurationConfig, tenantDomain);
     }
 

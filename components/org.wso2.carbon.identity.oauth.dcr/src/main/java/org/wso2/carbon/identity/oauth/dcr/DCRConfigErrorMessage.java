@@ -7,16 +7,15 @@ public enum DCRConfigErrorMessage {
 
     /**
      * Invalid tenant domain.
-     * TODO: check if this is the right error code
      */
-    ERROR_CODE_INVALID_TENANT_DOMAIN("60004",
+    ERROR_CODE_INVALID_TENANT_DOMAIN("60005",
             "Invalid input.",
             "%s is not a valid tenant domain."),
 
     /**
      * Unable to retrieve DCR configuration.
      */
-    ERROR_CODE_DCR_CONFIG_RETRIEVE("65017",
+    ERROR_CODE_DCR_CONFIGURATION_RETRIEVE("65020",
             "Unable to retrieve DCR configuration.",
             "Server encountered an error while retrieving the " +
                     "DCR configuration of %s.");

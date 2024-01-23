@@ -20,14 +20,25 @@ package org.wso2.carbon.identity.oauth.dcr.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
-import org.wso2.carbon.identity.oauth.dcr.dao.DCRConfigurationDAO;
-import org.wso2.carbon.identity.oauth.dcr.dao.DCRConfigurationDAOImpl;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
+import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
+import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.oauth.dcr.DCRConfigErrorMessage.ERROR_CODE_DCR_CONFIGURATION_RETRIEVE;
+import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
+import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.oauth.dcr.util.DCRConfigErrorUtils.handleServerException;
 
 /**
  * This is the DataHolder class of DynamicClientRegistration bundle. This holds a reference to the
@@ -44,7 +55,6 @@ public class DCRDataHolder {
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
     private List<TokenBinder> tokenBinders = new ArrayList<>();
     private ConfigurationManager configurationManager;
-    private DCRConfigurationDAO dcrConfigurationDAO = new DCRConfigurationDAOImpl();
 
     private DCRDataHolder() {
 
@@ -113,12 +123,54 @@ public class DCRDataHolder {
         this.configurationManager = configurationManager;
     }
 
-    public DCRConfigurationDAO getDCRConfigurationDAO() {
-        return dcrConfigurationDAO;
+    public DCRConfiguration getDCRConfigurationByTenantDomain(String tenantDomain) throws DCRMServerException {
+
+        try {
+            Resource resource = getResource(DCR_CONFIG_RESOURCE_TYPE_NAME, DCR_CONFIG_RESOURCE_NAME);
+            DCRConfiguration dcrConfiguration;
+            if (resource != null) {
+                dcrConfiguration = DCRConfigUtils.parseResource(resource);
+            } else {
+                dcrConfiguration = DCRConfigUtils.getServerConfiguration();
+            }
+            return dcrConfiguration;
+        } catch (ConfigurationManagementException e) {
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
+        }
     }
 
-    public void setDCRConfigurationDAO(DCRConfigurationDAO dcrConfigurationDAO) {
-        this.dcrConfigurationDAO = dcrConfigurationDAO;
+    public void setDCRConfigurationByTenantDomain(DCRConfiguration dcrConfiguration, String tenantDomain)
+            throws DCRMServerException {
+
+        try {
+            ResourceAdd resourceAdd = DCRConfigUtils.parseConfig(dcrConfiguration);
+            getConfigurationManager().replaceResource(DCR_CONFIG_RESOURCE_TYPE_NAME, resourceAdd);
+        } catch (ConfigurationManagementException e) {
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
+        }
+    }
+
+    /**
+     * Configuration Management API returns a ConfigurationManagementException with the error code CONFIGM_00017 when
+     * resource is not found. This method wraps the original method and returns null if the resource is not found.
+     *
+     * @param resourceTypeName Resource type name.
+     * @param resourceName     Resource name.
+     * @return Retrieved resource from the configuration store. Returns {@code null} if the resource is not found.
+     * @throws ConfigurationManagementException exception
+     */
+    private Resource getResource(String resourceTypeName, String resourceName) throws ConfigurationManagementException {
+
+        try {
+            return getConfigurationManager().getResource(resourceTypeName, resourceName);
+        } catch (ConfigurationManagementException e) {
+            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode()) ||
+                    ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+                return null;
+            } else {
+                throw e;
+            }
+        }
     }
 
 }

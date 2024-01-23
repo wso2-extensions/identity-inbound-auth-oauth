@@ -654,7 +654,7 @@ public class DCRMService {
         if (enableFAPI) {
             // If there is a resource attribute for FAPI DCR enablement get it or else
             // get the default value from the file configuration.
-            DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance().getDCRConfigurationDAO()
+            DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance()
                     .getDCRConfigurationByTenantDomain(tenantDomain);
             boolean enableFAPIDCR = dcrConfiguration.isFAPIEnforced();
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
@@ -1005,7 +1005,7 @@ public class DCRMService {
     private void validateSSASignature(String softwareStatement, String tenantDomain) throws DCRMClientException,
             IdentityOAuth2Exception, DCRMServerException {
 
-        DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance().getDCRConfigurationDAO()
+        DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance()
                 .getDCRConfigurationByTenantDomain(tenantDomain);
         String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
