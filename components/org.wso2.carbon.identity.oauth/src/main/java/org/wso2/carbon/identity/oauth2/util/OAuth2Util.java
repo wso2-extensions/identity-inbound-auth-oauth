@@ -3928,6 +3928,33 @@ public class OAuth2Util {
     /**
      * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
      *
+     * @param authzUser       authenticated user object
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName         idp name
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(AuthenticatedUser authzUser, String userStoreDomain,
+                                                            String tenantDomain, String idpName)
+            throws IdentityOAuth2Exception {
+
+        String username = authzUser.getUserName();
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        if (!authenticatedUser.isFederatedUser()) {
+            try {
+                String userId = authzUser.getUserId();
+                authenticatedUser.setUserId(userId);
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception(
+                        "User id is not available for user: " + authzUser.getLoggableUserId(), e);
+            }
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
      * @param username        username of the user
      * @param userStoreDomain user store domain
      * @param tenantDomain    tenent domain

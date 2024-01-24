@@ -556,8 +556,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         isConsentedToken = resultSet.getString(12);
                     }
                     // data loss at dividing the validity period but can be neglected
-                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
-                            userDomain, tenantDomain, authenticatedIDP);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
+                            tenantDomain, authenticatedIDP);
 
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
                     AccessTokenDO accessTokenDO = new AccessTokenDO(consumerKey, user, OAuth2Util.buildScopeArray
