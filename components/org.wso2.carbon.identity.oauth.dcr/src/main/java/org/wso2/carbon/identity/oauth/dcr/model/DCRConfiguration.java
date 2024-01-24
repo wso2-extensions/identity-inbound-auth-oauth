@@ -5,24 +5,24 @@ package org.wso2.carbon.identity.oauth.dcr.model;
  */
 public class DCRConfiguration {
 
-    private boolean isDCRFAPIEnforced;
-    private boolean clientAuthenticationRequired;
+    private Boolean isDCRFAPIEnforced;
+    private Boolean clientAuthenticationRequired;
     private String ssaJwks;
 
-    public boolean isFAPIEnforced() {
+    public Boolean isFAPIEnforced() {
 
         return isDCRFAPIEnforced;
     }
 
-    public void setFAPIEnforced(boolean isDCRFAPIEnforced) {
+    public void setFAPIEnforced(Boolean isDCRFAPIEnforced) {
         this.isDCRFAPIEnforced = isDCRFAPIEnforced;
     }
 
-    public boolean isClientAuthenticationRequired() {
+    public Boolean isClientAuthenticationRequired() {
         return clientAuthenticationRequired;
     }
 
-    public void setClientAuthenticationRequired(boolean clientAuthenticationRequired) {
+    public void setClientAuthenticationRequired(Boolean clientAuthenticationRequired) {
         this.clientAuthenticationRequired = clientAuthenticationRequired;
     }
 

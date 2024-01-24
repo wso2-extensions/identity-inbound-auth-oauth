@@ -35,11 +35,14 @@ public class DCRConfigUtils {
 
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
 
-        boolean enableDCRFapi = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
-        boolean clientAuthenticationRequired = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED));
-//            TODO : check if DCR_CLIENT_AUTHENTICATION_REQUIRED value is correct
+        String enableDCRFapiValue = IdentityUtil.getProperty(OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT);
+        Boolean enableDCRFapi = enableDCRFapiValue != null ? Boolean.parseBoolean(enableDCRFapiValue) : null;
+
+        String clientAuthenticationRequiredValue = IdentityUtil.getProperty(
+                OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED);
+        Boolean clientAuthenticationRequired = clientAuthenticationRequiredValue != null ?
+                Boolean.parseBoolean(clientAuthenticationRequiredValue) : null;
+
         String ssaJwks = IdentityUtil.getProperty(OAuthConstants.DCR_SSA_VALIDATION_JWKS);
 
         dcrConfiguration.setFAPIEnforced(enableDCRFapi);
@@ -55,25 +58,33 @@ public class DCRConfigUtils {
      * @param resource Resource
      * @return DCRConfiguration Configuration instance.
      */
-    public static DCRConfiguration parseResource(Resource resource) {
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
+    public static DCRConfiguration overrideConfigsWithResource(Resource resource, DCRConfiguration dcrConfiguration) {
 
         if (resource.isHasAttribute()) {
             List<Attribute> attributes = resource.getAttributes();
             Map<String, String> attributeMap = getAttributeMap(attributes);
 
-            boolean enableFAPIDCR = Boolean.parseBoolean(attributeMap.get(ENABLE_FAPI_ENFORCEMENT));
-            boolean clientAuthenticationRequired = Boolean.parseBoolean(attributeMap.get(
-                    CLIENT_AUTHENTICATION_REQUIRED));
+            String enableDCRFapiValue = attributeMap.get(ENABLE_FAPI_ENFORCEMENT);
+            Boolean enableDCRFapi = enableDCRFapiValue != null ? Boolean.parseBoolean(enableDCRFapiValue) : null;
+
+            String clientAuthenticationRequiredValue = attributeMap.get(CLIENT_AUTHENTICATION_REQUIRED);
+            Boolean clientAuthenticationRequired = clientAuthenticationRequiredValue != null ?
+                    Boolean.parseBoolean(clientAuthenticationRequiredValue) : null;
+
             String ssaJwks = attributeMap.get(SSA_JWKS);
 
-            dcrConfiguration.setFAPIEnforced(enableFAPIDCR);
-            dcrConfiguration.setClientAuthenticationRequired(clientAuthenticationRequired);
-            dcrConfiguration.setSsaJwks(ssaJwks);
+            if (enableDCRFapi != null) {
+                dcrConfiguration.setFAPIEnforced(enableDCRFapi);
+            }
+            if (clientAuthenticationRequired != null) {
+                dcrConfiguration.setClientAuthenticationRequired(clientAuthenticationRequired);
+            }
+            if (ssaJwks != null) {
+                dcrConfiguration.setSsaJwks(ssaJwks);
+            }
         }
-        return dcrConfiguration;
 
+        return dcrConfiguration;
     }
 
     private static Map<String, String> getAttributeMap(List<Attribute> attributes) {

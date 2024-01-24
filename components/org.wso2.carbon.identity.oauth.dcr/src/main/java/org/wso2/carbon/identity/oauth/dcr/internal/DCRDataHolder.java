@@ -127,12 +127,11 @@ public class DCRDataHolder {
 
         try {
             Resource resource = getResource(DCR_CONFIG_RESOURCE_TYPE_NAME, DCR_CONFIG_RESOURCE_NAME);
-            DCRConfiguration dcrConfiguration;
+            DCRConfiguration dcrConfiguration = DCRConfigUtils.getServerConfiguration();
             if (resource != null) {
-                dcrConfiguration = DCRConfigUtils.parseResource(resource);
-            } else {
-                dcrConfiguration = DCRConfigUtils.getServerConfiguration();
+                DCRConfigUtils.overrideConfigsWithResource(resource, dcrConfiguration);
             }
+
             return dcrConfiguration;
         } catch (ConfigurationManagementException e) {
             throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
