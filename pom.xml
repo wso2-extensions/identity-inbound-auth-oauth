@@ -891,7 +891,7 @@
 
         <!-- Carbon Identity Framework version -->
         <carbon.identity.framework.version>5.25.673</carbon.identity.framework.version>
-        <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 7.0.0)
+        <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
         <carbon.identity.organization.management.version>1.3.96
