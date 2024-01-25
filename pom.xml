@@ -873,7 +873,7 @@
     <properties>
         <!-- Identity Inbound Auth OAuth Version-->
         <identity.inbound.auth.oauth.exp.pkg.version>${project.version}</identity.inbound.auth.oauth.exp.pkg.version>
-        <identity.inbound.auth.oauth.imp.pkg.version.range>[6.2.0, 7.0.0)</identity.inbound.auth.oauth.imp.pkg.version.range>
+        <identity.inbound.auth.oauth.imp.pkg.version.range>[6.2.0, 8.0.0)</identity.inbound.auth.oauth.imp.pkg.version.range>
 
         <!-- OSGi/Equinox dependency version -->
         <equinox.javax.servlet.version>3.0.0.v201112011016</equinox.javax.servlet.version>
