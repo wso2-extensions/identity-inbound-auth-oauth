@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -58,8 +60,8 @@ public class OAuthComponentServiceHolder {
     private Map<Integer, OAuthApplicationMgtListener> oAuthApplicationMgtListeners = new TreeMap<>();
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
-
-
+    private AccessTokenDAO accessTokenDAOService;
+    private TokenManagementDAO tokenManagementDAOService;
     /**
      * Get the list of scope validator implementations available.
      *
@@ -242,5 +244,45 @@ public class OAuthComponentServiceHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         this.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    /**
+     * Get AccessTokenDAO instance.
+     *
+     * @return AccessTokenDAO {@link AccessTokenDAO} instance.
+     */
+    public AccessTokenDAO getAccessTokenDAOService() {
+
+        return accessTokenDAOService;
+    }
+
+    /**
+     * Set AccessTokenDAO instance.
+     *
+     * @param accessTokenDAOService {@link AccessTokenDAO} instance.
+     */
+    public void setAccessTokenDAOService(AccessTokenDAO accessTokenDAOService) {
+
+        this.accessTokenDAOService = accessTokenDAOService;
+    }
+
+    /**
+     * Get TokenManagementDAO instance.
+     *
+     * @return  TokenManagementDAO  {@link TokenManagementDAO} instance.
+     */
+    public TokenManagementDAO getTokenManagementDAOService() {
+
+        return tokenManagementDAOService;
+    }
+
+    /**
+     * Set TokenManagementDAO instance.
+     *
+     * @param tokenManagementDAOService {@link TokenManagementDAO} instance.
+     */
+    public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
+
+        this.tokenManagementDAOService = tokenManagementDAOService;
     }
 }

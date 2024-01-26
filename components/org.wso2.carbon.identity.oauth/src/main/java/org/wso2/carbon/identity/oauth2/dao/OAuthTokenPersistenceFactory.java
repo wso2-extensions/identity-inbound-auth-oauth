@@ -20,6 +20,7 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
@@ -64,7 +65,11 @@ public class OAuthTokenPersistenceFactory {
 
     public AccessTokenDAO getAccessTokenDAO() {
 
-        return tokenDAO;
+        AccessTokenDAO accessTokenDAO = OAuthComponentServiceHolder.getInstance().getAccessTokenDAOService();
+        if (accessTokenDAO == null) {
+            return tokenDAO;
+        }
+        return accessTokenDAO;
     }
 
     public OAuthScopeDAO getOAuthScopeDAO() {
@@ -74,7 +79,12 @@ public class OAuthTokenPersistenceFactory {
 
     public TokenManagementDAO getTokenManagementDAO() {
 
-        return managementDAO;
+        TokenManagementDAO tokenManagementDAO = OAuthComponentServiceHolder.getInstance()
+                .getTokenManagementDAOService();
+        if (tokenManagementDAO == null) {
+            return managementDAO;
+        }
+        return tokenManagementDAO;
     }
 
     public RequestObjectDAO getRequestObjectDAO() {
