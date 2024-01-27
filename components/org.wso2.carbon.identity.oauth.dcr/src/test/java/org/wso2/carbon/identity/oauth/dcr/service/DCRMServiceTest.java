@@ -1195,7 +1195,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
         String tenantDomain = "carbon.super";
 
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setSsaJwks("https://localhost:9444/oauth2/jwks");
+        dcrConfiguration.setSsaJwks(dummyJwskUri);
 
         mockStatic(DCRDataHolder.class);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
