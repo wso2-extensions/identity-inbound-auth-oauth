@@ -33,7 +33,7 @@ import javax.xml.bind.annotation.XmlTransient;
 /**
  * OAuth consumer app dto.
  */
-@XmlAccessorType(XmlAccessType.FIELD)
+//@XmlAccessorType(XmlAccessType.FIELD)
 public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     private String oauthConsumerKey;
@@ -454,6 +454,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         fapiConformanceEnabled = fapiConformant;
     }
 
+    @JsonIgnore
+    @XmlTransient
     @Override
     public String getProtocolName() {
 
