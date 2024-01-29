@@ -4678,4 +4678,17 @@ public class OAuth2Util {
         }
         return grantType;
     }
+
+    /**
+     * Check if oauth code persistence is enabled.
+     *
+     * @return True if oauth code persistence is enabled.
+     */
+    public static boolean isAuthCodePersistenceEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE));
+        }
+        return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
 }
