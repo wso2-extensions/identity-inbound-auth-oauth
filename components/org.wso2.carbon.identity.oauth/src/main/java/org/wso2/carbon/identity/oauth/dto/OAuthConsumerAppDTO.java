@@ -26,14 +26,12 @@ import org.wso2.carbon.identity.application.mgt.inbound.dto.InboundProtocolConfi
 import java.util.List;
 import java.util.Map;
 
-//import javax.xml.bind.annotation.XmlAccessType;
-//import javax.xml.bind.annotation.XmlAccessorType;
+
 import javax.xml.bind.annotation.XmlTransient;
 
 /**
  * OAuth consumer app dto.
  */
-//@XmlAccessorType(XmlAccessType.FIELD)
 public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     private String oauthConsumerKey;
@@ -89,6 +87,10 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     @XmlTransient
     @JsonIgnore
     private Map<String, Object> auditLogData;
+
+    @XmlTransient
+    @JsonIgnore
+    public static final String OAUTH_2 = FrameworkConstants.StandardInboundProtocols.OAUTH2;
 
     public String getJwksURI() {
 
@@ -454,12 +456,10 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         fapiConformanceEnabled = fapiConformant;
     }
 
-    @JsonIgnore
-    @XmlTransient
     @Override
     public String getProtocolName() {
 
-        return FrameworkConstants.StandardInboundProtocols.OAUTH2;
+        return OAUTH_2;
     }
     
     public List<String> getAllowedOrigins() {
