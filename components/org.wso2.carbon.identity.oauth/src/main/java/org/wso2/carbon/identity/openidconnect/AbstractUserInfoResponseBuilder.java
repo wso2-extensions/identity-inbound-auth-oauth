@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
@@ -61,7 +62,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     public String getResponseString(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
-        String clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        String clientId;
+        Optional<AccessTokenDO> optionalAccessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
+        if (optionalAccessTokenDO.isPresent()) {
+            AccessTokenDO accessTokenDO = optionalAccessTokenDO.get();
+            clientId = accessTokenDO.getConsumerKey();
+        } else {
+            throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
+        }
         String spTenantDomain = getServiceProviderTenantDomain(tokenResponse);
         // Retrieve user claims.
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
@@ -80,10 +88,18 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                  Map<String, Object> userClaims)
             throws OAuthSystemException, UserInfoEndpointException {
 
+        AccessTokenDO accessTokenDO;
+        String accessToken;
+        try {
+            accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                    .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+            accessToken = accessTokenDO == null ? null : accessTokenDO.getAccessToken();
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+        }
         if (MapUtils.isEmpty(userClaims)) {
             if (log.isDebugEnabled()) {
-                AuthenticatedUser authenticatedUser =
-                        getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+                AuthenticatedUser authenticatedUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
                 log.debug("No user claims available to be filtered for user: " +
                         authenticatedUser.toFullQualifiedUsername() + " for client_id: " + clientId +
                         " of tenantDomain: " + spTenantDomain);
@@ -101,25 +117,18 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         userClaimsFilteredByScope.putAll(essentialClaims);
 
         //Handle essential claims of the request object
-        Map<String, Object> filteredClaimsFromRequestObject =
-                filterClaimsFromRequestObject(userClaims, OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        Map<String, Object> filteredClaimsFromRequestObject = filterClaimsFromRequestObject(userClaims, accessToken);
         userClaimsFilteredByScope.putAll(filteredClaimsFromRequestObject);
 
         // Filter the user claims based on user consent
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        AuthenticatedUser authenticatedUser = OAuth2Util.getAuthenticatedUser(accessTokenDO);
         return getUserClaimsFilteredByConsent(tokenResponse, userClaimsFilteredByScope, authenticatedUser, clientId,
                 spTenantDomain);
     }
 
-    private String getGrantType(OAuth2TokenValidationResponseDTO tokenResponse) throws UserInfoEndpointException {
+    private String getGrantType(AccessTokenDO accessTokenDO) throws UserInfoEndpointException {
 
-        try {
-            return OAuth2Util.getAccessTokenDOfromTokenIdentifier(
-                    OAuth2Util.getAccessTokenIdentifier(tokenResponse)).getGrantType();
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException(
-                    "Error while retrieving access token information to derive the grant type." , e);
-        }
+        return accessTokenDO.getGrantType();
     }
 
     private Map<String, Object> filterClaimsFromRequestObject(Map<String, Object> userAttributes,
@@ -155,7 +164,14 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                      OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException, OAuthSystemException {
 
-        AuthenticatedUser authenticatedUser = getAuthenticatedUser(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
+        AuthenticatedUser authenticatedUser;
+        try {
+            authenticatedUser = OAuth2Util.getAuthenticatedUser(OAuth2ServiceComponentHolder.getInstance()
+                    .getAccessTokenProvider().getVerifiedAccessToken(
+                            tokenResponse.getAuthorizationContextToken().getTokenString(), false));
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+        }
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
     }
 
@@ -194,18 +210,20 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                                                  String clientId,
                                                                  String tenantDomain) throws UserInfoEndpointException {
 
-        String grantType = getGrantType(validationResponseDTO);
-        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
-            try {
+        String grantType;
+        try {
+            String accessToken = validationResponseDTO.getAuthorizationContextToken().getTokenString();
+            AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                    .getVerifiedAccessToken(accessToken, false);
+            grantType = getGrantType(accessTokenDO);
+            if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                 // Get the Access Token details from the database/cache to check if the token is consented or not.
-                String accessToken = validationResponseDTO.getAuthorizationContextToken().getTokenString();
-                AccessTokenDO accessTokenDO = OAuth2Util.findAccessToken(accessToken, false);
                 boolean isConsentedToken = accessTokenDO.isConsentedToken();
                 return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType,
                         getServiceProvider(tenantDomain, clientId), isConsentedToken);
-            } catch (IdentityOAuth2Exception e) {
-                throw new UserInfoEndpointException("An error occurred while fetching the access token details.", e);
             }
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserInfoEndpointException("An error occurred while fetching the access token details.", e);
         }
         return OIDCClaimUtil.filterUserClaimsBasedOnConsent(userClaims, user, clientId, tenantDomain, grantType,
                 getServiceProvider(tenantDomain, clientId));
@@ -250,39 +268,25 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
                                             String spTenantDomain,
                                             Map<String, Object> filteredUserClaims) throws UserInfoEndpointException;
 
-    private AuthenticatedUser getAuthenticatedUser(String accessToken) throws OAuthSystemException {
-
-        AccessTokenDO accessTokenDO;
-        try {
-            accessTokenDO = OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken);
-            return OAuth2Util.getAuthenticatedUser(accessTokenDO);
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException();
-        }
-    }
-
     private String getServiceProviderTenantDomain(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
         String clientId = null;
         OAuthAppDO oAuthAppDO;
         try {
-            clientId = getClientId(OAuth2Util.getAccessTokenIdentifier(tokenResponse));
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            Optional<AccessTokenDO> optionalAccessTokenDO = OAuth2Util.getAccessTokenDO(tokenResponse);
+            if (optionalAccessTokenDO.isPresent()) {
+                AccessTokenDO accessTokenDO = optionalAccessTokenDO.get();
+                clientId = accessTokenDO.getConsumerKey();
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            } else {
+                throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
+            }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new UserInfoEndpointException(
                     "Error while retrieving OAuth app information for clientId: " + clientId);
         }
         return OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-    }
-
-    private String getClientId(String accessToken) throws UserInfoEndpointException {
-
-        try {
-            return OAuth2Util.getClientIdForAccessToken(accessToken);
-        } catch (IdentityOAuth2Exception e) {
-            throw new UserInfoEndpointException("Error while obtaining the client_id from accessToken.", e);
-        }
     }
 
     private ServiceProvider getServiceProvider(String tenantDomain, String clientId) throws UserInfoEndpointException {

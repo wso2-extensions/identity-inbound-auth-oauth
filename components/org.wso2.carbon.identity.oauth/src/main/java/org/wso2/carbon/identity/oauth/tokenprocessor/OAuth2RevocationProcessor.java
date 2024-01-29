@@ -78,12 +78,14 @@ public interface OAuth2RevocationProcessor {
      *
      * @param revokeRequestDTO Metadata containing revoke token request.
      * @return boolean whether it is a refresh token request or not
+     * @throws IdentityOAuth2Exception If an error occurs while checking the token type.
      */
-    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO);
+    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuth2Exception;
 
     /**
      * Handle indirect token revocation for internal user events.
-     * @param username User on which the event occurred.
+     *
+     * @param username         User on which the event occurred.
      * @param userStoreManager User store manager.
      * @return true if revocation is successful. Else return false.
      * @throws UserStoreException
