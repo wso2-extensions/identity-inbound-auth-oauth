@@ -652,8 +652,6 @@ public class DCRMService {
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
-            // If there is a resource attribute for FAPI DCR enablement get it or else
-            // get the default value from the file configuration.
             DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance()
                     .getDCRConfigurationByTenantDomain(tenantDomain);
             boolean enableFAPIDCR = dcrConfiguration.isFAPIEnforced();

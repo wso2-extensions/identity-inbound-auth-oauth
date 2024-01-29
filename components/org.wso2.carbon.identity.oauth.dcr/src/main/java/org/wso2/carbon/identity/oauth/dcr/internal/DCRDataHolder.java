@@ -116,13 +116,23 @@ public class DCRDataHolder {
     }
 
     public ConfigurationManager getConfigurationManager() {
+
         return configurationManager;
     }
 
     public void setConfigurationManager(ConfigurationManager configurationManager) {
+
         this.configurationManager = configurationManager;
     }
 
+    /**
+     * Get DCR configuration by tenant domain.
+     * If there is a resource available for the tenant with the given resource type and resource name,
+     * it will override the server configuration.
+     * @param tenantDomain Tenant domain.
+     * @return DCRConfiguration.
+     * @throws DCRMServerException DCRMServerException.
+     */
     public DCRConfiguration getDCRConfigurationByTenantDomain(String tenantDomain) throws DCRMServerException {
 
         try {
@@ -161,10 +171,12 @@ public class DCRDataHolder {
     private Resource getResource(String resourceTypeName, String resourceName) throws ConfigurationManagementException {
 
         try {
+
             return getConfigurationManager().getResource(resourceTypeName, resourceName);
         } catch (ConfigurationManagementException e) {
             if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode()) ||
                     ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+
                 return null;
             } else {
                 throw e;
