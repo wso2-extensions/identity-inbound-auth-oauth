@@ -788,4 +788,43 @@ public final class OAuthUtil {
         }
         return username;
     }
+
+    /**
+     * This will be called before when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked pre user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     */
+    public static void invokePreRevocationBySystemListeners(String userUUID, Map<String, Object> params) {
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPreTokenRevocationBySystem(userUUID, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for pre token revocation by system.", e);
+            }
+        }
+    }
+
+    /**
+     * This will be called after when tokens are revoked through Listeners implicitly.
+     * The {@link OAuthEventInterceptor} implementations can be invoked post user events
+     * for the user.
+     * @param userUUID - UUID of the user.
+     * @param params   - Additional parameters.
+     */
+    public static void invokePostRevocationBySystemListeners(String userUUID, Map<String, Object> params) {
+
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            try {
+                oAuthEventInterceptorProxy.onPostTokenRevocationBySystem(userUUID, params);
+            } catch (IdentityOAuth2Exception e) {
+                LOG.error("Error while triggering listener for post token revocation by system.", e);
+            }
+        }
+    }
 }
