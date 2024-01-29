@@ -812,6 +812,7 @@ public class OAuthAdminServiceImpl {
 
             AppInfoCache.getInstance().clearCacheEntry(consumerKey);
             updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+            handleInternalTokenRevocation(consumerKey, properties);
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("App state is updated to:" + newState + " in the AppInfoCache for OAuth App with " +
@@ -854,6 +855,7 @@ public class OAuthAdminServiceImpl {
 
         AppInfoCache.getInstance().clearCacheEntry(consumerKey);
         updateAppAndRevokeTokensAndAuthzCodes(consumerKey, properties);
+        handleInternalTokenRevocation(consumerKey, properties);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Client Secret for OAuth app with consumerKey: " + consumerKey + " updated in OAuthCache.");
         }
@@ -1879,6 +1881,18 @@ public class OAuthAdminServiceImpl {
             return  OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
+        }
+    }
+
+
+    private void handleInternalTokenRevocation(String consumerKey, Properties properties)
+            throws IdentityOAuthAdminException {
+        for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
+                .getOAuthApplicationMgtListeners()) {
+            oAuthApplicationMgtListener.doPostRegenerateClientSecret(consumerKey, properties);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
+            }
         }
     }
 }
