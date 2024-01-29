@@ -34,7 +34,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
-import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
@@ -778,7 +777,7 @@ public class TokenValidationHandler {
 
     private AccessTokenDO findRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
 
-        return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().getRefreshToken(refreshToken);
+        return OAuth2ServiceComponentHolder.getInstance().getTokenProvider().getVerifiedRefreshToken(refreshToken);
     }
 
     private boolean isJWTTokenValidation(String tokenIdentifier) {

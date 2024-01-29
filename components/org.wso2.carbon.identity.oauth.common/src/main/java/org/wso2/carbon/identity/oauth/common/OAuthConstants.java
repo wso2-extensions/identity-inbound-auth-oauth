@@ -358,6 +358,7 @@ public final class OAuthConstants {
 
         public static final String APP_STATE_ACTIVE = "ACTIVE";
         public static final String APP_STATE_REVOKED = "REVOKED";
+        public static final String APP_STATE_DELETED = "DELETED";
 
         private OauthAppStates() {
 

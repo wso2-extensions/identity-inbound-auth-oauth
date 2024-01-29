@@ -44,4 +44,10 @@ public class DefaultTokenProvider implements TokenProvider {
         return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().validateRefreshToken(consumerKey,
                 refreshToken);
     }
+
+    @Override
+    public AccessTokenDO getVerifiedRefreshToken(String refreshToken) throws IdentityOAuth2Exception {
+
+        return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().getRefreshToken(refreshToken);
+    }
 }
