@@ -43,6 +43,8 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -53,7 +55,9 @@ import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuth
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
@@ -629,6 +633,140 @@ public class OAuth2ServiceComponent {
 
         if (log.isDebugEnabled()) {
             log.debug("Unset organization user resident resolver service.");
+        }
+        OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
+    }
+
+    /**
+     * Sets the refresh token grant processor.
+     *
+     * @param refreshTokenGrantProcessor RefreshTokenGrantProcessor
+     */
+    @Reference(
+            name = "refreshtoken.grant.processor",
+            service = RefreshTokenGrantProcessor.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetRefreshTokenGrantProcessor"
+    )
+    protected void setRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting refresh token grant processor.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRefreshTokenGrantProcessor(refreshTokenGrantProcessor);
+    }
+
+    /**
+     * Unsets the refresh token grant processor.
+     *
+     * @param refreshTokenGrantProcessor RefreshTokenGrantProcessor
+     */
+    protected void unsetRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset refresh token grant processor.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRefreshTokenGrantProcessor(null);
+    }
+
+    /**
+     * Sets the access token grant processor.
+     *
+     * @param accessTokenDAO AccessTokenDAO
+     */
+    @Reference(
+            name = "access.token.dao.service",
+            service = AccessTokenDAO.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccessTokenDAOService"
+    )
+    protected void setAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Adding the Access Token DAO Service : %s", accessTokenDAO.getClass().getName()));
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenDAOService(accessTokenDAO);
+    }
+
+    /**
+     * Unsets the access token grant processor.
+     *
+     * @param accessTokenDAO   AccessTokenDAO
+     */
+    protected void unsetAccessTokenDAOService(AccessTokenDAO accessTokenDAO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Removing the Access Token DAO Service : %s", accessTokenDAO.getClass().getName()));
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAccessTokenDAOService(null);
+    }
+
+    /**
+     * Sets the access token grant processor.
+     *
+     * @param tokenMgtDAOService TokenManagementDAO
+     */
+    @Reference(
+            name = "token.management.dao.service",
+            service = TokenManagementDAO.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetTokenMgtDAOService"
+    )
+    protected void setTokenMgtDAOService(TokenManagementDAO tokenMgtDAOService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Adding the Token Mgt DAO Service : %s", tokenMgtDAOService.getClass().getName()));
+        }
+        OAuth2ServiceComponentHolder.getInstance().setTokenManagementDAOService(tokenMgtDAOService);
+    }
+
+    /**
+     * Unsets the access token grant processor.
+     *
+     * @param tokenManagementDAO TokenManagementDAO
+     */
+    protected void unsetTokenMgtDAOService(TokenManagementDAO tokenManagementDAO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Removing the Token Mgt DAO Service : %s",
+                    tokenManagementDAO.getClass().getName()));
+        }
+        OAuth2ServiceComponentHolder.getInstance().setTokenManagementDAOService(null);
+    }
+
+
+    /**
+     * Sets the access token grant processor.
+     *
+     * @param oAuth2RevocationProcessor OAuth2RevocationProcessor
+     */
+    @Reference(
+            name = "oauth2.revocation.processor",
+            service = OAuth2RevocationProcessor.class,
+            cardinality = ReferenceCardinality.OPTIONAL,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOAuth2RevocationProcessor"
+    )
+    protected void setOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting Oauth2 revocation processor.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setRevocationProcessor(oAuth2RevocationProcessor);
+    }
+
+    /**
+     * Unsets the access token grant processor.
+     *
+     * @param oAuth2RevocationProcessor OAuth2RevocationProcessor
+     */
+    protected void unsetOAuth2RevocationProcessor(OAuth2RevocationProcessor oAuth2RevocationProcessor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset Oauth2 revocation processor.");
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
     }
