@@ -483,7 +483,11 @@ public class ResponseTypeHandlerUtil {
         String consumerKey = authorizationReqDTO.getConsumerKey();
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizationReqDTO.getUser());
 
-        if (cacheEnabled) {
+        /*
+         * If no token persistence, the token is not cached against a cache key with userId, scope, client and
+         * idp since multiple active tokens can exist for the same key.
+         */
+        if (cacheEnabled && OAuth2Util.isTokenPersistenceEnabled()) {
             existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUserId, authenticatedIDP);
         }
 
@@ -951,8 +955,13 @@ public class ResponseTypeHandlerUtil {
 
     private static void addTokenToCache(OAuthCacheKey cacheKey, AccessTokenDO tokenBean) {
 
-        OAuthCache.getInstance().addToCache(cacheKey, tokenBean);
-        // Adding AccessTokenDO to improve validation performance
+        /*
+         * If no token persistence, the token will be not be cached against a cache key with userId, scope, client and
+         * idp. But, token will be cached and managed as an AccessTokenDO against the token identifier.
+         */
+        if (OAuth2Util.isTokenPersistenceEnabled()) {
+            OAuthCache.getInstance().addToCache(cacheKey, tokenBean);
+        }        // Adding AccessTokenDO to improve validation performance
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenBean.getAccessToken());
         OAuthCache.getInstance().addToCache(accessTokenCacheKey, tokenBean);
         if (log.isDebugEnabled()) {

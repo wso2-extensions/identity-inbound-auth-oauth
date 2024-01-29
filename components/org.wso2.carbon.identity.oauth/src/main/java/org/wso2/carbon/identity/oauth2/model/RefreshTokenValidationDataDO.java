@@ -49,6 +49,18 @@ public class RefreshTokenValidationDataDO {
 
     private long accessTokenValidityInMillis;
 
+    private boolean isConsented;
+
+    public boolean isConsented() {
+
+        return isConsented;
+    }
+
+    public void setConsented(boolean consented) {
+
+        isConsented = consented;
+    }
+
     public String getAccessToken() {
         return accessToken;
     }

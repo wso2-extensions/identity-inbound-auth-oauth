@@ -299,37 +299,42 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 OAuthCache.getInstance().clearCacheEntry(accessTokenCacheKey,
                         oldAccessToken.getAuthorizedUser().getTenantDomain());
             }
-            AccessTokenDO tokenToCache = AccessTokenDO.clone(accessTokenBean);
-            OauthTokenIssuer oauthTokenIssuer;
-            try {
-                oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
-            } catch (InvalidOAuthClientException e) {
-                throw new IdentityOAuth2Exception(
-                        "Error while retrieving oauth issuer for the app with clientId: " +
-                        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), e);
-            }
-            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+            /*
+             * If no token persistence, the token will be not be cached against a cache key with userId, scope, client,
+             * idp and binding reference. But, token will be cached and managed as an AccessTokenDO against the
+             * token identifier.
+             */
+            if (OAuth2Util.isTokenPersistenceEnabled()) {
+                AccessTokenDO tokenToCache = AccessTokenDO.clone(accessTokenBean);
+                OauthTokenIssuer oauthTokenIssuer;
                 try {
-                    String persistedTokenIdentifier =
-                            oauthTokenIssuer.getAccessTokenHash(accessTokenBean.getAccessToken());
-                    tokenToCache.setAccessToken(persistedTokenIdentifier);
-                } catch (OAuthSystemException e) {
-                    if (log.isDebugEnabled()) {
-                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token " + tokenToCache.getAccessToken(), e);
-                        } else {
-                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token.", e);
+                    oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(
+                            tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+                } catch (InvalidOAuthClientException e) {
+                    throw new IdentityOAuth2Exception(
+                            "Error while retrieving oauth issuer for the app with clientId: " +
+                                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), e);
+                }
+                if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                    try {
+                        String persistedTokenIdentifier =
+                                oauthTokenIssuer.getAccessTokenHash(accessTokenBean.getAccessToken());
+                        tokenToCache.setAccessToken(persistedTokenIdentifier);
+                    } catch (OAuthSystemException e) {
+                        if (log.isDebugEnabled()) {
+                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                                log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
+                                        " failed to parse the received token " + tokenToCache.getAccessToken(), e);
+                            } else {
+                                log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
+                                        " failed to parse the received token.", e);
+                            }
                         }
                     }
                 }
+                // Add new access token to the OAuthCache
+                OAuthCache.getInstance().addToCache(oauthCacheKey, tokenToCache);
             }
-
-            // Add new access token to the OAuthCache
-            OAuthCache.getInstance().addToCache(oauthCacheKey, tokenToCache);
-
             // Add new access token to the AccessTokenCache
             OAuth2Util.addTokenDOtoCache(accessTokenBean);
 

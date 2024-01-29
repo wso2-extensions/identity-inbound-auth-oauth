@@ -27,8 +27,8 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 
 /**
- * Abstraction layer between OAuth2Service and persistence layer to handle
- * revocation logic during token persistence and non-persistence scenarios.
+ * Abstraction layer between OAuth2Service and persistence layer to handle revocation logic during token persistence
+ * and non-persistence scenarios.
  */
 public interface OAuth2RevocationProcessor {
 
@@ -54,41 +54,12 @@ public interface OAuth2RevocationProcessor {
                             RefreshTokenValidationDataDO refreshTokenDO) throws IdentityOAuth2Exception;
 
     /**
-     * Validate and return the refresh token metadata.
-     *
-     * @param revokeRequestDTO Metadata containing revoke token request.
-     * @return RefreshTokenValidationDataDO {@link RefreshTokenValidationDataDO} instance.
-     * @throws IdentityOAuth2Exception If an error occurs while validating the refresh token.
-     */
-    RefreshTokenValidationDataDO getRevocableRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO)
-            throws IdentityOAuth2Exception;
-
-    /**
-     * Validate and return the access token metadata.
-     *
-     * @param revokeRequestDTO Metadata containing revoke token request.
-     * @return AccessTokenDO    {@link AccessTokenDO} instance.
-     * @throws IdentityOAuth2Exception If an error occurs while validating the access token.
-     */
-    AccessTokenDO getRevocableAccessToken(OAuthRevocationRequestDTO revokeRequestDTO)
-            throws IdentityOAuth2Exception;
-
-    /**
-     * Check whether revoke request is related to access token or revoke token.
-     *
-     * @param revokeRequestDTO Metadata containing revoke token request.
-     * @return boolean whether it is a refresh token request or not
-     * @throws IdentityOAuth2Exception If an error occurs while checking the token type.
-     */
-    boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) throws IdentityOAuth2Exception;
-
-    /**
      * Handle indirect token revocation for internal user events.
      *
      * @param username         User on which the event occurred.
      * @param userStoreManager User store manager.
      * @return true if revocation is successful. Else return false.
-     * @throws UserStoreException
+     * @throws UserStoreException If an error occurs while revoking tokens for users.
      */
     boolean revokeTokens(String username, UserStoreManager userStoreManager)
             throws UserStoreException;

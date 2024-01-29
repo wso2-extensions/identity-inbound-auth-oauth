@@ -116,7 +116,7 @@ public class ClaimUtil {
             String subjectClaimValue = null;
 
             try {
-                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getAccessTokenProvider()
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
                                 false);
                 userId = accessTokenDO.getAuthzUser().getUserId();

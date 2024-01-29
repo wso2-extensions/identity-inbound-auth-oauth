@@ -31,7 +31,9 @@ import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 
 /**
- * Handles oauth2 token revocation when persistence layer exists.
+ * DefaultOAuth2RevocationProcessor is responsible for handling OAuth2 token revocation
+ * when a persistence layer is in use. It provides methods to revoke access tokens and
+ * refresh tokens, as well as a mechanism to revoke tokens associated with a specific user.
  */
 public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcessor {
 
@@ -49,27 +51,6 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
 
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{refreshTokenDO.getAccessToken()});
-    }
-
-    @Override
-    public RefreshTokenValidationDataDO getRevocableRefreshToken(OAuthRevocationRequestDTO revokeRequestDTO)
-            throws IdentityOAuth2Exception {
-
-        return OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
-                .validateRefreshToken(revokeRequestDTO.getConsumerKey(), revokeRequestDTO.getToken());
-    }
-
-    @Override
-    public AccessTokenDO getRevocableAccessToken(OAuthRevocationRequestDTO revokeRequestDTO)
-            throws IdentityOAuth2Exception {
-
-        return OAuth2Util.findAccessToken(revokeRequestDTO.getToken(), true);
-    }
-
-    @Override
-    public boolean isRefreshTokenType(OAuthRevocationRequestDTO revokeRequestDTO) {
-
-        return StringUtils.equals(GrantType.REFRESH_TOKEN.toString(), revokeRequestDTO.getTokenType());
     }
 
     @Override

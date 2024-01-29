@@ -25,8 +25,8 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-import org.wso2.carbon.identity.oauth.tokenprocessor.AccessTokenProvider;
-import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultAccessTokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -82,7 +82,7 @@ public class OAuth2ServiceComponentHolder {
     private TokenManagementDAO tokenManagementDAOService;
     private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
     private OAuth2RevocationProcessor revocationProcessor;
-    private AccessTokenProvider accessTokenProvider;
+    private TokenProvider tokenProvider;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -480,25 +480,25 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Get access token provider.
+     * Get token provider.
      *
-     * @return AccessTokenProvider
+     * @return TokenProvider
      */
-    public AccessTokenProvider getAccessTokenProvider() {
+    public TokenProvider getTokenProvider() {
 
-        if (accessTokenProvider == null) {
-            accessTokenProvider = new DefaultAccessTokenProvider();
+        if (tokenProvider == null) {
+            tokenProvider = new DefaultTokenProvider();
         }
-        return accessTokenProvider;
+        return tokenProvider;
     }
 
     /**
-     * Set access token provider.
+     * Set token provider.
      *
-     * @param accessTokenProvider AccessTokenProvider
+     * @param tokenProvider TokenProvider
      */
-    public void setAccessTokenProvider(AccessTokenProvider accessTokenProvider) {
+    public void setTokenProvider(TokenProvider tokenProvider) {
 
-        this.accessTokenProvider = accessTokenProvider;
+        this.tokenProvider = tokenProvider;
     }
 }
