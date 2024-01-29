@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.openidconnect.model;
 
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.utils.security.KeystoreUtils;
 
 /**
@@ -59,7 +60,8 @@ public class Constants {
 
     public static final String FULL_STOP_DELIMITER = ".";
     public static final String DASH_DELIMITER = "-";
-    public static final String KEYSTORE_FILE_EXTENSION = KeystoreUtils.getExtensionByFileType(
-            KeystoreUtils.StoreFileType.defaultFileType());
+    @Deprecated
+    public static final String KEYSTORE_FILE_EXTENSION = KeystoreUtils.getKeyStoreFileExtension(
+            MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
     public static final String REQUEST_OBJECT_SIGNING_ALG = "request_object_signing_alg";
 }
