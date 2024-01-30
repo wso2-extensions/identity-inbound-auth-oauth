@@ -126,9 +126,15 @@ public class DCRConfigUtils {
         resourceAdd.setName(DCR_CONFIG_RESOURCE_NAME);
         List<Attribute> attributes = new ArrayList<>();
 
-        String isFAPIEnforced = String.valueOf(dcrConfiguration.isFAPIEnforced());
-        String isClientAuthenticationRequired = String.valueOf(dcrConfiguration.isClientAuthenticationRequired());
-        String ssaJwks = dcrConfiguration.getSsaJwks();
+        String isFAPIEnforced;
+        String isClientAuthenticationRequired;
+        String ssaJwks;
+
+        isFAPIEnforced = dcrConfiguration.isFAPIEnforced() != null ?
+                String.valueOf(dcrConfiguration.isFAPIEnforced()) : null;
+        isClientAuthenticationRequired = dcrConfiguration.isClientAuthenticationRequired() != null ?
+                String.valueOf(dcrConfiguration.isClientAuthenticationRequired()) : null;
+        ssaJwks = dcrConfiguration.getSsaJwks();
 
         addAttribute(attributes, ENABLE_FAPI_ENFORCEMENT, isFAPIEnforced);
         addAttribute(attributes, CLIENT_AUTHENTICATION_REQUIRED, isClientAuthenticationRequired);
