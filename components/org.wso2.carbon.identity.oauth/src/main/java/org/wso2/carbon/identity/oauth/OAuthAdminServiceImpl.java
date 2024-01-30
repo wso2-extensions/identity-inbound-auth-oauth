@@ -2535,7 +2535,20 @@ public class OAuthAdminServiceImpl {
         try {
             authorizedUser = detailToken.getAuthzUser().getUserId();
         } catch (UserIdNotFoundException e) {
-            throw handleError("Error when obtaining the user ID.", e);
+            /*
+            * This fall back mechanism is added to support the token deletion process of the token exchange grant type.
+            * When a token is issued from the token exchange grant type, the username for the token is set from the
+            * `sub` property of the JWT token. This `sub` property of the JWT claim can be any value. When deleting
+            * those access tokens while deleting the applications, it tried to resolve the user to remove the cache.
+            * In that case, the user id extraction is failing because the user is searched from the username claim
+            * by adding the `sub` value of the user. To prevent that, the authorized user will be extracted from the
+            * subject identifier of the issued token.
+            */
+            if (detailToken.getAuthzUser().getAuthenticatedSubjectIdentifier() != null) {
+                authorizedUser = detailToken.getAuthzUser().getAuthenticatedSubjectIdentifier();
+            } else {
+                throw handleError("Error when obtaining the user ID.", e);
+            }
         }
         String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);

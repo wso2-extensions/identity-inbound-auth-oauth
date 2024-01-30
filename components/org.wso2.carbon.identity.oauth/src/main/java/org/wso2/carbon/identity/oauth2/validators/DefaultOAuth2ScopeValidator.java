@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.common.model.Scope;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -69,6 +71,8 @@ public class DefaultOAuth2ScopeValidator {
 
     private static final String NO_POLICY_HANDLER = "NoPolicyScopeValidationHandler";
 
+    private static final String IS_LEGACY_APP = "isLegacyApp";
+
     /**
      * Validate scope.
      *
@@ -96,7 +100,7 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
-                        .getAuthorizationReqDTO().getUser(), appId, null, tenantDomain);
+                        .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         return authorizedScopes;
@@ -129,12 +133,12 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        String userType = tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE).toString();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
-                .getAuthorizedUser(), appId, grantType, tenantDomain);
+                .getAuthorizedUser(), appId, grantType, userType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
-        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)
-                || OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(grantType)) {
+        if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
             authorizedScopes.remove(OPENID_SCOPE);
         }
@@ -148,12 +152,13 @@ public class DefaultOAuth2ScopeValidator {
      * @param authenticatedUser Authenticated user.
      * @param appId             App ID.
      * @param grantType         Grant type.
+     * @param userType          User type.
      * @param tenantDomain      Tenant domain.
      * @return Authorized scopes.
      * @throws IdentityOAuth2Exception if any error occurs during getting authorized scopes.
      */
     private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
-                                             String appId, String grantType, String tenantDomain)
+                                             String appId, String grantType, String userType, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         // Filter OIDC scopes and add to approved scopes list.
@@ -188,6 +193,7 @@ public class DefaultOAuth2ScopeValidator {
             scopeValidationContext.setAppId(appId);
             scopeValidationContext.setPolicyId(policyId);
             scopeValidationContext.setGrantType(grantType);
+            scopeValidationContext.setUserType(userType);
             for (ScopeValidationHandler scopeValidationHandler : scopeValidationHandlers) {
                 if (scopeValidationHandler.canHandle(scopeValidationContext)) {
                     scopeValidationContext.setValidatedScopesByHandler(validatedScopesByHandler);
@@ -224,11 +230,18 @@ public class DefaultOAuth2ScopeValidator {
         scopes.addAll(intersection);
         approvedScopes.addAll(scopes);
         if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
-            /*
-            This will add the new scopes mapped to the legacy scopes to the approved scopes list. This is supported for
-            the backward compatibility.
-            */
-            addNewScopesMappedToLegacyScopes(approvedScopes, internalScopes);
+            List<String> approvedIntenalScopes = approvedScopes.stream().filter(internalScopes::contains)
+                    .collect(Collectors.toList());
+            if (!approvedIntenalScopes.isEmpty()) {
+                // Check whether the application is a legacy application that needs backward compatibility.
+                if (isLegacyApp(appId, tenantDomain)) {
+                /*
+                This will add the new scopes mapped to the legacy scopes to the approved scopes list. This is supported
+                for the backward compatibility.
+                */
+                    addNewScopesMappedToLegacyScopes(approvedScopes, internalScopes);
+                }
+            }
         }
         return approvedScopes;
     }
@@ -480,5 +493,38 @@ public class DefaultOAuth2ScopeValidator {
                 approvedScopes.add(scope);
             }
         }
+    }
+
+    /**
+     * Check whether the application is a legacy application that needs backward compatibility.
+     *
+     * @param appId        Application ID.
+     * @param tenantDomain Tenant domain.
+     * @return True if the application is a legacy application.
+     * @throws IdentityOAuth2Exception If an error occurred while checking whether the app is a legacy app.
+     */
+    private boolean isLegacyApp(String appId, String tenantDomain) throws IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationManagementService =
+                OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
+        try {
+            ServiceProvider serviceProvider =
+                    applicationManagementService.getApplicationByResourceId(appId, tenantDomain);
+            if (serviceProvider != null) {
+                ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+                if (serviceProviderProperties != null) {
+                    for (ServiceProviderProperty serviceProviderProperty : serviceProviderProperties) {
+                        if (IS_LEGACY_APP.equals(serviceProviderProperty.getName()) &&
+                                Boolean.parseBoolean(serviceProviderProperty.getValue())) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving service provider for app id : " + appId +
+                    " tenant domain : " + tenantDomain, e);
+        }
+        return false;
     }
 }

@@ -461,7 +461,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
         return OAUTH_2;
     }
-    
     public List<String> getAllowedOrigins() {
         
         return allowedOrigins;

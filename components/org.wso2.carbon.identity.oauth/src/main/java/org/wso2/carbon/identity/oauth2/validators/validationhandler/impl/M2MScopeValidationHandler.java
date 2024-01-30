@@ -35,9 +35,10 @@ public class M2MScopeValidationHandler implements ScopeValidationHandler {
     @Override
     public boolean canHandle(ScopeValidationContext scopeValidationContext) {
 
-        return ((OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType())
-                || OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(scopeValidationContext.getGrantType()))
-                && scopeValidationContext.getPolicyId().equals("RBAC"));
+        return ((OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType()) ||
+                (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(scopeValidationContext.getGrantType()) &&
+                        OAuthConstants.UserType.APPLICATION.equals(scopeValidationContext.getUserType()))) &&
+                scopeValidationContext.getPolicyId().equals("RBAC"));
     }
 
     @Override
@@ -45,7 +46,8 @@ public class M2MScopeValidationHandler implements ScopeValidationHandler {
                                        ScopeValidationContext scopeValidationContext)
             throws ScopeValidationHandlerException {
 
-       if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(scopeValidationContext.getGrantType())) {
+        if (OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(scopeValidationContext.getGrantType()) &&
+                OAuthConstants.UserType.APPLICATION.equals(scopeValidationContext.getUserType())) {
            List<String> internalOrgScopes = appAuthorizedScopes.stream()
                    .filter(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX))
                    .collect(Collectors.toList());
