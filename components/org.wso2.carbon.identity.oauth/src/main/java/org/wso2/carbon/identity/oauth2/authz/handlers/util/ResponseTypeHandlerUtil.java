@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -607,6 +608,9 @@ public class ResponseTypeHandlerUtil {
         newTokenBean.setScope(oauthAuthzMsgCtx.getApprovedScope());
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setTokenType(OAuthConstants.UserType.APPLICATION_USER);
+        String tokenId = UUID.randomUUID().toString();
+        newTokenBean.setTokenId(tokenId);
+        oauthAuthzMsgCtx.addProperty(OAuth2Constants.USER_SESSION_ID, tokenId);
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
         newTokenBean.setValidityPeriod(validityPeriodInMillis / SECOND_TO_MILLISECONDS_FACTOR);
