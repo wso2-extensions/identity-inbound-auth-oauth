@@ -284,9 +284,6 @@ public class OAuthAdminServiceImpl {
     OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application, boolean enableAuditing)
             throws IdentityOAuthAdminException {
 
-        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
-
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDO app = new OAuthAppDO();
@@ -698,8 +695,6 @@ public class OAuthAdminServiceImpl {
     void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO, boolean enableAuditing)
             throws IdentityOAuthAdminException {
 
-        boolean enforceFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreUpdateConsumerApplication(consumerAppDTO);
