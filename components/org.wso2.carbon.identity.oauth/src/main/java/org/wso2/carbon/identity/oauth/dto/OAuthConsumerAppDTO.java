@@ -88,10 +88,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     @JsonIgnore
     private Map<String, Object> auditLogData;
 
-    @XmlTransient
-    @JsonIgnore
-    public static final String OAUTH_2 = FrameworkConstants.StandardInboundProtocols.OAUTH2;
-
     public String getJwksURI() {
 
         return jwksURI;
@@ -457,10 +453,11 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     }
 
     @Override
-    public String getProtocolName() {
+    public String fetchProtocolName() {
 
-        return OAUTH_2;
+        return FrameworkConstants.StandardInboundProtocols.OAUTH2;
     }
+
     public List<String> getAllowedOrigins() {
         
         return allowedOrigins;
