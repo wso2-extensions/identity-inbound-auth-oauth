@@ -92,8 +92,7 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
 
         } else {
             redirectUrl += "#" +
-                    OAuthConstants.OAUTH_ERROR + "=" + authorizationResponseDTO.getErrorResponseDTO().getError() +
-                    "&" + OAuthConstants.OAUTH_ERROR_DESCRIPTION + "=" +
+                    OAuthConstants.OAUTH_ERROR_DESCRIPTION + "=" +
                     authorizationResponseDTO.getErrorResponseDTO().getErrorDescription()
                             .replace(" ", "+");
 
@@ -105,6 +104,9 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             if (StringUtils.isNotBlank(state)) {
                 redirectUrl += "&" + OAuthConstants.STATE + "=" + state;
             }
+
+            redirectUrl += "&" + OAuthConstants.OAUTH_ERROR + "=" +
+                    authorizationResponseDTO.getErrorResponseDTO().getError();
         }
         authorizationResponseDTO.setRedirectUrl(redirectUrl);
         return redirectUrl;

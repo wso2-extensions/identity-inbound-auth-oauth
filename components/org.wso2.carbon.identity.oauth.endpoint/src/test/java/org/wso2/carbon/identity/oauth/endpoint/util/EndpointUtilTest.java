@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
@@ -71,9 +72,15 @@ import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FragmentResponseModeProvider;
+import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.QueryResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
@@ -650,6 +657,8 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         when(mockedOAuthResponse.getLocationUri()).thenReturn("http://localhost:8080/location");
         when(mockedHttpServletRequest.getParameter(contains(REDIRECT))).thenReturn("http://localhost:8080/location");
 
+        setSupportedResponseModes();
+
         String url = EndpointUtil.getErrorPageURL(mockedHttpServletRequest, "invalid request",
                 "invalid request object", "invalid request", "test", parameters);
 
@@ -957,5 +966,34 @@ public class EndpointUtilTest extends PowerMockIdentityBaseTest {
         } catch (OAuthProblemException e) {
             Assert.assertFalse(shouldPass, "Expected exception not thrown");
         }
+    }
+
+    private void setSupportedResponseModes() throws ClassNotFoundException, InstantiationException,
+            IllegalAccessException {
+
+        Map<String, ResponseModeProvider> supportedResponseModeProviders = new HashMap<>();
+        ResponseModeProvider defaultResponseModeProvider;
+        Map<String, String> supportedResponseModeClassNames = new HashMap<>();
+        String defaultResponseModeProviderClassName;
+        supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.QUERY,
+                QueryResponseModeProvider.class.getCanonicalName());
+        supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FRAGMENT,
+                FragmentResponseModeProvider.class.getCanonicalName());
+        supportedResponseModeClassNames.put(OAuthConstants.ResponseModes.FORM_POST,
+                FormPostResponseModeProvider.class.getCanonicalName());
+        defaultResponseModeProviderClassName = DefaultResponseModeProvider.class.getCanonicalName();
+
+        for (Map.Entry<String, String> entry : supportedResponseModeClassNames.entrySet()) {
+            ResponseModeProvider responseModeProvider = (ResponseModeProvider)
+                    Class.forName(entry.getValue()).newInstance();
+
+            supportedResponseModeProviders.put(entry.getKey(), responseModeProvider);
+        }
+
+        defaultResponseModeProvider = (ResponseModeProvider)
+                Class.forName(defaultResponseModeProviderClassName).newInstance();
+
+        OAuth2ServiceComponentHolder.setResponseModeProviders(supportedResponseModeProviders);
+        OAuth2ServiceComponentHolder.setDefaultResponseModeProvider(defaultResponseModeProvider);
     }
 }
