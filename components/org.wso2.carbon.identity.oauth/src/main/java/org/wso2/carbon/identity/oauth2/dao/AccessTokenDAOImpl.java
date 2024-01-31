@@ -1965,9 +1965,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     int tenentId = rs.getInt(3);
                     String userDomain = rs.getString(4);
                     String tokenSope = rs.getString(5);
+                    String authorizedOrganizationId = null;
                     String authenticatedIDP = null;
                     if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                         authenticatedIDP = rs.getString(6);
+                        authorizedOrganizationId = rs.getString(8);
                     }
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
@@ -1978,6 +1980,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     aTokenDetail.setConsumerKey(consumerKey);
                     aTokenDetail.setScope(scope);
                     aTokenDetail.setAuthzUser(user);
+                    aTokenDetail.setAuthorizedOrganizationId(authorizedOrganizationId);
                     tokenMap.put(token, aTokenDetail);
                 }
             }

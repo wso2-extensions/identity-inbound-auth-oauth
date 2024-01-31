@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -1652,6 +1653,68 @@ public class OAuthAdminServiceImpl {
         }
         triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
         return revokeRespDTO;
+    }
+
+    /**
+     * Revoke issued tokens for the application for the given authorized organization.
+     *
+     * @param application  {@link OAuthAppRevocationRequestDTO}.
+     * @param tenantDomain Tenant domain of the organization for which the tokens should be revoked.
+     * @return revokeRespDTO {@link OAuthAppRevocationRequestDTO}.
+     * @throws IdentityOAuthAdminException Error while revoking the issued tokens.
+     */
+    public OAuthRevocationResponseDTO revokeIssuedTokensForApplicationByOrganization
+    (OAuthAppRevocationRequestDTO application, String tenantDomain) throws IdentityOAuthAdminException {
+
+        triggerPreApplicationTokenRevokeListeners(application);
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+
+        String consumerKey = application.getConsumerKey();
+        if (StringUtils.isBlank(consumerKey)) {
+            revokeRespDTO.setError(true);
+            revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+            revokeRespDTO.setErrorMsg("Consumer key is null or empty.");
+            triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, new ArrayList<>());
+            return revokeRespDTO;
+        }
+
+        List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
+        if (!accessTokenDOs.isEmpty()) {
+            List<String> accessTokens = new ArrayList<>();
+            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                String authorizedOrganizationId = accessTokenDO.getAuthorizedOrganizationId();
+                if (StringUtils.equals(getOrganizationId(tenantDomain), authorizedOrganizationId)) {
+                    accessTokens.add(accessTokenDO.getAccessToken());
+                    clearCacheByAccessTokenAndConsumerKey(accessTokenDO, consumerKey);
+                }
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("Access tokens and token of users are removed from the cache for " +
+                        "OAuth app in tenant domain: %s with consumer key: %s.", tenantDomain, consumerKey));
+            }
+
+            revokeAccessTokens(accessTokens.toArray(new String[0]), consumerKey, tenantDomain);
+            revokeOAuthConsentsForApplication(getApplicationName(consumerKey, tenantDomain), tenantDomain);
+        }
+        triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
+        return revokeRespDTO;
+    }
+
+    /**
+     * Get organization id.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Organization Id.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving org id.
+     */
+    private static String getOrganizationId(String tenantDomain) throws IdentityOAuthAdminException {
+
+        try {
+            return OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuthAdminException("Error while resolving org id of tenant : " + tenantDomain, e);
+        }
     }
 
     /**
