@@ -482,7 +482,7 @@ public class OAuthAdminServiceImpl {
                     }
                     oidcDataMap = buildSPData(app);
                     oidcDataMap.put("allowedOrigins", application.getAllowedOrigins());
-                    if (enableAuditing) {
+                    if (enableAuditing && isEnableV2AuditLogs()) {
                         Optional<String> initiatorId = getInitiatorId();
                         if (initiatorId.isPresent()) {
                             AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -900,7 +900,7 @@ public class OAuthAdminServiceImpl {
         Map<String, Object> oidcDataMap = buildSPData(oauthappdo);
         oidcDataMap.put("allowedOrigins", consumerAppDTO.getAllowedOrigins());
         consumerAppDTO.setAuditLogData(oidcDataMap);
-        if (enableAuditing) {
+        if (enableAuditing && isEnableV2AuditLogs()) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -1406,7 +1406,7 @@ public class OAuthAdminServiceImpl {
                     + consumerKey);
         }
         handleInternalTokenRevocation(consumerKey, properties);
-        if (enableAuditing) {
+        if (enableAuditing && isEnableV2AuditLogs()) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
