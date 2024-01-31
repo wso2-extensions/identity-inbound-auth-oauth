@@ -21,11 +21,14 @@ package org.wso2.carbon.identity.oauth2.model;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 
 import java.sql.Timestamp;
+import java.util.Properties;
 
 /**
  * Results holder for refresh token validation query.
  */
 public class RefreshTokenValidationDataDO {
+
+    private String refreshToken;
 
     private String tokenId;
 
@@ -48,6 +51,20 @@ public class RefreshTokenValidationDataDO {
     private Timestamp accessTokenIssuedTime;
 
     private long accessTokenValidityInMillis;
+
+    private boolean isConsented;
+
+    private Properties properties = new Properties();
+
+    public boolean isConsented() {
+
+        return isConsented;
+    }
+
+    public void setConsented(boolean consented) {
+
+        isConsented = consented;
+    }
 
     public String getAccessToken() {
         return accessToken;
@@ -137,5 +154,30 @@ public class RefreshTokenValidationDataDO {
 
     public void setAccessTokenValidityInMillis(long accessTokenValidityInMillis) {
         this.accessTokenValidityInMillis = accessTokenValidityInMillis;
+    }
+
+    public String getRefreshToken() {
+
+        return refreshToken;
+    }
+
+    public void setRefreshToken(String refreshToken) {
+
+        this.refreshToken = refreshToken;
+    }
+
+    public Properties getProperties() {
+
+        return properties;
+    }
+
+    public void addProperty(Object propName, Object propValue) {
+
+        properties.put(propName, propValue);
+    }
+
+    public Object getProperty(Object propName) {
+
+        return properties.get(propName);
     }
 }

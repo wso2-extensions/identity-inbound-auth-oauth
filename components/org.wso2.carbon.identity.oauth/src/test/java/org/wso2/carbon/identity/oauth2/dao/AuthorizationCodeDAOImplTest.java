@@ -166,6 +166,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         when(OAuth2Util.getUserStoreDomain(any())).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
         when(OAuth2Util.getAuthenticatedIDP(any())).thenReturn("LOCAL");
+        when(OAuth2Util.isAuthCodePersistenceEnabled()).thenReturn(true);
         mockStatic(IdentityTenantUtil.class);
         mockStatic(IdentityCoreServiceDataHolder.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
@@ -314,6 +315,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         String authzCode2 = UUID.randomUUID().toString();
         mockStatic(OAuth2Util.class);
         when(getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
+        when(OAuth2Util.isAuthCodePersistenceEnabled()).thenReturn(true);
         persistAuthorizationCode(consumerKey1, authzCodeID1, authzCode1, OAuthConstants.AuthorizationCodeState.ACTIVE);
         String[] tempScope = new String[]{"sms", "email"};
         AuthzCodeDO authzCodeDO = persistAuthorizationCodeWithModifiedScope(consumerKey2, authzCodeID2, authzCode2,
@@ -326,6 +328,8 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetAuthorizationCodesByUserForOpenidScope() throws Exception {
 
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.isAuthCodePersistenceEnabled()).thenReturn(true);
         String consumerKey1 = UUID.randomUUID().toString();
         String authzCodeID1 = UUID.randomUUID().toString();
         String authzCode1 = UUID.randomUUID().toString();
@@ -343,7 +347,6 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         when(OAuth2Util.getUserStoreDomain(any())).thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
-        mockStatic(OAuth2Util.class);
         mockStatic(IdentityUtil.class);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(DEFAULT_TENANT_ID);
         when(IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
@@ -376,6 +379,7 @@ public class AuthorizationCodeDAOImplTest extends PowerMockIdentityBaseTest {
         // If state is EXPIRED/INACTIVE needs to revoke token as well.
         mockStatic(OAuth2TokenUtil.class);
         doNothing().when(OAuth2TokenUtil.class, "postRevokeCode", anyString(), anyString(), anyString());
+        when(OAuth2Util.isAuthCodePersistenceEnabled()).thenReturn(true);
         authorizationCodeDAO.deactivateAuthorizationCode(authzCodeDO1);
 
         Assert.assertTrue(authorizationCodeDAO.getActiveAuthorizationCodesByConsumerKey

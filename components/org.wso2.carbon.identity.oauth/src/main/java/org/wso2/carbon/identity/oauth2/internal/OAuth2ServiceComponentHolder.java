@@ -25,9 +25,17 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
@@ -70,6 +78,11 @@ public class OAuth2ServiceComponentHolder {
     private List<ScopeDTO> oidcScopesClaims = new ArrayList<>();
     private List<Scope> oauthScopeBinding = new ArrayList<>();
     private ScopeClaimMappingDAO scopeClaimMappingDAO;
+    private AccessTokenDAO accessTokenDAOService;
+    private TokenManagementDAO tokenManagementDAOService;
+    private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
+    private OAuth2RevocationProcessor revocationProcessor;
+    private TokenProvider tokenProvider;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -378,5 +391,115 @@ public class OAuth2ServiceComponentHolder {
             OrganizationUserResidentResolverService organizationUserResidentResolverService) {
 
         OAuth2ServiceComponentHolder.organizationUserResidentResolverService = organizationUserResidentResolverService;
+    }
+
+    /**
+     * Get AccessTokenDAO instance.
+     *
+     * @return AccessTokenDAO {@link AccessTokenDAO} instance.
+     */
+    public AccessTokenDAO getAccessTokenDAOService() {
+
+        return accessTokenDAOService;
+    }
+
+    /**
+     * Set AccessTokenDAO instance.
+     *
+     * @param accessTokenDAOService {@link AccessTokenDAO} instance.
+     */
+    public void setAccessTokenDAOService(AccessTokenDAO accessTokenDAOService) {
+
+        this.accessTokenDAOService = accessTokenDAOService;
+    }
+
+    /**
+     * Get TokenManagementDAO instance.
+     *
+     * @return  TokenManagementDAO  {@link TokenManagementDAO} instance.
+     */
+    public TokenManagementDAO getTokenManagementDAOService() {
+
+        return tokenManagementDAOService;
+    }
+
+    /**
+     * Set TokenManagementDAO instance.
+     *
+     * @param tokenManagementDAOService {@link TokenManagementDAO} instance.
+     */
+    public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
+
+        this.tokenManagementDAOService = tokenManagementDAOService;
+    }
+
+    /**
+     * Get Refresh Token Grant Processor.
+     *
+     * @return RefreshTokenGrantProcessor  Refresh Token Grant Processor.
+     */
+    public RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
+
+        if (refreshTokenGrantProcessor == null) {
+            refreshTokenGrantProcessor = new DefaultRefreshTokenGrantProcessor();
+        }
+        return refreshTokenGrantProcessor;
+    }
+
+    /**
+     * Set Refresh Token Grant Processor.
+     *
+     * @param refreshTokenGrantProcessor Refresh Token Grant Processor.
+     */
+    public void setRefreshTokenGrantProcessor(RefreshTokenGrantProcessor refreshTokenGrantProcessor) {
+
+        this.refreshTokenGrantProcessor = refreshTokenGrantProcessor;
+    }
+
+    /**
+     * Get Revocation Processor.
+     *
+     * @return Revocation Processor.
+     */
+    public OAuth2RevocationProcessor getRevocationProcessor() {
+
+        if (revocationProcessor == null) {
+            revocationProcessor = new DefaultOAuth2RevocationProcessor();
+        }
+        return revocationProcessor;
+    }
+
+    /**
+     * Set Revocation Processor.
+     *
+     * @param revocationProcessor Revocation Processor.
+     */
+    public void setRevocationProcessor(OAuth2RevocationProcessor revocationProcessor) {
+
+        this.revocationProcessor = revocationProcessor;
+    }
+
+    /**
+     * Get token provider.
+     *
+     * @return TokenProvider
+     */
+    public TokenProvider getTokenProvider() {
+
+        if (tokenProvider == null) {
+            tokenProvider = new DefaultTokenProvider();
+        }
+        return tokenProvider;
+    }
+
+    /**
+     * Set token provider.
+     * Set token provider.
+     *
+     * @param tokenProvider TokenProvider
+     */
+    public void setTokenProvider(TokenProvider tokenProvider) {
+
+        this.tokenProvider = tokenProvider;
     }
 }

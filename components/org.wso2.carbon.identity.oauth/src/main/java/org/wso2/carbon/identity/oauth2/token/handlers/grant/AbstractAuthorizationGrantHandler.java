@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -463,6 +464,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setTenantID(OAuth2Util.getTenantId(tenantDomain));
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setGrantType(tokenReq.getGrantType());
+        String tokenId = UUID.randomUUID().toString();
+        tokReqMsgCtx.addProperty(OAuth2Constants.USER_SESSION_ID, tokenId);
+        newTokenBean.setTokenId(tokenId);
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
@@ -530,44 +534,50 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
 
         if (isHashDisabled && cacheEnabled) {
-            AccessTokenDO tokenToCache = AccessTokenDO.clone(newTokenBean);
-            // If usePersistedAccessTokenAlias is enabled then in the DB the
-            // access token alias taken from the OauthTokenIssuer's getAccessTokenHash
-            // method is set as the token.
-            if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                try {
-                    String persistedTokenIdentifier =
-                            oauthTokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
-                    tokenToCache.setAccessToken(persistedTokenIdentifier);
-                } catch (OAuthSystemException e) {
-                    if (log.isDebugEnabled()) {
-                        if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token: " + tokenToCache.getAccessToken(), e);
-                        } else {
-                            log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
-                                    " failed to parse the received token.", e);
+            /*
+             * If no token persistence, the token will be not be cached against a cache key with userId, scope, client,
+             * idp and binding reference. But, token will be cached and managed as an AccessTokenDO against the
+             * token identifier.
+             */
+            if (OAuth2Util.isTokenPersistenceEnabled()) {
+                AccessTokenDO tokenToCache = AccessTokenDO.clone(newTokenBean);
+                // If usePersistedAccessTokenAlias is enabled then in the DB the
+                // access token alias taken from the OauthTokenIssuer's getAccessTokenHash
+                // method is set as the token.
+                if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                    try {
+                        String persistedTokenIdentifier =
+                                oauthTokenIssuer.getAccessTokenHash(newTokenBean.getAccessToken());
+                        tokenToCache.setAccessToken(persistedTokenIdentifier);
+                    } catch (OAuthSystemException e) {
+                        if (log.isDebugEnabled()) {
+                            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                                log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
+                                        " failed to parse the received token: " + tokenToCache.getAccessToken(), e);
+                            } else {
+                                log.debug("Token issuer: " + oauthTokenIssuer.getClass() + " was tried and" +
+                                        " failed to parse the received token.", e);
+                            }
                         }
                     }
                 }
-            }
 
-            String userId;
-            try {
-                userId = tokenToCache.getAuthzUser().getUserId();
-            } catch (UserIdNotFoundException e) {
-                throw new IdentityOAuth2Exception(
-                        "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
-            }
+                String userId;
+                try {
+                    userId = tokenToCache.getAuthzUser().getUserId();
+                } catch (UserIdNotFoundException e) {
+                    throw new IdentityOAuth2Exception(
+                            "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
+                }
 
-            String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
-            OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), userId, authenticatedIDP,
-                    getTokenBindingReference(tokenToCache));
-            oauthCache.addToCache(cacheKey, tokenToCache);
-            if (log.isDebugEnabled()) {
-                log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
+                String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
+                OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), userId,
+                        authenticatedIDP, getTokenBindingReference(tokenToCache));
+                oauthCache.addToCache(cacheKey, tokenToCache);
+                if (log.isDebugEnabled()) {
+                    log.debug("Access token was added to OAuthCache with cache key : " + cacheKey.getCacheKeyString());
+                }
             }
-
             // Adding AccessTokenDO to improve validation performance
             OAuth2Util.addTokenDOtoCache(newTokenBean);
         }
@@ -863,7 +873,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String scope = OAuth2Util.buildScopeString(tokenMsgCtx.getScope());
         String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
 
-        if (cacheEnabled) {
+        if (cacheEnabled && OAuth2Util.isTokenPersistenceEnabled()) {
+            /*
+             * If no token persistence, the token is not cached against a cache key with userId, scope, client,
+             * idp and binding reference as, multiple active tokens can exist for the same key.
+             */
             existingToken = getExistingTokenFromCache(cacheKey, tokenReq.getClientId(),
                     tokenMsgCtx.getAuthorizedUser().getLoggableUserId(), scope, tokenBindingReference,
                     tokenMsgCtx.getAuthorizedUser().getTenantDomain());

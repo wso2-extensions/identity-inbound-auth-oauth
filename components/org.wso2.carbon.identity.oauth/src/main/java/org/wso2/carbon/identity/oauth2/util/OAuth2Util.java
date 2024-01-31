@@ -107,6 +107,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
@@ -3977,10 +3978,10 @@ public class OAuth2Util {
             throws UserInfoEndpointException {
 
         if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
-            AccessTokenDO accessTokenDO = null;
+            AccessTokenDO accessTokenDO;
             try {
-                accessTokenDO = OAuth2Util.findAccessToken(
-                        tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
             } catch (IdentityOAuth2Exception e) {
                 throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
             }
@@ -3990,6 +3991,31 @@ public class OAuth2Util {
             }
         }
         return null;
+    }
+
+    /**
+     * Retrieves and verifies an access token data object based on the provided
+     * OAuth2TokenValidationResponseDTO, excluding expired tokens from verification.
+     *
+     * @param tokenResponse The OAuth2TokenValidationResponseDTO containing token information.
+     * @return An Optional containing the AccessTokenDO if the token is valid (ACTIVE), or an empty Optional if the
+     * token is not found in ACTIVE state.
+     * @throws UserInfoEndpointException If an error occurs while obtaining the access token.
+     */
+    public static Optional<AccessTokenDO> getAccessTokenDO(OAuth2TokenValidationResponseDTO tokenResponse)
+            throws UserInfoEndpointException {
+
+        if (tokenResponse.getAuthorizationContextToken().getTokenString() != null) {
+            try {
+                AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
+                        .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(), false);
+                return Optional.ofNullable(accessTokenDO);
+            } catch (IdentityOAuth2Exception e) {
+                throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
+            }
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**
@@ -4619,5 +4645,63 @@ public class OAuth2Util {
             }
         }
         return isFederatedRoleBasedAuthzEnabled;
+    }
+
+
+    /**
+     * Check if token persistence is enabled.
+     *
+     * @return True if token persistence is enabled.
+     */
+    public static boolean isTokenPersistenceEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_TOKEN_PERSISTENCE_ENABLE));
+        }
+        return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
+
+    /**
+     * Resolves the grant type from the response type for implicit and hybrid flows.
+     *
+     * @param responseType Response type Eg: token, id_token
+     * @return Grant type
+     */
+    public static String getGrantType(String responseType) {
+
+        String grantType;
+        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
+            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
+            grantType = OAuthConstants.GrantTypes.IMPLICIT;
+        } else {
+            grantType = responseType;
+        }
+        return grantType;
+    }
+
+    /**
+     * Check if oauth code persistence is enabled.
+     *
+     * @return True if oauth code persistence is enabled.
+     */
+    public static boolean isAuthCodePersistenceEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_CODE_PERSISTENCE_ENABLE));
+        }
+        return OAuth2Constants.DEFAULT_PERSIST_ENABLED;
+    }
+
+    /**
+     * Check if revoke token headers is enabled.
+     *
+     * @return True if oauth code persistence is enabled.
+     */
+    public static boolean isRevokeTokenHeadersEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.OAUTH_ENABLE_REVOKE_TOKEN_HEADERS) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.OAUTH_ENABLE_REVOKE_TOKEN_HEADERS));
+        }
+        return true;
     }
 }

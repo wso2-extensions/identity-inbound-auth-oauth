@@ -68,7 +68,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
                                         AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
+        if (!OAuth2Util.isAuthCodePersistenceEnabled()) {
             return;
         }
 
@@ -338,7 +338,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     public void deactivateAuthorizationCode(AuthzCodeDO authzCodeDO) throws
             IdentityOAuth2Exception {
 
-        if (!isPersistenceEnabled()) {
+        if (!OAuth2Util.isAuthCodePersistenceEnabled()) {
             return;
         }
 

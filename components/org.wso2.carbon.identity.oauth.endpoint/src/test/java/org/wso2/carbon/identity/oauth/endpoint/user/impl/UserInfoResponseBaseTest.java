@@ -110,6 +110,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     public static final String[] OIDC_SCOPE_ARRAY = new String[]{OIDC_SCOPE};
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
+    private static final String MOCK_CLIENT_ID = "mock_client_id";
 
     @Mock
     private OAuthIssuer oAuthIssuer;
@@ -226,7 +227,7 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     protected void prepareOAuth2Util() throws Exception {
 
         mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn("mock_client_id");
+        when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(MOCK_CLIENT_ID);
         when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn(TENANT_DOT_COM);
         when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(TENANT_DOT_COM);
         ArrayList<String> userAttributesFromCache = new ArrayList<>();
@@ -363,7 +364,10 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAuthzUser(authorizedUser);
+        accessTokenDO.setConsumerKey(MOCK_CLIENT_ID);
+        accessTokenDO.setAccessToken(accessToken);
         when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken)).thenReturn(accessTokenDO);
+        when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, false)).thenReturn(accessTokenDO);
 
         when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
         OauthTokenIssuer oauthTokenIssuer = new OauthTokenIssuerImpl();
@@ -473,11 +477,9 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
         when(OAuth2Util.getAccessTokenIdentifier(any())).thenCallRealMethod();
         when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
+        when(OAuth2Util.getAccessTokenDO(any())).thenCallRealMethod();
         when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
                 thenCallRealMethod();
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
-        accessTokenDO.setAccessToken(accessToken);
-        when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean())).thenReturn(accessTokenDO);
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(DEFAULT_TOKEN_TYPE, new OauthTokenIssuerImpl());
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, new JWTTokenIssuer());

@@ -45,6 +45,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -53,11 +54,13 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -483,7 +486,11 @@ public class ResponseTypeHandlerUtil {
         String consumerKey = authorizationReqDTO.getConsumerKey();
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizationReqDTO.getUser());
 
-        if (cacheEnabled) {
+        /*
+         * If no token persistence, the token is not cached against a cache key with userId, scope, client and
+         * idp since multiple active tokens can exist for the same key.
+         */
+        if (cacheEnabled && OAuth2Util.isTokenPersistenceEnabled()) {
             existingTokenBean = getExistingTokenFromCache(consumerKey, scope, authorizedUserId, authenticatedIDP);
         }
 
@@ -601,10 +608,26 @@ public class ResponseTypeHandlerUtil {
         newTokenBean.setScope(oauthAuthzMsgCtx.getApprovedScope());
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setTokenType(OAuthConstants.UserType.APPLICATION_USER);
+        String tokenId = UUID.randomUUID().toString();
+        newTokenBean.setTokenId(tokenId);
+        oauthAuthzMsgCtx.addProperty(OAuth2Constants.USER_SESSION_ID, tokenId);
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
         newTokenBean.setValidityPeriod(validityPeriodInMillis / SECOND_TO_MILLISECONDS_FACTOR);
-        newTokenBean.setGrantType(getGrantType(authorizationReqDTO.getResponseType()));
+        String grantType = OAuth2Util.getGrantType(authorizationReqDTO.getResponseType());
+        newTokenBean.setGrantType(grantType);
+        /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
+        from the current grant. */
+        if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
+            if (existingTokenBean != null) {
+                newTokenBean.setIsConsentedToken(existingTokenBean.isConsentedToken());
+            } else {
+                if (OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(grantType)) {
+                    newTokenBean.setIsConsentedToken(true);
+                }
+            }
+            oauthAuthzMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
+        }
         newTokenBean.setAccessToken(getNewAccessToken(oauthAuthzMsgCtx, oauthIssuerImpl));
         setRefreshTokenDetails(oauthAuthzMsgCtx, oAuthAppBean, existingTokenBean, newTokenBean, oauthIssuerImpl,
                 timestamp);
@@ -928,19 +951,6 @@ public class ResponseTypeHandlerUtil {
         return userStoreDomain;
     }
 
-    private static String getGrantType(String responseType) {
-
-        String grantType;
-        if (StringUtils.contains(responseType, OAuthConstants.GrantTypes.TOKEN)) {
-            // This sets the grant type for implicit when response_type contains 'token' or 'id_token'.
-            grantType = OAuthConstants.GrantTypes.IMPLICIT;
-        } else {
-            grantType = responseType;
-        }
-
-        return grantType;
-    }
-
     private static OAuthCacheKey getOAuthCacheKey(String consumerKey, String scope, String authorizedUserId,
                                                   String authenticatedIDP) {
 
@@ -951,8 +961,13 @@ public class ResponseTypeHandlerUtil {
 
     private static void addTokenToCache(OAuthCacheKey cacheKey, AccessTokenDO tokenBean) {
 
-        OAuthCache.getInstance().addToCache(cacheKey, tokenBean);
-        // Adding AccessTokenDO to improve validation performance
+        /*
+         * If no token persistence, the token will be not be cached against a cache key with userId, scope, client and
+         * idp. But, token will be cached and managed as an AccessTokenDO against the token identifier.
+         */
+        if (OAuth2Util.isTokenPersistenceEnabled()) {
+            OAuthCache.getInstance().addToCache(cacheKey, tokenBean);
+        }        // Adding AccessTokenDO to improve validation performance
         OAuthCacheKey accessTokenCacheKey = new OAuthCacheKey(tokenBean.getAccessToken());
         OAuthCache.getInstance().addToCache(accessTokenCacheKey, tokenBean);
         if (log.isDebugEnabled()) {

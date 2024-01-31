@@ -42,9 +42,11 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
@@ -61,6 +63,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
@@ -108,6 +111,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
+    private static final String DUMMY_USER_ID = "DUMMY_USER_ID";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
     private static final String EXPIRY_TIME_JWT = "EXPIRY_TIME_JWT";
 
@@ -156,11 +160,13 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
         OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         reqMessageContext.setScope(requestScopes);
+        reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("DUMMY_USERNAME");
         authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        authenticatedUser.setUserId(DUMMY_USER_ID);
         reqMessageContext.setAuthorizedUser(authenticatedUser);
 
         prepareForBuildJWTToken();
@@ -183,11 +189,13 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.setApprovedScope(requestScopes);
+        authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("DUMMY_USERNAME");
         authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
         authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        authenticatedUser.setUserId(DUMMY_USER_ID);
         authorizeReqDTO.setUser(authenticatedUser);
         authorizeReqDTO.setConsumerKey(DUMMY_CONSUMER_KEY);
 
@@ -222,6 +230,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(null))
                 .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
 
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
@@ -230,30 +239,36 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
 
     @DataProvider(name = "createJWTClaimSetDataProvider")
     public Object[][] provideClaimSetData() {
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserName("DUMMY_USERNAME");
-        authenticatedUser.setTenantDomain("DUMMY_TENANT.COM");
-        authenticatedUser.setUserStoreDomain("DUMMY_DOMAIN");
+        AuthenticatedUser authenticatedUserForAuthz = new AuthenticatedUser();
+        authenticatedUserForAuthz.setUserName("DUMMY_USERNAME");
+        authenticatedUserForAuthz.setTenantDomain("DUMMY_TENANT.COM");
+        authenticatedUserForAuthz.setUserStoreDomain("DUMMY_DOMAIN");
+        authenticatedUserForAuthz.setUserId(DUMMY_USER_ID);
+        authenticatedUserForAuthz.setFederatedUser(true);
 
-        final String authenticatedSubjectIdentifier = authenticatedUser.toString();
-        authenticatedUser.setAuthenticatedSubjectIdentifier(authenticatedSubjectIdentifier);
+        final String authenticatedSubjectIdentifier = authenticatedUserForAuthz.toString();
+        authenticatedUserForAuthz.setAuthenticatedSubjectIdentifier(authenticatedSubjectIdentifier);
 
         OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
         authorizeReqDTO.setTenantDomain("super.wso2");
-        authorizeReqDTO.setUser(authenticatedUser);
+        authorizeReqDTO.setUser(authenticatedUserForAuthz);
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
-        authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+        authzReqMessageContext.setConsentedToken(true);
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
         tokenReqDTO.setGrantType(APPLICATION_ACCESS_TOKEN_GRANT_TYPE);
         tokenReqDTO.setTenantDomain("super.wso2");
         OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
-        tokenReqMessageContext.setAuthorizedUser(authenticatedUser);
+        AuthenticatedUser authenticatedUserForTokenReq = new AuthenticatedUser(authenticatedUserForAuthz);
+        tokenReqMessageContext.setAuthorizedUser(authenticatedUserForTokenReq);
+        tokenReqMessageContext.setConsentedToken(false);
         Calendar cal = Calendar.getInstance(); // creates calendar
         cal.setTime(new Date()); // sets calendar time/date
         cal.add(Calendar.HOUR_OF_DAY, 1); // adds one hour
         tokenReqMessageContext.addProperty(EXPIRY_TIME_JWT, cal.getTime());
-        tokenReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+        tokenReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        authenticatedUserForTokenReq.setFederatedUser(false);
 
         return new Object[][]{
                 {
@@ -278,6 +293,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                                       long expectedExpiry) throws Exception {
 
         OAuthAppDO appDO = spy(new OAuthAppDO());
+        appDO.setOauthConsumerKey(DUMMY_CLIENT_ID);
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
         mockStatic(OAuth2Util.class);
@@ -286,6 +302,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn(ID_TOKEN_ISSUER);
         when(OAuth2Util.getOIDCAudience(anyString(), anyObject())).thenReturn(Collections.singletonList
                 (DUMMY_CLIENT_ID));
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
         when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
         when(oAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
@@ -326,6 +343,32 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                     .getMillis(), expectedExpiry);
         }
 
+        assertNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
+        assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
+        assertNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
+        // The entity_id claim and is_consented are mandatory claims in the JWT when token persistence is disabled.
+        OAuth2ServiceComponentHolder.setConsentedTokenColumnEnabled(true);
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(false);
+        jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
+                (OAuthAuthzReqMessageContext) authzReqMessageContext,
+                (OAuthTokenReqMessageContext) tokenReqMessageContext,
+                DUMMY_CLIENT_ID
+        );
+        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID));
+        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED));
+        assertNotNull(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED));
+        if (tokenReqMessageContext != null) {
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), false);
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), false);
+        }
+        if (authzReqMessageContext != null) {
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), true);
+            assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), true);
+        }
+        // Enabling persistence back for the rest of the test cases.
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
     }
 
     @Test(dataProvider = "createJWTClaimSetDataProvider")
@@ -340,6 +383,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
             when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
+            when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME,
                     Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
@@ -625,5 +669,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         mockStatic(OAuth2Util.class);
         when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
     }
 }
