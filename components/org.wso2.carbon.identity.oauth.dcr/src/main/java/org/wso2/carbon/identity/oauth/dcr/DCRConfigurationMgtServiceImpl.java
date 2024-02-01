@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
-import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 
@@ -36,7 +36,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      * {@inheritDoc}
      */
     @Override
-    public DCRConfiguration getDCRConfiguration(String tenantDomain) throws DCRMException {
+    public DCRConfiguration getDCRConfiguration(String tenantDomain) throws DCRMClientException, DCRMServerException {
 
         validateTenantDomain(tenantDomain);
 
@@ -48,7 +48,8 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      * {@inheritDoc}
      */
     @Override
-    public void setDCRConfiguration(DCRConfiguration dcrConfigurationConfig, String tenantDomain) throws DCRMException {
+    public void setDCRConfiguration(DCRConfiguration dcrConfigurationConfig, String tenantDomain)
+            throws DCRMClientException, DCRMServerException {
 
         validateTenantDomain(tenantDomain);
 
