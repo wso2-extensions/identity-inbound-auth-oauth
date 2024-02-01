@@ -534,9 +534,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
-        if (tokenReqMessageContext != null && tokenReqMessageContext.getProperty(CNF) != null) {
-            jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
-        }
+        // Include cnf.
+        jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
 
         return jwtClaimsSet;
     }
@@ -582,16 +581,22 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * @return authenticated subject identifier.
      */
     private String getAuthenticatedSubjectIdentifier(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
-     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+                                                     OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
         return authenticatedUser.getAuthenticatedSubjectIdentifier();
     }
 
-    private JWTClaimsSet handleCnf(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private JWTClaimsSet handleCnf(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext tokReqMsgCtx) {
 
-        jwtClaimsSetBuilder.claim(CNF, tokReqMsgCtx.getProperty(CNF));
+        if (tokReqMsgCtx != null && tokReqMsgCtx.getProperty(CNF) != null) {
+            jwtClaimsSetBuilder.claim(CNF, tokReqMsgCtx.getProperty(CNF));
+        } else if (tokReqMsgCtx != null && tokReqMsgCtx.getOauth2AccessTokenReqDTO() != null) {
+            if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getParameters() != null
+                    && tokReqMsgCtx.getOauth2AccessTokenReqDTO().getParameters().containsKey(CNF)) {
+                jwtClaimsSetBuilder.claim(CNF, tokReqMsgCtx.getOauth2AccessTokenReqDTO().getParameters().get(CNF));
+            }
+        }
         return jwtClaimsSetBuilder.build();
     }
 
@@ -606,7 +611,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      *
      * @param authAuthzReqMessageContext
      * @param tokenReqMessageContext
-     *
      * @return AuthenticatedUser
      */
     private AuthenticatedUser getAuthenticatedUser(OAuthAuthzReqMessageContext authAuthzReqMessageContext,
@@ -832,18 +836,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                             tokReqMsgCtx.getTokenBinding().getBindingValue()));
                 }
             }
-            if (OAuth2Constants.TokenBinderType.CLIENT_REQUEST.equals(bindingType)) {
-                String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
-                if (StringUtils.isNotBlank(cnf)) {
-                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, tokReqMsgCtx.getTokenBinding().getBindingValue());
-                }
-            }
         }
         return jwtClaimsSetBuilder.build();
     }
 
     /**
      * Set tenant domain of user to the JWT token's realm claim if signed with user tenant.
+     *
      * @param tenantDomain
      * @param jwtClaimsSet
      * @return
