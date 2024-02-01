@@ -1658,13 +1658,13 @@ public class OAuthAdminServiceImpl {
     /**
      * Revoke issued tokens for the application for the given authorized organization.
      *
-     * @param application  {@link OAuthAppRevocationRequestDTO}.
-     * @param tenantDomain Tenant domain of the organization for which the tokens should be revoked.
+     * @param application    {@link OAuthAppRevocationRequestDTO}.
+     * @param organizationId ID of the organization for which the tokens should be revoked.
      * @return revokeRespDTO {@link OAuthAppRevocationRequestDTO}.
      * @throws IdentityOAuthAdminException Error while revoking the issued tokens.
      */
-    public OAuthRevocationResponseDTO revokeIssuedTokensForApplicationByOrganization
-    (OAuthAppRevocationRequestDTO application, String tenantDomain) throws IdentityOAuthAdminException {
+    public OAuthRevocationResponseDTO revokeIssuedTokensForOrganizationByApplication
+    (OAuthAppRevocationRequestDTO application, String organizationId) throws IdentityOAuthAdminException {
 
         triggerPreApplicationTokenRevokeListeners(application);
         OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
@@ -1683,16 +1683,17 @@ public class OAuthAdminServiceImpl {
             List<String> accessTokens = new ArrayList<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                 String authorizedOrganizationId = accessTokenDO.getAuthorizedOrganizationId();
-                if (StringUtils.equals(getOrganizationId(tenantDomain), authorizedOrganizationId)) {
+                if (StringUtils.equals(organizationId, authorizedOrganizationId)) {
                     accessTokens.add(accessTokenDO.getAccessToken());
                     clearCacheByAccessTokenAndConsumerKey(accessTokenDO, consumerKey);
                 }
             }
             if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("Access tokens and token of users are removed from the cache for " +
-                        "OAuth app in tenant domain: %s with consumer key: %s.", tenantDomain, consumerKey));
+                LOG.debug(String.format("Access tokens are removed from the cache for OAuth application with " +
+                        "consumer key: %s in organization with ID: %s", consumerKey, organizationId));
             }
 
+            String tenantDomain = getTenantDomain(organizationId);
             revokeAccessTokens(accessTokens.toArray(new String[0]), consumerKey, tenantDomain);
             revokeOAuthConsentsForApplication(getApplicationName(consumerKey, tenantDomain), tenantDomain);
         }
@@ -1701,19 +1702,20 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Get organization id.
+     * Get tenant domain corresponding to the provided organization ID.
      *
-     * @param tenantDomain Tenant domain.
-     * @return Organization Id.
-     * @throws IdentityOAuthAdminException if an error occurs while retrieving org id.
+     * @param organizationId The organization ID.
+     * @return The tenant domain.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving the tenant domain.
      */
-    private static String getOrganizationId(String tenantDomain) throws IdentityOAuthAdminException {
+    private static String getTenantDomain(String organizationId) throws IdentityOAuthAdminException {
 
         try {
             return OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                    .resolveOrganizationId(tenantDomain);
+                    .resolveTenantDomain(organizationId);
         } catch (OrganizationManagementException e) {
-            throw new IdentityOAuthAdminException("Error while resolving org id of tenant : " + tenantDomain, e);
+            throw new IdentityOAuthAdminException("Error while resolving tenant domain of organization with ID : " +
+                    organizationId, e);
         }
     }
 
