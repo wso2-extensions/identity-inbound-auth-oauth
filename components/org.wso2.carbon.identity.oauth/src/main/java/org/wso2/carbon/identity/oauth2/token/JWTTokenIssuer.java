@@ -832,6 +832,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                             tokReqMsgCtx.getTokenBinding().getBindingValue()));
                 }
             }
+            if (OAuth2Constants.TokenBinderType.CLIENT_REQUEST.equals(bindingType)) {
+                String cnf = tokReqMsgCtx.getTokenBinding().getBindingValue();
+                if (StringUtils.isNotBlank(cnf)) {
+                    jwtClaimsSetBuilder.claim(OAuthConstants.CNF, tokReqMsgCtx.getTokenBinding().getBindingValue());
+                }
+            }
         }
         return jwtClaimsSetBuilder.build();
     }
