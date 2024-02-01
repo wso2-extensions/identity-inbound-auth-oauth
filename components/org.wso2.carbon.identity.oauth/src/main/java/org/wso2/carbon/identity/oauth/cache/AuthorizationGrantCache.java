@@ -260,7 +260,7 @@ public class AuthorizationGrantCache extends
      * @param id session data key
      * @return
      */
-    private AuthorizationGrantCacheEntry getFromSessionStore(String id) {
+    public AuthorizationGrantCacheEntry getFromSessionStore(String id) {
         return (AuthorizationGrantCacheEntry) SessionDataStore.getInstance().getSessionData(id,
                 AUTHORIZATION_GRANT_CACHE_NAME);
     }
@@ -270,7 +270,7 @@ public class AuthorizationGrantCache extends
      * @param id session data key
      * @param entry cache entry to store
      */
-    private void storeToSessionStore(String id, AuthorizationGrantCacheEntry entry) {
+    public void storeToSessionStore(String id, AuthorizationGrantCacheEntry entry) {
         SessionDataStore.getInstance().storeSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME, entry);
     }
 
