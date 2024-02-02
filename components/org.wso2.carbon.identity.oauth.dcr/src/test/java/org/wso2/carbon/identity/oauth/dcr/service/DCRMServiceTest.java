@@ -448,7 +448,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void registerApplicationTestWithExistSP() throws DCRMException, IdentityApplicationManagementException {
+    public void registerApplicationTestWithExistSP() throws DCRMException, IdentityApplicationManagementException,
+            UserStoreException {
 
         dummyGrantTypes.add("dummy1");
         dummyGrantTypes.add("dummy2");
@@ -472,7 +473,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
     @Test
     public void registerApplicationTestWithFailedToGetSP() throws DCRMException,
-            IdentityApplicationManagementException {
+            IdentityApplicationManagementException, UserStoreException {
 
         dummyGrantTypes.add("dummy1");
         dummyGrantTypes.add("dummy2");
@@ -665,8 +666,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
     }
 
     @Test
-    public void registerApplicationWithFailedToRegisterTest() throws
-            IdentityApplicationManagementException, IdentityOAuthAdminException, NoSuchFieldException {
+    public void registerApplicationWithFailedToRegisterTest() throws IdentityApplicationManagementException,
+            IdentityOAuthAdminException, NoSuchFieldException, UserStoreException {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         FieldSetter.setField(dcrmService,

@@ -276,10 +276,25 @@ public class OAuthAdminServiceImpl {
             if (StringUtils.isNotEmpty(tenantAwareLoggedInUsername)) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
             } else {
-                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
+                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, application.getUsername());
                 if (tenantAwareLoggedInUser.isPresent()) {
                     defaultAppOwner = new AuthenticatedUser(tenantAwareLoggedInUser.get());
                 }
+            }
+
+            /*
+             * If there is no authenticated user, it is due to the DCR endpoint api authentication being turned off and
+             * hence we are setting the tenant admin as authenticated the app owner.
+             * If DCR endpoint api authentication is enabled there should be an authenticated user at this point,
+             * since if not, there will be an error from Authentication valve above this level.
+             */
+            if (defaultAppOwner == null) {
+                if (LOG.isDebugEnabled()) {
+                        LOG.debug("No authenticated user found. Setting tenant admin as the owner for app : " +
+                                application.getApplicationName());
+                }
+                String adminUsername = application.getUsername();
+                defaultAppOwner = buildAuthenticatedUser(adminUsername, tenantDomain);
             }
 
             if (defaultAppOwner != null) {
