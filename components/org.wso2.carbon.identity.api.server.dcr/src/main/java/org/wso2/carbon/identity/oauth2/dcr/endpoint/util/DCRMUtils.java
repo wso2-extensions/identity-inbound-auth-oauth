@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
 import org.slf4j.MDC;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -53,6 +54,9 @@ public class DCRMUtils {
 
     public static DCRMService getOAuth2DCRMService() {
 
+        if (oAuth2DCRMService == null) {
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService(DCRMService.class, null);
+        }
         return oAuth2DCRMService;
     }
 

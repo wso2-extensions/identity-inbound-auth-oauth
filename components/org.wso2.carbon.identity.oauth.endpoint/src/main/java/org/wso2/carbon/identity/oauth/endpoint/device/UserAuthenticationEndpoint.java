@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -70,6 +71,14 @@ public class UserAuthenticationEndpoint {
         this.deviceAuthService = deviceAuthService;
     }
 
+    public DeviceAuthService getDeviceAuthService() {
+        if (deviceAuthService == null) {
+            deviceAuthService = (DeviceAuthService) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
+                    (DeviceAuthService.class, null);
+        }
+        return deviceAuthService;
+    }
+
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -89,10 +98,10 @@ public class UserAuthenticationEndpoint {
                 return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
             DeviceFlowDO deviceFlowDODetails =
-                    deviceAuthService.getDetailsByUserCode(userCode);
+                    getDeviceAuthService().getDetailsByUserCode(userCode);
             if (!isExpiredUserCode(deviceFlowDODetails)) {
                 String clientId = deviceFlowDODetails.getConsumerKey();
-                deviceAuthService.setAuthenticationStatus(userCode);
+                getDeviceAuthService().setAuthenticationStatus(userCode);
                 CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
                 commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
                 commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);

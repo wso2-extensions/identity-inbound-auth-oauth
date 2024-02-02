@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -29,6 +28,7 @@ import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import javax.servlet.http.HttpServletRequest;
@@ -113,14 +113,15 @@ public class OIDCDiscoveryEndpoint {
         return responseBuilder.entity(response).build();
     }
 
-    @Autowired
     public void setOidProviderResponseBuilder(OIDProviderResponseBuilder oidProviderResponseBuilder) {
 
         this.oidProviderResponseBuilder = oidProviderResponseBuilder;
     }
 
     public OIDProviderResponseBuilder getOidProviderResponseBuilder() {
-
+        if (oidProviderResponseBuilder == null) {
+            oidProviderResponseBuilder = new OIDProviderJSONResponseBuilder();
+        }
         return this.oidProviderResponseBuilder;
     }
 }
