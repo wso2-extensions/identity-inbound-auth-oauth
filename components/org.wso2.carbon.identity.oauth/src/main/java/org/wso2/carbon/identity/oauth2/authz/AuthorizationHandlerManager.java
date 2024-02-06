@@ -280,7 +280,6 @@ public class AuthorizationHandlerManager {
         removeAllowedScopesFromRequestedScopes(authzReqMsgCtx, requestedAllowedScopes);
         List<String> authorizedScopes = null;
         // Switch the scope validators dynamically based on the authorization runtime.
-        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
         if (AuthzUtil.isLegacyAuthzRuntime()) {
             // If it is management app, we validate internal scopes in the requested scopes.
             String[] authorizedInternalScopes = new String[0];
@@ -291,25 +290,17 @@ public class AuthorizationHandlerManager {
             removeInternalScopesFromRequestedScopes(authzReqMsgCtx);
             // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
             authzReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
-            // Drop unregistered scopes before global scope validators.
-            if (isDropUnregisteredScopes) {
-                if (log.isDebugEnabled()) {
-                    log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
-                }
-                dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
-            }
         } else {
             // Engage new scope validator
             authorizedScopes = getAuthorizedScopes(authzReqMsgCtx);
             removeAuthorizedScopesFromRequestedScopes(authzReqMsgCtx, authorizedScopes);
-            // Drop unregistered scopes before global scope validators.
-            if (isDropUnregisteredScopes) {
-                if (log.isDebugEnabled()) {
-                    log.debug("DropUnregisteredScopes config is enabled. Drop all the scopes left as they did not " +
-                            "get validated from any of validators.");
-                }
-                authzReqMsgCtx.getAuthorizationReqDTO().setScopes(new String[0]);
+        }
+        boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
+        if (isDropUnregisteredScopes) {
+            if (log.isDebugEnabled()) {
+                log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
             }
+            dropUnregisteredScopeFromRequestedScopes(authzReqMsgCtx);
         }
         //Validate scopes using global scope validators.
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
