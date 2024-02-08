@@ -49,8 +49,9 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
     public boolean canHandle(ScopeValidationContext scopeValidationContext) {
 
         return getPolicyID().equals(scopeValidationContext.getPolicyId())
-                && !OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType())
-                && !OAuthConstants.GrantTypes.ORGANIZATION_SWITCH_CC.equals(scopeValidationContext.getGrantType());
+                && !OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(scopeValidationContext.getGrantType()) &&
+                !(OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(scopeValidationContext.getGrantType()) &&
+                        OAuthConstants.UserType.APPLICATION.equals(scopeValidationContext.getUserType()));
     }
 
     @Override

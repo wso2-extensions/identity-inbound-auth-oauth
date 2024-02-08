@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2014-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -62,6 +62,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * OAuth2 Service component data holder
@@ -110,6 +111,8 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
     private RoleManagementService roleManagementServiceV2;
+    private Map<String, Set<String>> legacyScopesToNewScopesMap = new HashMap<>();
+    private Map<String, Set<String>> legacyMultipleScopesToNewScopesMap = new HashMap<>();
 
     private OAuth2ServiceComponentHolder() {
 
@@ -791,5 +794,45 @@ public class OAuth2ServiceComponentHolder {
     public void setRoleManagementServiceV2(RoleManagementService roleManagementServiceV2) {
 
         this.roleManagementServiceV2 = roleManagementServiceV2;
+    }
+
+    /**
+     * Get the map of legacy scopes to new scopes.
+     *
+     * @return Map of legacy scopes to new scopes.
+     */
+    public Map<String, Set<String>> getLegacyScopesToNewScopesMap() {
+
+        return legacyScopesToNewScopesMap;
+    }
+
+    /**
+     * Set the map of legacy scopes to new scopes.
+     *
+     * @param legacyScopesToNewScopesMap Map of legacy scopes to new scopes.
+     */
+    public void setLegacyScopesToNewScopesMap(Map<String, Set<String>> legacyScopesToNewScopesMap) {
+
+        this.legacyScopesToNewScopesMap = legacyScopesToNewScopesMap;
+    }
+
+    /**
+     * Get the map of legacy multiple scopes to new scopes.
+     *
+     * @return Map of legacy multiple scopes to new scopes.
+     */
+    public Map<String, Set<String>> getLegacyMultipleScopesToNewScopesMap() {
+
+        return legacyMultipleScopesToNewScopesMap;
+    }
+
+    /**
+     * Set the map of legacy multiple scopes to new scopes.
+     *
+     * @param legacyMultipleScopesToNewScopesMap Map of legacy multiple scopes to new scopes.
+     */
+    public void setLegacyMultipleScopesToNewScopesMap(Map<String, Set<String>> legacyMultipleScopesToNewScopesMap) {
+
+        this.legacyMultipleScopesToNewScopesMap = legacyMultipleScopesToNewScopesMap;
     }
 }

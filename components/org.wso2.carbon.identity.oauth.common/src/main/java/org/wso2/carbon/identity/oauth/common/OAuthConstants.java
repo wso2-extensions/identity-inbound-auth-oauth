@@ -127,6 +127,7 @@ public final class OAuthConstants {
 
     public static final String ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE = "OAuth.OpenIDConnect." +
             "EnableTLSCertificateBoundAccessTokensViaBindingType";
+    public static final String IS_API_BASED_LOGOUT_WITHOUT_COOKIES = "isAPIBasedLogoutWithoutCookies";
 
     /**
      * Enum for OIDC supported subject types.
@@ -213,6 +214,7 @@ public final class OAuthConstants {
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
     public static final String OAUTH_SCOPE_BINDING_PATH = "oauth-scope-bindings.xml";
+    public static final String RESOURCE_ACCESS_CONTROL_V2_CONFIG_PATH = "resource-access-control-v2.xml";
     public static final String SCOPE_RESOURCE_PATH = "/oidc";
 
     public static final String RESTRICT_UNASSIGNED_SCOPES = "restrict.unassigned.scopes";
@@ -291,7 +293,6 @@ public final class OAuthConstants {
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
-        public static final String ORGANIZATION_SWITCH_CC = "organization_switch_cc";
 
         private GrantTypes() {
 
