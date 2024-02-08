@@ -248,7 +248,7 @@ public class AuthorizationGrantCache extends
      *
      * @param id to clear cache.
      */
-    private void clearFromSessionStore(String id) {
+    public void clearFromSessionStore(String id) {
 
         if (StringUtils.isNotBlank(id)) {
             SessionDataStore.getInstance().clearSessionData(id, AUTHORIZATION_GRANT_CACHE_NAME);
