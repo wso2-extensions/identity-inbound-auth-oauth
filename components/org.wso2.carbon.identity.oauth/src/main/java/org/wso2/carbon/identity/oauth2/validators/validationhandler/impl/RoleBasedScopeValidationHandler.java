@@ -105,12 +105,10 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      *
      * @param roleId Role id list.
      * @param appId App id.
-     * @param tenantDomain Tenant domain.
      * @return Filtered role ids.
      * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
      */
-    private List<String> getFilteredRoleIds(List<String> roleId, String appId)
-            throws ScopeValidationHandlerException {
+    private List<String> getFilteredRoleIds(List<String> roleId, String appId) throws ScopeValidationHandlerException {
 
         List<String> rolesAssociatedWithApp = getRoleIdsAssociatedWithApp(appId);
         return roleId.stream().distinct().filter(rolesAssociatedWithApp::contains).collect(Collectors.toList());
@@ -123,8 +121,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * @return Role ids associated with app.
      * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of app.
      */
-    private List<String> getRoleIdsAssociatedWithApp(String appId)
-            throws ScopeValidationHandlerException {
+    private List<String> getRoleIdsAssociatedWithApp(String appId) throws ScopeValidationHandlerException {
 
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
