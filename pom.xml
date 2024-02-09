@@ -923,7 +923,7 @@
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <com.google.code.gson.version>2.9.0</com.google.code.gson.version>
         <com.google.code.gson.osgi.version.range>[2.6.2,3.0.0)</com.google.code.gson.osgi.version.range>
-        <json-smart.version>2.4.7</json-smart.version>
+        <json-smart.version>2.5.0</json-smart.version>
         <version.org.wso2.orbit.javax.xml.bind>2.3.1.wso2v1</version.org.wso2.orbit.javax.xml.bind>
         <version.org.wso2.orbit.javax.activation>1.1.1.wso2v1</version.org.wso2.orbit.javax.activation>
         <net.minidev.accessors-smart.version>2.4.7</net.minidev.accessors-smart.version>
