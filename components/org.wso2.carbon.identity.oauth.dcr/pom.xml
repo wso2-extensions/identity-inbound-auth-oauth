@@ -127,6 +127,10 @@
             <artifactId>jaxp-ri</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
+        </dependency>
 
     </dependencies>
 
@@ -160,7 +164,6 @@
                             org.wso2.carbon.user.core.*; version="${carbon.kernel.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.configuration.mgt.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.common.model;version="${carbon.identity.framework.imp.pkg.version.range}",
