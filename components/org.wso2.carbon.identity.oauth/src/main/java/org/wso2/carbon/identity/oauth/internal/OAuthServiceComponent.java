@@ -24,10 +24,11 @@ import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
+    import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
@@ -449,5 +450,34 @@ public class OAuthServiceComponent {
     protected void unsetApplicationCORSManagementService(CORSManagementService corsManagementService) {
 
         OAuthComponentServiceHolder.getInstance().setCorsManagementService(null);
+    }
+
+    @Reference(
+            name = "identity.authorized.api.management.component",
+            service = AuthorizedAPIManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAuthorizedAPIManagementService"
+    )
+    protected void setAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting AuthorizedAPIManagementService Service");
+        }
+        OAuthComponentServiceHolder.getInstance().
+                setAuthorizedAPIManagementService(authorizedAPIManagementService);
+    }
+
+    /**
+     * Unsets AuthorizedAPIManagementService Service.
+     *
+     * @param authorizedAPIManagementService An instance of AuthorizedAPIManagementService
+     */
+    protected void unsetAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unsetting AuthorizedAPIManagementService.");
+        }
+        OAuthComponentServiceHolder.getInstance().setAuthorizedAPIManagementService(null);
     }
 }

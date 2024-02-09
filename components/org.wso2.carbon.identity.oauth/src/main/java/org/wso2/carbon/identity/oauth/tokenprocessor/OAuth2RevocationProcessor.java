@@ -26,6 +26,8 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 
+import java.util.List;
+
 /**
  * Abstraction layer between OAuth2Service and persistence layer to handle revocation logic during token persistence
  * and non-persistence scenarios.
@@ -73,4 +75,19 @@ public interface OAuth2RevocationProcessor {
      * @throws UserStoreException If an error occurs while revoking tokens for users.
      */
     boolean revokeTokens(String username, UserStoreManager userStoreManager, String roleId) throws UserStoreException;
+
+    /**
+     * Revoke tokens associated with the specified application ID, API ID, removed scopes, and tenant domain.
+     *
+     * @param appId           The ID of the application.
+     * @param apiId           The ID of the API.
+     * @param removedScopes   The list of removed scopes.
+     * @param tenantDomain    The tenant domain.
+     * @throws IdentityOAuth2Exception If an error occurs while revoking tokens.
+     */
+    default void revokeTokens(String appId, String apiId,
+                         List<String> removedScopes,
+                         String tenantDomain) throws IdentityOAuth2Exception {
+
+    }
 }
