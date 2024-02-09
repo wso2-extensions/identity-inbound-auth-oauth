@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.util;
 
-import org.wso2.carbon.identity.oauth.dcr.DCRConfigErrorMessage;
+import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 
@@ -34,7 +34,7 @@ public class DCRConfigErrorUtils {
      * @param data  Additional data that should be added to the error message. This is a String var-arg.
      * @return DCRMServerException instance.
      */
-    public static DCRMServerException handleServerException(DCRConfigErrorMessage error, String... data) {
+    public static DCRMServerException handleServerException(DCRMConstants.DCRConfigErrorMessage error, String... data) {
 
         return new DCRMServerException(String.format(error.getDescription(), data), error.getCode());
     }
@@ -47,7 +47,8 @@ public class DCRConfigErrorUtils {
      * @param data  Additional data that should be added to the error message. This is a String var-arg.
      * @return DCRMServerException instance.
      */
-    public static DCRMServerException handleServerException(DCRConfigErrorMessage error, Throwable e, String... data) {
+    public static DCRMServerException handleServerException(DCRMConstants.DCRConfigErrorMessage error, Throwable e,
+                                                            String... data) {
 
         return new DCRMServerException(String.format(error.getDescription(), data), error.getCode(), e);
     }
@@ -59,7 +60,7 @@ public class DCRConfigErrorUtils {
      * @param data  Additional data that should be added to the error message. This is a String var-arg.
      * @return DCRMClientException instance.
      */
-    public static DCRMClientException handleClientException(DCRConfigErrorMessage error, String... data) {
+    public static DCRMClientException handleClientException(DCRMConstants.DCRConfigErrorMessage error, String... data) {
 
         return new DCRMClientException(String.format(error.getDescription(), data), error.getCode());
     }
@@ -72,7 +73,8 @@ public class DCRConfigErrorUtils {
      * @param data  Additional data that should be added to the error message. This is a String var-arg.
      * @return DCRMClientException instance.
      */
-    public static DCRMClientException handleClientException(DCRConfigErrorMessage error, Throwable e, String... data) {
+    public static DCRMClientException handleClientException(DCRMConstants.DCRConfigErrorMessage error, Throwable e,
+                                                            String... data) {
 
         return new DCRMClientException(String.format(error.getDescription(), data), error.getCode(), e);
     }

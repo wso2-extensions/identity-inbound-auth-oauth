@@ -69,7 +69,8 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         try {
             IdentityTenantUtil.getTenantId(tenantDomain);
         } catch (IdentityRuntimeException e) {
-            throw handleClientException(DCRConfigErrorMessage.ERROR_CODE_INVALID_TENANT_DOMAIN, e, tenantDomain);
+            throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_INVALID_TENANT_DOMAIN, e,
+                    tenantDomain);
         }
     }
 

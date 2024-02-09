@@ -103,4 +103,83 @@ public class DCRMConstants {
     public static final String ENABLE_FAPI_ENFORCEMENT = "enableFapiEnforcement";
     public static final String CLIENT_AUTHENTICATION_REQUIRED = "clientAuthenticationRequired";
     public static final String SSA_JWKS = "ssaJwks";
+
+    /**
+     * Enum for DCR Configuration related error messages.
+     */
+    public enum DCRConfigErrorMessage {
+
+        /**
+         * Invalid tenant domain.
+         */
+        ERROR_CODE_INVALID_TENANT_DOMAIN("60005",
+                "Invalid input.",
+                "%s is not a valid tenant domain."),
+
+        /**
+         * Unable to retrieve DCR configuration.
+         */
+        ERROR_CODE_DCR_CONFIGURATION_RETRIEVE("65020",
+                "Unable to retrieve DCR configuration.",
+                "Server encountered an error while retrieving the " +
+                        "DCR configuration of %s.");
+
+        /**
+         * The error code.
+         */
+        private final String code;
+
+        /**
+         * The error message.
+         */
+        private final String message;
+
+        /**
+         * The error description.
+         */
+        private final String description;
+
+
+        DCRConfigErrorMessage(String code, String message, String description) {
+            this.code = code;
+            this.message = message;
+            this.description = description;
+        }
+
+        /**
+         * Get the {@code code}.
+         *
+         * @return Returns the {@code code} to be set.
+         */
+        public String getCode() {
+
+            return code;
+        }
+
+        /**
+         * Get the {@code message}.
+         *
+         * @return Returns the {@code message} to be set.
+         */
+        public String getMessage() {
+
+            return message;
+        }
+
+        /**
+         * Get the {@code description}.
+         *
+         * @return Returns the {@code description} to be set.
+         */
+        public String getDescription() {
+
+            return description;
+        }
+
+        @Override
+        public String toString() {
+
+            return code + ":" + message;
+        }
+    }
 }
