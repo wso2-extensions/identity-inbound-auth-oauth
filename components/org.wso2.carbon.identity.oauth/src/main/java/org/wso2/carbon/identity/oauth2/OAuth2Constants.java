@@ -84,4 +84,27 @@ public class OAuth2Constants {
 
         public static final String APIM_SERVICE_CATALOG_PREFIX = "service_catalog:";
     }
+
+    /**
+     * This class define static variables for column names in db.
+     */
+    public static class OAuthColumnName {
+
+        public static final String ACCESS_TOKEN = "ACCESS_TOKEN";
+        public static final String TOKEN_SCOPE = "TOKEN_SCOPE";
+        public static final String REFRESH_TOKEN = "REFRESH_TOKEN";
+        public static final String TOKEN_ID = "TOKEN_ID";
+        public static final String TENANT_ID = "TENANT_ID";
+        public static final String AUTHZ_USER = "AUTHZ_USER";
+        public static final String SUBJECT_IDENTIFIER = "SUBJECT_IDENTIFIER";
+        public static final String USER_DOMAIN = "USER_DOMAIN";
+        public static final String AUTHENTICATED_IDP_NAME = "NAME";
+        public static final String AUTHORIZED_ORGANIZATION = "AUTHORIZED_ORGANIZATION";
+        public static final String TOKEN_BINDING_REF = "TOKEN_BINDING_REF";
+        public static final String TIME_CREATED = "TIME_CREATED";
+        public static final String REFRESH_TOKEN_TIME_CREATED = "REFRESH_TOKEN_TIME_CREATED";
+        public static final String VALIDITY_PERIOD = "VALIDITY_PERIOD";
+        public static final String REFRESH_TOKEN_VALIDITY_PERIOD = "REFRESH_TOKEN_VALIDITY_PERIOD";
+        public static final String USER_TYPE = "USER_TYPE";
+    }
 }
