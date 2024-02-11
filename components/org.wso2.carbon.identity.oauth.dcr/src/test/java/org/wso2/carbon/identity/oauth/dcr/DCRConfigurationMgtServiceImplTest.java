@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -40,7 +41,7 @@ import static org.powermock.reflect.Whitebox.invokeMethod;
  * The getDCRConfiguration and setDCRConfiguration methods are called by the api layer in server configuration api.
  * Hence, the unit tests are written to cover the getDCRConfiguration and setDCRConfiguration methods.
  */
-@PrepareForTest({DCRDataHolder.class, IdentityTenantUtil.class})
+@PrepareForTest({DCRDataHolder.class, DCRConfigUtils.class, IdentityTenantUtil.class})
 public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
 
     @Mock
@@ -59,10 +60,9 @@ public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
 
-        mockStatic(DCRDataHolder.class);
-        when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
+        mockStatic(DCRConfigUtils.class);
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        when(dataHolder.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
+        when(DCRConfigUtils.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
 
         String tenantDomain = "carbon.super";
         try {
@@ -79,12 +79,15 @@ public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
 
+        mockStatic(DCRConfigUtils.class);
+        DCRConfiguration dcrConfiguration = new DCRConfiguration();
+        when(DCRConfigUtils.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
+
         mockStatic(DCRDataHolder.class);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        when(dataHolder.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
 
         String tenantDomain = "carbon.super";
+
         try {
             invokeMethod(dcrConfigurationMgtServiceImpl, "setDCRConfiguration",
                     dcrConfiguration, tenantDomain);

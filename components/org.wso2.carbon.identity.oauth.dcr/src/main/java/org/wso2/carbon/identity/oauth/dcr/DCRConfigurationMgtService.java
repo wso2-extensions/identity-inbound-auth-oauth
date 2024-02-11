@@ -22,7 +22,8 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 
 /**
- * Service for managing the DCR configurations of a tenant.
+ * Service interface for managing the DCR configurations of a tenant.
+ * This service is responsible for getting and setting the DCR configurations of a tenant.
  */
 public interface DCRConfigurationMgtService {
 
@@ -36,7 +37,7 @@ public interface DCRConfigurationMgtService {
     DCRConfiguration getDCRConfiguration(String tenantDomain) throws DCRMException;
 
     /**
-     * Set the JWT Authenticator configurations of a tenant.
+     * Set the DCR configurations of a tenant.
      *
      * @param dcrConfigurationConfig The {@code DCRConfiguration} object to be set.
      * @param tenantDomain                 The tenant domain.

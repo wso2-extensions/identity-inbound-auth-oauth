@@ -78,12 +78,11 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
         resource.setAttributes(Arrays.asList(attribute1, attribute2));
         resource.setHasAttribute(true);
 
-        DCRConfiguration dcrConfigurationUpdated = invokeMethod(DCRConfigUtils.class,
+        invokeMethod(DCRConfigUtils.class,
                 "overrideConfigsWithResource", resource, this.dcrConfiguration);
 
-        assertEquals(false, dcrConfigurationUpdated.isFAPIEnforced());
-        assertEquals(false, dcrConfigurationUpdated.isClientAuthenticationRequired());
-        assertEquals(dcrConfigurationUpdated.getSsaJwks(), dcrConfigurationUpdated.getSsaJwks());
+        assertEquals(false, this.dcrConfiguration.isFAPIEnforced());
+        assertEquals(false, this.dcrConfiguration.isClientAuthenticationRequired());
     }
 
     @Test(priority = 3, description = "Test parseConfig method properly converts the DCRConfiguration object to " +

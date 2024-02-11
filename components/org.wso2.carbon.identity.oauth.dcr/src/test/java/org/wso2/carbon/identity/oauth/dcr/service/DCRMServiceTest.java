@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
@@ -91,7 +92,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
  */
 @PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class,
         OAuth2Util.class, OAuthServerConfiguration.class, JWTSignatureValidationUtils.class, IdentityUtil.class,
-        DCRDataHolder.class})
+        DCRDataHolder.class, DCRConfigUtils.class})
 public class DCRMServiceTest extends PowerMockTestCase {
 
     private final String dummyConsumerKey = "dummyConsumerKey";
@@ -1197,9 +1198,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
         dcrConfiguration.setSsaJwks(dummyJwskUri);
 
-        mockStatic(DCRDataHolder.class);
-        when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        when(dataHolder.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
+        mockStatic(DCRConfigUtils.class);
+        when(DCRConfigUtils.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
 
         mockStatic(JWTSignatureValidationUtils.class);
         when(JWTSignatureValidationUtils.validateUsingJWKSUri(any(), anyString())).thenReturn(false);

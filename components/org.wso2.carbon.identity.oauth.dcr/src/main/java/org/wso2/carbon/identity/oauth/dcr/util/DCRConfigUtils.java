@@ -20,11 +20,19 @@ package org.wso2.carbon.identity.oauth.dcr.util;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.base.IdentityRuntimeException;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
+import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 
 import java.util.ArrayList;
@@ -33,16 +41,112 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.CLIENT_AUTHENTICATION_REQUIRED;
+import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_DCR_CONFIGURATION_RETRIEVE;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
+import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_TYPE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.ENABLE_FAPI_ENFORCEMENT;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.SSA_JWKS;
+import static org.wso2.carbon.identity.oauth.dcr.util.DCRConfigErrorUtils.handleClientException;
+import static org.wso2.carbon.identity.oauth.dcr.util.DCRConfigErrorUtils.handleServerException;
 
 
 /**
  * Util class for DCR configurations and DCR resource related operations.
  */
 public class DCRConfigUtils {
+
+    private DCRConfigUtils() { }
+
+    /**
+     * Validate the tenant domain.
+     *
+     * @param tenantDomain The tenant domain.
+     * @throws DCRMClientException If the tenant domain is invalid.
+     */
+    public static void validateTenantDomain(String tenantDomain)
+            throws DCRMClientException {
+
+        try {
+            IdentityTenantUtil.getTenantId(tenantDomain);
+        } catch (IdentityRuntimeException e) {
+            throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_INVALID_TENANT_DOMAIN, e,
+                    tenantDomain);
+        }
+    }
+
+    /**
+     * Persist the DCRConfiguration object.
+     *
+     * @param dcrConfiguration The DCRConfiguration object.
+     * @param tenantDomain     The tenant domain.
+     */
+    public static void setDCRConfigurationByTenantDomain(DCRConfiguration dcrConfiguration, String tenantDomain)
+            throws DCRMServerException {
+
+        try {
+            ResourceAdd resourceAdd = DCRConfigUtils.parseConfig(dcrConfiguration);
+            getConfigurationManager().replaceResource(DCR_CONFIG_RESOURCE_TYPE_NAME, resourceAdd);
+        } catch (ConfigurationManagementException e) {
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
+        }
+    }
+
+    public static ConfigurationManager getConfigurationManager() {
+
+        return DCRDataHolder.getInstance().getConfigurationManager();
+    }
+
+    /**
+     * Get DCR configuration by tenant domain.
+     * If there is a resource available for the tenant with the given resource type and resource name,
+     * it will override the server configuration.
+     * @param tenantDomain Tenant domain.
+     * @return DCRConfiguration.
+     * @throws DCRMServerException DCRMServerException.
+     */
+    public static DCRConfiguration getDCRConfigurationByTenantDomain(String tenantDomain) throws DCRMServerException {
+
+        try {
+            Resource resource = getResource(DCR_CONFIG_RESOURCE_TYPE_NAME, DCR_CONFIG_RESOURCE_NAME);
+            DCRConfiguration dcrConfiguration = DCRConfigUtils.getServerConfiguration();
+            if (resource != null) {
+                DCRConfigUtils.overrideConfigsWithResource(resource, dcrConfiguration);
+            }
+
+            return dcrConfiguration;
+        } catch (ConfigurationManagementException e) {
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
+        }
+    }
+
+    /**
+     * Configuration Management API returns a ConfigurationManagementException with the error code CONFIGM_00017 when
+     * resource is not found. This method wraps the original method and returns null if the resource is not found.
+     *
+     * @param resourceTypeName Resource type name.
+     * @param resourceName     Resource name.
+     * @return Retrieved resource from the configuration store. Returns {@code null} if the resource is not found.
+     * @throws ConfigurationManagementException exception
+     */
+    private static Resource getResource(String resourceTypeName, String resourceName)
+            throws ConfigurationManagementException {
+
+        try {
+
+            return getConfigurationManager().getResource(resourceTypeName, resourceName);
+        } catch (ConfigurationManagementException e) {
+            if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode()) ||
+                    ERROR_CODE_RESOURCE_TYPE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
+
+                return null;
+            } else {
+                throw e;
+            }
+        }
+    }
 
     /**
      * Get the DCR configuration from the server configuration.
@@ -74,9 +178,8 @@ public class DCRConfigUtils {
      * Override the server configuration with resource values.
      *
      * @param resource Resource
-     * @return DCRConfiguration Configuration instance.
      */
-    public static DCRConfiguration overrideConfigsWithResource(Resource resource, DCRConfiguration dcrConfiguration) {
+    public static void overrideConfigsWithResource(Resource resource, DCRConfiguration dcrConfiguration) {
 
         if (resource.isHasAttribute()) {
             List<Attribute> attributes = resource.getAttributes();
@@ -102,7 +205,6 @@ public class DCRConfigUtils {
             }
         }
 
-        return dcrConfiguration;
     }
 
     private static Map<String, String> getAttributeMap(List<Attribute> attributes) {
