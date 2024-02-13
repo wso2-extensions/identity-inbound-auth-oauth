@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -40,6 +41,8 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
     public static final String PUBLIC_CLIENT_AUTHENTICATOR = "PublicClientAuthenticator";
     private static final Log log = LogFactory.getLog(PublicClientAuthenticator.class);
+    private static final String GRANT_TYPE = "grant_type";
+    private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
 
     /**
      * Returns the execution order of this authenticator.
@@ -80,6 +83,24 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     public boolean canAuthenticate(HttpServletRequest request, Map<String, List> bodyParams, OAuthClientAuthnContext
             context) {
 
+        List<String> publicClientSupportedGrantTypes = OAuthServerConfiguration.getInstance().
+                getPublicClientSupportedGrantTypesList();
+        List grantTypes = bodyParams.get(GRANT_TYPE);
+
+        /* PublicClientSupportedGrantTypes will not be empty since the default grant types in IS are configured to
+        support public clients except client credentials grant. */
+        if (!publicClientSupportedGrantTypes.isEmpty() && grantTypes != null) {
+            for (Object grantType : grantTypes) {
+                if (!publicClientSupportedGrantTypes.contains(grantType.toString())) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("The request contained grant type : '" + grantType + "' which is not " +
+                                "allowed for public clients.");
+                    }
+                    return false;
+                }
+            }
+        }
+
         String clientId = getClientId(request, bodyParams, context);
 
         try {
@@ -92,13 +113,12 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
                 } else {
                     if (log.isDebugEnabled()) {
                         log.debug("The Application (Service Provider) with client ID : " + clientId
-                                + " has not enabled the option \"Allow authentication without the client secret\" "
-                                + "and no valid Authorization Header exists in the request.");
+                                + " has not enabled the option \"Allow authentication without the client secret\".");
                     }
                 }
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("Application with the given client ID " + clientId + " is not found");
+                    log.debug("Client ID " + clientId + " is not found among the request body parameters.");
                 }
             }
         } catch (InvalidOAuthClientException e) {

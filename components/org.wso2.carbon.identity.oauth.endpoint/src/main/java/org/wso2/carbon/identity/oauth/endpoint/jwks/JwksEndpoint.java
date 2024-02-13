@@ -166,7 +166,7 @@ public class JwksEndpoint {
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
         jwk.x509CertChain(encodedCertList);
-        jwk.x509CertSHA256Thumbprint(Base64URL.encode(OAuth2Util.getThumbPrint(certificate, alias)));
+        jwk.x509CertSHA256Thumbprint(new Base64URL(OAuth2Util.getThumbPrint(certificate, alias)));
         return jwk;
     }
 
