@@ -167,6 +167,7 @@ public class OAuthServerConfiguration {
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
+    private boolean useLegacyPermissionAccessForUserBasedAuth = false;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -518,6 +519,9 @@ public class OAuthServerConfiguration {
 
         // Read config for using legacy scopes as alias for new scopes.
         parseUseLegacyScopesAsAliasForNewScopes(oauthElem);
+
+        // Read config for using legacy permission access for user based auth.
+        parseUseLegacyPermissionAccessForUserBasedAuth(oauthElem);
     }
 
     /**
@@ -3607,6 +3611,33 @@ public class OAuthServerConfiguration {
         return useLegacyScopesAsAliasForNewScopes;
     }
 
+    /**
+     * Parse the UseLegacyPermissionAccessForUserBasedAuth configuration that used to give legacy permission access in
+     * user based authentication handlers.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUseLegacyPermissionAccessForUserBasedAuth(OMElement oauthConfigElem) {
+
+        OMElement useLegacyPermissionAccessForUserBasedAuthElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USE_LEGACY_PERMISSION_ACCESS_FOR_USER_BASED_AUTH));
+        if (useLegacyPermissionAccessForUserBasedAuthElem != null) {
+            useLegacyPermissionAccessForUserBasedAuth =
+                    Boolean.parseBoolean(useLegacyPermissionAccessForUserBasedAuthElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property UseLegacyPermissionAccessForUserBasedAuth for the OAuth
+     * configuration in identity.xml.
+     *
+     * @return true if the UseLegacyPermissionAccessForUserBasedAuth is enabled.
+     */
+    public boolean isUseLegacyPermissionAccessForUserBasedAuth() {
+
+        return useLegacyPermissionAccessForUserBasedAuth;
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -3935,6 +3966,8 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
         private static final String USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES = "UseLegacyScopesAsAliasForNewScopes";
+        private static final String USE_LEGACY_PERMISSION_ACCESS_FOR_USER_BASED_AUTH =
+                "UseLegacyPermissionAccessForUserBasedAuth";
     }
 
 }
