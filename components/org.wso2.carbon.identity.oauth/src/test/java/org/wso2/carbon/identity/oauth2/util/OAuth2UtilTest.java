@@ -92,11 +92,10 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
 
 import java.net.SocketException;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
