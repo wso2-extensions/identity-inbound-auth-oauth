@@ -3512,5 +3512,4 @@ public class OAuthServerConfiguration {
         // FAPI Configurations
         private static final String FAPI = "FAPI";
     }
-
 }
