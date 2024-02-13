@@ -257,6 +257,7 @@ public class AuthzUtil {
         List<String> roleIds = getUserRoles(authenticatedUser, null);
         List<String> permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
         if (OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
+            // Handling backward compatibility for previous access level.
             List<String> internalScopes = getInternalScopes(authenticatedUser.getTenantDomain());
             List<String> approvedInternalScopes = permissions.stream().filter(internalScopes::contains)
                     .collect(Collectors.toList());
