@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.api.UserStoreException;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -154,7 +155,8 @@ public class DCRMService {
      * @return
      * @throws DCRMException
      */
-    public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException {
+    public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException,
+            UserStoreException {
 
         return createOAuthApplication(registrationRequest);
     }
@@ -421,12 +423,29 @@ public class DCRMService {
     }
 
     private Application createOAuthApplication(ApplicationRegistrationRequest registrationRequest)
-            throws DCRMException {
+            throws DCRMException, UserStoreException {
 
         String applicationOwner = StringUtils.isNotBlank(registrationRequest.getExtApplicationOwner()) ?
                 registrationRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        /*
+        ApplicationOwner will be null and a server error is thrown when creating an app, if the api authentication/
+        api security is disabled for DCR endpoint.
+        In such cases, we set the tenant admin as the owner of the application.
+        */
+        if (StringUtils.isBlank(applicationOwner)) {
+            DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance()
+                    .getDCRConfigurationByTenantDomain(tenantDomain);
+            boolean isClientAuthenticationRequired = dcrConfiguration.isClientAuthenticationRequired() != null ?
+                    dcrConfiguration.isClientAuthenticationRequired() : true;
+            if (!isClientAuthenticationRequired) {
+                applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
+                        .getRealmConfiguration().getAdminUserName();
+            }
+        }
+
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
         boolean isManagementApp = registrationRequest.isManagementApp();
@@ -577,6 +596,7 @@ public class DCRMService {
         // Then Create OAuthApp
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(spName);
+        oAuthConsumerApp.setUsername(applicationOwner);
         oAuthConsumerApp.setCallbackUrl(
                 validateAndSetCallbackURIs(registrationRequest.getRedirectUris(), registrationRequest.getGrantTypes()));
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);

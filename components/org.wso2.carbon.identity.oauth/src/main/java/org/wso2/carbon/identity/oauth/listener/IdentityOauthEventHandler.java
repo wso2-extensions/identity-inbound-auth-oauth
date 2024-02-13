@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
-import org.wso2.carbon.identity.application.authentication.framework.exception.session.mgt.SessionManagementException;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.bean.context.MessageContext;
@@ -336,14 +335,8 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                                 .getRevocationProcessor()
                                 .revokeTokens(userName, userStoreManager, roleId);
                         OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
-                        OAuth2ServiceComponentHolder.getUserSessionManagementService()
-                                .terminateSessionsByUserId(userId);
                     } catch (UserSessionException e) {
                         String errorMsg = "Error occurred while revoking access token for user Id: " + userId;
-                        log.error(errorMsg, e);
-                        throw new IdentityEventException(errorMsg, e);
-                    } catch (SessionManagementException e) {
-                        String errorMsg = "Failed to terminate active sessions of user Id: " + userId;
                         log.error(errorMsg, e);
                         throw new IdentityEventException(errorMsg, e);
                     }

@@ -35,7 +35,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
-import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -74,6 +73,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -95,6 +95,7 @@ import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.TARGET_APPLICATION;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
+import static org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil.isEnableV2AuditLogs;
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
@@ -268,18 +269,50 @@ public class OAuthAdminServiceImpl {
     public OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application)
             throws IdentityOAuthAdminException {
 
+        // When external service call this method, it will always audit the action.
+        return registerAndRetrieveOAuthApplicationData(application, true);
+    }
+
+    /**
+     * Same as {@link #registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO)} but with an option to disable
+     * the audit logs. This is to avoid logging duplicate logs.
+     *
+     * @param application    <code>OAuthConsumerAppDTO</code> with application information.
+     * @param enableAuditing Enable auditing or not.
+     * @return OAuthConsumerAppDTO Created OAuth application details.
+     * @throws IdentityOAuthAdminException Error when persisting the application information to the persistence store.
+     */
+    OAuthConsumerAppDTO registerAndRetrieveOAuthApplicationData(OAuthConsumerAppDTO application, boolean enableAuditing)
+            throws IdentityOAuthAdminException {
+
         String tenantAwareLoggedInUsername = CarbonContext.getThreadLocalCarbonContext().getUsername();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         OAuthAppDO app = new OAuthAppDO();
         AuthenticatedUser defaultAppOwner = null;
+        Map<String, Object> oidcDataMap;
         try {
             if (StringUtils.isNotEmpty(tenantAwareLoggedInUsername)) {
                 defaultAppOwner = buildAuthenticatedUser(tenantAwareLoggedInUsername, tenantDomain);
             } else {
-                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, null);
+                Optional<User> tenantAwareLoggedInUser = OAuthUtil.getUser(tenantDomain, application.getUsername());
                 if (tenantAwareLoggedInUser.isPresent()) {
                     defaultAppOwner = new AuthenticatedUser(tenantAwareLoggedInUser.get());
                 }
+            }
+
+            /*
+             * If there is no authenticated user, it is due to the DCR endpoint api authentication being turned off and
+             * hence we are setting the tenant admin as authenticated the app owner.
+             * If DCR endpoint api authentication is enabled there should be an authenticated user at this point,
+             * since if not, there will be an error from Authentication valve above this level.
+             */
+            if (defaultAppOwner == null) {
+                if (LOG.isDebugEnabled()) {
+                        LOG.debug("No authenticated user found. Setting tenant admin as the owner for app : " +
+                                application.getApplicationName());
+                }
+                String adminUsername = application.getUsername();
+                defaultAppOwner = buildAuthenticatedUser(adminUsername, tenantDomain);
             }
 
             if (defaultAppOwner != null) {
@@ -332,6 +365,7 @@ public class OAuthAdminServiceImpl {
                         // Set OIDC Config Properties.
                         app.setRequestObjectSignatureValidationEnabled(
                                 application.isRequestObjectSignatureValidationEnabled());
+
                         // Validate IdToken Encryption configurations.
                         app.setIdTokenEncryptionEnabled(application.isIdTokenEncryptionEnabled());
                         if (application.isIdTokenEncryptionEnabled()) {
@@ -462,14 +496,16 @@ public class OAuthAdminServiceImpl {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
                                 " in tenant domain: " + tenantDomain);
                     }
-                    if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+                    oidcDataMap = buildSPData(app);
+                    oidcDataMap.put("allowedOrigins", application.getAllowedOrigins());
+                    if (enableAuditing && isEnableV2AuditLogs()) {
                         Optional<String> initiatorId = getInitiatorId();
                         if (initiatorId.isPresent()) {
                             AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                                     initiatorId.get(), USER,
                                     app.getOauthConsumerKey(), TARGET_APPLICATION,
                                     OAuthConstants.LogConstants.CREATE_OAUTH_APPLICATION)
-                                    .data(buildSPData(app));
+                                    .data(oidcDataMap);
                             triggerAuditLogEvent(auditLogBuilder, true);
                         } else {
                             LOG.error("Error getting the logged in userId");
@@ -497,7 +533,9 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
         }
-        return OAuthUtil.buildConsumerAppDTO(app);
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
+        oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
+        return oAuthConsumerAppDTO;
     }
 
 
@@ -660,6 +698,18 @@ public class OAuthAdminServiceImpl {
      * @throws IdentityOAuthAdminException Error when updating the underlying identity persistence store.
      */
     public void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO) throws IdentityOAuthAdminException {
+
+        updateConsumerApplication(consumerAppDTO, true);
+    }
+
+    /**
+     * Same as {@link #updateConsumerApplication(OAuthConsumerAppDTO)} but with an option to enable/disable audit logs.
+     *
+     * @param consumerAppDTO <code>OAuthConsumerAppDTO</code> with updated application information
+     * @throws IdentityOAuthAdminException Error when updating the underlying identity persistence store.
+     */
+    void updateConsumerApplication(OAuthConsumerAppDTO consumerAppDTO, boolean enableAuditing)
+            throws IdentityOAuthAdminException {
 
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
@@ -863,13 +913,16 @@ public class OAuthAdminServiceImpl {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
         }
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        Map<String, Object> oidcDataMap = buildSPData(oauthappdo);
+        oidcDataMap.put("allowedOrigins", consumerAppDTO.getAllowedOrigins());
+        consumerAppDTO.setAuditLogData(oidcDataMap);
+        if (enableAuditing && isEnableV2AuditLogs()) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                         initiatorId.get(), USER, oauthConsumerKey,
                         TARGET_APPLICATION, OAuthConstants.LogConstants.UPDATE_OAUTH_APPLICATION)
-                        .data(buildSPData(oauthappdo));
+                        .data(oidcDataMap);
                 triggerAuditLogEvent(auditLogBuilder, true);
             } else {
                 LOG.error("Error getting the logged in userId");
@@ -1162,7 +1215,7 @@ public class OAuthAdminServiceImpl {
                         "consumerKey: " + consumerKey);
             }
 
-            if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+            if (isEnableV2AuditLogs()) {
                 Optional<String> initiatorId = getInitiatorId();
                 if (initiatorId.isPresent()) {
                     AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -1214,7 +1267,7 @@ public class OAuthAdminServiceImpl {
         String newSecret = OAuthUtil.getRandomNumberSecure();
         OAuthConsumerAppDTO oldAppDTO = null;
 
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        if (isEnableV2AuditLogs()) {
             oldAppDTO = getOAuthApplicationData(consumerKey);
         }
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
@@ -1230,7 +1283,7 @@ public class OAuthAdminServiceImpl {
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        if (isEnableV2AuditLogs()) {
             // This API is invoked when regenerating client secret and when activating the app.
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
@@ -1301,12 +1354,24 @@ public class OAuthAdminServiceImpl {
      */
     public void removeOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
 
+        removeOAuthApplicationData(consumerKey, true);
+    }
+
+    /**
+     * Removes an OAuth consumer application. Also this will allow to enable or disable audit logs.
+     *
+     * @param consumerKey Consumer Key.
+     * @throws IdentityOAuthAdminException Error when removing the consumer information from the database.
+     */
+    void removeOAuthApplicationData(String consumerKey, boolean enableAuditing) throws IdentityOAuthAdminException {
+
         for (OAuthApplicationMgtListener oAuthApplicationMgtListener : OAuthComponentServiceHolder.getInstance()
                 .getOAuthApplicationMgtListeners()) {
             oAuthApplicationMgtListener.doPreRemoveOAuthApplicationData(consumerKey);
         }
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
+
 
         Set<AccessTokenDO> activeDetailedTokens;
         try {
@@ -1357,7 +1422,7 @@ public class OAuthAdminServiceImpl {
                     + consumerKey);
         }
         handleInternalTokenRevocation(consumerKey, properties);
-        if (ApplicationMgtUtil.isLegacyAuditLogsDisabledInAppMgt()) {
+        if (enableAuditing && isEnableV2AuditLogs()) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -1652,6 +1717,70 @@ public class OAuthAdminServiceImpl {
         }
         triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
         return revokeRespDTO;
+    }
+
+    /**
+     * Revoke issued tokens for the application for the given authorized organization.
+     *
+     * @param application    {@link OAuthAppRevocationRequestDTO}.
+     * @param organizationId ID of the organization for which the tokens should be revoked.
+     * @return revokeRespDTO {@link OAuthAppRevocationRequestDTO}.
+     * @throws IdentityOAuthAdminException Error while revoking the issued tokens.
+     */
+    public OAuthRevocationResponseDTO revokeIssuedTokensForOrganizationByApplication
+    (OAuthAppRevocationRequestDTO application, String organizationId) throws IdentityOAuthAdminException {
+
+        triggerPreApplicationTokenRevokeListeners(application);
+        OAuthRevocationResponseDTO revokeRespDTO = new OAuthRevocationResponseDTO();
+
+        String consumerKey = application.getConsumerKey();
+        if (StringUtils.isBlank(consumerKey)) {
+            revokeRespDTO.setError(true);
+            revokeRespDTO.setErrorCode(OAuth2ErrorCodes.INVALID_REQUEST);
+            revokeRespDTO.setErrorMsg("Consumer key is null or empty.");
+            triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, new ArrayList<>());
+            return revokeRespDTO;
+        }
+
+        List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
+        if (!accessTokenDOs.isEmpty()) {
+            List<String> accessTokens = new ArrayList<>();
+            for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                String authorizedOrganizationId = accessTokenDO.getAuthorizedOrganizationId();
+                if (StringUtils.equals(organizationId, authorizedOrganizationId)) {
+                    accessTokens.add(accessTokenDO.getAccessToken());
+                    clearCacheByAccessTokenAndConsumerKey(accessTokenDO, consumerKey);
+                }
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("Access tokens are removed from the cache for OAuth application with " +
+                        "consumer key: %s in organization with ID: %s", consumerKey, organizationId));
+            }
+
+            String tenantDomain = getTenantDomain(organizationId);
+            revokeAccessTokens(accessTokens.toArray(new String[0]), consumerKey, tenantDomain);
+            revokeOAuthConsentsForApplication(getApplicationName(consumerKey, tenantDomain), tenantDomain);
+        }
+        triggerPostApplicationTokenRevokeListeners(application, revokeRespDTO, accessTokenDOs);
+        return revokeRespDTO;
+    }
+
+    /**
+     * Get tenant domain corresponding to the provided organization ID.
+     *
+     * @param organizationId The organization ID.
+     * @return The tenant domain.
+     * @throws IdentityOAuthAdminException if an error occurs while retrieving the tenant domain.
+     */
+    private static String getTenantDomain(String organizationId) throws IdentityOAuthAdminException {
+
+        try {
+            return OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuthAdminException("Error while resolving tenant domain of organization with ID : " +
+                    organizationId, e);
+        }
     }
 
     /**
@@ -2481,7 +2610,20 @@ public class OAuthAdminServiceImpl {
         try {
             authorizedUser = detailToken.getAuthzUser().getUserId();
         } catch (UserIdNotFoundException e) {
-            throw handleError("Error when obtaining the user ID.", e);
+            /*
+            * This fall back mechanism is added to support the token deletion process of the token exchange grant type.
+            * When a token is issued from the token exchange grant type, the username for the token is set from the
+            * `sub` property of the JWT token. This `sub` property of the JWT claim can be any value. When deleting
+            * those access tokens while deleting the applications, it tried to resolve the user to remove the cache.
+            * In that case, the user id extraction is failing because the user is searched from the username claim
+            * by adding the `sub` value of the user. To prevent that, the authorized user will be extracted from the
+            * subject identifier of the issued token.
+            */
+            if (detailToken.getAuthzUser().getAuthenticatedSubjectIdentifier() != null) {
+                authorizedUser = detailToken.getAuthzUser().getAuthenticatedSubjectIdentifier();
+            } else {
+                throw handleError("Error when obtaining the user ID.", e);
+            }
         }
         String authenticatedIDP = detailToken.getAuthzUser().getFederatedIdPName();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authorizedUser);

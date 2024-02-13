@@ -156,6 +156,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -2614,9 +2615,8 @@ public class OAuth2Util {
             KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
 
             if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
+                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
                         .getPublicKey();
             } else {
                 publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
@@ -3152,10 +3152,9 @@ public class OAuth2Util {
 
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 // derive key store name
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
                 // obtain private key
-                privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                privateKey = tenantKSM.getPrivateKey(fileName, tenantDomain);
 
             } else {
                 try {
@@ -3329,14 +3328,13 @@ public class OAuth2Util {
             KeyStore keyStore = null;
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 // derive key store name
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Loading default tenant certificate for tenant : %s from the KeyStore" +
-                            " %s", tenantDomain, ksName));
+                            " %s", tenantDomain, fileName));
                 }
                 try {
-                    keyStore = tenantKSM.getKeyStore(jksName);
+                    keyStore = tenantKSM.getKeyStore(fileName);
                     publicCert = keyStore.getCertificate(tenantDomain);
                 } catch (KeyStoreException e) {
                     throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
@@ -3924,6 +3922,33 @@ public class OAuth2Util {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
         }
 
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param authzUser       authenticated user object
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName         idp name
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(AuthenticatedUser authzUser, String userStoreDomain,
+                                                            String tenantDomain, String idpName)
+            throws IdentityOAuth2Exception {
+
+        String username = authzUser.getUserName();
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        if (!authenticatedUser.isFederatedUser()) {
+            try {
+                String userId = authzUser.getUserId();
+                authenticatedUser.setUserId(userId);
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception(
+                        "User id is not available for user: " + authzUser.getLoggableUserId(), e);
+            }
+        }
         return authenticatedUser;
     }
 

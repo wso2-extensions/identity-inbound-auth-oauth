@@ -21,7 +21,9 @@ package org.wso2.carbon.identity.oauth.internal;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
@@ -69,6 +71,9 @@ public class OAuthComponentServiceHolder {
     private AccessTokenDAO accessTokenDAOService;
     private TokenManagementDAO tokenManagementDAOService;
     private ApplicationManagementService applicationManagementService;
+    private OauthInboundAuthConfigHandler oauthInboundAuthConfigHandler;
+    private CORSManagementService corsManagementService;
+
 
     /**
      * Get the list of scope validator implementations available.
@@ -354,10 +359,10 @@ public class OAuthComponentServiceHolder {
 
         return accessTokenResponseHandlers;
     }
-    
+
     /**
      * Get AccessTokenDAO instance.
-     * 
+     *
      * @return AccessTokenDAO {@link AccessTokenDAO} instance.
      */
     public AccessTokenDAO getAccessTokenDAOService() {
@@ -367,7 +372,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Set AccessTokenDAO instance.
-     * 
+     *
      * @param accessTokenDAOService {@link AccessTokenDAO} instance.
      */
     public void setAccessTokenDAOService(AccessTokenDAO accessTokenDAOService) {
@@ -377,7 +382,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Get TokenManagementDAO instance.
-     * 
+     *
      * @return  TokenManagementDAO  {@link TokenManagementDAO} instance.
      */
     public TokenManagementDAO getTokenManagementDAOService() {
@@ -387,7 +392,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Set TokenManagementDAO instance.
-     * 
+     *
      * @param tokenManagementDAOService {@link TokenManagementDAO} instance.
      */
     public void setTokenManagementDAOService(TokenManagementDAO tokenManagementDAOService) {
@@ -397,8 +402,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Get ApplicationManagementService instance.
-     *
-     * @return ApplicationManagementService {@link ApplicationManagementService} instance.
+     * @return ApplicationManagementService instance.
      */
     public ApplicationManagementService getApplicationManagementService() {
 
@@ -407,11 +411,38 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Set ApplicationManagementService instance.
-     *
-     * @param applicationManagementService {@link ApplicationManagementService} instance.
+     * @param applicationManagementService ApplicationManagementService instance.
      */
     public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
 
         this.applicationManagementService = applicationManagementService;
+    }
+
+    /**
+     * Get OAuthProtocolApplicationService instance.
+     * @return OAuthProtocolApplicationService instance.
+     */
+    public OauthInboundAuthConfigHandler getOAuthInboundConfigHandler() {
+
+        return oauthInboundAuthConfigHandler;
+    }
+
+    /**
+     * Set OAuthProtocolApplicationService instance.
+     * @param oauthInboundAuthConfigHandler OAuthProtocolApplicationService instance.
+     */
+    public void setOAuthInboundConfigHandler(OauthInboundAuthConfigHandler oauthInboundAuthConfigHandler) {
+
+        this.oauthInboundAuthConfigHandler = oauthInboundAuthConfigHandler;
+    }
+
+    public CORSManagementService getCorsManagementService() {
+
+        return corsManagementService;
+    }
+
+    public void setCorsManagementService(CORSManagementService corsManagementService) {
+
+        this.corsManagementService = corsManagementService;
     }
 }

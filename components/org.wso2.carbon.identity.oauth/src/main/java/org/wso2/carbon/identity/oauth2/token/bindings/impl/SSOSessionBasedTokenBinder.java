@@ -25,7 +25,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 
@@ -88,6 +90,10 @@ public class SSOSessionBasedTokenBinder extends AbstractTokenBinder {
 
     private String retrieveTokenBindingValueFromRequest(HttpServletRequest request) throws OAuthSystemException {
 
+        if (Boolean.TRUE.equals(request.getAttribute(OAuthConstants.IS_API_BASED_LOGOUT_WITHOUT_COOKIES))) {
+            // The session id is a sha256Hex of the commonAuthId cookie value.
+            return request.getParameter(FrameworkConstants.RequestParams.SESSION_ID);
+        }
         Cookie[] cookies = request.getCookies();
         String commonAuthCookieValueFromRequestAttribute = (String) request.getAttribute(COMMONAUTH_COOKIE);
         if (ArrayUtils.isNotEmpty(cookies)) {

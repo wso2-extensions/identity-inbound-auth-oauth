@@ -50,6 +50,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -333,17 +335,8 @@ public class OAuthAppDAO {
                             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5)));
-                            }
-                            if (ApplicationMgtUtil.isConsole(oauthApp.getApplicationName())) {
-                                String consoleCallbackUrl = getConsoleCallbackFromServerConfig(tenantDomain);
-                                if (StringUtils.isNotBlank(consoleCallbackUrl)) {
-                                    oauthApp.setCallbackUrl(consoleCallbackUrl);
-                                }
-                            }
-                            if (ApplicationMgtUtil.isMyAccount(oauthApp.getApplicationName())) {
-                                String myAccountCallbackUrl = getMyAccountCallbackFromServerConfig(tenantDomain);
-                                if (StringUtils.isNotBlank(myAccountCallbackUrl)) {
-                                    oauthApp.setCallbackUrl(myAccountCallbackUrl);
+                                if (isRootOrganization(tenantId)) {
+                                    resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
                             }
 
@@ -453,18 +446,9 @@ public class OAuthAppDAO {
                             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5)));
-                            }
-                            String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
-                            if (ApplicationMgtUtil.isConsole(oauthApp.getApplicationName())) {
-                                String consoleCallbackUrl = getConsoleCallbackFromServerConfig(tenantDomain);
-                                if (StringUtils.isNotBlank(consoleCallbackUrl)) {
-                                    oauthApp.setCallbackUrl(consoleCallbackUrl);
-                                }
-                            }
-                            if (ApplicationMgtUtil.isMyAccount(oauthApp.getApplicationName())) {
-                                String myAccountCallbackUrl = getMyAccountCallbackFromServerConfig(tenantDomain);
-                                if (StringUtils.isNotBlank(myAccountCallbackUrl)) {
-                                    oauthApp.setCallbackUrl(myAccountCallbackUrl);
+                                if (isRootOrganization(tenantId)) {
+                                    String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+                                    resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
                             }
 
@@ -554,18 +538,9 @@ public class OAuthAppDAO {
                         if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
                                     ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL)));
-                        }
-                        String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
-                        if (ApplicationMgtUtil.isConsole(oauthApp.getApplicationName())) {
-                            String consoleCallbackUrl = getConsoleCallbackFromServerConfig(tenantDomain);
-                            if (StringUtils.isNotBlank(consoleCallbackUrl)) {
-                                oauthApp.setCallbackUrl(consoleCallbackUrl);
-                            }
-                        }
-                        if (ApplicationMgtUtil.isMyAccount(oauthApp.getApplicationName())) {
-                            String myAccountCallbackUrl = getMyAccountCallbackFromServerConfig(tenantDomain);
-                            if (StringUtils.isNotBlank(myAccountCallbackUrl)) {
-                                oauthApp.setCallbackUrl(myAccountCallbackUrl);
+                            if (isRootOrganization(rSet.getInt(TENANT_ID))) {
+                                String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
+                                resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                             }
                         }
 
@@ -641,18 +616,9 @@ public class OAuthAppDAO {
                         if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
                                     ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL)));
-                        }
-                        String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
-                        if (ApplicationMgtUtil.isConsole(oauthApp.getApplicationName())) {
-                            String consoleCallbackUrl = getConsoleCallbackFromServerConfig(tenantDomain);
-                            if (StringUtils.isNotBlank(consoleCallbackUrl)) {
-                                oauthApp.setCallbackUrl(consoleCallbackUrl);
-                            }
-                        }
-                        if (ApplicationMgtUtil.isMyAccount(oauthApp.getApplicationName())) {
-                            String myAccountCallbackUrl = getMyAccountCallbackFromServerConfig(tenantDomain);
-                            if (StringUtils.isNotBlank(myAccountCallbackUrl)) {
-                                oauthApp.setCallbackUrl(myAccountCallbackUrl);
+                            if (isRootOrganization(rSet.getInt(TENANT_ID))) {
+                                String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
+                                resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                             }
                         }
 
@@ -738,18 +704,9 @@ public class OAuthAppDAO {
                             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
                                         ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(6)));
-                            }
-                            String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
-                            if (ApplicationMgtUtil.isConsole(oauthApp.getApplicationName())) {
-                                String consoleCallbackUrl = getConsoleCallbackFromServerConfig(tenantDomain);
-                                if (StringUtils.isNotBlank(consoleCallbackUrl)) {
-                                    oauthApp.setCallbackUrl(consoleCallbackUrl);
-                                }
-                            }
-                            if (ApplicationMgtUtil.isMyAccount(oauthApp.getApplicationName())) {
-                                String myAccountCallbackUrl = getMyAccountCallbackFromServerConfig(tenantDomain);
-                                if (StringUtils.isNotBlank(myAccountCallbackUrl)) {
-                                    oauthApp.setCallbackUrl(myAccountCallbackUrl);
+                                if (isRootOrganization(tenantID)) {
+                                    String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
+                                    resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
                             }
 
@@ -1901,6 +1858,32 @@ public class OAuthAppDAO {
                 LOG.debug(msg, e);
             }
             throw new IdentityOAuth2Exception(msg, e);
+        }
+    }
+
+    private void resolveCallbackFromServerConfigForSystemApps(String tenantDomain, OAuthAppDO oauthApp) {
+
+        if (ApplicationMgtUtil.isConsole(oauthApp.getApplicationName())) {
+            String consoleCallbackUrl = getConsoleCallbackFromServerConfig(tenantDomain);
+            if (StringUtils.isNotBlank(consoleCallbackUrl)) {
+                oauthApp.setCallbackUrl(consoleCallbackUrl);
+            }
+        }
+        if (ApplicationMgtUtil.isMyAccount(oauthApp.getApplicationName())) {
+            String myAccountCallbackUrl = getMyAccountCallbackFromServerConfig(tenantDomain);
+            if (StringUtils.isNotBlank(myAccountCallbackUrl)) {
+                oauthApp.setCallbackUrl(myAccountCallbackUrl);
+            }
+        }
+    }
+
+    private boolean isRootOrganization(int tenantId) throws IdentityOAuth2Exception {
+
+        try {
+            return !OrganizationManagementUtil.isOrganization(tenantId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while checking if given tenant with id: " + tenantId +
+                    " is a root organization.", e);
         }
     }
 }

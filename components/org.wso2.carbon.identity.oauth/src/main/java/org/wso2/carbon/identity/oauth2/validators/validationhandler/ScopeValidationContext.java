@@ -31,6 +31,7 @@ public class ScopeValidationContext {
     private AuthenticatedUser authenticatedUser;
     private String appId;
     private String grantType;
+    private String userType;
 
     private String policyId;
     private Map<String, List<String>> validatedScopesByHandler;
@@ -134,5 +135,25 @@ public class ScopeValidationContext {
     public void setPolicyId(String policyId) {
 
         this.policyId = policyId;
+    }
+
+    /**
+     * Set the user type.
+     *
+     * @param userType User type.
+     */
+    public void setUserType(String userType) {
+
+        this.userType = userType;
+    }
+
+    /**
+     * Get the user type.
+     *
+     * @return User type.
+     */
+    public String getUserType() {
+
+        return userType;
     }
 }
