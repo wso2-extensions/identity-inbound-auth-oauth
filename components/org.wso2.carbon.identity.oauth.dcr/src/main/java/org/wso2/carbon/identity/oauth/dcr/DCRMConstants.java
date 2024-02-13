@@ -55,7 +55,8 @@ public class DCRMConstants {
         TENANT_DOMAIN_MISMATCH("NOT_FOUND_60001", "Tenant domain in request does not match with the application " +
                 "tenant domain for consumer key: %s"),
         FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s"),
-        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement");
+        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement"),
+        MANDATORY_SOFTWARE_STATEMENT("Mandatory software statement is missing");
 
         private final String message;
         private final String errorCode;
@@ -103,6 +104,7 @@ public class DCRMConstants {
     public static final String ENABLE_FAPI_ENFORCEMENT = "enableFapiEnforcement";
     public static final String CLIENT_AUTHENTICATION_REQUIRED = "clientAuthenticationRequired";
     public static final String SSA_JWKS = "ssaJwks";
+    public static final String MANDATE_SSA = "mandateSSA";
 
     /**
      * Enum for DCR Configuration related error messages.

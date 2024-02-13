@@ -243,6 +243,7 @@ public final class OAuthConstants {
     public static final String ENABLE_FAPI = "OAuth.OpenIDConnect.FAPI.EnableFAPIValidation";
     public static final String ENABLE_DCR_FAPI_ENFORCEMENT = "OAuth.DCRM.EnableFAPIEnforcement";
     public static final String DCR_SSA_VALIDATION_JWKS = "OAuth.DCRM.SoftwareStatementJWKS";
+    public static final String DCR_MANDATE_SSA = "OAuth.DCRM.MandatorySoftwareStatement";
     public static final String DCR_CLIENT_AUTHENTICATION_REQUIRED = "OAuth.DCRM.ClientAuthenticationRequired";
     public static final String FAPI_CLIENT_AUTH_METHOD_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedClientAuthenticationMethods.AllowedClientAuthenticationMethod";

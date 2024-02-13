@@ -447,6 +447,13 @@ public class DCRMService {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
         }
+
+        // Check whether the software statement is mandatory and if it is provided.
+        if (isSSAMandatedAndSSAisEmpty(tenantDomain, registrationRequest.getSoftwareStatement())) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                    DCRMConstants.ErrorMessages.MANDATORY_SOFTWARE_STATEMENT.getMessage());
+        }
+
         // Validate software statement assertion signature.
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
@@ -493,6 +500,14 @@ public class DCRMService {
         Application application = buildResponse(createdApp);
         application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
         return application;
+    }
+
+    public boolean isSSAMandatedAndSSAisEmpty(String tenantDomain, String softwareStatement)
+            throws DCRMServerException {
+        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfigurationByTenantDomain(tenantDomain);
+        String mandateSSA = dcrConfiguration.getMandateSSA();
+
+        return "true".equals(mandateSSA) && StringUtils.isEmpty(softwareStatement);
     }
 
     private Application buildResponse(OAuthConsumerAppDTO createdApp) {

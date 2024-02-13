@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.dcr.model;
 
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
+
 /**
  * DCR Configuration model.
  */
@@ -26,6 +28,28 @@ public class DCRConfiguration {
     private Boolean isDCRFAPIEnforced;
     private Boolean clientAuthenticationRequired;
     private String ssaJwks;
+    private String mandateSSA;
+
+    public String getMandateSSA() {
+
+        return mandateSSA;
+    }
+
+    /**
+     * Set the value of mandateSSA.
+     * We only accept "true", "false" or null as valid values for this mandateSSA field.
+     *
+     * @param mandateSSA The value to set.
+     */
+    public void setMandateSSA(String mandateSSA) throws DCRMServerException {
+
+        if (mandateSSA == null || "true".equals(mandateSSA) || "false".equals(mandateSSA)) {
+            this.mandateSSA = mandateSSA;
+        } else {
+            throw new DCRMServerException("Invalid value for mandateSSA: " + mandateSSA);
+        }
+
+    }
 
     public Boolean isFAPIEnforced() {
 
@@ -33,6 +57,7 @@ public class DCRConfiguration {
     }
 
     public void setFAPIEnforced(Boolean isDCRFAPIEnforced) {
+
         this.isDCRFAPIEnforced = isDCRFAPIEnforced;
     }
 
@@ -42,6 +67,7 @@ public class DCRConfiguration {
     }
 
     public void setClientAuthenticationRequired(Boolean clientAuthenticationRequired) {
+
         this.clientAuthenticationRequired = clientAuthenticationRequired;
     }
 
@@ -51,6 +77,7 @@ public class DCRConfiguration {
     }
 
     public void setSsaJwks(String ssaJwks) {
+
         this.ssaJwks = ssaJwks;
     }
 }
