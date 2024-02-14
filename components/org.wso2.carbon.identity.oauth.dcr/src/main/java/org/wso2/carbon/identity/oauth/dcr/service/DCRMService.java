@@ -509,7 +509,7 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
-        application.setApplicationOwner(createdApp.getApplicationOwner());
+        application.setApplicationOwner(createdApp.getUsername());
         application.setAppicationDisplayName(createdApp.getApplicationName());
         application.setApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
         application.setUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
@@ -569,7 +569,6 @@ public class DCRMService {
         // Then Create OAuthApp
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(spName);
-        oAuthConsumerApp.setApplicationOwner(applicationOwner);
         oAuthConsumerApp.setCallbackUrl(
                 validateAndSetCallbackURIs(registrationRequest.getRedirectUris(), registrationRequest.getGrantTypes()));
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
