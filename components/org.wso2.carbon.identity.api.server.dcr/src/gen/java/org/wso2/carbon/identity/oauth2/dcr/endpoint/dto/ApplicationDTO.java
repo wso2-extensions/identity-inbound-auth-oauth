@@ -28,30 +28,55 @@ public class ApplicationDTO  {
   
   
   private String clientName = null;
+
   private String jwksUri = null;
+
   private String tokenEndpointAuthMethod = null;
+
   private String tokenEndpointAuthSigningAlg = null;
+
   private String sectorIdentifierUri = null;
+
   private String idTokenSignedResponseAlg = null;
+
   private String idTokenEncryptedResponseAlg = null;
+
   private String idTokenEncryptedResponseEnc = null;
+
   private String requestObjectSigningAlg = null;
+
   private String tlsClientAuthSubjectDn = null;
+
   private boolean requirePushAuthorizationRequest;
+
   private boolean requireSignedRequestObject;
+
   private boolean tlsClientCertificateBoundAccessToken;
+
   private String subjectType = null;
+
   private String requestObjectEncryptionAlgorithm = null;
+
   private String requestObjectEncryptionMethod = null;
+
   private String softwareStatement = null;
+
   private String extApplicationDisplayName = null;
+
   private String extApplicationOwner = null;
+
   private Long extApplicationTokenLifetime = null;
+
   private Long extUserTokenLifetime = null;
+
   private Long extRefreshTokenLifetime = null;
+
   private Long extIdTokenLifetime = null;
+
   private boolean extPkceMandatory;
+
   private boolean extPkceSupportPlain;
+
   private boolean extPublicClient;
 
   /**
@@ -123,6 +148,105 @@ public class ApplicationDTO  {
   }
   public void setClientName(String clientName) {
     this.clientName = clientName;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_display_name")
+  public String getExtApplicationDisplayName() {
+    return extApplicationDisplayName;
+  }
+  public void setExtApplicationDisplayName(String extApplicationDisplayName) {
+    this.extApplicationDisplayName = extApplicationDisplayName;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_owner")
+  public String getExtApplicationOwner() {
+    return extApplicationOwner;
+  }
+  public void setExtApplicationOwner(String extApplicationOwner) {
+    this.extApplicationOwner = extApplicationOwner;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_token_lifetime")
+  public Long getExtApplicationTokenLifetime() {
+    return extApplicationTokenLifetime;
+  }
+  public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
+    this.extApplicationTokenLifetime = extApplicationTokenLifetime;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_user_token_lifetime")
+  public Long getExtUserTokenLifetime() {
+    return extUserTokenLifetime;
+  }
+  public void setExtUserTokenLifetime(Long extUserTokenLifetime) {
+    this.extUserTokenLifetime = extUserTokenLifetime;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_refresh_token_lifetime")
+  public Long getExtRefreshTokenLifetime() {
+    return extRefreshTokenLifetime;
+  }
+  public void setExtRefreshTokenLifetime(Long extRefreshTokenLifetime) {
+    this.extRefreshTokenLifetime = extRefreshTokenLifetime;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_id_token_lifetime")
+  public Long getExtIdTokenLifetime() {
+    return extIdTokenLifetime;
+  }
+  public void setExtIdTokenLifetime(Long extIdTokenLifetime) {
+    this.extIdTokenLifetime = extIdTokenLifetime;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_pkce_mandatory")
+  public Boolean getExtPkceMandatory() {
+    return extPkceMandatory;
+  }
+  public void setExtPkceMandatory(Boolean extPkceMandatory) {
+    this.extPkceMandatory = extPkceMandatory;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_pkce_support_plain")
+  public Boolean getExtPkceSupportPlain() {
+    return extPkceSupportPlain;
+  }
+  public void setExtPkceSupportPlain(Boolean extPkceSupportPlain) {
+    this.extPkceSupportPlain = extPkceSupportPlain;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_public_client")
+  public Boolean getExtPublicClient() {
+    return extPublicClient;
+  }
+  public void setExtPublicClient(Boolean extPublicClient) {
+    this.extPublicClient = extPublicClient;
   }
 
   @ApiModelProperty
@@ -278,103 +402,6 @@ public class ApplicationDTO  {
     this.softwareStatement = softwareStatement;
   }
 
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_application_display_name")
-  public String getExtApplicationDisplayName() {
-    return extApplicationDisplayName;
-  }
-  public void setExtApplicationDisplayName(String extApplicationDisplayName) {
-    this.extApplicationDisplayName = extApplicationDisplayName;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_application_owner")
-  public String getExtApplicationOwner() {
-    return extApplicationOwner;
-  }
-  public void setExtApplicationOwner(String extApplicationOwner) {
-    this.extApplicationOwner = extApplicationOwner;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_application_token_lifetime")
-  public Long getExtApplicationTokenLifetime() {
-    return extApplicationTokenLifetime;
-  }
-  public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
-    this.extApplicationTokenLifetime = extApplicationTokenLifetime;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_user_token_lifetime")
-  public Long getExtUserTokenLifetime() {
-    return extUserTokenLifetime;
-  }
-  public void setExtUserTokenLifetime(Long extUserTokenLifetime) {
-    this.extUserTokenLifetime = extUserTokenLifetime;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_refresh_token_lifetime")
-  public Long getExtRefreshTokenLifetime() {
-    return extRefreshTokenLifetime;
-  }
-  public void setExtRefreshTokenLifetime(Long extRefreshTokenLifetime) {
-    this.extRefreshTokenLifetime = extRefreshTokenLifetime;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_id_token_lifetime")
-  public Long getExtIdTokenLifetime() {
-    return extIdTokenLifetime;
-  }
-  public void setExtIdTokenLifetime(Long extIdTokenLifetime) {
-    this.extIdTokenLifetime = extIdTokenLifetime;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_pkce_mandatory")
-  public Boolean getExtPkceMandatory() {
-    return extPkceMandatory;
-  }
-  public void setExtPkceMandatory(Boolean extPkceMandatory) {
-    this.extPkceMandatory = extPkceMandatory;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_pkce_support_plain")
-  public Boolean getExtPkceSupportPlain() {
-    return extPkceSupportPlain;
-  }
-  public void setExtPkceSupportPlain(Boolean extPkceSupportPlain) {
-    this.extPkceSupportPlain = extPkceSupportPlain;
-  }
-
-  /**
-   **/
-  @ApiModelProperty(value = "")
-  @JsonProperty("ext_public_client")
-  public Boolean getExtPublicClient() {
-    return extPublicClient;
-  }
-  public void setExtPublicClient(Boolean extPublicClient) {
-    this.extPublicClient = extPublicClient;
-  }
-
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -386,14 +413,30 @@ public class ApplicationDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
-    sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
-    sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");
-    sb.append("  ext_user_token_lifetime: ").append(extUserTokenLifetime).append("\n");
-    sb.append("  ext_refresh_token_lifetime: ").append(extRefreshTokenLifetime).append("\n");
-    sb.append("  ext_id_token_lifetime: ").append(extIdTokenLifetime).append("\n");
-    sb.append("  ext_pkce_mandatory: ").append(extPkceMandatory).append("\n");
-    sb.append("  ext_pkce_support_plain: ").append(extPkceSupportPlain).append("\n");
-    sb.append("  ext_public_client: ").append(extPublicClient).append("\n");
+    sb.append("  extApplicationOwner: ").append(extApplicationOwner).append("\n");
+    sb.append("  extApplicationTokenLifetime: ").append(extApplicationTokenLifetime).append("\n");
+    sb.append("  extUserTokenLifetime: ").append(extUserTokenLifetime).append("\n");
+    sb.append("  extRefreshTokenLifetime: ").append(extRefreshTokenLifetime).append("\n");
+    sb.append("  extIdTokenLifetime: ").append(extIdTokenLifetime).append("\n");
+    sb.append("  extPkceMandatory: ").append(extPkceMandatory).append("\n");
+    sb.append("  extPkceSupportPlain: ").append(extPkceSupportPlain).append("\n");
+    sb.append("  extPublicClient: ").append(extPublicClient).append("\n");
+    sb.append("  jwksUri: ").append(jwksUri).append("\n");
+    sb.append("  tokenEndpointAuthMethod: ").append(tokenEndpointAuthMethod).append("\n");
+    sb.append("  tokenEndpointAuthSigningAlg: ").append(tokenEndpointAuthSigningAlg).append("\n");
+    sb.append("  sectorIdentifierUri: ").append(sectorIdentifierUri).append("\n");
+    sb.append("  idTokenSignedResponseAlg: ").append(idTokenSignedResponseAlg).append("\n");
+    sb.append("  idTokenEncryptedResponseAlg: ").append(idTokenEncryptedResponseAlg).append("\n");
+    sb.append("  idTokenEncryptedResponseEnc: ").append(idTokenEncryptedResponseEnc).append("\n");
+    sb.append("  requestObjectSigningAlg: ").append(requestObjectSigningAlg).append("\n");
+    sb.append("  tlsClientAuthSubjectDn: ").append(tlsClientAuthSubjectDn).append("\n");
+    sb.append("  requirePushAuthorizationRequest: ").append(requirePushAuthorizationRequest).append("\n");
+    sb.append("  requireSignedRequestObject: ").append(requireSignedRequestObject).append("\n");
+    sb.append("  tlsClientCertificateBoundAccessToken: ").append(tlsClientCertificateBoundAccessToken).append("\n");
+    sb.append("  subjectType: ").append(subjectType).append("\n");
+    sb.append("  requestObjectEncryptionAlgorithm: ").append(requestObjectEncryptionAlgorithm).append("\n");
+    sb.append("  requestObjectEncryptionMethod: ").append(requestObjectEncryptionMethod).append("\n");
+    sb.append("  softwareStatement: ").append(softwareStatement).append("\n");
     sb.append("}\n");
     return sb.toString();
   }

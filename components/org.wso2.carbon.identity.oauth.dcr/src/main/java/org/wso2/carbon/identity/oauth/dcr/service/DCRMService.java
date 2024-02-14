@@ -509,6 +509,15 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
+        application.setApplicationOwner(createdApp.getApplicationOwner());
+        application.setAppicationDisplayName(createdApp.getApplicationName());
+        application.setApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
+        application.setUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
+        application.setUserRefreshTokenLifetime(createdApp.getRefreshTokenExpiryTime());
+        application.setUserIdTokenLifetime(createdApp.getIdTokenExpiryTime());
+        application.setPkceMandatory(createdApp.getPkceMandatory());
+        application.setPkceSupportPlain(createdApp.getPkceSupportPlain());
+        application.setPublicClient(createdApp.isBypassClientCredentials());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
@@ -523,15 +532,6 @@ public class DCRMService {
         application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
         application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
-        application.setApplicationOwner(createdApp.getApplicationOwner());
-        application.setAppicationDisplayName(createdApp.getApplicationName());
-        application.setApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
-        application.setUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
-        application.setUserRefreshTokenLifetime(createdApp.getRefreshTokenExpiryTime());
-        application.setUserIdTokenLifetime(createdApp.getIdTokenExpiryTime());
-        application.setPkceMandatory(createdApp.getPkceMandatory());
-        application.setPkceSupportPlain(createdApp.getPkceSupportPlain());
-        application.setPublicClient(createdApp.isBypassClientCredentials());
         if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
             application.setTlsClientCertificateBoundAccessTokens(true);
         }

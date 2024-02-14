@@ -218,6 +218,15 @@ public class DCRMUtils {
         specification we have to set the expiration time to 0.
         https://openid.net/specs/openid-connect-registration-1_0.html */
         applicationDTO.setClientSecretExpiresAt(0L);
+        applicationDTO.setExtApplicationOwner(application.getApplicationOwner());
+        applicationDTO.setExtApplicationDisplayName(application.getAppicationDisplayName());
+        applicationDTO.setExtApplicationTokenLifetime(application.getApplicationTokenLifetime());
+        applicationDTO.setExtUserTokenLifetime(application.getUserTokenLifetime());
+        applicationDTO.setExtRefreshTokenLifetime(application.getUserRefreshTokenLifetime());
+        applicationDTO.setExtIdTokenLifetime(application.getUserIdTokenLifetime());
+        applicationDTO.setExtPkceMandatory(application.isPkceMandatory());
+        applicationDTO.setExtPkceSupportPlain(application.isPkceSupportPlain());
+        applicationDTO.setExtPublicClient(application.isPublicClient());
         applicationDTO.setJwksUri(application.getJwksURI());
         applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
         applicationDTO.setTokenEndpointAuthSigningAlg(application.getTokenEndpointAuthSignatureAlgorithm());
@@ -234,15 +243,6 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
-        applicationDTO.setExtApplicationOwner(application.getApplicationOwner());
-        applicationDTO.setExtApplicationDisplayName(application.getAppicationDisplayName());
-        applicationDTO.setExtApplicationTokenLifetime(application.getApplicationTokenLifetime());
-        applicationDTO.setExtUserTokenLifetime(application.getUserTokenLifetime());
-        applicationDTO.setExtRefreshTokenLifetime(application.getUserRefreshTokenLifetime());
-        applicationDTO.setExtIdTokenLifetime(application.getUserIdTokenLifetime());
-        applicationDTO.setExtPkceMandatory(application.isPkceMandatory());
-        applicationDTO.setExtPkceSupportPlain(application.isPkceSupportPlain());
-        applicationDTO.setExtPublicClient(application.isPublicClient());
 
         return applicationDTO;
     }
