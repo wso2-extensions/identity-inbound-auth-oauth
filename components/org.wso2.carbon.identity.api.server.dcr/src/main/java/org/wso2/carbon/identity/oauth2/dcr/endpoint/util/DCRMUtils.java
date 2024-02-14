@@ -234,6 +234,16 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
+        applicationDTO.setExtApplicationOwner(application.getApplicationOwner());
+        applicationDTO.setExtApplicationDisplayName(application.getAppicationDisplayName());
+        applicationDTO.setExtApplicationTokenLifetime(application.getApplicationTokenLifetime());
+        applicationDTO.setExtUserTokenLifetime(application.getUserTokenLifetime());
+        applicationDTO.setExtRefreshTokenLifetime(application.getUserRefreshTokenLifetime());
+        applicationDTO.setExtIdTokenLifetime(application.getUserIdTokenLifetime());
+        applicationDTO.setExtPkceMandatory(application.isPkceMandatory());
+        applicationDTO.setExtPkceSupportPlain(application.isPkceSupportPlain());
+        applicationDTO.setExtPublicClient(application.isPublicClient());
+
         return applicationDTO;
     }
 

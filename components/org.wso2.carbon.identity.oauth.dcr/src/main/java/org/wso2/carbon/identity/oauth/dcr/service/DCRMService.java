@@ -523,6 +523,15 @@ public class DCRMService {
         application.setRequestObjectEncryptionAlgorithm(createdApp.getRequestObjectEncryptionAlgorithm());
         application.setRequestObjectEncryptionMethod(createdApp.getRequestObjectEncryptionMethod());
         application.setRequirePushedAuthorizationRequests(createdApp.getRequirePushedAuthorizationRequests());
+        application.setApplicationOwner(createdApp.getApplicationOwner());
+        application.setAppicationDisplayName(createdApp.getApplicationName());
+        application.setApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
+        application.setUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
+        application.setUserRefreshTokenLifetime(createdApp.getRefreshTokenExpiryTime());
+        application.setUserIdTokenLifetime(createdApp.getIdTokenExpiryTime());
+        application.setPkceMandatory(createdApp.getPkceMandatory());
+        application.setPkceSupportPlain(createdApp.getPkceSupportPlain());
+        application.setPublicClient(createdApp.isBypassClientCredentials());
         if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
             application.setTlsClientCertificateBoundAccessTokens(true);
         }
@@ -560,6 +569,7 @@ public class DCRMService {
         // Then Create OAuthApp
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(spName);
+        oAuthConsumerApp.setApplicationOwner(applicationOwner);
         oAuthConsumerApp.setCallbackUrl(
                 validateAndSetCallbackURIs(registrationRequest.getRedirectUris(), registrationRequest.getGrantTypes()));
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);

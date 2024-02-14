@@ -49,6 +49,15 @@ public class Application implements Serializable {
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareStatement = null;
+    private String appicationDisplayName = null;
+    private String applicationOwner = null;
+    private Long applicationTokenLifetime = null;
+    private Long userTokenLifetime = null;
+    private Long userRefreshTokenLifetime = null;
+    private Long userIdTokenLifetime = null;
+    private boolean isPkceMandatory;
+    private boolean isPkceSupportPlain;
+    private boolean isPublicClient;
 
     public String getSoftwareStatement() {
 
@@ -257,6 +266,97 @@ public class Application implements Serializable {
 
         this.idTokenEncryptionMethod = idTokenEncryptionMethod;
     }
+
+    public String getAppicationDisplayName() {
+
+        return appicationDisplayName;
+    }
+
+    public void setAppicationDisplayName(String appicationDisplayName) {
+
+        this.appicationDisplayName = appicationDisplayName;
+    }
+
+    public String getApplicationOwner() {
+
+        return applicationOwner;
+    }
+
+    public void setApplicationOwner(String applicationOwner) {
+
+        this.applicationOwner = applicationOwner;
+    }
+
+    public Long getApplicationTokenLifetime() {
+
+        return applicationTokenLifetime;
+    }
+
+    public void setApplicationTokenLifetime(Long applicationTokenLifetime) {
+
+        this.applicationTokenLifetime = applicationTokenLifetime;
+    }
+
+    public Long getUserTokenLifetime() {
+
+        return userTokenLifetime;
+    }
+
+    public void setUserTokenLifetime(Long userTokenLifetime) {
+
+        this.userTokenLifetime = userTokenLifetime;
+    }
+
+    public Long getUserRefreshTokenLifetime() {
+
+        return userRefreshTokenLifetime;
+    }
+
+    public void setUserRefreshTokenLifetime(Long userRefreshTokenLifetime) {
+
+        this.userRefreshTokenLifetime = userRefreshTokenLifetime;
+    }
+
+    public Long getUserIdTokenLifetime() {
+
+        return userIdTokenLifetime;
+    }
+
+    public void setUserIdTokenLifetime(Long userIdTokenLifetime) {
+
+        this.userIdTokenLifetime = userIdTokenLifetime;
+    }
+
+    public boolean isPkceMandatory() {
+
+        return isPkceMandatory;
+    }
+
+    public void setPkceMandatory(boolean pkceMandatory) {
+
+        isPkceMandatory = pkceMandatory;
+    }
+
+    public boolean isPkceSupportPlain() {
+
+        return isPkceSupportPlain;
+    }
+
+    public void setPkceSupportPlain(boolean pkceSupportPlain) {
+
+        isPkceSupportPlain = pkceSupportPlain;
+    }
+
+    public boolean isPublicClient() {
+
+        return isPublicClient;
+    }
+
+    public void setPublicClient(boolean publicClient) {
+
+        isPublicClient = publicClient;
+    }
+
     @Override
     public String toString() {
 

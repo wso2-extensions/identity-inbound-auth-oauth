@@ -494,6 +494,7 @@ public final class OAuthUtil {
 
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(appDO.getApplicationName());
+        dto.setApplicationOwner(appDO.getAppOwner().toFullQualifiedUsername());
         dto.setCallbackUrl(appDO.getCallbackUrl());
         dto.setOauthConsumerKey(appDO.getOauthConsumerKey());
         dto.setOauthConsumerSecret(appDO.getOauthConsumerSecret());

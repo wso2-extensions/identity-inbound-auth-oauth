@@ -37,6 +37,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String oauthConsumerKey;
     private String oauthConsumerSecret;
     private String applicationName;
+    private String applicationOwner;
     private String callbackUrl;
     private String oauthVersion;
     private String username;
@@ -126,6 +127,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     public void setApplicationName(String applicationName) {
         this.applicationName = applicationName;
+    }
+
+    public String getApplicationOwner() {
+
+        return applicationOwner;
+    }
+
+    public void setApplicationOwner(String applicationOwner) {
+
+        this.applicationOwner = applicationOwner;
     }
 
     public String getCallbackUrl() {
