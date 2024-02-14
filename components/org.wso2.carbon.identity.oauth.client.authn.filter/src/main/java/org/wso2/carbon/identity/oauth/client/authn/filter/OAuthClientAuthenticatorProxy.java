@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.client.authn.filter;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.jaxrs.impl.MetadataMap;
@@ -84,8 +85,15 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
                 OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService
                         .authenticateClient(request, bodyContentParams);
                 if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
-                    oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
-                    oAuthClientAuthnContext.setErrorMessage("Unsupported client authentication mechanism");
+                    /* If the previous authenticator is not engaged it means that either client authentication
+                    flow failed or no supported authenticaiton mechanism was found.If the error details are already
+                    not set in the context, set the default error details. */
+                    if (StringUtils.isBlank(oAuthClientAuthnContext.getErrorCode())) {
+                        oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+                    }
+                    if (StringUtils.isBlank(oAuthClientAuthnContext.getErrorMessage())) {
+                        oAuthClientAuthnContext.setErrorMessage("Unsupported client authentication mechanism");
+                    }
                 }
                 setContextToRequest(request, oAuthClientAuthnContext);
             } catch (DBConnectionException e) {
