@@ -185,8 +185,11 @@ public class OAuthClientAuthnService {
                     executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
                 });
             } catch (InvalidOAuthClientException e) {
-                throw new OAuthClientAuthnException("Could not find an existing app for client_id: " + clientId,
-                        OAuth2ErrorCodes.INVALID_CLIENT);
+                String errorMessage = "A valid OAuth client could not be found for client_id: " + clientId;
+                if (log.isDebugEnabled()) {
+                    log.debug(errorMessage, e);
+                }
+                setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, errorMessage, oAuthClientAuthnContext);
             } catch (IdentityOAuth2Exception e) {
                 throw new OAuthClientAuthnException("Error while obtaining the service provider for client_id: " +
                         clientId, OAuth2ErrorCodes.SERVER_ERROR);
@@ -315,7 +318,7 @@ public class OAuthClientAuthnService {
      * @throws OAuthClientAuthnException OAuth Client Authentication Exception.
      */
     private List<OAuthClientAuthenticator> getConfiguredClientAuthMethods(String clientId)
-            throws OAuthClientAuthnException {
+            throws OAuthClientAuthnException, InvalidOAuthClientException {
 
         String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
         List<String> configuredClientAuthMethods = new ArrayList<>();
@@ -325,7 +328,7 @@ public class OAuthClientAuthnService {
             if (StringUtils.isNotBlank(tokenEndpointAuthMethod)) {
                 configuredClientAuthMethods = Arrays.asList(tokenEndpointAuthMethod);
             }
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new OAuthClientAuthnException("Error occurred while retrieving app information for client id: " +
                     clientId + " of tenantDomain: " + tenantDomain, OAuth2ErrorCodes.INVALID_REQUEST, e);
         }
