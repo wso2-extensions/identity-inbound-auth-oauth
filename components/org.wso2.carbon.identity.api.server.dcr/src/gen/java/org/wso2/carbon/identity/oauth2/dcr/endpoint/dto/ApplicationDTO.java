@@ -30,6 +30,9 @@ public class ApplicationDTO  {
     private String clientName = null;
 
 
+    private String extApplicationDisplayName = null;
+
+
     private String extApplicationOwner = null;
 
 
@@ -140,6 +143,17 @@ public class ApplicationDTO  {
   }
   public void setClientName(String clientName) {
     this.clientName = clientName;
+  }
+
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_display_name")
+  public String getExtApplicationDisplayName() {
+    return extApplicationDisplayName;
+  }
+  public void setExtApplicationDisplayName(String extApplicationDisplayName) {
+    this.extApplicationDisplayName = extApplicationDisplayName;
   }
 
     /**

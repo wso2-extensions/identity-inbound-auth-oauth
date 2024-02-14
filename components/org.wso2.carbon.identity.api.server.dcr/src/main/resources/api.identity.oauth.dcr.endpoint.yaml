@@ -463,6 +463,8 @@ definitions:
           type: string
       client_name:
         type: string
+      ext_application_display_name:
+        type: string
       ext_application_owner:
         type: string
       ext_application_token_lifetime:
