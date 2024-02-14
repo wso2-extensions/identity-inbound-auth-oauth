@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
