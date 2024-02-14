@@ -509,6 +509,14 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
+        application.setExtApplicationOwner(createdApp.getUsername());
+        application.setExtApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
+        application.setExtUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
+        application.setExtRefreshTokenLifetime(createdApp.getRefreshTokenExpiryTime());
+        application.setExtIdTokenLifetime(createdApp.getIdTokenExpiryTime());
+        application.setExtPkceMandatory(createdApp.getPkceMandatory());
+        application.setExtPkceSupportPlain(createdApp.getPkceSupportPlain());
+        application.setExtPublicClient(createdApp.isBypassClientCredentials());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
