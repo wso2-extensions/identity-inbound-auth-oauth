@@ -218,6 +218,15 @@ public class DCRMUtils {
         specification we have to set the expiration time to 0.
         https://openid.net/specs/openid-connect-registration-1_0.html */
         applicationDTO.setClientSecretExpiresAt(0L);
+        applicationDTO.setExtApplicationDisplayName(application.getExtApplicationDisplayName());
+        applicationDTO.setExtApplicationOwner(application.getExtApplicationOwner());
+        applicationDTO.setExtApplicationTokenLifetime(application.getExtApplicationTokenLifetime());
+        applicationDTO.setExtUserTokenLifetime(application.getExtUserTokenLifetime());
+        applicationDTO.setExtRefreshTokenLifetime(application.getExtRefreshTokenLifetime());
+        applicationDTO.setExtIdTokenLifetime(application.getExtIdTokenLifetime());
+        applicationDTO.setExtPkceMandatory(application.getExtPkceMandatory());
+        applicationDTO.setExtPkceSupportPlain(application.getExtPkceSupportPlain());
+        applicationDTO.setExtPublicClient(application.getExtPublicClient());
         applicationDTO.setJwksUri(application.getJwksURI());
         applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
         applicationDTO.setTokenEndpointAuthSigningAlg(application.getTokenEndpointAuthSignatureAlgorithm());

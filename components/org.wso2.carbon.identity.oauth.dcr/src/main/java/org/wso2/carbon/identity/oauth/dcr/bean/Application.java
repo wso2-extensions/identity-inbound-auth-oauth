@@ -33,6 +33,15 @@ public class Application implements Serializable {
     private String clientSecret = null;
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
+    private String extApplicationDisplayName = null;
+    private String extApplicationOwner = null;
+    private Long extApplicationTokenLifetime = null;
+    private Long extUserTokenLifetime = null;
+    private Long extRefreshTokenLifetime = null;
+    private Long extIdTokenLifetime = null;
+    private Boolean extPkceMandatory = null;
+    private Boolean extPkceSupportPlain = null;
+    private Boolean extPublicClient = null;
     private String jwksURI = null;
     private String tokenEndpointAuthMethod = null;
     private String tokenEndpointAuthSignatureAlgorithm = null;
@@ -109,6 +118,97 @@ public class Application implements Serializable {
 
         this.grantTypes = grantTypes;
     }
+
+    public void setExtApplicationDisplayName(String extApplicationDisplayName) {
+
+        this.extApplicationDisplayName = extApplicationDisplayName;
+    }
+
+    public String getExtApplicationDisplayName() {
+
+        return extApplicationDisplayName;
+    }
+
+    public String getExtApplicationOwner() {
+
+        return extApplicationOwner;
+    }
+
+    public void setExtApplicationOwner(String extApplicationOwner) {
+
+        this.extApplicationOwner = extApplicationOwner;
+    }
+
+    public Long getExtApplicationTokenLifetime() {
+
+        return extApplicationTokenLifetime;
+    }
+
+    public void setExtApplicationTokenLifetime(Long extApplicationTokenLifetime) {
+
+        this.extApplicationTokenLifetime = extApplicationTokenLifetime;
+    }
+
+    public Long getExtUserTokenLifetime() {
+
+        return extUserTokenLifetime;
+    }
+
+    public void setExtUserTokenLifetime(Long extUserTokenLifetime) {
+
+        this.extUserTokenLifetime = extUserTokenLifetime;
+    }
+
+    public Long getExtRefreshTokenLifetime() {
+
+        return extRefreshTokenLifetime;
+    }
+
+    public void setExtRefreshTokenLifetime(Long extRefreshTokenLifetime) {
+
+        this.extRefreshTokenLifetime = extRefreshTokenLifetime;
+    }
+
+    public Long getExtIdTokenLifetime() {
+
+        return extIdTokenLifetime;
+    }
+
+    public void setExtIdTokenLifetime(Long extIdTokenLifetime) {
+
+        this.extIdTokenLifetime = extIdTokenLifetime;
+    }
+
+    public Boolean getExtPkceMandatory() {
+
+        return extPkceMandatory;
+    }
+
+    public void setExtPkceMandatory(Boolean extPkceMandatory) {
+
+        this.extPkceMandatory = extPkceMandatory;
+    }
+
+    public Boolean getExtPkceSupportPlain() {
+
+        return extPkceSupportPlain;
+    }
+
+    public void setExtPkceSupportPlain(Boolean extPkceSupportPlain) {
+
+        this.extPkceSupportPlain = extPkceSupportPlain;
+    }
+
+    public Boolean getExtPublicClient() {
+
+        return extPublicClient;
+    }
+
+    public void setExtPublicClient(Boolean extPublicClient) {
+
+        this.extPublicClient = extPublicClient;
+    }
+
     public String getJwksURI() {
 
         return jwksURI;
