@@ -138,7 +138,12 @@ public class OAuth2TokenEndpoint {
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
 
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
-            validateOAuthApplication(oauthRequest.getoAuthClientAuthnContext());
+            OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
+            if (!oauthClientAuthnContext.isAuthenticated()
+                    && OAuth2ErrorCodes.INVALID_CLIENT.equals(oauthClientAuthnContext.getErrorCode())) {
+                return handleBasicAuthFailure(oauthClientAuthnContext.getErrorMessage());
+            }
+            validateOAuthApplication(oauthClientAuthnContext);
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest, httpRequest);
 
             if (oauth2AccessTokenResp.getErrorMsg() != null) {
