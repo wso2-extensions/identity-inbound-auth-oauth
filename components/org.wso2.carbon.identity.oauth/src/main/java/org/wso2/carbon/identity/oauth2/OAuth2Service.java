@@ -458,8 +458,9 @@ public class OAuth2Service extends AbstractAdmin {
             return tokenRespDTO;
         } catch (Exception e) { // in case of an error, consider it as a system error
             log.error("Error occurred while issuing the access token for Client ID : " +
-                    tokenReqDTO.getClientId() + ", User ID " + tokenReqDTO.getResourceOwnerUsername() +
-                    ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
+                    tokenReqDTO.getClientId() + ", User ID " + (LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(tokenReqDTO.getResourceOwnerUsername()) :
+                            tokenReqDTO.getResourceOwnerUsername()) + ", Scope : " + Arrays.toString(tokenReqDTO.getScope()) + " and Grant Type : " +
                     tokenReqDTO.getGrantType(), e);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(

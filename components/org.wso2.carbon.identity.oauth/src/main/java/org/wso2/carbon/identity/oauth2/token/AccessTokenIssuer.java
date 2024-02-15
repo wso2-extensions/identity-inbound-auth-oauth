@@ -825,7 +825,8 @@ public class AccessTokenIssuer {
                     subject = getDefaultSubject(serviceProvider, authenticatedUser);
                     log.warn("Cannot find subject claim: " + subjectClaimUri + " for user:"
                             + authenticatedUser.getLoggableUserId()
-                            + ". Defaulting to username: " + subject + " as the subject identifier.");
+                            + ". Defaulting to username: " + (LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(subject) : subject) + " as the subject identifier.");
                 }
                 // Get the subject claim in the correct format (ie. tenantDomain or userStoreDomain appended)
                 subject = getFormattedSubjectClaim(serviceProvider, subject, userStoreDomain, userTenantDomain);
