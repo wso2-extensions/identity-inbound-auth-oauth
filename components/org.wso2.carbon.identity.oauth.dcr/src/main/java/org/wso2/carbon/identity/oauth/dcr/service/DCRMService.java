@@ -237,7 +237,7 @@ public class DCRMService {
             // Validate software statement assertion signature.
             if (StringUtils.isNotEmpty(updateRequest.getSoftwareStatement())) {
                 try {
-                    validateSSASignature(updateRequest.getSoftwareStatement(), tenantDomain);
+                    validateSSASignature(updateRequest.getSoftwareStatement());
                 } catch (IdentityOAuth2Exception e) {
                     throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                             DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
@@ -436,8 +436,7 @@ public class DCRMService {
         In such cases, we set the tenant admin as the owner of the application.
         */
         if (StringUtils.isBlank(applicationOwner)) {
-            DCRConfiguration dcrConfiguration = DCRDataHolder.getInstance()
-                    .getDCRConfigurationByTenantDomain(tenantDomain);
+            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
             boolean isClientAuthenticationRequired = dcrConfiguration.isClientAuthenticationRequired() != null ?
                     dcrConfiguration.isClientAuthenticationRequired() : true;
             if (!isClientAuthenticationRequired) {
@@ -468,7 +467,7 @@ public class DCRMService {
         }
 
         // Check whether the software statement is mandatory and if it is provided.
-        if (isSSAMandatedAndSSAisEmpty(tenantDomain, registrationRequest.getSoftwareStatement())) {
+        if (isSSAMandatedAndSSAisEmpty(registrationRequest.getSoftwareStatement())) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                     DCRMConstants.ErrorMessages.MANDATORY_SOFTWARE_STATEMENT.getMessage());
         }
@@ -476,7 +475,7 @@ public class DCRMService {
         // Validate software statement assertion signature.
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
-                validateSSASignature(registrationRequest.getSoftwareStatement(), tenantDomain);
+                validateSSASignature(registrationRequest.getSoftwareStatement());
             } catch (IdentityOAuth2Exception e) {
                 throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                         DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
@@ -521,9 +520,10 @@ public class DCRMService {
         return application;
     }
 
-    public boolean isSSAMandatedAndSSAisEmpty(String tenantDomain, String softwareStatement)
+    public boolean isSSAMandatedAndSSAisEmpty(String softwareStatement)
             throws DCRMServerException {
-        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfigurationByTenantDomain(tenantDomain);
+
+        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
         String mandateSSA = dcrConfiguration.getMandateSSA();
 
         return "true".equals(mandateSSA) && StringUtils.isEmpty(softwareStatement);
@@ -688,7 +688,7 @@ public class DCRMService {
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
-            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfigurationByTenantDomain(tenantDomain);
+            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
             boolean enableFAPIDCR = dcrConfiguration.isFAPIEnforced();
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
         }
@@ -1035,11 +1035,11 @@ public class DCRMService {
      * @throws DCRMClientException
      * @throws IdentityOAuth2Exception
      */
-    private void validateSSASignature(String softwareStatement, String tenantDomain) throws DCRMClientException,
+    private void validateSSASignature(String softwareStatement) throws DCRMClientException,
             IdentityOAuth2Exception, DCRMServerException {
 
         DCRConfiguration dcrConfiguration = DCRConfigUtils
-                .getDCRConfigurationByTenantDomain(tenantDomain);
+                .getDCRConfiguration();
         String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {

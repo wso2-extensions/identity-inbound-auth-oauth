@@ -51,7 +51,7 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
     DCRConfiguration dcrConfiguration;
     String dummySSAJwks = "http://localhost.com/jwks";
 
-    @Test(priority = 1, description = "Test getServerConfiguration method returns a proper DCRConfiguration object")
+    @Test(priority = 1, description = "Test getDCRServerConfiguration method returns a proper DCRConfiguration object")
     public void testGetServerConfiguration() throws Exception {
 
         mockStatic(IdentityUtil.class);
@@ -59,7 +59,7 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
         when(IdentityUtil.getProperty(OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED)).thenReturn("true");
         when(IdentityUtil.getProperty(OAuthConstants.DCR_SSA_VALIDATION_JWKS)).thenReturn(dummySSAJwks);
 
-        DCRConfiguration dcrConfiguration = invokeMethod(DCRConfigUtils.class, "getServerConfiguration");
+        DCRConfiguration dcrConfiguration = invokeMethod(DCRConfigUtils.class, "getDCRServerConfiguration");
 
         assertEquals(true, dcrConfiguration.isFAPIEnforced());
         assertEquals(true, dcrConfiguration.isClientAuthenticationRequired());

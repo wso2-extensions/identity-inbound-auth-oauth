@@ -62,12 +62,11 @@ public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
 
         mockStatic(DCRConfigUtils.class);
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        when(DCRConfigUtils.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
+        when(DCRConfigUtils.getDCRConfiguration()).thenReturn(dcrConfiguration);
 
-        String tenantDomain = "carbon.super";
         try {
-            Assert.assertTrue(invokeMethod(dcrConfigurationMgtServiceImpl, "getDCRConfiguration",
-                    tenantDomain) instanceof DCRConfiguration);
+            Assert.assertTrue(invokeMethod(dcrConfigurationMgtServiceImpl, "getDCRConfiguration")
+                    instanceof DCRConfiguration);
         } catch (Exception e) {
             Assert.assertTrue(e instanceof DCRMException);
         }
@@ -81,16 +80,13 @@ public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
 
         mockStatic(DCRConfigUtils.class);
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        when(DCRConfigUtils.getDCRConfigurationByTenantDomain(anyString())).thenReturn(dcrConfiguration);
+        when(DCRConfigUtils.getDCRConfiguration()).thenReturn(dcrConfiguration);
 
         mockStatic(DCRDataHolder.class);
         when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
 
-        String tenantDomain = "carbon.super";
-
         try {
-            invokeMethod(dcrConfigurationMgtServiceImpl, "setDCRConfiguration",
-                    dcrConfiguration, tenantDomain);
+            invokeMethod(dcrConfigurationMgtServiceImpl, "setDCRConfiguration", dcrConfiguration);
         } catch (Exception e) {
             Assert.assertTrue(e instanceof DCRMException);
         }

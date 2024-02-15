@@ -82,16 +82,15 @@ public class DCRConfigUtils {
      * Persist the DCRConfiguration object.
      *
      * @param dcrConfiguration The DCRConfiguration object.
-     * @param tenantDomain     The tenant domain.
      */
-    public static void setDCRConfigurationByTenantDomain(DCRConfiguration dcrConfiguration, String tenantDomain)
+    public static void setDCRConfigurationByTenantDomain(DCRConfiguration dcrConfiguration)
             throws DCRMServerException {
 
         try {
             ResourceAdd resourceAdd = parseConfig(dcrConfiguration);
             getConfigurationManager().replaceResource(DCR_CONFIG_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
-            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e);
         }
     }
 
@@ -104,22 +103,22 @@ public class DCRConfigUtils {
      * Get DCR configuration by tenant domain.
      * If there is a resource available for the tenant with the given resource type and resource name,
      * it will override the server configuration.
-     * @param tenantDomain Tenant domain.
      * @return DCRConfiguration.
      * @throws DCRMServerException DCRMServerException.
      */
-    public static DCRConfiguration getDCRConfigurationByTenantDomain(String tenantDomain) throws DCRMServerException {
+    public static DCRConfiguration getDCRConfiguration() throws DCRMServerException {
 
         try {
+//            tenantDomain is resolved inside getResource() method.
             Resource resource = getResource(DCR_CONFIG_RESOURCE_TYPE_NAME, DCR_CONFIG_RESOURCE_NAME);
-            DCRConfiguration dcrConfiguration = getServerConfiguration();
+            DCRConfiguration dcrConfiguration = getDCRServerConfiguration();
             if (resource != null) {
                 overrideConfigsWithResource(resource, dcrConfiguration);
             }
 
             return dcrConfiguration;
         } catch (ConfigurationManagementException e) {
-            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e, tenantDomain);
+            throw handleServerException(ERROR_CODE_DCR_CONFIGURATION_RETRIEVE, e);
         }
     }
 
@@ -154,7 +153,7 @@ public class DCRConfigUtils {
      *
      * @return DCRConfiguration The DCR configuration.
      */
-    public static DCRConfiguration getServerConfiguration() throws DCRMServerException {
+    private static DCRConfiguration getDCRServerConfiguration() throws DCRMServerException {
 
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
 
