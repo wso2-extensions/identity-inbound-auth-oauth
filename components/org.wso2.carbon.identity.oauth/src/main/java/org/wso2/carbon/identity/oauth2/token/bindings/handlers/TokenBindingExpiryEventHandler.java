@@ -38,8 +38,10 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -108,12 +110,12 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             } else {
                 revokeTokensForCommonAuthCookie(request, getAuthenticatedUser(eventProperties, context));
             }
-        } catch (IdentityOAuth2Exception | OAuthSystemException  e) {
-            log.error("Error while revoking the tokens on session termination.", e);
-        } catch (InvalidOAuthClientException e) {
+        } catch (InvalidOAuthClientException | IdentityOAuth2ClientException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error while revoking the tokens on session termination.", e);
             }
+        } catch (IdentityOAuth2Exception | OAuthSystemException  e) {
+            log.error("Error while revoking the tokens on session termination.", e);
         }
     }
 
@@ -238,12 +240,18 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         }
 
         TokenBinder tokenBinder = tokenBinderOptional.get();
-        String tokenBindingRef = OAuth2Util.getTokenBindingReference(tokenBinder.getTokenBindingValue(request));
-        if (StringUtils.isBlank(tokenBindingRef)) {
-            throw new IdentityOAuth2Exception("Token binding reference is null for the application " +
-                    consumerKey + " with binding type " + bindingType + ".");
+
+        try {
+            String tokenBindingRef = OAuth2Util.getTokenBindingReference(tokenBinder.getTokenBindingValue(request));
+            if (StringUtils.isBlank(tokenBindingRef)) {
+                throw new IdentityOAuth2ClientException("Token binding reference is null for the application " +
+                        consumerKey + " with binding type " + bindingType + ".");
+            }
+            return tokenBindingRef;
+        } catch (OAuthSystemClientException e) {
+            String errorMsg = "No bound tokens found for the the provided binding reference";
+            throw new IdentityOAuth2ClientException(errorMsg, e);
         }
-        return tokenBindingRef;
     }
 
     /**

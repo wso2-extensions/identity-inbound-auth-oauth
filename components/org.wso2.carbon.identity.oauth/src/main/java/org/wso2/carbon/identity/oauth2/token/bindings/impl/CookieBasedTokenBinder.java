@@ -24,6 +24,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -94,7 +95,7 @@ public class CookieBasedTokenBinder extends AbstractTokenBinder {
         if (StringUtils.isNotBlank(tokenBindingValue)) {
             return tokenBindingValue;
         } else {
-            throw new OAuthSystemException("Failed to retrieve token binding value.");
+            throw new OAuthSystemClientException("Failed to retrieve token binding value.");
         }
     }
 
