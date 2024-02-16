@@ -83,7 +83,7 @@ public class DCRConfigUtils {
      *
      * @param dcrConfiguration The DCRConfiguration object.
      */
-    public static void setDCRConfigurationByTenantDomain(DCRConfiguration dcrConfiguration)
+    public static void setDCRConfiguration(DCRConfiguration dcrConfiguration)
             throws DCRMServerException {
 
         try {
@@ -113,7 +113,7 @@ public class DCRConfigUtils {
             Resource resource = getResource(DCR_CONFIG_RESOURCE_TYPE_NAME, DCR_CONFIG_RESOURCE_NAME);
             DCRConfiguration dcrConfiguration = getDCRServerConfiguration();
             if (resource != null) {
-                overrideConfigsWithResource(resource, dcrConfiguration);
+                overrideDCRServerConfigsWithDCRResourceConfig(resource, dcrConfiguration);
             }
 
             return dcrConfiguration;
@@ -165,14 +165,15 @@ public class DCRConfigUtils {
         Boolean clientAuthenticationRequired = clientAuthenticationRequiredValue != null ?
                 Boolean.parseBoolean(clientAuthenticationRequiredValue) : null;
 
+        String mandateSSAValue = IdentityUtil.getProperty(OAuthConstants.DCR_MANDATE_SSA);
+        Boolean mandateSSA = mandateSSAValue != null ? Boolean.parseBoolean(mandateSSAValue) : null;
+
         String ssaJwks = IdentityUtil.getProperty(OAuthConstants.DCR_SSA_VALIDATION_JWKS);
-        String mandateSSA = IdentityUtil.getProperty(OAuthConstants.DCR_MANDATE_SSA);
 
         dcrConfiguration.setFAPIEnforced(enableDCRFapi);
-        dcrConfiguration.setClientAuthenticationRequired(clientAuthenticationRequired);
-        dcrConfiguration.setSsaJwks(ssaJwks);
-
+        dcrConfiguration.setAuthenticationRequired(clientAuthenticationRequired);
         dcrConfiguration.setMandateSSA(mandateSSA);
+        dcrConfiguration.setSsaJwks(ssaJwks);
 
         return dcrConfiguration;
     }
@@ -182,12 +183,15 @@ public class DCRConfigUtils {
      *
      * @param resource Resource
      */
-    public static void overrideConfigsWithResource(Resource resource, DCRConfiguration dcrConfiguration)
+    public static void overrideDCRServerConfigsWithDCRResourceConfig(Resource resource,
+                                                                     DCRConfiguration dcrConfiguration)
             throws DCRMServerException {
 
         if (resource.isHasAttribute()) {
             List<Attribute> attributes = resource.getAttributes();
             Map<String, String> attributeMap = getAttributeMap(attributes);
+
+            // preventing null values being converted to false
 
             String enableDCRFapiValue = attributeMap.get(ENABLE_FAPI_ENFORCEMENT);
             Boolean enableDCRFapi = enableDCRFapiValue != null ? Boolean.parseBoolean(enableDCRFapiValue) : null;
@@ -196,14 +200,16 @@ public class DCRConfigUtils {
             Boolean clientAuthenticationRequired = clientAuthenticationRequiredValue != null ?
                     Boolean.parseBoolean(clientAuthenticationRequiredValue) : null;
 
+            String mandateSSAValue = attributeMap.get(MANDATE_SSA);
+            Boolean mandateSSA = mandateSSAValue != null ? Boolean.parseBoolean(mandateSSAValue) : null;
+
             String ssaJwks = attributeMap.get(SSA_JWKS);
-            String mandateSSA = attributeMap.get(MANDATE_SSA);
 
             if (enableDCRFapi != null) {
                 dcrConfiguration.setFAPIEnforced(enableDCRFapi);
             }
             if (clientAuthenticationRequired != null) {
-                dcrConfiguration.setClientAuthenticationRequired(clientAuthenticationRequired);
+                dcrConfiguration.setAuthenticationRequired(clientAuthenticationRequired);
             }
             if (ssaJwks != null) {
                 dcrConfiguration.setSsaJwks(ssaJwks);
@@ -243,10 +249,11 @@ public class DCRConfigUtils {
 
         isFAPIEnforced = dcrConfiguration.isFAPIEnforced() != null ?
                 String.valueOf(dcrConfiguration.isFAPIEnforced()) : null;
-        isClientAuthenticationRequired = dcrConfiguration.isClientAuthenticationRequired() != null ?
-                String.valueOf(dcrConfiguration.isClientAuthenticationRequired()) : null;
+        isClientAuthenticationRequired = dcrConfiguration.isAuthenticationRequired() != null ?
+                String.valueOf(dcrConfiguration.isAuthenticationRequired()) : null;
+        mandateSSA = dcrConfiguration.getMandateSSA() != null ?
+                String.valueOf(dcrConfiguration.getMandateSSA()) : null;
         ssaJwks = dcrConfiguration.getSsaJwks();
-        mandateSSA = dcrConfiguration.getMandateSSA();
 
         addAttribute(attributes, ENABLE_FAPI_ENFORCEMENT, isFAPIEnforced);
         addAttribute(attributes, CLIENT_AUTHENTICATION_REQUIRED, isClientAuthenticationRequired);

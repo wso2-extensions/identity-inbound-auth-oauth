@@ -62,15 +62,15 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
         DCRConfiguration dcrConfiguration = invokeMethod(DCRConfigUtils.class, "getDCRServerConfiguration");
 
         assertEquals(true, dcrConfiguration.isFAPIEnforced());
-        assertEquals(true, dcrConfiguration.isClientAuthenticationRequired());
+        assertEquals(true, dcrConfiguration.isAuthenticationRequired());
         assertEquals(dummySSAJwks, dcrConfiguration.getSsaJwks());
 
         this.dcrConfiguration = dcrConfiguration;
     }
 
-    @Test(priority = 2, description = "Test overrideConfigsWithResource method properly overrides the " +
-            "DCRConfiguration object")
-    public void testOverrideConfigsWithResource() throws Exception {
+    @Test(priority = 2, description = "Test overrideDCRServerConfigsWithDCRResourceConfig method properly overrides " +
+            "the DCRConfiguration object")
+    public void testOverrideDCRServerConfigsWithDCRResourceConfig() throws Exception {
 
         Resource resource = new Resource();
         Attribute attribute1 = new Attribute(ENABLE_FAPI_ENFORCEMENT, "false");
@@ -79,10 +79,10 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
         resource.setHasAttribute(true);
 
         invokeMethod(DCRConfigUtils.class,
-                "overrideConfigsWithResource", resource, this.dcrConfiguration);
+                "overrideDCRServerConfigsWithDCRResourceConfig", resource, this.dcrConfiguration);
 
         assertEquals(false, this.dcrConfiguration.isFAPIEnforced());
-        assertEquals(false, this.dcrConfiguration.isClientAuthenticationRequired());
+        assertEquals(false, this.dcrConfiguration.isAuthenticationRequired());
     }
 
     @Test(priority = 3, description = "Test parseConfig method properly converts the DCRConfiguration object to " +

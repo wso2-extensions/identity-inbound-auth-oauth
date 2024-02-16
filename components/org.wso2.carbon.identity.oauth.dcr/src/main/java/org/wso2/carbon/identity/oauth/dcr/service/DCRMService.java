@@ -437,8 +437,8 @@ public class DCRMService {
         */
         if (StringUtils.isBlank(applicationOwner)) {
             DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
-            boolean isClientAuthenticationRequired = dcrConfiguration.isClientAuthenticationRequired() != null ?
-                    dcrConfiguration.isClientAuthenticationRequired() : true;
+            boolean isClientAuthenticationRequired = dcrConfiguration.isAuthenticationRequired() != null ?
+                    dcrConfiguration.isAuthenticationRequired() : true;
             if (!isClientAuthenticationRequired) {
                 applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
                         .getRealmConfiguration().getAdminUserName();
@@ -466,7 +466,7 @@ public class DCRMService {
                     registrationRequest.getConsumerKey());
         }
 
-        // Check whether the software statement is mandatory and if it is provided.
+        // Check whether the software statement is mandatory and throw error if it is not provided.
         if (isSSAMandatedAndSSAisEmpty(registrationRequest.getSoftwareStatement())) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                     DCRMConstants.ErrorMessages.MANDATORY_SOFTWARE_STATEMENT.getMessage());
@@ -520,13 +520,23 @@ public class DCRMService {
         return application;
     }
 
+    /**
+     * Check whether the software statement is mandatory and the software statement is empty.
+     *
+     * @param softwareStatement Software statement.
+     * @return True if the software statement is mandatory and the software statement is empty.
+     * @throws DCRMServerException If an error occurred while checking the software statement.
+     */
     public boolean isSSAMandatedAndSSAisEmpty(String softwareStatement)
             throws DCRMServerException {
 
         DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
-        String mandateSSA = dcrConfiguration.getMandateSSA();
+        Boolean isSSAMandated = dcrConfiguration.getMandateSSA();
 
-        return "true".equals(mandateSSA) && StringUtils.isEmpty(softwareStatement);
+        if (isSSAMandated != null) {
+            return isSSAMandated && StringUtils.isEmpty(softwareStatement);
+        }
+        return false;
     }
 
     private Application buildResponse(OAuthConsumerAppDTO createdApp) {

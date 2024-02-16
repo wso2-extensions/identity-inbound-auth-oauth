@@ -18,19 +18,17 @@
 
 package org.wso2.carbon.identity.oauth.dcr.model;
 
-import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
-
 /**
  * DCR Configuration model.
  */
 public class DCRConfiguration {
 
     private Boolean isDCRFAPIEnforced;
-    private Boolean clientAuthenticationRequired;
+    private Boolean authenticationRequired;
+    private Boolean mandateSSA;
     private String ssaJwks;
-    private String mandateSSA;
 
-    public String getMandateSSA() {
+    public Boolean getMandateSSA() {
 
         return mandateSSA;
     }
@@ -41,14 +39,9 @@ public class DCRConfiguration {
      *
      * @param mandateSSA The value to set.
      */
-    public void setMandateSSA(String mandateSSA) throws DCRMServerException {
+    public void setMandateSSA(Boolean mandateSSA) {
 
-        if (mandateSSA == null || "true".equals(mandateSSA) || "false".equals(mandateSSA)) {
-            this.mandateSSA = mandateSSA;
-        } else {
-            throw new DCRMServerException("Invalid value for mandateSSA: " + mandateSSA);
-        }
-
+        this.mandateSSA = mandateSSA;
     }
 
     public Boolean isFAPIEnforced() {
@@ -61,14 +54,14 @@ public class DCRConfiguration {
         this.isDCRFAPIEnforced = isDCRFAPIEnforced;
     }
 
-    public Boolean isClientAuthenticationRequired() {
+    public Boolean isAuthenticationRequired() {
 
-        return clientAuthenticationRequired;
+        return authenticationRequired;
     }
 
-    public void setClientAuthenticationRequired(Boolean clientAuthenticationRequired) {
+    public void setAuthenticationRequired(Boolean authenticationRequired) {
 
-        this.clientAuthenticationRequired = clientAuthenticationRequired;
+        this.authenticationRequired = authenticationRequired;
     }
 
     public String getSsaJwks() {

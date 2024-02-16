@@ -43,7 +43,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
     public void setDCRConfiguration(DCRConfiguration dcrConfiguration)
             throws DCRMServerException {
 
-        DCRConfigUtils.setDCRConfigurationByTenantDomain(dcrConfiguration);
+        DCRConfigUtils.setDCRConfiguration(dcrConfiguration);
     }
 
 
