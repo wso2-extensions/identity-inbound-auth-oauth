@@ -112,19 +112,19 @@ public class DCRMConstants {
     public enum DCRConfigErrorMessage {
 
         /**
-         * Invalid tenant domain.
-         */
-        ERROR_CODE_INVALID_TENANT_DOMAIN("60005",
-                "Invalid input.",
-                "%s is not a valid tenant domain."),
-
-        /**
          * Unable to retrieve DCR configuration.
          */
         ERROR_CODE_DCR_CONFIGURATION_RETRIEVE("65020",
                 "Unable to retrieve DCR configuration.",
                 "Server encountered an error while retrieving the " +
-                        "DCR configuration of %s.");
+                        "DCR configuration of %s."),
+
+        /**
+         * Unable to retrieve DCR configuration.
+         */
+        ERROR_CODE_SSA_JWKS_REQUIRED("65020",
+                "SSA JWKS not found.",
+                "SSA JWKS url is required to mandate SSA validation");
 
         /**
          * The error code.

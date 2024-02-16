@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr;
 
+import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
@@ -41,7 +42,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      */
     @Override
     public void setDCRConfiguration(DCRConfiguration dcrConfiguration)
-            throws DCRMServerException {
+            throws DCRMServerException, DCRMClientException {
 
         DCRConfigUtils.setDCRConfiguration(dcrConfiguration);
     }

@@ -20,13 +20,11 @@ package org.wso2.carbon.identity.oauth.dcr.util;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
 import org.wso2.carbon.identity.configuration.mgt.core.model.ResourceAdd;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
@@ -62,31 +60,15 @@ public class DCRConfigUtils {
     private DCRConfigUtils() { }
 
     /**
-     * Validate the tenant domain.
-     *
-     * @param tenantDomain The tenant domain.
-     * @throws DCRMClientException If the tenant domain is invalid.
-     */
-    public static void validateTenantDomain(String tenantDomain)
-            throws DCRMClientException {
-
-        try {
-            IdentityTenantUtil.getTenantId(tenantDomain);
-        } catch (IdentityRuntimeException e) {
-            throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_INVALID_TENANT_DOMAIN, e,
-                    tenantDomain);
-        }
-    }
-
-    /**
      * Persist the DCRConfiguration object.
      *
      * @param dcrConfiguration The DCRConfiguration object.
      */
     public static void setDCRConfiguration(DCRConfiguration dcrConfiguration)
-            throws DCRMServerException {
+            throws DCRMServerException, DCRMClientException {
 
         try {
+            validateMandateSSA(dcrConfiguration);
             ResourceAdd resourceAdd = parseConfig(dcrConfiguration);
             getConfigurationManager().replaceResource(DCR_CONFIG_RESOURCE_TYPE_NAME, resourceAdd);
         } catch (ConfigurationManagementException e) {
@@ -97,6 +79,14 @@ public class DCRConfigUtils {
     public static ConfigurationManager getConfigurationManager() {
 
         return DCRDataHolder.getInstance().getConfigurationManager();
+    }
+
+    private static void validateMandateSSA (DCRConfiguration dcrConfiguration) throws DCRMClientException {
+
+        if (dcrConfiguration.getMandateSSA() != null && dcrConfiguration.getMandateSSA() &&
+                StringUtils.isBlank(dcrConfiguration.getSsaJwks())) {
+            throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_JWKS_REQUIRED);
+        }
     }
 
     /**
