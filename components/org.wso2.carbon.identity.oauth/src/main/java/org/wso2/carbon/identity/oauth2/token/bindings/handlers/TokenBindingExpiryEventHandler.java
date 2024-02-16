@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.authentication.framework.context.Ses
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
@@ -293,8 +294,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         try {
             userId = user.getUserId();
         } catch (UserIdNotFoundException e) {
-            log.error("User id cannot be found for user: " + user.getLoggableUserId() + ". Hence skip revoking " +
-                    "relevant tokens");
+            // Masking getLoggableUserId as it will return the username because the user id is not available.
+            log.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                    LoggerUtils.getMaskedContent(user.getLoggableUserId()) :  user.getLoggableUserId()) +
+                    ". Hence skip revoking relevant tokens");
             throw new IdentityOAuth2Exception("Unable to revoke tokens for the token binding reference: "
                     + tokenBindingReference);
         }
@@ -324,7 +327,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
                 } catch (UserIdNotFoundException e) {
-                    log.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                    // Masking getLoggableUserId as it will return the username because the user id is not available.
+                    log.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                            LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
+                            authenticatedUser.getLoggableUserId()));
                     throw new IdentityOAuth2Exception("Unable to revoke tokens of the app: " + consumerKey +
                             " for the token binding reference: " + tokenBindingReference);
                 }
