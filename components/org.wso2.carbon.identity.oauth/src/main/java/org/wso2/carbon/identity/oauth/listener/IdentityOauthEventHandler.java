@@ -24,6 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.AuthorizedAPI;
+import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.core.bean.context.MessageContext;
 import org.wso2.carbon.identity.core.handler.InitConfig;
@@ -36,6 +39,7 @@ import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
@@ -51,6 +55,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * This is an event handler listening for some of the core user management operations.
@@ -192,6 +197,52 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 terminateSession(userIdList, roleId, tenantDomain);
             } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
+                throw new IdentityEventException(errorMsg);
+            }
+        } else if (IdentityEventConstants.Event.PRE_UPDATE_AUTHORIZED_API_FOR_APPLICATION_EVENT
+                .equals(event.getEventName())) {
+
+            String appId = (String) event.getEventProperties().get(IdentityEventConstants.EventProperty.APPLICATION_ID);
+            String apiId = (String) event.getEventProperties().get(IdentityEventConstants.EventProperty.API_ID);
+            List<String> removedScopes = (List<String>) event.getEventProperties().get(IdentityEventConstants.
+                    EventProperty.DELETED_SCOPES);
+            String tenantDomain = (String) event.getEventProperties().get(IdentityEventConstants.
+                    EventProperty.TENANT_DOMAIN);
+            if (!removedScopes.isEmpty()) {
+                try {
+                    OAuth2ServiceComponentHolder.getInstance()
+                            .getRevocationProcessor().revokeTokens(appId, apiId, removedScopes, tenantDomain);
+                } catch (IdentityOAuth2Exception e) {
+                    String errorMsg = "Error occurred while revoking access token " +
+                            "for application resource id: " + appId;
+                    log.error(errorMsg, e);
+                    throw new IdentityEventException(errorMsg);
+                }
+            }
+        } else if (IdentityEventConstants.Event.PRE_DELETE_AUTHORIZED_API_FOR_APPLICATION_EVENT
+                .equals(event.getEventName())) {
+
+            String appId = (String) event.getEventProperties().get(IdentityEventConstants.EventProperty.APPLICATION_ID);
+            String apiId = (String) event.getEventProperties().get(IdentityEventConstants.EventProperty.API_ID);
+            String tenantDomain = (String) event.getEventProperties().get(IdentityEventConstants.
+                    EventProperty.TENANT_DOMAIN);
+            try {
+                AuthorizedAPI authorizedAPI = OAuthComponentServiceHolder.getInstance()
+                        .getAuthorizedAPIManagementService()
+                        .getAuthorizedAPI(appId, apiId, tenantDomain);
+                List<String> removedScopes = new ArrayList<>();
+                removedScopes.addAll(authorizedAPI.getScopes().stream()
+                                .map(Scope::getName).filter(scope ->
+                        !removedScopes.contains(scope)).collect(Collectors.toList()));
+
+                if (!removedScopes.isEmpty()) {
+                    OAuth2ServiceComponentHolder.getInstance()
+                            .getRevocationProcessor().revokeTokens(appId, apiId, removedScopes, tenantDomain);
+                }
+            } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+                String errorMsg = "Error occurred while revoking access token " +
+                        "for application resource id: " + appId;
+                log.error(errorMsg, e);
                 throw new IdentityEventException(errorMsg);
             }
         }

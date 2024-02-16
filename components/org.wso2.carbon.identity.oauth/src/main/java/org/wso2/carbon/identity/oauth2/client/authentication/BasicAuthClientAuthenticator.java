@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.client.authentication;
 
-import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
@@ -34,6 +33,7 @@ import org.wso2.carbon.identity.oauth2.model.ClientAuthenticationMethodModel;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -248,15 +248,21 @@ public class BasicAuthClientAuthenticator extends AbstractOAuthClientAuthenticat
     protected static String[] extractCredentialsFromAuthzHeader(String authorizationHeader, OAuthClientAuthnContext
             oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
-        String[] splitValues = authorizationHeader.trim().split(" ");
-        if (splitValues.length == CREDENTIAL_LENGTH) {
-            byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-            String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-            String[] credentials = userNamePassword.split(CREDENTIAL_SEPARATOR);
-            if (credentials.length == CREDENTIAL_LENGTH) {
-                return credentials;
+        try {
+            String[] authHeaderComponents = authorizationHeader.trim().split(" ");
+            if (authHeaderComponents.length == CREDENTIAL_LENGTH) {
+                byte[] decodedBytes = Base64.getDecoder().decode(authHeaderComponents[1].trim());
+                String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
+                String[] credentials = userNamePassword.split(CREDENTIAL_SEPARATOR);
+                if (credentials.length == CREDENTIAL_LENGTH) {
+                    return credentials;
+                }
             }
+        } catch (IllegalArgumentException e) {
+            throw new OAuthClientAuthnException("Error decoding authorization header. " + e.getMessage(),
+                    OAuth2ErrorCodes.INVALID_CLIENT);
         }
+
         String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64Hash>\" format " +
                 "violated.";
         throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_CLIENT);

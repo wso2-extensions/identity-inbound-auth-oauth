@@ -438,7 +438,8 @@ public class OAuth2ServiceComponent {
         boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
                 OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
         OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
-        if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
+        if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()
+                || OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
             initializeLegacyScopeToNewScopeMappings();
         }
     }

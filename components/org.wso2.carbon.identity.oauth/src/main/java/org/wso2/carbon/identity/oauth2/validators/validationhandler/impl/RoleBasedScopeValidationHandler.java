@@ -23,7 +23,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.RoleV2;
+import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -71,8 +74,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                 tenantDomain = resolveTenantDomainByOrgId(scopeValidationContext.getAuthenticatedUser()
                         .getAccessingOrganization());
             }
-            List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId(),
-                    tenantDomain);
+            List<String> filteredRoleIds = getFilteredRoleIds(userRoles, scopeValidationContext.getAppId());
             if (filteredRoleIds.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -103,14 +105,12 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      *
      * @param roleId Role id list.
      * @param appId App id.
-     * @param tenantDomain Tenant domain.
      * @return Filtered role ids.
      * @throws ScopeValidationHandlerException if an error occurs while retrieving filtered role id list.
      */
-    private List<String> getFilteredRoleIds(List<String> roleId, String appId, String tenantDomain)
-            throws ScopeValidationHandlerException {
+    private List<String> getFilteredRoleIds(List<String> roleId, String appId) throws ScopeValidationHandlerException {
 
-        List<String> rolesAssociatedWithApp = getRoleIdsAssociatedWithApp(appId, tenantDomain);
+        List<String> rolesAssociatedWithApp = getRoleIdsAssociatedWithApp(appId);
         return roleId.stream().distinct().filter(rolesAssociatedWithApp::contains).collect(Collectors.toList());
     }
 
@@ -118,20 +118,20 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
      * Get the role ids associated with app.
      *
      * @param appId App id.
-     * @param tenantDomain Tenant domain.
      * @return Role ids associated with app.
      * @throws ScopeValidationHandlerException if an error occurs while retrieving role id list of app.
      */
-    private List<String> getRoleIdsAssociatedWithApp(String appId, String tenantDomain)
-            throws ScopeValidationHandlerException {
+    private List<String> getRoleIdsAssociatedWithApp(String appId) throws ScopeValidationHandlerException {
 
+        ApplicationManagementService applicationManagementService =
+                OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
         try {
-            return OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getAssociatedRolesOfApplication(appId, tenantDomain).stream().map(RoleV2::getId)
-                    .collect(Collectors.toCollection(ArrayList::new));
+            int applicationTenantId = applicationManagementService.getTenantIdByApp(appId);
+            return applicationManagementService.getAssociatedRolesOfApplication(appId,
+                            IdentityTenantUtil.getTenantDomain(applicationTenantId)).stream()
+                    .map(RoleV2::getId).collect(Collectors.toCollection(ArrayList::new));
         } catch (IdentityApplicationManagementException e) {
-            throw new ScopeValidationHandlerException("Error while retrieving role id list of app : " + appId
-                    + "tenant domain : " + tenantDomain, e);
+            throw new ScopeValidationHandlerException("Error while retrieving role id list of app : " + appId, e);
         }
     }
 

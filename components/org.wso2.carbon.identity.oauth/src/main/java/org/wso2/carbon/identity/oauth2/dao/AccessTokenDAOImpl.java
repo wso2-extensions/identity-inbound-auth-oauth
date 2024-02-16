@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -2815,6 +2816,37 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
     }
 
     /**
+     * Retrieves active AccessTokenDOs with token id for the given consumer key.
+     *
+     * @param consumerKey client id
+     * @return access token data object set
+     * @throws IdentityOAuth2Exception
+     */
+    @Override
+    public Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyAndScope(String consumerKey, List<String> scopes)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving active access token set with token id of client: " + consumerKey);
+        }
+        Set<AccessTokenDO> activeAccessTokenDOSet = null;
+        for (String scope: scopes) {
+            activeAccessTokenDOSet = getActiveAccessTokenSetByConsumerKeyForScope(consumerKey,
+                    IdentityUtil.getPrimaryDomainName(), scope);
+
+            if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+                Map<String, String> availableDomainMappings = OAuth2Util.getAvailableUserStoreDomainMappings();
+                for (Map.Entry<String, String> availableDomainMapping : availableDomainMappings.entrySet()) {
+                    activeAccessTokenDOSet.addAll(getActiveAccessTokenSetByConsumerKeyForOpenidScope(consumerKey,
+                            availableDomainMapping.getKey()));
+                }
+            }
+        }
+
+        return activeAccessTokenDOSet;
+    }
+
+    /**
      * Retrieves active AccessTokenDOs with token id for a given consumer key
      *
      * @param consumerKey     client id
@@ -2862,6 +2894,101 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     + "the application with consumer key : " + consumerKey, e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, rs, ps);
+        }
+        return accessTokens;
+
+    }
+
+    /**
+     * Retrieves active AccessTokenDOs with token id for a given consumer key
+     *
+     * @param consumerKey     client id
+     * @param userStoreDomain userstore domain
+     * @return set of access token data objects
+     * @throws IdentityOAuth2Exception
+     */
+    private Set<AccessTokenDO> getActiveAccessTokenSetByConsumerKeyForScope(String consumerKey,
+                                                                            String userStoreDomain,
+                                                                            String scope)
+            throws IdentityOAuth2Exception {
+
+        Connection connection = IdentityDatabaseUtil.getDBConnection();
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
+        Set<AccessTokenDO> accessTokens = new HashSet<>();
+        try {
+            String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
+                    GET_ACCESS_TOKENS_FOR_CONSUMER_KEY_AND_SCOPE, userStoreDomain);
+            ps = connection.prepareStatement(sqlQuery);
+            ps.setString(1, consumerKey);
+            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+            ps.setString(4, scope);
+            resultSet = ps.executeQuery();
+
+            while (resultSet.next()) {
+                String accessToken = getPersistenceProcessor()
+                        .getPreprocessedAccessTokenIdentifier(resultSet.getString(OAuthColumnName.ACCESS_TOKEN));
+                String tokenScope = resultSet.getString(OAuthColumnName.TOKEN_SCOPE);
+                String refreshToken = resultSet.getString(OAuthColumnName.REFRESH_TOKEN);
+                String tokenId = resultSet.getString(OAuthColumnName.TOKEN_ID);
+                int tenantId = resultSet.getInt(OAuthColumnName.TENANT_ID);
+                String authzUser = resultSet.getString(OAuthColumnName.AUTHZ_USER);
+                String subjectIdentifier = resultSet.getString(OAuthColumnName.SUBJECT_IDENTIFIER);
+                String userDomain = resultSet.getString(OAuthColumnName.USER_DOMAIN);
+                String authenticatedIDPName = resultSet.getString(OAuthColumnName.AUTHENTICATED_IDP_NAME);
+                String authorizedOrganization = resultSet.getString(OAuthColumnName.AUTHORIZED_ORGANIZATION);
+                String bindingRef = resultSet.getString(OAuthColumnName.TOKEN_BINDING_REF);
+                TokenBinding tokenBinding = new TokenBinding();
+                tokenBinding.setBindingReference(bindingRef);
+
+                AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
+                        userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
+                user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
+                if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+                    user.setAccessingOrganization(authorizedOrganization);
+                    user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
+                                /* Tenant domain of the application is set as the authenticated user tenant domain
+                                for the organization SSO login users. */
+                    if (user.isFederatedUser()) {
+                        user.setTenantDomain(
+                                OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                    }
+                }
+                Timestamp issuedTime = resultSet
+                        .getTimestamp(OAuthColumnName.TIME_CREATED, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                Timestamp refreshTokenIssuedTime =
+                        resultSet.getTimestamp(OAuthColumnName.REFRESH_TOKEN_TIME_CREATED
+                                , Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                long validityPeriodInMillis = resultSet.getLong(OAuthColumnName.VALIDITY_PERIOD);
+                long refreshTokenValidityPeriodMillis
+                        = resultSet.getLong(OAuthColumnName.REFRESH_TOKEN_VALIDITY_PERIOD);
+                String tokenType = resultSet.getString(OAuthColumnName.USER_TYPE);
+                String[] scopes = OAuth2Util.buildScopeArray(tokenScope);
+
+                AccessTokenDO accessTokenDO = new AccessTokenDO();
+                accessTokenDO.setAccessToken(accessToken);
+                accessTokenDO.setConsumerKey(consumerKey);
+                accessTokenDO.setScope(scopes);
+                accessTokenDO.setAuthzUser(user);
+                accessTokenDO.setTenantID(tenantId);
+                accessTokenDO.setRefreshToken(refreshToken);
+                accessTokenDO.setTokenId(tokenId);
+                accessTokenDO.setIssuedTime(issuedTime);
+                accessTokenDO.setRefreshTokenIssuedTime(refreshTokenIssuedTime);
+                accessTokenDO.setValidityPeriod(validityPeriodInMillis);
+                accessTokenDO.setRefreshTokenValidityPeriod(refreshTokenValidityPeriodMillis);
+                accessTokenDO.setTokenType(tokenType);
+                accessTokenDO.setTokenBinding(tokenBinding);
+                accessTokens.add(accessTokenDO);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollBack(connection);
+            throw new IdentityOAuth2Exception("Error occurred while getting access tokens from access token table for "
+                    + "the application with consumer key : " + consumerKey, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, resultSet, ps);
         }
         return accessTokens;
     }

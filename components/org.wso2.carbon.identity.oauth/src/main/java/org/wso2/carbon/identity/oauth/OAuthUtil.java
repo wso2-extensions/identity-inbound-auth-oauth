@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -174,7 +175,10 @@ public final class OAuthUtil {
             try {
                 userId = authenticatedUser.getUserId();
             } catch (UserIdNotFoundException e) {
-                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                // Masking getLoggableUserId as it will return the username because the user id is not available.
+                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
+                        authenticatedUser.getLoggableUserId()));
                 return;
             }
             clearOAuthCache(consumerKey, userId);
@@ -197,7 +201,10 @@ public final class OAuthUtil {
         } catch (UserIdNotFoundException e) {
             userId = resolveUserIdFromUsername(authorizedUser);
             if (StringUtils.isEmpty(userId)) {
-                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                // Masking getLoggableUserId as it will return the username because the user id is not available.
+                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
+                        authorizedUser.getLoggableUserId()));
                 return;
             }
         }
@@ -227,7 +234,10 @@ public final class OAuthUtil {
             try {
                 userId = authenticatedUser.getUserId();
             } catch (UserIdNotFoundException e) {
-                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                // Masking getLoggableUserId as it will return the username because the user id is not available.
+                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
+                        authenticatedUser.getLoggableUserId()));
                 return;
             }
             clearOAuthCache(consumerKey, userId, scope);
@@ -253,7 +263,10 @@ public final class OAuthUtil {
         } catch (UserIdNotFoundException e) {
             userId = resolveUserIdFromUsername(authorizedUser);
             if (StringUtils.isEmpty(userId)) {
-                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+                // Masking getLoggableUserId as it will return the username because the user id is not available.
+                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
+                        authorizedUser.getLoggableUserId()));
                 return;
             }
         }
@@ -286,7 +299,10 @@ public final class OAuthUtil {
             try {
                 userId = authenticatedUser.getUserId();
             } catch (UserIdNotFoundException e) {
-                LOG.error("User id cannot be found for user: " + authenticatedUser.getLoggableUserId());
+                // Masking getLoggableUserId as it will return the username because the user id is not available.
+                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                        LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
+                        authenticatedUser.getLoggableUserId()));
                 return;
             }
             clearOAuthCache(consumerKey, userId, scope);
@@ -332,7 +348,10 @@ public final class OAuthUtil {
             tenantDomain = authorizedUser.getTenantDomain();
 
         } catch (UserIdNotFoundException e) {
-            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
+            // Masking getLoggableUserId as it will return the username because the user id is not available.
+            LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
+                    LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
+                    authorizedUser.getLoggableUserId()));
             return;
         }
         clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
