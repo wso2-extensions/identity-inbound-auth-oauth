@@ -90,6 +90,8 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                         .collect(Collectors.toList());
                 associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX));
                 associatedScopes.addAll(internalOrgScopes);
+            } else {
+                associatedScopes.removeIf(scope -> scope.startsWith(Oauth2ScopeConstants.INTERNAL_ORG_SCOPE_PREFIX));
             }
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
