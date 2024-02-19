@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuthSystemClientException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -95,7 +96,7 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
         if (StringUtils.isNotBlank(cnfValue)) {
             return cnfValue;
         } else {
-            throw new OAuthSystemException("Error occurred while generating cnf hash value.");
+            throw new OAuthSystemClientException("Error occurred while generating cnf hash value.");
         }
     }
 
