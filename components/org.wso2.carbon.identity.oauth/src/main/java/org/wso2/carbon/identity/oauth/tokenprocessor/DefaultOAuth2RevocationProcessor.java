@@ -175,7 +175,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
         if (revocationResponseDTO.isError()) {
             String msg = "Error while revoking tokens for clientId:" + clientId +
                     " Error Message:" + revocationResponseDTO.getErrorMsg();
-            if (revocationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+            if (OAuth2ErrorCodes.SERVER_ERROR.equals(revocationResponseDTO.getErrorCode())) {
                 LOG.error(msg);
             }
             if (LOG.isDebugEnabled()) {
