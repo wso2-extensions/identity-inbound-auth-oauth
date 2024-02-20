@@ -21,23 +21,24 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -130,8 +131,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
 
             // Iterate through the retrieved access tokens and revoke them.
             for (AccessTokenDO accessTokenDO: accessTokenDOSet) {
-                revokeTokens(clientId, accessTokenDO.getAuthzUser(), accessTokenDO,
-                        accessTokenDO.getTokenBinding().getBindingReference());
+                revokeExistingToken(clientId, accessTokenDO.getAccessToken());
             }
         } catch (IdentityApplicationManagementException e) {
             LOG.error("Error occurred while retrieving app by app ID : " + appId, e);
@@ -140,31 +140,48 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
     }
 
     /**
-     * Revokes access tokens associated with the specified consumer key, user, access token data object,
-     * and token binding reference.
+     * This method is used to avoid client validation failure in OAuth2Service.revokeTokenByOAuthClient.
      *
-     * @param consumerKey             The consumer key of the application.
-     * @param user                    The authenticated user.
-     * @param accessTokenDO           The access token data object.
-     * @param tokenBindingReference   The token binding reference.
-     * @throws IdentityOAuth2Exception If an error occurs while revoking access tokens.
+     * @param clientId client id of the application.
+     * @return Returns a OAuthClientAuthnContext with isAuthenticated set to true.
      */
-    private void revokeTokens(String consumerKey, AuthenticatedUser user, AccessTokenDO accessTokenDO,
-                                       String tokenBindingReference) throws IdentityOAuth2Exception {
+    private OAuthClientAuthnContext buildAuthenticatedOAuthClientAuthnContext(String clientId) {
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Revoking tokens for the application with consumerKey:" + consumerKey + " for the user: "
-                    + user.getLoggableUserId());
+        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+        oAuthClientAuthnContext.setAuthenticated(true);
+        oAuthClientAuthnContext.setClientId(clientId);
+
+        return oAuthClientAuthnContext;
+    }
+
+    /**
+     * Builds the revocation request and calls the revoke oauth service.
+     *
+     * @param clientId client id.
+     * @param accessToken access token.
+     */
+    private void revokeExistingToken(String clientId, String accessToken) throws IdentityOAuth2Exception {
+
+        // This is used to avoid client validation failure in revokeTokenByOAuthClient.
+        // This will not affect the flow negatively as the client is already authenticated by this point.
+        OAuthClientAuthnContext oAuthClientAuthnContext = buildAuthenticatedOAuthClientAuthnContext(clientId);
+
+        OAuthRevocationRequestDTO revocationRequestDTO =
+                OAuth2Util.buildOAuthRevocationRequest(oAuthClientAuthnContext, accessToken);
+
+        OAuthRevocationResponseDTO revocationResponseDTO = OAuthComponentServiceHolder.getInstance().getOauth2Service()
+                        .revokeTokenByOAuthClient(revocationRequestDTO);
+
+        if (revocationResponseDTO.isError()) {
+            String msg = "Error while revoking tokens for clientId:" + clientId +
+                    " Error Message:" + revocationResponseDTO.getErrorMsg();
+            if (revocationResponseDTO.getErrorCode().equals(OAuth2ErrorCodes.SERVER_ERROR)) {
+                LOG.error(msg);
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg);
+            }
+            throw new IdentityOAuth2Exception(msg);
         }
-        OAuthUtil.clearOAuthCache(consumerKey, user, OAuth2Util.buildScopeString
-                (accessTokenDO.getScope()), tokenBindingReference);
-        OAuthUtil.clearOAuthCache(consumerKey, user, OAuth2Util.buildScopeString
-                (accessTokenDO.getScope()));
-        OAuthUtil.clearOAuthCache(consumerKey, user);
-        OAuthUtil.clearOAuthCache(accessTokenDO);
-        OAuthUtil.invokePreRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
-        OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
-                .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
-        OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
     }
 }
