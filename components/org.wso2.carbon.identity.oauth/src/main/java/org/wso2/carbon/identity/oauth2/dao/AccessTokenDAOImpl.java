@@ -2829,10 +2829,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         if (log.isDebugEnabled()) {
             log.debug("Retrieving active access token set with token id of client: " + consumerKey);
         }
-        Set<AccessTokenDO> activeAccessTokenDOSet = null;
+        Set<AccessTokenDO> activeAccessTokenDOSet = new HashSet<>();
         for (String scope: scopes) {
-            activeAccessTokenDOSet = getActiveAccessTokenSetByConsumerKeyForScope(consumerKey,
-                    IdentityUtil.getPrimaryDomainName(), scope);
+            activeAccessTokenDOSet.addAll(getActiveAccessTokenSetByConsumerKeyForScope(consumerKey,
+                    IdentityUtil.getPrimaryDomainName(), scope));
 
             if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
                 Map<String, String> availableDomainMappings = OAuth2Util.getAvailableUserStoreDomainMappings();
