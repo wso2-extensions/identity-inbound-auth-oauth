@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -140,6 +140,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -2280,7 +2281,7 @@ public class OAuth2Util {
 
     /**
      * Get Oauth application information.
-     * 
+     *
      * @param clientId      Client id of the application.
      * @param tenantDomain  Tenant domain of the application.
      * @return Oauth app information.
@@ -5034,7 +5035,7 @@ public class OAuth2Util {
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
-  
+
     /**
      * Retrieve the list of client authentication methods supported by the server.
      *
@@ -5235,5 +5236,28 @@ public class OAuth2Util {
             return callbackUrl;
         }
         return null;
+    }
+
+    /**
+     * Find the tenant domain of the user identity is managed.
+     *
+     * @param authenticatedUser authenticated user.
+     * @return The tenant domain.
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getUserResidentTenantDomain(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
+            return authenticatedUser.getTenantDomain();
+        }
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
+                    authenticatedUser.getUserResidentOrganization(), e);
+        }
     }
 }

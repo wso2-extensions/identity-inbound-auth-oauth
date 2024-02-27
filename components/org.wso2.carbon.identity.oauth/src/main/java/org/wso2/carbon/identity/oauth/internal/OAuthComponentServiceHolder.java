@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidat
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
@@ -76,6 +77,7 @@ public class OAuthComponentServiceHolder {
     private CORSManagementService corsManagementService;
 
     private AuthorizedAPIManagementService authorizedAPIManagementService;
+    private IdpManager idpManager;
 
     /**
      * Get the list of scope validator implementations available.
@@ -466,5 +468,25 @@ public class OAuthComponentServiceHolder {
     public void setAuthorizedAPIManagementService(AuthorizedAPIManagementService authorizedAPIManagementService) {
 
         this.authorizedAPIManagementService = authorizedAPIManagementService;
+    }
+
+    /**
+     * Returns the IdpManager service.
+     *
+     * @return The IdpManager service.
+     */
+    public IdpManager getIdpManager() {
+
+        return idpManager;
+    }
+
+    /**
+     * Sets the idpManager service.
+     *
+     * @param idpManager The IdpManager service to set.
+     */
+    public void setIdpManager(IdpManager idpManager) {
+
+        this.idpManager = idpManager;
     }
 }

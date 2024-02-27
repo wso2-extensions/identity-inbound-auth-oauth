@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.sql.Connection;
@@ -77,6 +78,7 @@ import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.GET_ACCESS_TOKENS_B
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.RETRIEVE_TOKEN_BINDING_BY_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.STORE_TOKEN_BINDING;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IS_EXTENDED_TOKEN;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getUserResidentTenantDomain;
 
 /**
  * Access token related data access object implementation.
@@ -496,7 +498,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
+            String rootTenantDomain = (String) IdentityUtil.threadLocalProperties.get()
+                    .get(OrganizationManagementConstants.ROOT_TENANT_DOMAIN);
             int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            if (rootTenantDomain != null) {
+                appTenantId = OAuth2Util.getTenantId(rootTenantDomain);
+            }
             prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
@@ -957,6 +964,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             prepStmt = connection.prepareStatement(sql);
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
             int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            if (authenticatedUser.getUserResidentOrganization() != null) {
+                appTenantId = OAuth2Util.getTenantId(authenticatedUser.getTenantDomain());
+            }
             prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
                 prepStmt.setString(3, tenantAwareUsernameWithNoUserDomain);
@@ -965,10 +975,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             prepStmt.setInt(4, tenantId);
             prepStmt.setString(5, userDomain);
+            String accessingOrg = authenticatedUser.getAccessingOrganization();
+            if (StringUtils.isEmpty(accessingOrg)) {
+                accessingOrg = OAuthConstants.AuthorizedOrganization.NONE;
+            }
+            prepStmt.setString(6, accessingOrg);
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(6, authenticatedIDP);
+                prepStmt.setString(7, authenticatedIDP);
                 // Set tenant ID of the IDP by considering it is same as appTenantID.
-                prepStmt.setInt(7, appTenantId);
+                prepStmt.setInt(8, appTenantId);
             }
 
             resultSet = prepStmt.executeQuery();
@@ -1000,6 +1015,11 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                 "for client id " + consumerKey, e);
                     }
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
+                    if (StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization())) {
+                        user.setAccessingOrganization(authenticatedUser.getAccessingOrganization());
+                        user.setUserResidentOrganization(authenticatedUser.getUserResidentOrganization());
+                        user.setTenantDomain(authenticatedUser.getTenantDomain());
+                    }
                     AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                             refreshTokenIssuedTime, validityPeriodInMillis,
                             refreshTokenValidityPeriodMillis, tokenType);
@@ -3185,22 +3205,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 log.debug("CONSENTED_TOKEN column is not available. Since not updating the token with id: "
                         + tokenId + " to: " + isConsentedGrant);
             }
-        }
-    }
-
-
-    private String getUserResidentTenantDomain(AuthenticatedUser authenticatedUser) throws IdentityOAuth2Exception {
-
-        if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
-            return authenticatedUser.getTenantDomain();
-        }
-
-        try {
-            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-        } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
-                    authenticatedUser.getUserResidentOrganization(), e);
         }
     }
 

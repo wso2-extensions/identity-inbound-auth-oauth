@@ -58,6 +58,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.IS_EXTENDED_TOKEN;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getUserResidentTenantDomain;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isAccessTokenExtendedTableExist;
 
 /*
@@ -778,7 +779,7 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         ResultSet rs = null;
         Set<String> distinctConsumerKeys = new HashSet<>();
         boolean isUsernameCaseSensitive = IdentityUtil.isUserStoreInUsernameCaseSensitive(authzUser.toString());
-        String tenantDomain = authzUser.getTenantDomain();
+        String tenantDomain = getUserResidentTenantDomain(authzUser);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
         String userDomain = OAuth2Util.getSanitizedUserStoreDomain(authzUser.getUserStoreDomain());
 
