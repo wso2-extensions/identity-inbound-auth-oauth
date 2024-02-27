@@ -41,6 +41,8 @@ import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -343,7 +345,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
     }
 
     private void revokeTokensOfLockedUser(String userName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+            throws IdentityEventException, UserStoreException {
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
@@ -355,6 +357,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             OAuth2ServiceComponentHolder.getInstance()
                     .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
+            revokeTokensOfAssociatedUsers(userName, userStoreManager);
         }
     }
 
@@ -373,7 +376,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
     }
 
     private void revokeTokensOfDisabledUser(String userName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+            throws IdentityEventException, UserStoreException {
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
@@ -384,6 +387,44 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             OAuth2ServiceComponentHolder.getInstance()
                     .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
+            revokeTokensOfAssociatedUsers(userName, userStoreManager);
+        }
+    }
+
+    /**
+     * Revoke access tokens of associated users.
+     *
+     * @param username         Username of the user.
+     * @param userStoreManager User store manager of the user.
+     * @throws IdentityEventException If an error occurs while revoking access tokens of associated users.
+     */
+    private void revokeTokensOfAssociatedUsers(String username, UserStoreManager userStoreManager)
+            throws IdentityEventException {
+
+        try {
+            String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, username).getUserID();
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            String orgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            List<UserAssociation> userAssociationList = OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService().getUserAssociationsOfGivenUser(userId, orgId);
+            for (UserAssociation userAssociation : userAssociationList) {
+                String orgIdOfUserAssociation = userAssociation.getOrganizationId();
+                String tenantDomainOfUserAssociation = OAuthComponentServiceHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(orgIdOfUserAssociation);
+                RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+                UserStoreManager userStoreManagerOfUserAssociation = (UserStoreManager)
+                        realmService.getTenantUserRealm(
+                                IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
+                String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
+                        .getUserNameFromUserID(userAssociation.getUserId());
+                OAuth2ServiceComponentHolder.getInstance()
+                        .getRevocationProcessor()
+                        .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
+            }
+        } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
+            String errorMsg = "Error occurred while revoking access tokens of associated users for User : " + username;
+            throw new IdentityEventException(errorMsg, e);
         }
     }
 
