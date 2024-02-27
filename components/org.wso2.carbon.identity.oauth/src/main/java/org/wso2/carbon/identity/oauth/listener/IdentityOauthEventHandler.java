@@ -137,13 +137,13 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             List<String> deletedGroups = (ArrayList) event.getEventProperties().get(DELETE_GROUP_ID_LIST);
-            List<User> userListOfGroup = new ArrayList<>();
+            List<User> userListOfDeletedGroups = new ArrayList<>();
             for (String groupId : deletedGroups) {
-                userListOfGroup.addAll(getUserListOfGroup(groupId, tenantDomain));
+                userListOfDeletedGroups.addAll(getUserListOfGroup(groupId, tenantDomain));
             }
 
             Set<String> userIds = new HashSet<>();
-            for (User user : userListOfGroup) {
+            for (User user : userListOfDeletedGroups) {
                 userIds.add(user.getUserID());
             }
             terminateSession(new ArrayList<>(userIds), null, tenantDomain);
@@ -315,7 +315,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
 
         } catch (UserStoreException e) {
             String errorMsg =
-                    "Error while getting user list of group:" + groupId + "in tenant domain " + tenantDomain;
+                    "Error while getting user list of group: " + groupId + " in tenant domain " + tenantDomain;
             throw new IdentityEventException(errorMsg, e);
         }
     }
