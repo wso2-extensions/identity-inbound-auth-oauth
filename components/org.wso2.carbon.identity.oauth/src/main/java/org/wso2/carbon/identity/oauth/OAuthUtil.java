@@ -773,7 +773,8 @@ public final class OAuthUtil {
      * @param authenticatedUser  Authenticated user.
      * @return Set of clientIds of associated applications.
      */
-    private static Set<String> getClientIdsOfAssociatedApplications(Role role, AuthenticatedUser authenticatedUser) {
+    private static Set<String> getClientIdsOfAssociatedApplications(Role role, AuthenticatedUser authenticatedUser)
+            throws UserStoreException {
 
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
@@ -789,7 +790,8 @@ public final class OAuthUtil {
                 associatedApplications = newAssociatedApplications;
             }
         } catch (IdentityOAuth2Exception e) {
-            throw new RuntimeException(e);
+            LOG.error("Error occurred while getting the main applications of the shared apps.", e);
+            throw new UserStoreException(e);
         }
         Set<String> clientIds = new HashSet<>();
         associatedApplications.forEach(associatedApplication -> {
