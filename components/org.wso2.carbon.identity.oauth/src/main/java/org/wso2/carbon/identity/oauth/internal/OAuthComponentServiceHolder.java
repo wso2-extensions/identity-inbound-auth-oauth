@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -78,6 +79,7 @@ public class OAuthComponentServiceHolder {
 
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private IdpManager idpManager;
+    private OrganizationUserSharingService organizationUserSharingService;
 
     /**
      * Get the list of scope validator implementations available.
@@ -488,5 +490,25 @@ public class OAuthComponentServiceHolder {
     public void setIdpManager(IdpManager idpManager) {
 
         this.idpManager = idpManager;
+    }
+
+    /**
+     * Get the organization user sharing service.
+     *
+     * @return OrganizationUserSharingService instance.
+     */
+    public OrganizationUserSharingService getOrganizationUserSharingService() {
+
+        return organizationUserSharingService;
+    }
+
+    /**
+     * Set the organization user sharing service.
+     *
+     * @param organizationUserSharingService OrganizationUserSharingService instance.
+     */
+    public void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        this.organizationUserSharingService = organizationUserSharingService;
     }
 }

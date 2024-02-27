@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
@@ -496,5 +497,28 @@ public class OAuthServiceComponent {
     protected void unsetIdpManager(IdpManager idpManager) {
 
         OAuthComponentServiceHolder.getInstance().setIdpManager(null);
+    }
+
+    @Reference(
+            name = "organization.user.sharing.service",
+            service = OrganizationUserSharingService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationUserSharingService"
+    )
+    protected void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the organization user sharing service.");
+        }
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserSharingService(organizationUserSharingService);
+    }
+
+    protected void unsetOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unset organization user sharing service.");
+        }
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserSharingService(null);
     }
 }
