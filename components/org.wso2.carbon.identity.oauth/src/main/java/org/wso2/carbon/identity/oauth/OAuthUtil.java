@@ -721,8 +721,8 @@ public final class OAuthUtil {
         try {
             isOrganization = OrganizationManagementUtil.isOrganization(tenantDomain);
         } catch (OrganizationManagementException e) {
-            LOG.error("Error occurred while check whether organization for the tenant : " + tenantDomain);
-            throw new UserStoreException(e);
+            String msg = "Error occurred while check whether organization for the tenant : " + tenantDomain;
+            throw new UserStoreException(msg, e);
         }
 
         if (!isOrganization) {
@@ -759,11 +759,11 @@ public final class OAuthUtil {
             authenticatedUser.setTenantDomain(tenantDomain);
             return authenticatedUser;
         } catch (OrganizationManagementException e) {
-            LOG.error("Error occurred while resolving organization information for the tenant : " + tenantDomain);
-            throw new UserStoreException(e);
+            String msg = "Error occurred while resolving organization information for the tenant : " + tenantDomain;
+            throw new UserStoreException(msg, e);
         } catch (IdentityProviderManagementException e) {
-            LOG.error("Error occurred while resolving IDP name of the organization login IDP in : " + tenantDomain);
-            throw new UserStoreException(e);
+            String msg = "Error occurred while resolving IDP name of the organization login IDP in : " + tenantDomain;
+            throw new UserStoreException(msg, e);
         }
     }
 
