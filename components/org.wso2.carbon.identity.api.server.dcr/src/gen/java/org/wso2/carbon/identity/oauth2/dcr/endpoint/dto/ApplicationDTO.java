@@ -56,6 +56,9 @@ public class ApplicationDTO  {
 
     private Boolean extPublicClient = null;
 
+    private String tokenTypeExtension = null;
+    private String extTokenType = null;
+
 
     private String jwksUri = null;
     private String tokenEndpointAuthMethod = null;
@@ -242,6 +245,28 @@ public class ApplicationDTO  {
     }
     public void setExtPublicClient(Boolean extPublicClient) {
         this.extPublicClient = extPublicClient;
+    }
+
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("token_type_extension")
+    public String getTokenTypeExtension() {
+      return tokenTypeExtension;
+    }
+    public void setTokenTypeExtension(String tokenType) {
+      this.tokenTypeExtension = tokenType;
+    }
+
+    /**
+     **/
+    @ApiModelProperty(value = "")
+    @JsonProperty("ext_token_type")
+    public String getExtTokenType() {
+      return extTokenType;
+    }
+    public void setExtTokenType(String tokenType) {
+      this.extTokenType = tokenType;
     }
 
     /**
