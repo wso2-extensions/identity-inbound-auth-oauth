@@ -2281,7 +2281,7 @@ public class OAuth2Util {
 
     /**
      * Get Oauth application information.
-     * 
+     *
      * @param clientId      Client id of the application.
      * @param tenantDomain  Tenant domain of the application.
      * @return Oauth app information.
@@ -5035,7 +5035,7 @@ public class OAuth2Util {
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
-  
+
     /**
      * Retrieve the list of client authentication methods supported by the server.
      *
@@ -5238,6 +5238,13 @@ public class OAuth2Util {
         return null;
     }
 
+    /**
+     * Find the tenant domain of the user identity is managed.
+     *
+     * @param authenticatedUser authenticated user.
+     * @return The tenant domain.
+     * @throws IdentityOAuth2Exception
+     */
     public static String getUserResidentTenantDomain(AuthenticatedUser authenticatedUser)
             throws IdentityOAuth2Exception {
 
