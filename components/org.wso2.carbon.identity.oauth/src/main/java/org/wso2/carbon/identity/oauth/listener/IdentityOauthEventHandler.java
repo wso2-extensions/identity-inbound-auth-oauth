@@ -54,8 +54,12 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty.DELETE_GROUP_ID_LIST;
 
 /**
  * This is an event handler listening for some of the core user management operations.
@@ -126,6 +130,23 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 deletedUserIDList = (List<String>) userIdList;
                 terminateSession(deletedUserIDList, roleId, tenantDomain);
             }
+
+        } else if (IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
+            IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_V2_EVENT.equals(event.getEventName())) {
+
+            String tenantDomain = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
+            List<String> deletedGroups = (ArrayList) event.getEventProperties().get(DELETE_GROUP_ID_LIST);
+            List<User> userListOfDeletedGroups = new ArrayList<>();
+            for (String groupId : deletedGroups) {
+                userListOfDeletedGroups.addAll(getUserListOfGroup(groupId, tenantDomain));
+            }
+
+            Set<String> userIds = new HashSet<>();
+            for (User user : userListOfDeletedGroups) {
+                userIds.add(user.getUserID());
+            }
+            terminateSession(new ArrayList<>(userIds), null, tenantDomain);
 
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
                 IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName())) {
@@ -274,6 +295,27 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         } catch (UserStoreException e) {
             String errorMsg =
                     "Error while getting user list of group:" + groupName + "in tenant domain " + tenantDomain;
+            throw new IdentityEventException(errorMsg, e);
+        }
+    }
+
+    private List<User> getUserListOfGroup(String groupId, String tenantDomain) throws IdentityEventException {
+
+        try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            UserStoreManager userStoreManager;
+            try {
+                userStoreManager = (UserStoreManager) realmService.getTenantUserRealm(
+                        IdentityTenantUtil.getTenantId(tenantDomain)).getUserStoreManager();
+            } catch (org.wso2.carbon.user.api.UserStoreException e) {
+                String errorMsg = "Error while getting realm service in tenant domain " + tenantDomain;
+                throw new IdentityEventException(errorMsg, e);
+            }
+            return ((AbstractUserStoreManager) userStoreManager).getUserListOfGroup(groupId, null, null);
+
+        } catch (UserStoreException e) {
+            String errorMsg =
+                    "Error while getting user list of group: " + groupId + " in tenant domain " + tenantDomain;
             throw new IdentityEventException(errorMsg, e);
         }
     }
