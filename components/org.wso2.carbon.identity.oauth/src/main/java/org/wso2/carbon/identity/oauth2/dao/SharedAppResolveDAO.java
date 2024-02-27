@@ -26,7 +26,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.GET_MAIN_APPLICATION;
 import static org.wso2.carbon.identity.oauth2.dao.SQLQueries.GET_SHARED_APP_ID;
+import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_MAIN_APPLICATION;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.ErrorMessages.ERROR_CODE_ERROR_RESOLVING_SHARED_APPLICATION;
 
 /**
@@ -52,6 +54,24 @@ public class SharedAppResolveDAO {
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception(ERROR_CODE_ERROR_RESOLVING_SHARED_APPLICATION.getCode(),
                     ERROR_CODE_ERROR_RESOLVING_SHARED_APPLICATION.getMessage(), e);
+        }
+    }
+
+    public static String getMainApplication(String sharedAppId, String sharedOrgId) throws IdentityOAuth2Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement preparedStatement = connection.prepareStatement(GET_MAIN_APPLICATION)) {
+             preparedStatement.setString(1, sharedAppId);
+             preparedStatement.setString(2, sharedOrgId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getString(1);
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception(ERROR_CODE_ERROR_RESOLVING_MAIN_APPLICATION.getCode(),
+                    ERROR_CODE_ERROR_RESOLVING_MAIN_APPLICATION.getMessage(), e);
         }
     }
 }
