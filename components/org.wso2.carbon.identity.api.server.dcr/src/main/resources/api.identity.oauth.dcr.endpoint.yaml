@@ -332,6 +332,8 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      ext_token_type:
+        type: string
       token_endpoint_auth_method:
         type: string
       token_endpoint_auth_signing_alg:
@@ -410,6 +412,8 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      ext_token_type:
+        type: string
       token_endpoint_auth_method:
         type: string
       token_endpoint_auth_signing_alg:

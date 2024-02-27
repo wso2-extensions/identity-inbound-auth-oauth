@@ -272,7 +272,11 @@ public class DCRMService {
                         validateAndSetCallbackURIs(updateRequest.getRedirectUris(), updateRequest.getGrantTypes());
                 appDTO.setCallbackUrl(callbackUrl);
             }
-            if (updateRequest.getTokenType() != null) {
+            // The token type using token_type_extension will be deprecated.
+            if (updateRequest.getExtTokenType() != null) {
+                appDTO.setTokenType(updateRequest.getExtTokenType());
+            } else if (updateRequest.getTokenType() != null) {
+                // Fallback to deprecated method if new ext_token_type is not available
                 appDTO.setTokenType(updateRequest.getTokenType());
             }
             if (StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
@@ -539,6 +543,7 @@ public class DCRMService {
         application.setExtPkceMandatory(createdApp.getPkceMandatory());
         application.setExtPkceSupportPlain(createdApp.getPkceSupportPlain());
         application.setExtPublicClient(createdApp.isBypassClientCredentials());
+        application.setExtTokenType(createdApp.getTokenType());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
@@ -595,7 +600,13 @@ public class DCRMService {
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
-        oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+        // The token type using token_type_extension will be deprecated.
+        if (registrationRequest.getExtTokenType() != null) {
+            oAuthConsumerApp.setTokenType(registrationRequest.getExtTokenType());
+        } else if (registrationRequest.getTokenType() != null) {
+            // Fallback to deprecated method if new ext_token_type is not available
+            oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+        }
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
 
