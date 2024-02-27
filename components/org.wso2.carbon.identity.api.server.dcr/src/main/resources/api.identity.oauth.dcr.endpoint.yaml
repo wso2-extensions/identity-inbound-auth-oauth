@@ -489,6 +489,10 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      ext_token_type:
+        type: string
+      token_type_extension:
+        type: string
       jwks_uri:
         type: string
       token_endpoint_auth_method:
