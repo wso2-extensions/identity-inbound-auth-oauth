@@ -790,8 +790,7 @@ public final class OAuthUtil {
                 associatedApplications = newAssociatedApplications;
             }
         } catch (IdentityOAuth2Exception e) {
-            LOG.error("Error occurred while getting the main applications of the shared apps.", e);
-            throw new UserStoreException(e);
+            throw new UserStoreException("Error occurred while getting the main applications of the shared apps.", e);
         }
         Set<String> clientIds = new HashSet<>();
         associatedApplications.forEach(associatedApplication -> {
@@ -937,17 +936,6 @@ public final class OAuthUtil {
         }
 
         return isErrorOnRevokingTokens;
-    }
-
-    private static String resolveRootTenantDomain(String tenantDomain) {
-
-        try {
-            String rootOrgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                    .getPrimaryOrganizationId(tenantDomain);
-            return OAuthComponentServiceHolder.getInstance().getOrganizationManager().resolveTenantDomain(rootOrgId);
-        } catch (OrganizationManagementException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
