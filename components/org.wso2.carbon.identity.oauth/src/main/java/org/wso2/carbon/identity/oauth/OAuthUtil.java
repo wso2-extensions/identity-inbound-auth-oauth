@@ -359,7 +359,7 @@ public final class OAuthUtil {
                     authorizedUser.getLoggableUserId()));
             return;
         }
-        if (OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+        if (authorizedUser.getAccessingOrganization() != null) {
             authorizedOrganization = authorizedUser.getAccessingOrganization();
         }
         clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
