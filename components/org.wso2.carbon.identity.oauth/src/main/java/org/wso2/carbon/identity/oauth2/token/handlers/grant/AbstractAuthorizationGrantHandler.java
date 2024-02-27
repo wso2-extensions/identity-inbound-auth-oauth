@@ -367,12 +367,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             throws IdentityOAuth2Exception {
 
         // Revoke the existing token and generate new access and refresh tokens.
-        OAuthUtil.invokePreRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
+        if (OAuthServerConfiguration.getInstance().isInvokeTokenRevocationEventOnRenewal()) {
+            OAuthUtil.invokePreRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
+        }
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .updateAccessTokenState(existingTokenBean.getTokenId(), OAuthConstants.TokenStates
                         .TOKEN_STATE_REVOKED, existingTokenBean.getGrantType());
         clearExistingTokenFromCache(tokReqMsgCtx, existingTokenBean);
-        OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
+
+        if (OAuthServerConfiguration.getInstance().isInvokeTokenRevocationEventOnRenewal()) {
+            OAuthUtil.invokePostRevocationBySystemListeners(existingTokenBean, Collections.emptyMap());
+        }
 
         return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, false,
                 oauthTokenIssuer);

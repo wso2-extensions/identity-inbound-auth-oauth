@@ -260,6 +260,9 @@ public class OAuthServerConfiguration {
     // property added to fix IDENTITY-4112 in backward compatible manner
     private boolean isRevokeResponseHeadersEnabled = true;
 
+    // Property to invoke token revocation events on Access token renewal in backward compatible manner.
+    private boolean isInvokeTokenRevocationEventOnRenewal = true;
+
     // property to make DisplayName property to be used in consent page
     private boolean showDisplayNameInConsentPage = false;
     // Use the SP tenant domain instead of user domain.
@@ -432,6 +435,9 @@ public class OAuthServerConfiguration {
 
         // Read the value of UseSPTenantDomain config.
         parseUseSPTenantDomainConfig(oauthElem);
+
+        // Read the value of InvokeTokenRevocationEventOnRenewal config.
+        parseInvokeTokenRevocationEventOnRenewalConfig(oauthElem);
 
         parseRevokeResponseHeadersEnableConfig(oauthElem);
         parseShowDisplayNameInConsentPage(oauthElem);
@@ -1447,6 +1453,10 @@ public class OAuthServerConfiguration {
 
     public boolean isRevokeResponseHeadersEnabled() {
         return isRevokeResponseHeadersEnabled;
+    }
+
+    public boolean isInvokeTokenRevocationEventOnRenewal() {
+        return isInvokeTokenRevocationEventOnRenewal;
     }
 
     /**
@@ -2707,6 +2717,21 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseInvokeTokenRevocationEventOnRenewalConfig(OMElement oauthElem) {
+
+        OMElement invokeTokenRevocationEventOnRenewalElem = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.INVOKE_TOKEN_REVOCATION_EVENT_ON_RENEWAL));
+
+        if (invokeTokenRevocationEventOnRenewalElem != null) {
+            isInvokeTokenRevocationEventOnRenewal =
+                    Boolean.parseBoolean(invokeTokenRevocationEventOnRenewalElem.getText().trim());
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("InvokeTokenRevocationEventOnRenewal is set to : " + isInvokeTokenRevocationEventOnRenewal);
+        }
+    }
+
     private void parseOAuthTokenValueGenerator(OMElement oauthElem) {
 
         OMElement oauthTokenValueGeneratorElement = oauthElem
@@ -3467,6 +3492,9 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_REVOKE_RESPONSE_HEADERS = "EnableRevokeResponseHeaders";
         private static final String IDENTITY_OAUTH_SHOW_DISPLAY_NAME_IN_CONSENT_PAGE = "ShowDisplayNameInConsentPage";
         private static final String REFRESH_TOKEN_ALLOWED = "IsRefreshTokenAllowed";
+
+        // To invoke token revocation events on Access token renewal.
+        private static final String INVOKE_TOKEN_REVOCATION_EVENT_ON_RENEWAL = "InvokeTokenRevocationEventOnRenewal";
 
         // Oauth access token value generator related.
         private static final String OAUTH_TOKEN_VALUE_GENERATOR = "AccessTokenValueGenerator";
