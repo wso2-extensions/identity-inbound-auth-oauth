@@ -30,6 +30,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -62,6 +63,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -86,6 +88,7 @@ import javax.crypto.spec.SecretKeySpec;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
 
@@ -739,13 +742,17 @@ public final class OAuthUtil {
                 authenticatedUser.setUserResidentOrganization(managedOrg);
             } else {
                 authenticatedUser.setFederatedUser(true);
-                authenticatedUser.setFederatedIdPName("SSO");
                 authenticatedUser.setUserName(userId);
                 authenticatedUser.setUserStoreDomain(FEDERATED_USER_DOMAIN_PREFIX);
                 String primaryOrganizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .getPrimaryOrganizationId(accessingOrg);
                 tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveTenantDomain(primaryOrganizationId);
+                IdentityProvider orgSsoIdp = OAuthComponentServiceHolder.getInstance().getIdpManager()
+                        .getIdPByRealmId(ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER, tenantDomain);
+                if (orgSsoIdp != null) {
+                    authenticatedUser.setFederatedIdPName(orgSsoIdp.getIdentityProviderName());
+                }
                 authenticatedUser.setUserResidentOrganization(accessingOrg);
             }
             authenticatedUser.setAccessingOrganization(accessingOrg);
@@ -753,6 +760,9 @@ public final class OAuthUtil {
             return authenticatedUser;
         } catch (OrganizationManagementException e) {
             LOG.error("Error occurred while resolving organization information for the tenant : " + tenantDomain);
+            throw new UserStoreException(e);
+        } catch (IdentityProviderManagementException e) {
+            LOG.error("Error occurred while resolving IDP name of the organization login IDP in : " + tenantDomain);
             throw new UserStoreException(e);
         }
     }
