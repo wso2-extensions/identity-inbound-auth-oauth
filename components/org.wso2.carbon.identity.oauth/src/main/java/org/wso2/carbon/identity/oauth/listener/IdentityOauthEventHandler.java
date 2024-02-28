@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleDTO;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -218,6 +219,32 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                     userIdList.add(user.getUserID());
                 }
                 terminateSession(userIdList, roleId, tenantDomain);
+
+                List<RoleDTO> roleDTOList = roleV2ManagementService.getSharedHybridRoles(roleId,
+                        IdentityTenantUtil.getTenantId(tenantDomain));
+                for (RoleDTO roleDTO : roleDTOList) {
+                    tenantDomain = IdentityTenantUtil.getTenantDomain(roleDTO.getTenantId());
+                    roleId = roleDTO.getId();
+                    List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfSharedRole =
+                            roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
+                    List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfSharedRole =
+                            roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
+                    userListOfGroup = new ArrayList<>();
+                    for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfSharedRole) {
+                        String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
+                        String groupName = UserCoreUtil.removeDomainFromName(group.getName());
+                        updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
+                    }
+                    userIdList = new ArrayList<>();
+                    for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo :
+                            userListOfSharedRole) {
+                        userIdList.add(userBasicInfo.getId());
+                    }
+                    for (User user : userListOfGroup) {
+                        userIdList.add(user.getUserID());
+                    }
+                    terminateSession(userIdList, roleId, tenantDomain);
+                }
             } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
                 throw new IdentityEventException(errorMsg);
