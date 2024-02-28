@@ -85,8 +85,9 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
-            processClaimObject(claims);
+            Map<String, Object> claims = this.claimsSet.toJSONObject();
+            JSONObject jsonClaims = new JSONObject(claims);
+            processClaimObject(jsonClaims);
         }
     }
 
@@ -118,8 +119,9 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
-            processClaimObject(claims);
+            Map<String, Object> claims = this.claimsSet.toJSONObject();
+            JSONObject jsonClaims = new JSONObject(claims);
+            processClaimObject(jsonClaims);
         }
     }
 
