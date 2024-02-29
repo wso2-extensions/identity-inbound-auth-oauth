@@ -368,9 +368,10 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
             Optional<AuthenticatedUser> authenticatedUser;
             ServiceProviderProperty[] spProps = serviceProvider.getSpProperties();
-            if (spProps != null && Arrays.stream(spProps)
+            if (OAuthServerConfiguration.getInstance().isPasswordFlowEnhancementsEnabled()
+                    || (spProps != null && Arrays.stream(spProps)
                     .anyMatch(property -> ENABLE_PASSWORD_FLOW_ENHANCEMENTS.equals(property.getName())
-                            && Boolean.parseBoolean(property.getValue()))) {
+                            && Boolean.parseBoolean(property.getValue())))) {
                 authenticatedUser = authenticateUserAtFramework(tokenReq, serviceProvider);
             } else {
                 authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
