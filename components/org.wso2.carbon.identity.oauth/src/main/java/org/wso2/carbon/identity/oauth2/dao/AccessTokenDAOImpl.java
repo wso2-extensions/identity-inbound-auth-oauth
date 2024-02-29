@@ -975,15 +975,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             }
             prepStmt.setInt(4, tenantId);
             prepStmt.setString(5, userDomain);
-            String accessingOrg = authenticatedUser.getAccessingOrganization();
-            if (StringUtils.isEmpty(accessingOrg)) {
-                accessingOrg = OAuthConstants.AuthorizedOrganization.NONE;
-            }
-            prepStmt.setString(6, accessingOrg);
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                prepStmt.setString(7, authenticatedIDP);
+                prepStmt.setString(6, authenticatedIDP);
                 // Set tenant ID of the IDP by considering it is same as appTenantID.
-                prepStmt.setInt(8, appTenantId);
+                prepStmt.setInt(7, appTenantId);
             }
 
             resultSet = prepStmt.executeQuery();
