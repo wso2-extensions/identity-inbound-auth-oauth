@@ -736,27 +736,33 @@ public final class OAuthUtil {
         try {
             String accessingOrg = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            if (managedOrg != null) {
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(managedOrg);
-                authenticatedUser.setUserResidentOrganization(managedOrg);
-            } else {
-                authenticatedUser.setFederatedUser(true);
-                authenticatedUser.setUserName(userId);
-                authenticatedUser.setUserStoreDomain(FEDERATED_USER_DOMAIN_PREFIX);
-                String primaryOrganizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .getPrimaryOrganizationId(accessingOrg);
-                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(primaryOrganizationId);
-                IdentityProvider orgSsoIdp = OAuthComponentServiceHolder.getInstance().getIdpManager()
-                        .getIdPByRealmId(ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER, tenantDomain);
-                if (orgSsoIdp != null) {
-                    authenticatedUser.setFederatedIdPName(orgSsoIdp.getIdentityProviderName());
-                }
-                authenticatedUser.setUserResidentOrganization(accessingOrg);
-            }
-            authenticatedUser.setAccessingOrganization(accessingOrg);
+            String primaryOrganizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .getPrimaryOrganizationId(accessingOrg);
+            tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(primaryOrganizationId);
             authenticatedUser.setTenantDomain(tenantDomain);
+
+            // Shared user flow.
+            if (managedOrg != null) {
+                authenticatedUser.setUserResidentOrganization(managedOrg);
+                authenticatedUser.setAccessingOrganization(accessingOrg);
+
+                // SSO login user shared flow.
+                if (!OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .isPrimaryOrganization(managedOrg)) {
+                    userId = OAuthComponentServiceHolder.getInstance().getOrganizationUserSharingService()
+                            .getUserAssociation(userId, accessingOrg).getAssociatedUserId();
+                    authenticatedUser.setUserName(userId);
+                    setOrganizationSSOUserDetails(authenticatedUser);
+                }
+                return authenticatedUser;
+            }
+
+            // Organization SSO user flow
+            authenticatedUser.setUserName(userId);
+            setOrganizationSSOUserDetails(authenticatedUser);
+            authenticatedUser.setUserResidentOrganization(accessingOrg);
+            authenticatedUser.setAccessingOrganization(accessingOrg);
             return authenticatedUser;
         } catch (OrganizationManagementException e) {
             String msg = "Error occurred while resolving organization information for the tenant : " + tenantDomain;
@@ -1180,5 +1186,17 @@ public final class OAuthUtil {
             }
         }
         return userId;
+    }
+
+    private static void setOrganizationSSOUserDetails(AuthenticatedUser authenticatedUser)
+            throws IdentityProviderManagementException {
+
+        authenticatedUser.setFederatedUser(true);
+        authenticatedUser.setUserStoreDomain(FEDERATED_USER_DOMAIN_PREFIX);
+        IdentityProvider orgSsoIdp = OAuthComponentServiceHolder.getInstance().getIdpManager()
+                .getIdPByRealmId(ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER, authenticatedUser.getTenantDomain());
+        if (orgSsoIdp != null) {
+            authenticatedUser.setFederatedIdPName(orgSsoIdp.getIdentityProviderName());
+        }
     }
 }
