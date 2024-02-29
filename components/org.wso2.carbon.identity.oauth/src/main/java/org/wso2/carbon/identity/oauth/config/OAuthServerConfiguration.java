@@ -144,6 +144,7 @@ public class OAuthServerConfiguration {
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
+    private boolean enablePasswordFlowEnhancements = false;
     private String tokenPersistenceProcessorClassName =
             "org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor";
     private String oauthTokenGeneratorClassName;
@@ -394,6 +395,8 @@ public class OAuthServerConfiguration {
 
         // read default timeout periods
         parseDefaultValidityPeriods(oauthElem);
+
+        parseEnablePasswordFlowEnhancements(oauthElem);
 
         // read OAuth URLs
         parseOAuthURLs(oauthElem);
@@ -878,6 +881,10 @@ public class OAuthServerConfiguration {
 
     public String getOauth2ErrorPageUrl() {
         return oauth2ErrorPageUrl;
+    }
+
+    public boolean isPasswordFlowEnhancementsEnabled() {
+        return enablePasswordFlowEnhancements;
     }
 
     public long getAuthorizationCodeValidityPeriodInSeconds() {
@@ -1978,6 +1985,15 @@ public class OAuthServerConfiguration {
             }
         }
         return new OAuthCallbackHandlerMetaData(className, properties, priority);
+    }
+
+    private void parseEnablePasswordFlowEnhancements(OMElement oauthConfigElem) {
+        OMElement enablePasswordFlowEnhancementsElem =
+                oauthConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.ENABLE_PASSWORD_FLOW_ENHANCEMENTS));
+        if (enablePasswordFlowEnhancementsElem != null) {
+            enablePasswordFlowEnhancements = Boolean.parseBoolean(enablePasswordFlowEnhancementsElem.getText());
+        }
     }
 
     private void parseDefaultValidityPeriods(OMElement oauthConfigElem) {
@@ -3823,6 +3839,8 @@ public class OAuthServerConfiguration {
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";
+        // Enable password flow enhancements
+        private static final String ENABLE_PASSWORD_FLOW_ENHANCEMENTS = "EnablePasswordFlowEnhancements";
         // Default validity periods
         private static final String AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD =
                 "AuthorizationCodeDefaultValidityPeriod";
