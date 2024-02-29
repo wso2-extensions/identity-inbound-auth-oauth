@@ -1304,6 +1304,7 @@ public class OAuthAdminServiceImpl {
                 accessTokens[countToken] = token;
                 countToken++;
             }
+            clearTokenCacheEntry(consumerKey, activeDetailedTokens);
 
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Access tokens and token of users are removed from the cache for OAuth App with " +
