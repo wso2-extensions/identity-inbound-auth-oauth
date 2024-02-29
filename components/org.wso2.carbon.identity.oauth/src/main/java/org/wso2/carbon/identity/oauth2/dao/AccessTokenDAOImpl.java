@@ -1964,7 +1964,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            ps.setInt(2, appTenantId);
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             rs = ps.executeQuery();
             while (rs.next()) {
@@ -1991,6 +1992,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
                             userDomain, OAuth2Util.getTenantDomain(tenentId), authenticatedIDP);
                     user.setAuthenticatedSubjectIdentifier(rs.getString(7));
+                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganizationId)) {
+                        user.setAccessingOrganization(authorizedOrganizationId);
+                        String userResidentOrg = resolveOrganizationId(user.getTenantDomain());
+                        user.setUserResidentOrganization(userResidentOrg);
+                        // Set authorized user tenant domain to the tenant domain of the application.
+                        user.setTenantDomain(IdentityTenantUtil.getTenantDomain(appTenantId));
+                    }
                     AccessTokenDO aTokenDetail = new AccessTokenDO();
                     aTokenDetail.setAccessToken(token);
                     aTokenDetail.setConsumerKey(consumerKey);
