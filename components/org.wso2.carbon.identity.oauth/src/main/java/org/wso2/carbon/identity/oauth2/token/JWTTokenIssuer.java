@@ -25,6 +25,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jose.util.X509CertUtils;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
@@ -35,6 +36,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -48,6 +50,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -55,16 +58,22 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
+import java.io.ByteArrayInputStream;
 import java.security.Key;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
@@ -97,6 +106,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String TOKEN_BINDING_TYPE = "binding_type";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String CNF = "cnf";
+    private static final String CNF_CLAIM = "x5t#S256";
+    private static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
+    private static final String END_CERT = "-----END CERTIFICATE-----";
+    private static final String X509_CERT_INSTANCE_NAME = "X.509";
+    private static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
     private static final Log log = LogFactory.getLog(JWTTokenIssuer.class);
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
@@ -534,11 +548,69 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
-        if (tokenReqMessageContext != null && tokenReqMessageContext.getProperty(CNF) != null) {
-            jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
+        if (tokenReqMessageContext != null) {
+            if (tokenReqMessageContext.getProperty(CNF) != null) {
+                jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
+            } else {
+                jwtClaimsSet = handleCnf(jwtClaimsSet, tokenReqMessageContext);
+            }
         }
-
         return jwtClaimsSet;
+    }
+
+    private JWTClaimsSet handleCnf(JWTClaimsSet jwtClaimsSet, OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder(jwtClaimsSet);
+        String mtlsAuthHeaderName = IdentityUtil.getProperty(MTLS_AUTH_HEADER);
+        if (mtlsAuthHeaderName != null) {
+            HttpRequestHeader[] requestHeaders =
+                    tokenReqMessageContext.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();
+            Optional<HttpRequestHeader> certHeader = Arrays.stream(requestHeaders).
+                    filter(httpRequestHeader -> mtlsAuthHeaderName.equals(httpRequestHeader.getName())).findFirst();
+            if (certHeader.isPresent()) {
+                Base64URL certThumbprint = null;
+                if (log.isDebugEnabled()) {
+                    log.debug("Client MTLS certificate found: " + certHeader);
+                }
+                try {
+                    if (certHeader.get().getValue() != null) {
+                        X509Certificate certificate = parseCertificate(certHeader.get().getValue()[0]);
+                        certThumbprint = X509CertUtils.computeSHA256Thumbprint(certificate);
+                    }
+                } catch (CertificateException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Error occurred while calculating the thumbprint of the MTLS certificate of " +
+                                "the client: " + tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(), e);
+                    }
+                }
+                if (certThumbprint != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Client MTLS certificate thumbprint: " + certThumbprint);
+                    }
+                    String certThumbprintString = certThumbprint.toString();
+                    JSONObject json = new JSONObject();
+                    json.put(CNF_CLAIM, certThumbprintString);
+                    jwtClaimsSetBuilder.claim(CNF, Collections.singletonMap(CNF_CLAIM, certThumbprint));
+                }
+            }
+        }
+        return jwtClaimsSetBuilder.build();
+    }
+
+    /**
+     * Parse the certificate content.
+     *
+     * @param content the content to be parsed
+     * @throws CertificateException if error occurs while parsing content
+     */
+    private static X509Certificate parseCertificate(String content) throws CertificateException {
+
+        String decodedContent = StringUtils.trim(content);
+        byte[] decoded = Base64.getDecoder().decode(StringUtils.trim(decodedContent.
+                replaceAll(BEGIN_CERT, "").
+                replaceAll(END_CERT, "")));
+        return (X509Certificate) CertificateFactory.getInstance(X509_CERT_INSTANCE_NAME).
+                generateCertificate(new ByteArrayInputStream(decoded));
     }
 
     /**

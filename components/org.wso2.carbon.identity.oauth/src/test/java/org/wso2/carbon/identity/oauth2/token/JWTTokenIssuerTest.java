@@ -37,6 +37,7 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -95,6 +96,7 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
                 JWTTokenIssuer.class,
                 IdentityTenantUtil.class,
                 OIDCClaimUtil.class
+                IdentityUtil.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -133,6 +135,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     public static final String AUTHZ_FLOW_CUSTOM_CLAIM_VALUE = "authz_flow_custom_claim_value";
     public static final String TOKEN_FLOW_CUSTOM_CLAIM = "token_flow_custom_claim";
     public static final String TOKEN_FLOW_CUSTOM_CLAIM_VALUE = "token_flow_custom_claim_value";
+    private static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
@@ -141,6 +144,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     public void setUp() throws Exception {
         initMocks(this);
         mockStatic(OAuthServerConfiguration.class);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(MTLS_AUTH_HEADER)).thenReturn(null);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
     }
 
