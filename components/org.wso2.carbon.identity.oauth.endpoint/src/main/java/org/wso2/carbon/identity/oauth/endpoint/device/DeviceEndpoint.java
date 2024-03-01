@@ -17,6 +17,7 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
@@ -200,9 +201,15 @@ public class DeviceEndpoint {
                     .setError(OAuth2ErrorCodes.INVALID_CLIENT)
                     .setErrorDescription("Client Authentication failed").buildJSONMessage();
         } else {
-            response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
-                    .setError(OAuth2ErrorCodes.INVALID_REQUEST)
-                    .setErrorDescription("Missing parameters: client_id").buildJSONMessage();
+            if (StringUtils.isNotBlank(oAuthClientAuthnContext.getErrorMessage())) {
+                response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                        .setError(OAuth2ErrorCodes.INVALID_REQUEST)
+                        .setErrorDescription(oAuthClientAuthnContext.getErrorMessage()).buildJSONMessage();
+            } else {
+                response = OAuthASResponse.errorResponse(HttpServletResponse.SC_UNAUTHORIZED)
+                        .setError(OAuth2ErrorCodes.INVALID_REQUEST)
+                        .setErrorDescription("Missing parameters: client_id").buildJSONMessage();
+            }
         }
         return Response.status(response.getResponseStatus())
                 .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
