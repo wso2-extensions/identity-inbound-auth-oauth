@@ -37,6 +37,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
@@ -104,6 +105,7 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
+import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -230,7 +232,10 @@ public class OAuth2AuthzEndpoint {
     private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
 
     public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
-
+        if (openIDConnectClaimFilter == null) {
+            openIDConnectClaimFilter = (OpenIDConnectClaimFilterImpl) PrivilegedCarbonContext.
+                    getThreadLocalCarbonContext().getOSGiService(OpenIDConnectClaimFilter.class, null);
+        }
         return openIDConnectClaimFilter;
     }
 
@@ -666,7 +671,7 @@ public class OAuth2AuthzEndpoint {
             throws SSOConsentServiceException {
 
         List<String> claimsListOfScopes =
-                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                getOpenIDConnectClaimFilter().getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
                         oAuth2Parameters.getTenantDomain());
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
@@ -2786,7 +2791,7 @@ public class OAuth2AuthzEndpoint {
 
         // Get the claims uri list of all the requested scopes. Eg:- country, email.
         List<String> claimListOfScopes =
-                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
+                getOpenIDConnectClaimFilter().getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
 
         List<String> essentialRequestedClaims = new ArrayList<>();
 
@@ -2861,7 +2866,7 @@ public class OAuth2AuthzEndpoint {
             throws SSOConsentServiceException {
 
         List<String> claimsListOfScopes =
-                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
+                getOpenIDConnectClaimFilter().getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
                         oAuth2Parameters.getTenantDomain());
         if (useExistingConsents) {
             return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,

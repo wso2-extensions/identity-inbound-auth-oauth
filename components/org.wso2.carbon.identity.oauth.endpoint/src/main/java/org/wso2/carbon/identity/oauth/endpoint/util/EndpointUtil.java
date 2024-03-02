@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -198,7 +199,10 @@ public class EndpointUtil {
      * @return
      */
     public static SSOConsentService getSSOConsentService() {
-
+        if (ssoConsentService == null) {
+            ssoConsentService = (SSOConsentService) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(SSOConsentService.class, null);
+        }
         return ssoConsentService;
     }
 
@@ -241,7 +245,10 @@ public class EndpointUtil {
      * @return RequestObjectService
      */
     public static RequestObjectService getRequestObjectService() {
-
+        if (requestObjectService == null) {
+            requestObjectService = (RequestObjectService) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(RequestObjectService.class, null);
+        }
         return requestObjectService;
     }
 
@@ -251,7 +258,10 @@ public class EndpointUtil {
      * @return OAuth2Service
      */
     public static OAuth2Service getOAuth2Service() {
-
+        if (oAuth2Service == null) {
+            oAuth2Service = (OAuth2Service) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(OAuth2Service.class, null);
+        }
         return oAuth2Service;
     }
 
@@ -261,8 +271,37 @@ public class EndpointUtil {
      * @return OAuthServerConfiguration
      */
     public static OAuthServerConfiguration getOAuthServerConfiguration() {
-
+        if (oauthServerConfiguration == null) {
+            oauthServerConfiguration = (OAuthServerConfiguration) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(OAuthServerConfiguration.class, null);
+        }
         return oauthServerConfiguration;
+    }
+
+    /**
+     * Returns the {@code OauthScopeService} instance
+     *
+     * @return OAuth2ScopeService
+     */
+    public static OAuth2ScopeService getOAuth2ScopeService() {
+        if (oAuth2ScopeService == null) {
+            oAuth2ScopeService = (OAuth2ScopeService) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(OAuth2ScopeService.class, null);
+        }
+        return oAuth2ScopeService;
+    }
+
+    /**
+     * Returns the {@code OAuthAdminServiceImpl} instance
+     *
+     * @return OAuthAdminServiceImpl
+     */
+    public static OAuthAdminServiceImpl getOAuthAdminService() {
+        if (oAuthAdminService == null) {
+            oAuthAdminService = (OAuthAdminServiceImpl) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(OAuthAdminServiceImpl.class, null);
+        }
+        return oAuthAdminService;
     }
 
     /**
@@ -834,7 +873,7 @@ public class EndpointUtil {
         scopesToBeConsented.removeAll(getOIDCScopeNames());
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
-        return oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(userId, appId,
+        return getOAuth2ScopeService().hasUserProvidedConsentForAllRequestedScopes(userId, appId,
                 IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented);
     }
 
@@ -867,25 +906,25 @@ public class EndpointUtil {
                         log.debug("Overriding existing consents of the user : " + userId + " for application : " +
                                 appId);
                     }
-                    oAuth2ScopeService.addUserConsentForApplication(userId, appId,
+                    getOAuth2ScopeService().addUserConsentForApplication(userId, appId,
                             IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                             userApprovedScopes, null);
                 } else {
-                    boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
+                    boolean isUserConsentExist = getOAuth2ScopeService().isUserHasAnExistingConsentForApp(
                             userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                     if (isUserConsentExist) {
                         if (log.isDebugEnabled()) {
                             log.debug("Updating existing consents of the user : " + userId + " for application : " +
                                     appId);
                         }
-                        oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
+                        getOAuth2ScopeService().updateUserConsentForApplication(userId, appId,
                                 IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                                 userApprovedScopes, null);
                     } else {
                         if (log.isDebugEnabled()) {
                             log.debug("Adding new consent to the user : " + userId + " for application : " + appId);
                         }
-                        oAuth2ScopeService.addUserConsentForApplication(userId, appId,
+                        getOAuth2ScopeService().addUserConsentForApplication(userId, appId,
                                 IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                                 userApprovedScopes, null);
                     }
@@ -918,7 +957,7 @@ public class EndpointUtil {
 
     private static List<String> getOIDCScopeNames() throws IdentityOAuthAdminException {
 
-        return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
+        return Arrays.asList(ArrayUtils.nullToEmpty(getOAuthAdminService().getScopeNames()));
     }
 
     /**
@@ -947,7 +986,7 @@ public class EndpointUtil {
                     allowedScopes = dropUnregisteredScopes(params);
                 }
                 // Get registered OIDC scopes.
-                String[] oidcScopes = oAuthAdminService.getScopeNames();
+                String[] oidcScopes = getOAuthAdminService().getScopeNames();
                 List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
                 for (String scope : allowedScopes) {
                     if (!oidcScopeList.contains(scope)) {
@@ -978,7 +1017,7 @@ public class EndpointUtil {
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
-                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(
+                OAuth2ScopeConsentResponse existingUserConsent = getOAuth2ScopeService().getUserConsentForApp(
                         userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
@@ -1072,7 +1111,7 @@ public class EndpointUtil {
         try {
             String requestedScopesStr = StringUtils.join(requestedScopes, " ");
             Set<String> registeredScopes = new HashSet<>();
-            Set<Scope> registeredScopeSet = oAuth2ScopeService.getScopes(null, null, true, requestedScopesStr);
+            Set<Scope> registeredScopeSet = getOAuth2ScopeService().getScopes(null, null, true, requestedScopesStr);
             registeredScopeSet.forEach(scope -> registeredScopes.add(scope.getName()));
             return registeredScopes;
         } catch (IdentityOAuth2ScopeServerException e) {
@@ -1435,7 +1474,10 @@ public class EndpointUtil {
     }
 
     public static CibaAuthServiceImpl getCibaAuthService() {
-
+        if (cibaAuthService == null) {
+            cibaAuthService = (CibaAuthServiceImpl) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(CibaAuthService.class, null);
+        }
         return cibaAuthService;
     }
 

@@ -25,6 +25,7 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONObject;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
@@ -66,6 +67,14 @@ public class DeviceEndpoint {
         this.deviceAuthService = deviceAuthService;
     }
 
+    public DeviceAuthService getDeviceAuthService() {
+        if (deviceAuthService == null) {
+            deviceAuthService = (DeviceAuthService) PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getOSGiService(DeviceAuthService.class, null);
+        }
+        return deviceAuthService;
+    }
+
     @POST
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
@@ -103,7 +112,8 @@ public class DeviceEndpoint {
 
         String temporaryUserCode = GenerateKeys.getKey(OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength());
         long quantifier = GenerateKeys.getCurrentQuantifier();
-        return deviceAuthService.generateDeviceResponse(deviceCode, temporaryUserCode, quantifier, clientId, scopes);
+        return getDeviceAuthService().
+                generateDeviceResponse(deviceCode, temporaryUserCode, quantifier, clientId, scopes);
     }
 
     private void validateRepeatedParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap)
