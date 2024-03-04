@@ -294,7 +294,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
-    private boolean addTenantDomainToTokenEnabled = false;
+    private boolean addTenantDomainToAccessTokenEnabled = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -469,7 +469,7 @@ public class OAuthServerConfiguration {
         setOAuthResponseJspPageAvailable();
         
         // read domain information setting config.
-        isAddTenantDomainToTokenEnabled(oauthElem);
+        isAddTenantDomainToAccessTokenEnabled(oauthElem);
     }
 
     /**
@@ -646,9 +646,9 @@ public class OAuthServerConfiguration {
         return deviceAuthzEPUrl;
     }
     
-    public boolean isAddTenantDomainToTokenEnabled() {
+    public boolean isAddTenantDomainToAccessTokenEnabled() {
 
-        return addTenantDomainToTokenEnabled;
+        return addTenantDomainToAccessTokenEnabled;
     }
     
     /**
@@ -3201,14 +3201,14 @@ public class OAuthServerConfiguration {
         }
     }
     
-    private void isAddTenantDomainToTokenEnabled(OMElement oauthConfigElem) {
+    private void isAddTenantDomainToAccessTokenEnabled(OMElement oauthConfigElem) {
         OMElement enableAddDomainElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                ConfigElements.ADD_DOMAIN_TO_TOKEN));
+                ConfigElements.ADD_DOMAIN_TO_ACCESS_TOKEN));
         if (enableAddDomainElem != null) {
-            addTenantDomainToTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
+            addTenantDomainToAccessTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
         }
         if (log.isDebugEnabled()) {
-            log.debug("AddTenantDomainToTokenEnabled was set to : " + addTenantDomainToTokenEnabled);
+            log.debug("AddTenantDomainToAccessTokenEnabled was set to : " + addTenantDomainToAccessTokenEnabled);
         }
     }
 
@@ -3370,7 +3370,7 @@ public class OAuthServerConfiguration {
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
         // Enable/Disable adding domain information to the token
-        private static final String ADD_DOMAIN_TO_TOKEN = "AddTenantDomainToAccessToken";
+        private static final String ADD_DOMAIN_TO_ACCESS_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";

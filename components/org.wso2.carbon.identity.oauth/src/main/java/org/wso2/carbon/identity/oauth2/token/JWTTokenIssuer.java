@@ -481,7 +481,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
 
-        if (OAuthServerConfiguration.getInstance().isAddTenantDomainToTokenEnabled()) {
+        if (OAuthServerConfiguration.getInstance().isAddTenantDomainToAccessTokenEnabled()) {
             jwtClaimsSetBuilder.claim(APP_DOMAIN, oAuthAppDO.getAppOwner().getTenantDomain());
             jwtClaimsSetBuilder.claim(USER_DOMAIN, authenticatedUser.getTenantDomain());
         }
