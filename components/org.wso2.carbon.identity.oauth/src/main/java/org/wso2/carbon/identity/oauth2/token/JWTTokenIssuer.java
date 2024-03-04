@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 
 import java.security.Key;
+import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.Arrays;
@@ -370,7 +371,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             Key privateKey = getPrivateKey(tenantDomain, tenantId);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
+            String certThumbPrint;
+            if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Util.JWT_X5T_HEXIFY_REQUIRED))) {
+                Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
+                certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
+            } else {
+                certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
+            }
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
             // Set the required "typ" header "at+jwt" for access tokens issued by the issuer

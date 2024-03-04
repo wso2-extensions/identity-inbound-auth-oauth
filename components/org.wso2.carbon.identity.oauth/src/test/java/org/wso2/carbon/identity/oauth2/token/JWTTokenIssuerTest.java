@@ -70,6 +70,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.Assert.assertNull;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
@@ -444,7 +445,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             mockCustomClaimsCallbackHandler();
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
-            when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
+            when(OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), anyBoolean())).thenReturn(THUMBPRINT);
             when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME,
