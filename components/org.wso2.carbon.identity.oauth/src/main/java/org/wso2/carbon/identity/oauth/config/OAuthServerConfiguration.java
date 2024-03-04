@@ -647,6 +647,7 @@ public class OAuthServerConfiguration {
     }
     
     public boolean isAddTenantDomainToTokenEnabled() {
+
         return addTenantDomainToTokenEnabled;
     }
     
@@ -3369,7 +3370,7 @@ public class OAuthServerConfiguration {
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
         // Enable/Disable adding domain information to the token
-        private static final String ADD_DOMAIN_TO_TOKEN = "AddTenantDomainToToken";
+        private static final String ADD_DOMAIN_TO_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
