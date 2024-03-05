@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import org.wso2.carbon.identity.application.authentication.framework.model.FederatedToken;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
@@ -80,6 +81,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private boolean isRequestObjectFlow;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
     private boolean isApiBasedAuthRequest;
+
+    private List<FederatedToken> federatedTokens;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -191,6 +194,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     public void setPkceCodeChallengeMethod(String pkceCodeChallengeMethod) {
         this.pkceCodeChallengeMethod = pkceCodeChallengeMethod;
+    }
+
+    public List<FederatedToken> getFederatedTokens() {
+
+        return federatedTokens;
+    }
+
+    public void setFederatedTokens(List<FederatedToken> federatedTokens) {
+
+        this.federatedTokens = federatedTokens;
     }
 
     /**

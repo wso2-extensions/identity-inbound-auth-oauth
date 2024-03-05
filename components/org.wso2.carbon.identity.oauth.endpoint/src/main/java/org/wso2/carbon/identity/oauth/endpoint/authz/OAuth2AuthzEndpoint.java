@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.FederatedToken;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -195,6 +196,7 @@ import javax.ws.rs.core.Response;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
+import static org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.DefaultAuthenticationRequestHandler.FEDERATED_TOKENS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
@@ -388,7 +390,29 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    /**
+     * Add the federated tokens comes with the authentication result to the session data cache.
+     *
+     * @param oAuthMessage         The OAuthMessage with the session data cache entry.
+     * @param authenticationResult The authentication result of authorization call.
+     */
+    private void addFederatedTokensToAuthCache(OAuthMessage oAuthMessage, AuthenticationResult authenticationResult) {
 
+        List<FederatedToken> federatedTokens =
+                (List<FederatedToken>) authenticationResult.getProperty(FEDERATED_TOKENS);
+
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
+        if (sessionDataCacheEntry == null || CollectionUtils.isEmpty(federatedTokens)) {
+            return;
+        }
+        if (CollectionUtils.isEmpty(sessionDataCacheEntry.getFederatedTokens())) {
+            sessionDataCacheEntry.setFederatedTokens(new ArrayList<>());
+        }
+        sessionDataCacheEntry.getFederatedTokens().addAll(federatedTokens);
+        if (log.isDebugEnabled()) {
+            log.debug("Added the federated tokens to the authorization grant cache.");
+        }
+    }
 
     private void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
 
@@ -1335,6 +1359,8 @@ public class OAuth2AuthzEndpoint {
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
         oAuthMessage.getSessionDataCacheEntry().setSessionContextIdentifier((String)
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
+        // Adding federated tokens come with the authorize authentication result.
+        addFederatedTokensToAuthCache(oAuthMessage, authnResult);
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2025,6 +2051,7 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setAuthorizationCode(code);
         boolean isRequestObjectFlow = sessionDataCacheEntry.getoAuth2Parameters().isRequestObjectFlow();
         authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
+        authorizationGrantCacheEntry.setFederatedTokens(sessionDataCacheEntry.getFederatedTokens());
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 

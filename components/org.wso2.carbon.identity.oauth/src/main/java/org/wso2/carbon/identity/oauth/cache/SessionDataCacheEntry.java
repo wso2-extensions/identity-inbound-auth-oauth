@@ -19,11 +19,13 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.FederatedToken;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -50,6 +52,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private ConcurrentMap<String, String[]> paramMap = new ConcurrentHashMap<String, String[]>();
 
     private Map<String, Serializable> endpointParams = new HashMap<>();
+    private List<FederatedToken> federatedTokens;
 
     public OAuthAuthzReqMessageContext getAuthzReqMsgCtx() {
         return authzReqMsgCtx;
@@ -158,5 +161,16 @@ public class SessionDataCacheEntry extends CacheEntry {
     public void setRemoveOnConsume(boolean removeOnConsume) {
 
         this.removeOnConsume = removeOnConsume;
+    }
+
+    public List<FederatedToken> getFederatedTokens() {
+
+        return federatedTokens;
+    }
+
+    public void setFederatedTokens(
+            List<FederatedToken> federatedTokens) {
+
+        this.federatedTokens = federatedTokens;
     }
 }
