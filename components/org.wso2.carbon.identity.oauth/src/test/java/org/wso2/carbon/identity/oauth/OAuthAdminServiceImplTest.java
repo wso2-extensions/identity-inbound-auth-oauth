@@ -882,7 +882,7 @@ public class OAuthAdminServiceImplTest extends PowerMockIdentityBaseTest {
         } catch (Exception ex) {
             Assert.assertTrue(ex instanceof IdentityOAuthClientException);
             Assert.assertEquals(((IdentityOAuthClientException) ex).getErrorCode(),
-                    Error.INVALID_REQUEST.getErrorCode());
+                    Error.INVALID_SUBJECT_TYPE_UPDATE.getErrorCode());
         }
     }
 
