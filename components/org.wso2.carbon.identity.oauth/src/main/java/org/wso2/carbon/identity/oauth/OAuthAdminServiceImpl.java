@@ -100,6 +100,7 @@ import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.trigger
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
+import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -2488,8 +2489,9 @@ public class OAuthAdminServiceImpl {
             for (String redirectURI : redirectURIs) {
                 URI uri = URI.create(redirectURI);
                 if (!uri.getHost().equals(hostname)) {
-                    throw handleClientError(INVALID_REQUEST,
-                            "Sector identifier URI is needed for PPID calculation");
+                    throw handleClientError(INVALID_SUBJECT_TYPE_UPDATE,
+                            "Sector Identifier URI is mandatory if multiple redirect URIs with different" +
+                                    "hostnames are configured.");
                 }
             }
         }
