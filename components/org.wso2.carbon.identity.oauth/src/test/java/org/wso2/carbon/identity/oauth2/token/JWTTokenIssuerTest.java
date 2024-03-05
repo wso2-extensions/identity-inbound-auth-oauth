@@ -16,6 +16,7 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.RSASSASigner;
@@ -23,6 +24,11 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.joda.time.Duration;
+import org.jose4j.jwt.consumer.InvalidJwtException;
+import org.jose4j.jwt.consumer.JwtConsumer;
+import org.jose4j.jwt.consumer.JwtConsumerBuilder;
+import org.jose4j.keys.resolvers.X509VerificationKeyResolver;
+import org.jose4j.lang.JoseException;
 import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -59,6 +65,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -441,11 +449,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                                    long expectedExpiry, boolean ppidEnabled) throws Exception {
 
             OAuthAppDO appDO = spy(new OAuthAppDO());
+            when(oAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
+                .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
             mockGrantHandlers();
             mockCustomClaimsCallbackHandler();
             mockStatic(OAuth2Util.class);
             when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
-            when(OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), anyBoolean())).thenReturn(THUMBPRINT);
             when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME,
@@ -453,6 +462,10 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             KeyStore wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                     System.getProperty(CarbonBaseConstants.CARBON_HOME));
             RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+            Certificate cert = wso2KeyStore.getCertificate("wso2carbon");
+            when(OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
+            when(OAuth2Util.class, "getThumbPrintWithPrevAlgorithm", any(), anyBoolean()).thenCallRealMethod();
+            when(OAuth2Util.class, "getThumbPrintWithAlgorithm", any(), anyString(), anyBoolean()).thenCallRealMethod();
 
             when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
             JWSSigner signer = new RSASSASigner(rsaPrivateKey);
@@ -474,10 +487,26 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                     (OAuthTokenReqMessageContext) tokenReqMessageContext,
                     (OAuthAuthzReqMessageContext) authzReqMessageContext);
             SignedJWT signedJWT = SignedJWT.parse(jwtToken);
+            validateX5tInJWT(jwtToken, cert);
             assertNotNull(jwtToken);
             assertNotNull(signedJWT.getHeader());
             assertNotNull(signedJWT.getHeader().getType());
             assertEquals(signedJWT.getHeader().getType().toString(), DEFAULT_TYP_HEADER_VALUE);
+    }
+
+    private void validateX5tInJWT(String jwt, Certificate cert) throws JoseException, JsonProcessingException {
+
+        try {
+            X509VerificationKeyResolver x509VerificationKeyResolver =
+                    new X509VerificationKeyResolver((X509Certificate) cert);
+            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                    .setVerificationKeyResolver(x509VerificationKeyResolver)
+                    .build();
+            jwtConsumer.process(jwt);
+        } catch (InvalidJwtException e) {
+            assertTrue(e.getMessage() != null && e.getMessage().contains("The JWT is no longer valid"),
+                    "Invalid x5t value in JWT token.");
+        }
     }
 
     @Test

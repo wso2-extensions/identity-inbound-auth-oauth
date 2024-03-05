@@ -342,7 +342,6 @@ public class OAuth2Util {
     private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
     // System flag to allow the weak keys (key length less than 2048) to be used for the signing.
     private static final String ALLOW_WEAK_RSA_SIGNER_KEY = "allow_weak_rsa_signer_key";
-    public static final String JWT_X5T_HEXIFY_REQUIRED = "OAuth.JWTX5tHexifyingRequired";
 
     private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
     private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
@@ -3127,12 +3126,8 @@ public class OAuth2Util {
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
-            if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWT_X5T_HEXIFY_REQUIRED))) {
-                Certificate certificate = getCertificate(tenantDomain, tenantId);
-                headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
-            } else {
-                headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
-            }
+            Certificate certificate = getCertificate(tenantDomain, tenantId);
+            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT;
