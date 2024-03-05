@@ -3202,6 +3202,7 @@ public class OAuthServerConfiguration {
     }
     
     private void isAddTenantDomainToAccessTokenEnabled(OMElement oauthConfigElem) {
+
         OMElement enableAddDomainElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
                 ConfigElements.ADD_DOMAIN_TO_ACCESS_TOKEN));
         if (enableAddDomainElem != null) {
@@ -3369,7 +3370,7 @@ public class OAuthServerConfiguration {
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
-        // Enable/Disable adding domain information to the token
+        // Enable/Disable adding domain information to the token.
         private static final String ADD_DOMAIN_TO_ACCESS_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";

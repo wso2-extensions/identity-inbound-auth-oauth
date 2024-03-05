@@ -102,8 +102,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String CLIENT_ID = "client_id";
-    private static final String APP_DOMAIN = "app_domain";
-    private static final String USER_DOMAIN = "user_domain";
+    private static final String APP_DOMAIN = "app_td";
+    private static final String USER_DOMAIN = "user_td";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
