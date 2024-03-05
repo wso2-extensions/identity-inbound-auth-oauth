@@ -130,6 +130,18 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
+     * @param orgId Organization ID
+     * @return IntrospectionResponseBuilder
+     */
+    public IntrospectionResponseBuilder setOrgId(String orgId) {
+
+        if (StringUtils.isNotBlank(orgId)) {
+            parameters.put(IntrospectionResponse.ORG_ID, orgId);
+        }
+        return this;
+    }
+
+    /**
      * @param tokenType Token type
      * @return IntrospectionResponseBuilder
      */
