@@ -195,55 +195,16 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             try {
-                org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService =
-                        OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
-                // Users can be either directly linked to roles or groups.
-                // Get the users directly linked to roles.
-                List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfRole =
-                        roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
-                // Get the users directly linked to group associated with the role.
-                List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfRole =
-                        roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
-                List<User> userListOfGroup = new ArrayList<>();
-                for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfRole) {
-                    String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
-                    String groupName = UserCoreUtil.removeDomainFromName(group.getName());
-                    updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
-                }
+                // Terminate sessions associated with the primary role.
+                terminateSessionsForRole(roleId, tenantDomain);
 
-                List<String> userIdList = new ArrayList<>();
-                for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo : userListOfRole) {
-                    userIdList.add(userBasicInfo.getId());
-                }
-                for (User user : userListOfGroup) {
-                    userIdList.add(user.getUserID());
-                }
-                terminateSession(userIdList, roleId, tenantDomain);
-
-                List<RoleDTO> roleDTOList = roleV2ManagementService.getSharedHybridRoles(roleId,
-                        IdentityTenantUtil.getTenantId(tenantDomain));
+                List<RoleDTO> roleDTOList = OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService()
+                        .getSharedHybridRoles(roleId, IdentityTenantUtil.getTenantId(tenantDomain));
                 for (RoleDTO roleDTO : roleDTOList) {
                     tenantDomain = IdentityTenantUtil.getTenantDomain(roleDTO.getTenantId());
                     roleId = roleDTO.getId();
-                    List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfSharedRole =
-                            roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
-                    List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfSharedRole =
-                            roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
-                    userListOfGroup = new ArrayList<>();
-                    for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfSharedRole) {
-                        String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
-                        String groupName = UserCoreUtil.removeDomainFromName(group.getName());
-                        updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
-                    }
-                    userIdList = new ArrayList<>();
-                    for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo :
-                            userListOfSharedRole) {
-                        userIdList.add(userBasicInfo.getId());
-                    }
-                    for (User user : userListOfGroup) {
-                        userIdList.add(user.getUserID());
-                    }
-                    terminateSession(userIdList, roleId, tenantDomain);
+                    // Terminate sessions associated with the given shared role.
+                    terminateSessionsForRole(roleId, tenantDomain);
                 }
             } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
@@ -296,6 +257,47 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 throw new IdentityEventException(errorMsg);
             }
         }
+    }
+
+    /**
+     * Terminate sessions associated for the given role.
+     *
+     * @param roleId       The ID of the role.
+     * @param tenantDomain The tenant domain of the role.
+     * @throws org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException if any error while
+     *                                                                                             listing users and
+     *                                                                                             groups for the role.
+     * @throws IdentityEventException                                                              if any error with
+     *                                                                                             session termination.
+     */
+    private void terminateSessionsForRole(String roleId, String tenantDomain) throws
+            org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException,
+            IdentityEventException {
+
+        org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService =
+                OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+        // Users can be either directly linked to roles or groups.
+        // Get the users directly linked to roles.
+        List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfRole =
+                roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
+        // Get the users directly linked to group associated with the role.
+        List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfRole =
+                roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
+        List<User> userListOfGroup = new ArrayList<>();
+        for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfRole) {
+            String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
+            String groupName = UserCoreUtil.removeDomainFromName(group.getName());
+            updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
+        }
+
+        List<String> userIdList = new ArrayList<>();
+        for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo : userListOfRole) {
+            userIdList.add(userBasicInfo.getId());
+        }
+        for (User user : userListOfGroup) {
+            userIdList.add(user.getUserID());
+        }
+        terminateSession(userIdList, roleId, tenantDomain);
     }
 
     /**
