@@ -3127,7 +3127,8 @@ public class OAuth2Util {
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
-            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
+            Certificate certificate = getCertificate(tenantDomain, tenantId);
+            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT;
@@ -3260,26 +3261,45 @@ public class OAuth2Util {
      */
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
-        return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM);
+        return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM, true);
     }
 
     public static String getThumbPrintWithPrevAlgorithm(Certificate certificate)
             throws IdentityOAuth2Exception {
 
-        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM);
+        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM, true);
     }
 
-    private static String getThumbPrintWithAlgorithm(Certificate certificate, String algorithm)
+    /**
+     * Method to obtain certificate thumbprint with SHA-1 algorithm.
+     *
+     * @param certificate      java.security.cert type certificate.
+     * @param requireHexifying True, if thumbprint needs to be hexified before encoding. It should not be hexified
+     *                         if used for the x5t value.
+     * @return Certificate thumbprint as a String.
+     * @throws IdentityOAuth2Exception When failed to obtain the thumbprint.
+     */
+    public static String getThumbPrintWithPrevAlgorithm(Certificate certificate, boolean requireHexifying)
             throws IdentityOAuth2Exception {
+
+        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM, requireHexifying);
+    }
+
+    private static String getThumbPrintWithAlgorithm(Certificate certificate, String algorithm,
+                                                     boolean requireHexifying) throws IdentityOAuth2Exception {
 
         try {
             MessageDigest digestValue = MessageDigest.getInstance(algorithm);
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
-            String publicCertThumbprint = hexify(digestInBytes);
-            String thumbprint = new String(new Base64(0, null, true).
-                    encode(publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            String thumbprint;
+            if (requireHexifying) {
+                thumbprint = new String(new Base64(0, null, true).encode(
+                        hexify(digestInBytes).getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            } else {
+                thumbprint = new String(new Base64(0, null, true).encode(digestInBytes), Charsets.UTF_8);
+            }
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Thumbprint value: %s calculated for Certificate: %s using algorithm: %s",
                         thumbprint, certificate, digestValue.getAlgorithm()));
