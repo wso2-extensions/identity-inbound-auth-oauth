@@ -16,10 +16,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.DefaultAuthenticationRequestHandler;
-import org.wso2.carbon.identity.application.authentication.framework.model.FederatedToken;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.util.HashMap;
@@ -55,11 +55,11 @@ public class FederatedTokenResponseHandler implements AccessTokenResponseHandler
             return null;
         }
 
-        List<FederatedToken> federatedTokens = cacheEntry.getFederatedTokens();
+        List<FederatedTokenDO> federatedTokens = cacheEntry.getFederatedTokens();
         if (CollectionUtils.isEmpty(federatedTokens)) {
             return null;
         }
-        // Removing the federated token from the auth grant cache entry since it is no longer required.
+        // Removing the federated token from the session cache entry since it is no longer required.
         cacheEntry.setFederatedTokens(null);
         // Add federated tokens to the token response if available.
         Map<String, Object> additionalAttributes = new HashMap<>();
