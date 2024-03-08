@@ -1,12 +1,19 @@
 /*
+ * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
  *
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com). All Rights Reserved.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This software is the property of WSO2 LLC. and its suppliers, if any.
- * Dissemination of any information or reproduction of any material contained
- * herein in any form is strictly forbidden, unless permitted by WSO2 expressly.
- * You may not alter or remove any copyright or other notice from copies of this content.
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.token.handlers.response;
@@ -15,7 +22,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.DefaultAuthenticationRequestHandler;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -64,9 +71,10 @@ public class FederatedTokenResponseHandler implements AccessTokenResponseHandler
         // Add federated tokens to the token response if available.
         Map<String, Object> additionalAttributes = new HashMap<>();
 
-        additionalAttributes.putIfAbsent(DefaultAuthenticationRequestHandler.FEDERATED_TOKENS, federatedTokens);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Federated tokens will be added to the additional attributes of the token response.");
+        additionalAttributes.putIfAbsent(FrameworkConstants.FEDERATED_TOKENS, federatedTokens);
+        if (LOG.isDebugEnabled() && tokReqMsgCtx.getAuthorizedUser() != null) {
+            LOG.debug("Federated tokens will be added to the additional attributes of the token response." +
+                    " for the user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId());
         }
 
         return additionalAttributes;

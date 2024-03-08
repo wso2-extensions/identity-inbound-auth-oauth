@@ -198,7 +198,6 @@ import javax.ws.rs.core.Response;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
-import static org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.DefaultAuthenticationRequestHandler.FEDERATED_TOKENS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
@@ -401,17 +400,21 @@ public class OAuth2AuthzEndpoint {
     private void addFederatedTokensToSessionCache(OAuthMessage oAuthMessage,
                                                   AuthenticationResult authenticationResult) {
 
+        if (!(authenticationResult.getProperty(FrameworkConstants.FEDERATED_TOKENS) instanceof List)) {
+            return;
+        }
         List<FederatedToken> federatedTokens =
-                (List<FederatedToken>) authenticationResult.getProperty(FEDERATED_TOKENS);
+                (List<FederatedToken>) authenticationResult.getProperty(FrameworkConstants.FEDERATED_TOKENS);
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         if (sessionDataCacheEntry == null || CollectionUtils.isEmpty(federatedTokens)) {
             return;
         }
         sessionDataCacheEntry.setFederatedTokens(getFederatedTokenDO(federatedTokens));
-        if (log.isDebugEnabled()) {
+        if (log.isDebugEnabled() && authenticationResult.getSubject() != null) {
             log.debug("Added the federated tokens to the session data cache. Session context identifier: " +
-                    sessionDataCacheEntry.getSessionContextIdentifier());
+                    sessionDataCacheEntry.getSessionContextIdentifier() + " for the user: " +
+                    authenticationResult.getSubject().getLoggableMaskedUserId());
         }
     }
 
