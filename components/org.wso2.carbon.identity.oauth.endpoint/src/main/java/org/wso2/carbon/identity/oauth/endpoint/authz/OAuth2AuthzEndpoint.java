@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.FederatedToken;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -129,6 +130,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
+import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
@@ -173,6 +175,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
@@ -388,7 +391,56 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    /**
+     * Add the federated tokens comes with the authentication result to the session data cache.
+     *
+     * @param oAuthMessage         The OAuthMessage with the session data cache entry.
+     * @param authenticationResult The authentication result of authorization call.
+     */
+    private void addFederatedTokensToSessionCache(OAuthMessage oAuthMessage,
+                                                  AuthenticationResult authenticationResult) {
 
+        if (!(authenticationResult.getProperty(FrameworkConstants.FEDERATED_TOKENS) instanceof List)) {
+            return;
+        }
+        List<FederatedToken> federatedTokens =
+                (List<FederatedToken>) authenticationResult.getProperty(FrameworkConstants.FEDERATED_TOKENS);
+
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
+        if (sessionDataCacheEntry == null || CollectionUtils.isEmpty(federatedTokens)) {
+            return;
+        }
+        sessionDataCacheEntry.setFederatedTokens(getFederatedTokenDO(federatedTokens));
+        if (log.isDebugEnabled() && authenticationResult.getSubject() != null) {
+            log.debug("Added the federated tokens to the session data cache. Session context identifier: " +
+                    sessionDataCacheEntry.getSessionContextIdentifier() + " for the user: " +
+                    authenticationResult.getSubject().getLoggableMaskedUserId());
+        }
+    }
+
+    /**
+     * This method creates a list of FederatedTokenDO objects from the list of FederatedToken objects.
+     *
+     * @param federatedTokens List of FederatedToken objects to be transformed as a list of FederatedTokenDO.
+     * @return List of FederatedTokenDO objects.
+     */
+    private List<FederatedTokenDO> getFederatedTokenDO(List<FederatedToken> federatedTokens) {
+
+        if (CollectionUtils.isEmpty(federatedTokens)) {
+            return null;
+        }
+
+        List<FederatedTokenDO>  federatedTokenDOs = federatedTokens.stream().map(federatedToken -> {
+            FederatedTokenDO federatedTokenDO =
+                    new FederatedTokenDO(federatedToken.getIdp(), federatedToken.getAccessToken());
+            federatedTokenDO.setRefreshToken(federatedToken.getRefreshToken());
+            federatedTokenDO.setScope(federatedToken.getScope());
+            federatedTokenDO.setTokenValidityPeriod(federatedToken.getTokenValidityPeriod());
+            return federatedTokenDO;
+        }).collect(Collectors.toList());
+
+        return federatedTokenDOs;
+    }
 
     private void setCommonAuthIdToRequest(HttpServletRequest request, HttpServletResponse response) {
 
@@ -1335,6 +1387,8 @@ public class OAuth2AuthzEndpoint {
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
         oAuthMessage.getSessionDataCacheEntry().setSessionContextIdentifier((String)
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
+        // Adding federated tokens come with the authentication result of the authorization call.
+        addFederatedTokensToSessionCache(oAuthMessage, authnResult);
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2025,6 +2079,8 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setAuthorizationCode(code);
         boolean isRequestObjectFlow = sessionDataCacheEntry.getoAuth2Parameters().isRequestObjectFlow();
         authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
+        authorizationGrantCacheEntry.setFederatedTokens(sessionDataCacheEntry.getFederatedTokens());
+        sessionDataCacheEntry.setFederatedTokens(null);
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
