@@ -102,6 +102,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String CLIENT_ID = "client_id";
+    private static final String APP_TENANT_DOMAIN = "app_td";
+    private static final String USER_TENANT_DOMAIN = "user_td";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
@@ -478,6 +480,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
+
+        if (OAuthServerConfiguration.getInstance().isAddTenantDomainToAccessTokenEnabled()) {
+            jwtClaimsSetBuilder.claim(APP_TENANT_DOMAIN, spTenantDomain);
+            jwtClaimsSetBuilder.claim(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
+        }
 
         setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
                 authenticatedUser, oAuthAppDO);

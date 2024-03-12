@@ -294,6 +294,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private boolean addTenantDomainToAccessTokenEnabled = false;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -466,6 +467,9 @@ public class OAuthServerConfiguration {
 
         // Set the availability of oauth_response.jsp page.
         setOAuthResponseJspPageAvailable();
+        
+        // read domain information setting config.
+        isAddTenantDomainToAccessTokenEnabled(oauthElem);
     }
 
     /**
@@ -641,6 +645,12 @@ public class OAuthServerConfiguration {
 
         return deviceAuthzEPUrl;
     }
+    
+    public boolean isAddTenantDomainToAccessTokenEnabled() {
+
+        return addTenantDomainToAccessTokenEnabled;
+    }
+    
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
@@ -3190,6 +3200,18 @@ public class OAuthServerConfiguration {
             log.debug("RenewTokenPerRequest was set to : " + isTokenRenewalPerRequestEnabled);
         }
     }
+    
+    private void isAddTenantDomainToAccessTokenEnabled(OMElement oauthConfigElem) {
+
+        OMElement enableAddDomainElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN));
+        if (enableAddDomainElem != null) {
+            addTenantDomainToAccessTokenEnabled  = Boolean.parseBoolean(enableAddDomainElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("AddTenantDomainToAccessTokenEnabled was set to : " + addTenantDomainToAccessTokenEnabled);
+        }
+    }
 
     /**
      * This method populates oauthTokenIssuerMap by reading the supportedTokenIssuers map. Earlier we only
@@ -3348,6 +3370,8 @@ public class OAuthServerConfiguration {
         private static final String OPENID_CONNECT_ADD_TENANT_DOMAIN_TO_ID_TOKEN = "AddTenantDomainToIdToken";
         // Property to decide whether to add userstore domain to id_token.
         private static final String OPENID_CONNECT_ADD_USERSTORE_DOMAIN_TO_ID_TOKEN = "AddUserstoreDomainToIdToken";
+        // Enable/Disable adding domain information to the token.
+        private static final String ADD_TENANT_DOMAIN_TO_ACCESS_TOKEN = "AddTenantDomainToAccessToken";
         private static final String REQUEST_OBJECT_ENABLED = "RequestObjectEnabled";
         private static final String ENABLE_FAPI_CIBA_PROFILE = "EnableCibaProfile";
         private static final String ENABLE_FAPI_SECURITY_PROFILE = "EnableSecurityProfile";
