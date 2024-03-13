@@ -748,7 +748,8 @@ public class TokenValidationHandler {
         }
 
         OAuth2TokenValidator tokenValidator;
-        if (isJWTTokenValidation(accessToken.getIdentifier())) {
+        if (StringUtils.equalsIgnoreCase(accessToken.getTokenType(), BEARER_TOKEN_TYPE) &&
+                isJWTTokenValidation(accessToken.getIdentifier())) {
             /*
             If the token is a self-contained JWT based access token and the
             config EnableJWTTokenValidationDuringIntrospection is set to true
