@@ -974,6 +974,11 @@ public class OAuth2AuthzEndpoint {
         List<String> claimsListOfScopes =
                 openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
                         oAuth2Parameters.getTenantDomain());
+        // Add essential claims requested through the claims parameter.
+        if (oAuth2Parameters.getEssentialClaims() != null) {
+            claimsListOfScopes.addAll(OAuth2Util.getEssentialClaims(oAuth2Parameters.getEssentialClaims(),
+                    USERINFO));
+        }
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
             return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user,
@@ -3421,6 +3426,11 @@ public class OAuth2AuthzEndpoint {
         List<String> claimsListOfScopes =
                 openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oAuth2Parameters.getScopes(),
                         oAuth2Parameters.getTenantDomain());
+        // Add essential claims requested through the claims parameter.
+        if (oAuth2Parameters.getEssentialClaims() != null) {
+            claimsListOfScopes.addAll(OAuth2Util.getEssentialClaims(oAuth2Parameters.getEssentialClaims(),
+                    USERINFO));
+        }
         if (useExistingConsents) {
             return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user,
                     claimsListOfScopes);
