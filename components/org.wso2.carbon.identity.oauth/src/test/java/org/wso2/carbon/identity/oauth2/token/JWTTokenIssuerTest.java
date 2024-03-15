@@ -36,6 +36,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -83,6 +84,7 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
                 OAuth2Util.class,
                 JWTTokenIssuer.class,
                 IdentityTenantUtil.class,
+                IdentityUtil.class
         }
 )
 public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
@@ -114,6 +116,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String CLAIM_CLIENT_ID = "client_id";
     private static final String DEFAULT_TYP_HEADER_VALUE = "at+jwt";
     private static final String THUMBPRINT = "Certificate";
+    private static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
 
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
@@ -122,6 +125,8 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     public void setUp() throws Exception {
         initMocks(this);
         mockStatic(OAuthServerConfiguration.class);
+        mockStatic(IdentityUtil.class);
+        when(IdentityUtil.getProperty(MTLS_AUTH_HEADER)).thenReturn(null);
         when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
     }
 
