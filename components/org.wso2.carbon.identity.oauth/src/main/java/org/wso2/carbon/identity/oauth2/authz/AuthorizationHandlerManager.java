@@ -310,6 +310,11 @@ public class AuthorizationHandlerManager {
                 }
                 authzReqMsgCtx.getAuthorizationReqDTO().setScopes(new String[0]);
             }
+            authzReqMsgCtx.setAuthorizedInternalScopes(authorizedScopes.stream()
+                    .filter(scope -> scope.startsWith(INTERNAL_SCOPE_PREFIX) ||
+                            scope.startsWith(CONSOLE_SCOPE_PREFIX) ||
+                            scope.equalsIgnoreCase(SYSTEM_SCOPE))
+                    .toArray(String[]::new));
         }
         //Validate scopes using global scope validators.
         boolean isValid = validateScopes(authzReqMsgCtx, authzHandler);
