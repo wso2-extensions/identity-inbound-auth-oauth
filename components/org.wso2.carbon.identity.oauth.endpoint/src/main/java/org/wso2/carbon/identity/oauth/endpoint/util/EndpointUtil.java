@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.ArrayUtils;
@@ -103,6 +102,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -380,18 +380,22 @@ public class EndpointUtil {
         }
         String errMsg = "Error decoding authorization header. Space delimited \"<authMethod> <base64encoded" +
                 "(username:password)>\" format violated.";
-        String[] splitValues = authorizationHeader.trim().split(" ");
-        if (splitValues.length == 2) {
-            if (HTTP_REQ_HEADER_AUTH_METHOD_BASIC.equals(splitValues[0])) {
-                byte[] decodedBytes = Base64Utils.decode(splitValues[1].trim());
-                String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
-                String[] credentials = userNamePassword.split(":");
-                if (credentials.length == 2) {
-                    return credentials;
+        String[] authHeaderComponents = authorizationHeader.trim().split(" ");
+        if (authHeaderComponents.length == 2) {
+            if (HTTP_REQ_HEADER_AUTH_METHOD_BASIC.equals(authHeaderComponents[0])) {
+                try {
+                    byte[] decodedBytes = Base64.getDecoder().decode(authHeaderComponents[1].trim());
+                    String userNamePassword = new String(decodedBytes, Charsets.UTF_8);
+                    String[] credentials = userNamePassword.split(":");
+                    if (credentials.length == 2) {
+                        return credentials;
+                    }
+                } catch (IllegalArgumentException e) {
+                    throw new OAuthClientException("Error decoding authorization header. " + e.getMessage());
                 }
             } else {
-                errMsg = "Error decoding authorization header.Unsupported authentication type:" + splitValues[0] + "" +
-                        " is provided in the Authorization Header.";
+                errMsg = "Error decoding authorization header. Unsupported authentication type: " +
+                        authHeaderComponents[0] + " is provided in the Authorization Header.";
             }
         }
         throw new OAuthClientException(errMsg);
