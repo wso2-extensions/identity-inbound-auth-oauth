@@ -28,9 +28,6 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -58,7 +55,6 @@ import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -144,7 +140,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
 
             setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
-            addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
+            getRefreshTokenGrantProcessor().addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
         }
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
@@ -610,47 +606,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             }
         }
         return refreshTokenValidityPeriod;
-    }
-
-    private static void addUserAttributesToCache(AccessTokenDO accessTokenBean,
-                                                 OAuthTokenReqMessageContext msgCtx) {
-
-        RefreshTokenValidationDataDO oldAccessToken =
-                (RefreshTokenValidationDataDO) msgCtx.getProperty(PREV_ACCESS_TOKEN);
-        if (oldAccessToken.getAccessToken() == null) {
-            return;
-        }
-        AuthorizationGrantCacheKey oldAuthorizationGrantCacheKey = new AuthorizationGrantCacheKey(oldAccessToken
-                .getAccessToken());
-        if (log.isDebugEnabled()) {
-            log.debug("Getting AuthorizationGrantCacheEntry using access token id: " + accessTokenBean.getTokenId());
-        }
-        AuthorizationGrantCacheEntry grantCacheEntry =
-                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(oldAuthorizationGrantCacheKey,
-                        oldAccessToken.getTokenId());
-
-        if (grantCacheEntry != null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Getting user attributes cached against the previous access token with access token id: " +
-                        oldAccessToken.getTokenId());
-            }
-            AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
-                    .getAccessToken());
-
-            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
-                grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
-            } else {
-                grantCacheEntry.setTokenId(null);
-            }
-
-            grantCacheEntry.setValidityPeriod(
-                    TimeUnit.MILLISECONDS.toNanos(accessTokenBean.getValidityPeriodInMillis()));
-
-            // This new method has introduced in order to resolve a regression occurred : wso2/product-is#4366.
-            AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
-                    oldAccessToken.getTokenId());
-            AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
-        }
     }
 
     private boolean isRenewRefreshToken(String renewRefreshToken) {
