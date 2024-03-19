@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -488,9 +489,9 @@ public class OAuthAdminServiceImpl {
                         Optional<String> initiatorId = getInitiatorId();
                         if (initiatorId.isPresent()) {
                             AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
-                                    initiatorId.get(), USER,
-                                    app.getOauthConsumerKey(), TARGET_APPLICATION,
-                                    OAuthConstants.LogConstants.CREATE_OAUTH_APPLICATION)
+                                    initiatorId.get(), LoggerUtils.Initiator.User.name(),
+                                    app.getOauthConsumerKey(), LoggerUtils.Target.Application.name(),
+                                    LogConstants.ApplicationManagement.CREATE_OAUTH_APPLICATION_ACTION)
                                     .data(oidcDataMap);
                             triggerAuditLogEvent(auditLogBuilder, true);
                         } else {
@@ -906,9 +907,9 @@ public class OAuthAdminServiceImpl {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
-                        initiatorId.get(), USER, oauthConsumerKey,
-                        TARGET_APPLICATION, OAuthConstants.LogConstants.UPDATE_OAUTH_APPLICATION)
-                        .data(oidcDataMap);
+                        initiatorId.get(), LoggerUtils.Initiator.User.name(), oauthConsumerKey,
+                        LoggerUtils.Target.Application.name(),
+                        LogConstants.ApplicationManagement.UPDATE_OAUTH_APPLICATION_ACTION).data(oidcDataMap);
                 triggerAuditLogEvent(auditLogBuilder, true);
             } else {
                 LOG.error("Error getting the logged in userId");
@@ -1413,8 +1414,9 @@ public class OAuthAdminServiceImpl {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
-                        initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
-                        OAuthConstants.LogConstants.DELETE_OAUTH_APPLICATION);
+                        initiatorId.get(), LoggerUtils.Initiator.User.name(), consumerKey,
+                        LoggerUtils.Target.Application.name(),
+                        LogConstants.ApplicationManagement.DELETE_OAUTH_APPLICATION_ACTION);
                 triggerAuditLogEvent(auditLogBuilder, true);
             } else {
                 LOG.error("Error getting the logged in userId");
