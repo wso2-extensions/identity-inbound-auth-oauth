@@ -22,12 +22,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
+import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.Scope;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -50,6 +53,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants.APPLICATION;
@@ -251,6 +256,15 @@ public class AuthzUtil {
         // Application id is not required for basic authentication flow.
         List<String> roleIds = getUserRoles(authenticatedUser, null);
         List<String> permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
+        if (OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
+            // Handling backward compatibility for previous access level.
+            List<String> internalScopes = getInternalScopes(authenticatedUser.getTenantDomain());
+            List<String> approvedInternalScopes = permissions.stream().filter(internalScopes::contains)
+                    .collect(Collectors.toList());
+            if (!approvedInternalScopes.isEmpty()) {
+                addNewScopesMappedToLegacyScopes(permissions, internalScopes);
+            }
+        }
         return new HashSet<>(permissions).containsAll(requestedPermissions);
     }
 
@@ -454,5 +468,62 @@ public class AuthzUtil {
 
         return authenticatedUser.getAccessingOrganization() == null ||
                 authenticatedUser.getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization());
+    }
+
+    /**
+     * Get the internal scopes.
+     *
+     * @param tenantDomain Tenant domain.
+     * @return Internal scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving internal scopes for tenant domain.
+     */
+    public static List<String> getInternalScopes(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            List<Scope> scopes = OAuth2ServiceComponentHolder.getInstance()
+                    .getApiResourceManager().getScopesByTenantDomain(tenantDomain, "name sw internal_");
+            return scopes.stream().map(Scope::getName).collect(Collectors.toCollection(ArrayList::new));
+        } catch (APIResourceMgtException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving internal scopes for tenant domain : "
+                    + tenantDomain, e);
+        }
+    }
+
+    /**
+     * This method adds the new scopes mapped to the legacy scopes to the approved scopes list.
+     *
+     * @param approvedScopes Approved scopes list.
+     * @param internalScopes Internal scopes list.
+     */
+    public static void addNewScopesMappedToLegacyScopes(List<String> approvedScopes, List<String> internalScopes) {
+
+        Set<String> approvedIntenalScopes = approvedScopes.stream().filter(internalScopes::contains)
+                .collect(Collectors.toSet());
+        Map<String, Set<String>> legacyScopeToNewScopeMap = OAuth2ServiceComponentHolder.getInstance()
+                .getLegacyScopesToNewScopesMap();
+        Map<String, Set<String>> legacyMultipleScopeToNewScopeMap = OAuth2ServiceComponentHolder.getInstance()
+                .getLegacyMultipleScopesToNewScopesMap();
+        Set<String> mappedScopes = new HashSet<>();
+
+        // This handles the single legacy scope is mapped to single or multiple new scopes case.
+        for (String approvedIntenalScope : approvedIntenalScopes) {
+            if (legacyScopeToNewScopeMap.containsKey(approvedIntenalScope)) {
+                mappedScopes.addAll(legacyScopeToNewScopeMap.get(approvedIntenalScope));
+            }
+        }
+        // This handles the collection of legacy scopes is mapped to single or multiple new scopes case.
+        for (Map.Entry<String, Set<String>> entry : legacyMultipleScopeToNewScopeMap.entrySet()) {
+            String[] scopes = entry.getKey().split(",");
+            List<String> scopeList = Arrays.asList(scopes);
+            if (approvedIntenalScopes.containsAll(scopeList)) {
+                mappedScopes.addAll(entry.getValue());
+            }
+        }
+        // Add the mapped scopes to the approved scopes.
+        for (String scope : mappedScopes) {
+            if (!approvedIntenalScopes.contains(scope)) {
+                approvedScopes.add(scope);
+            }
+        }
     }
 }

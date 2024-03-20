@@ -65,6 +65,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
@@ -104,7 +105,7 @@ public class DCRMService {
         if (StringUtils.isNotEmpty(jwksURI)) {
             consumerAppDTO.setJwksURI(jwksURI);
         }
-        return buildResponse(consumerAppDTO);
+        return buildResponse(consumerAppDTO, tenantDomain);
     }
 
     /**
@@ -134,7 +135,7 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientName);
             }
-            return buildResponse(oAuthConsumerAppDTO);
+            return buildResponse(oAuthConsumerAppDTO, tenantDomain);
         } catch (IdentityOAuthAdminException e) {
             if (INVALID_OAUTH_CLIENT.getErrorCode().equals(e.getErrorCode())) {
                 throw DCRMUtils.generateClientException(
@@ -271,7 +272,11 @@ public class DCRMService {
                         validateAndSetCallbackURIs(updateRequest.getRedirectUris(), updateRequest.getGrantTypes());
                 appDTO.setCallbackUrl(callbackUrl);
             }
-            if (updateRequest.getTokenType() != null) {
+            // The token type using token_type_extension will be deprecated.
+            if (updateRequest.getExtTokenType() != null) {
+                appDTO.setTokenType(updateRequest.getExtTokenType());
+            } else if (updateRequest.getTokenType() != null) {
+                // Fallback to deprecated method if new ext_token_type is not available
                 appDTO.setTokenType(updateRequest.getTokenType());
             }
             if (StringUtils.isNotEmpty(updateRequest.getBackchannelLogoutUri())) {
@@ -351,7 +356,7 @@ public class DCRMService {
         OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
         // Setting the jwksURI to be sent in the response.
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
-        Application application = buildResponse(oAuthConsumerAppDTO);
+        Application application = buildResponse(oAuthConsumerAppDTO, tenantDomain);
         application.setSoftwareStatement(updateRequest.getSoftwareStatement());
         return application;
     }
@@ -381,7 +386,26 @@ public class DCRMService {
 
             // Update service provider property list.
             serviceProvider.setSpProperties(serviceProviderProperties);
+        } else {
+            // Get the property with display name
+            ServiceProviderProperty displayNameProperty = Arrays.stream(serviceProviderProperties)
+                    .filter(property -> property.getName().equals(APP_DISPLAY_NAME)).findFirst().get();
+            displayNameProperty.setValue(applicationDisplayName);
+
+            // Update service provider property list.
+            serviceProvider.setSpProperties(serviceProviderProperties);
         }
+    }
+
+    /**
+     * Get display name property from the service provider.
+     * @param serviceProvider Service provider.
+     */
+    private String getDisplayNameProperty(ServiceProvider serviceProvider) {
+        // Get the property with display name
+        Optional<ServiceProviderProperty> displayNameProperty = Arrays.stream(serviceProvider.getSpProperties())
+                .filter(property -> property.getName().equals(APP_DISPLAY_NAME)).findFirst();
+        return displayNameProperty.map(ServiceProviderProperty::getValue).orElse(null);
     }
 
     private OAuthConsumerAppDTO getApplicationById(String clientId) throws DCRMException {
@@ -488,12 +512,12 @@ public class DCRMService {
             deleteApplication(createdApp.getOauthConsumerKey());
             throw ex;
         }
-        Application application = buildResponse(createdApp);
+        Application application = buildResponse(createdApp, tenantDomain);
         application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
         return application;
     }
 
-    private Application buildResponse(OAuthConsumerAppDTO createdApp) {
+    private Application buildResponse(OAuthConsumerAppDTO createdApp, String tenantDomain) throws DCRMException {
 
         Application application = new Application();
         application.setClientName(createdApp.getApplicationName());
@@ -509,6 +533,17 @@ public class DCRMService {
             grantTypesList = Arrays.asList(createdApp.getGrantTypes().split(" "));
         }
         application.setGrantTypes(grantTypesList);
+        ServiceProvider sp = getServiceProvider(createdApp.getApplicationName(), tenantDomain);
+        application.setExtApplicationDisplayName(getDisplayNameProperty(sp));
+        application.setExtApplicationOwner(createdApp.getUsername());
+        application.setExtApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
+        application.setExtUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
+        application.setExtRefreshTokenLifetime(createdApp.getRefreshTokenExpiryTime());
+        application.setExtIdTokenLifetime(createdApp.getIdTokenExpiryTime());
+        application.setExtPkceMandatory(createdApp.getPkceMandatory());
+        application.setExtPkceSupportPlain(createdApp.getPkceSupportPlain());
+        application.setExtPublicClient(createdApp.isBypassClientCredentials());
+        application.setExtTokenType(createdApp.getTokenType());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
@@ -565,7 +600,13 @@ public class DCRMService {
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
         oAuthConsumerApp.setGrantTypes(grantType);
         oAuthConsumerApp.setOAuthVersion(OAUTH_VERSION);
-        oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+        // The token type using token_type_extension will be deprecated.
+        if (registrationRequest.getExtTokenType() != null) {
+            oAuthConsumerApp.setTokenType(registrationRequest.getExtTokenType());
+        } else if (registrationRequest.getTokenType() != null) {
+            // Fallback to deprecated method if new ext_token_type is not available
+            oAuthConsumerApp.setTokenType(registrationRequest.getTokenType());
+        }
         oAuthConsumerApp.setBackChannelLogoutUrl(
                 validateBackchannelLogoutURI(registrationRequest.getBackchannelLogoutUri()));
 

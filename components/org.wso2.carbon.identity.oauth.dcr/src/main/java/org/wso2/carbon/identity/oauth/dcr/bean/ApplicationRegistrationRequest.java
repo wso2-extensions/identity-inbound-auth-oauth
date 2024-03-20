@@ -47,6 +47,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private boolean extPkceMandatory = false;
     private boolean extPkceSupportPlain = false;
     private boolean extPublicClient = false;
+    private String extTokenType = null;
     private String jwksURI;
     private String softwareStatement;
     private String tokenEndpointAuthMethod;
@@ -345,6 +346,16 @@ public class ApplicationRegistrationRequest implements Serializable {
     public void setExtPublicClient(boolean extPublicClient) {
 
         this.extPublicClient = extPublicClient;
+    }
+
+    public String getExtTokenType() {
+
+        return extTokenType;
+    }
+
+    public void setExtTokenType(String tokenType) {
+
+        this.extTokenType = tokenType;
     }
 
     public String getTokenEndpointAuthMethod() {

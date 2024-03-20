@@ -144,6 +144,7 @@ public class OAuthServerConfiguration {
     private long applicationAccessTokenValidityPeriodInSeconds = 3600;
     private long refreshTokenValidityPeriodInSeconds = 24L * 3600;
     private long timeStampSkewInSeconds = 300;
+    private boolean enablePasswordFlowEnhancements = false;
     private String tokenPersistenceProcessorClassName =
             "org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor";
     private String oauthTokenGeneratorClassName;
@@ -167,6 +168,7 @@ public class OAuthServerConfiguration {
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
+    private boolean useLegacyPermissionAccessForUserBasedAuth = false;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -394,6 +396,8 @@ public class OAuthServerConfiguration {
         // read default timeout periods
         parseDefaultValidityPeriods(oauthElem);
 
+        parseEnablePasswordFlowEnhancements(oauthElem);
+
         // read OAuth URLs
         parseOAuthURLs(oauthElem);
 
@@ -518,6 +522,9 @@ public class OAuthServerConfiguration {
 
         // Read config for using legacy scopes as alias for new scopes.
         parseUseLegacyScopesAsAliasForNewScopes(oauthElem);
+
+        // Read config for using legacy permission access for user based auth.
+        parseUseLegacyPermissionAccessForUserBasedAuth(oauthElem);
     }
 
     /**
@@ -874,6 +881,10 @@ public class OAuthServerConfiguration {
 
     public String getOauth2ErrorPageUrl() {
         return oauth2ErrorPageUrl;
+    }
+
+    public boolean isPasswordFlowEnhancementsEnabled() {
+        return enablePasswordFlowEnhancements;
     }
 
     public long getAuthorizationCodeValidityPeriodInSeconds() {
@@ -1974,6 +1985,15 @@ public class OAuthServerConfiguration {
             }
         }
         return new OAuthCallbackHandlerMetaData(className, properties, priority);
+    }
+
+    private void parseEnablePasswordFlowEnhancements(OMElement oauthConfigElem) {
+        OMElement enablePasswordFlowEnhancementsElem =
+                oauthConfigElem.getFirstChildWithName(
+                        getQNameWithIdentityNS(ConfigElements.ENABLE_PASSWORD_FLOW_ENHANCEMENTS));
+        if (enablePasswordFlowEnhancementsElem != null) {
+            enablePasswordFlowEnhancements = Boolean.parseBoolean(enablePasswordFlowEnhancementsElem.getText());
+        }
     }
 
     private void parseDefaultValidityPeriods(OMElement oauthConfigElem) {
@@ -3607,6 +3627,33 @@ public class OAuthServerConfiguration {
         return useLegacyScopesAsAliasForNewScopes;
     }
 
+    /**
+     * Parse the UseLegacyPermissionAccessForUserBasedAuth configuration that used to give legacy permission access in
+     * user based authentication handlers.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseUseLegacyPermissionAccessForUserBasedAuth(OMElement oauthConfigElem) {
+
+        OMElement useLegacyPermissionAccessForUserBasedAuthElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USE_LEGACY_PERMISSION_ACCESS_FOR_USER_BASED_AUTH));
+        if (useLegacyPermissionAccessForUserBasedAuthElem != null) {
+            useLegacyPermissionAccessForUserBasedAuth =
+                    Boolean.parseBoolean(useLegacyPermissionAccessForUserBasedAuthElem.getText());
+        }
+    }
+
+    /**
+     * This method returns the value of the property UseLegacyPermissionAccessForUserBasedAuth for the OAuth
+     * configuration in identity.xml.
+     *
+     * @return true if the UseLegacyPermissionAccessForUserBasedAuth is enabled.
+     */
+    public boolean isUseLegacyPermissionAccessForUserBasedAuth() {
+
+        return useLegacyPermissionAccessForUserBasedAuth;
+    }
+
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -3792,6 +3839,8 @@ public class OAuthServerConfiguration {
 
         // Default timestamp skew
         private static final String TIMESTAMP_SKEW = "TimestampSkew";
+        // Enable password flow enhancements
+        private static final String ENABLE_PASSWORD_FLOW_ENHANCEMENTS = "EnablePasswordFlowEnhancements";
         // Default validity periods
         private static final String AUTHORIZATION_CODE_DEFAULT_VALIDITY_PERIOD =
                 "AuthorizationCodeDefaultValidityPeriod";
@@ -3935,6 +3984,8 @@ public class OAuthServerConfiguration {
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
         private static final String USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES = "UseLegacyScopesAsAliasForNewScopes";
+        private static final String USE_LEGACY_PERMISSION_ACCESS_FOR_USER_BASED_AUTH =
+                "UseLegacyPermissionAccessForUserBasedAuth";
     }
 
 }

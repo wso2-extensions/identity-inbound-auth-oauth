@@ -500,6 +500,31 @@ public class SQLQueries {
             "JOIN IDN_OAUTH2_ACCESS_TOKEN_SCOPE ON ACCESS_TOKEN_TABLE.TOKEN_ID = " +
             "IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID";
 
+    /**
+     * SQL query to retrieve access tokens for a given consumer key and scope.
+     * It selects various attributes of access tokens from the IDN_OAUTH2_ACCESS_TOKEN table.
+     * The query involves joining multiple tables:
+     * - It selects access tokens from a subquery filtering by consumer key ID and token state.
+     * - It joins the resulting access token table with the IDP table based on the IDP ID.
+     * - It left joins the access token scope table to retrieve token scope information.
+     * The query parameters are placeholders for the consumer key, tenant ID, token state, and token scope.
+     */
+    public static final String  GET_ACCESS_TOKENS_FOR_CONSUMER_KEY_AND_SCOPE =
+            "SELECT " +
+                    "ACCESS_TOKEN, TOKEN_SCOPE, REFRESH_TOKEN, ACCESS_TOKEN_TABLE.TOKEN_ID, TIME_CREATED, " +
+                    "REFRESH_TOKEN_TIME_CREATED, GRANT_TYPE, VALIDITY_PERIOD, REFRESH_TOKEN_VALIDITY_PERIOD, " +
+                    "USER_TYPE, ACCESS_TOKEN_TABLE.TENANT_ID, AUTHZ_USER, ACCESS_TOKEN_TABLE.USER_DOMAIN, " +
+                    "SUBJECT_IDENTIFIER, AUTHORIZED_ORGANIZATION, TOKEN_BINDING_REF, IDP_ID, IDP_TABLE.NAME " +
+            "FROM (SELECT " +
+                    "ACCESS_TOKEN, REFRESH_TOKEN, TOKEN_ID, TIME_CREATED, REFRESH_TOKEN_TIME_CREATED, " +
+                    "GRANT_TYPE, VALIDITY_PERIOD, USER_TYPE, REFRESH_TOKEN_VALIDITY_PERIOD, TENANT_ID, AUTHZ_USER, " +
+                    "SUBJECT_IDENTIFIER, USER_DOMAIN, AUTHORIZED_ORGANIZATION, IDP_ID, TOKEN_BINDING_REF " +
+            "FROM IDN_OAUTH2_ACCESS_TOKEN WHERE CONSUMER_KEY_ID IN (" +
+                    "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY = ? AND TENANT_ID = ? ) " +
+            "AND TOKEN_STATE = ?) ACCESS_TOKEN_TABLE JOIN IDP IDP_TABLE ON IDP_TABLE.ID = IDP_ID " +
+            "LEFT JOIN IDN_OAUTH2_ACCESS_TOKEN_SCOPE ON " +
+                    "ACCESS_TOKEN_TABLE.TOKEN_ID = IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID WHERE TOKEN_SCOPE = ?";
+
     public static final String GET_ACCESS_TOKENS_BY_BINDING_REFERENCE = "SELECT ACCESS_TOKEN, CONSUMER_KEY, " +
             "TOKEN_SCOPE, REFRESH_TOKEN, ACCESS_TOKEN_TABLE.TOKEN_ID, TIME_CREATED, REFRESH_TOKEN_TIME_CREATED, " +
             "VALIDITY_PERIOD, REFRESH_TOKEN_VALIDITY_PERIOD, USER_TYPE, ACCESS_TOKEN_TABLE.TENANT_ID, AUTHZ_USER, " +
@@ -541,7 +566,8 @@ public class SQLQueries {
 
     public static final String GET_ACTIVE_DETAILS_FOR_CONSUMER_KEY_IDP_NAME = "SELECT IDN_OAUTH2_ACCESS_TOKEN" +
             ".AUTHZ_USER, IDN_OAUTH2_ACCESS_TOKEN.ACCESS_TOKEN, IDN_OAUTH2_ACCESS_TOKEN.TENANT_ID, " +
-            "IDN_OAUTH2_ACCESS_TOKEN.USER_DOMAIN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_SCOPE, IDP.NAME FROM " +
+            "IDN_OAUTH2_ACCESS_TOKEN.USER_DOMAIN, IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_SCOPE, IDP.NAME, " +
+            "IDN_OAUTH2_ACCESS_TOKEN.SUBJECT_IDENTIFIER, AUTHORIZED_ORGANIZATION FROM " +
             "IDN_OAUTH2_ACCESS_TOKEN LEFT JOIN IDN_OAUTH2_ACCESS_TOKEN_SCOPE" +
             " ON IDN_OAUTH2_ACCESS_TOKEN.TOKEN_ID=IDN_OAUTH2_ACCESS_TOKEN_SCOPE.TOKEN_ID " +
             " JOIN IDP ON IDN_OAUTH2_ACCESS_TOKEN.IDP_ID=IDP.ID WHERE " +
@@ -1642,6 +1668,9 @@ public class SQLQueries {
 
     public static final String GET_SHARED_APP_ID = "SELECT SHARED_APP_ID FROM SP_SHARED_APP WHERE " +
             "OWNER_ORG_ID = ? AND MAIN_APP_ID = ? AND SHARED_ORG_ID = ? ";
+
+    public static final String GET_MAIN_APPLICATION = "SELECT MAIN_APP_ID, OWNER_ORG_ID FROM SP_SHARED_APP WHERE " +
+            "SHARED_APP_ID = ?  AND SHARED_ORG_ID = ? ";
 
     public static final String RETRIEVE_TOKEN_BINDING_BY_REFRESH_TOKEN =
             "SELECT BINDING.TOKEN_BINDING_TYPE, BINDING.TOKEN_BINDING_VALUE, BINDING.TOKEN_BINDING_REF " +

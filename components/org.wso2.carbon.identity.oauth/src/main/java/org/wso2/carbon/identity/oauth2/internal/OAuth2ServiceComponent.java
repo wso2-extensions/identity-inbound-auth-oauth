@@ -86,6 +86,8 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinde
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
+import org.wso2.carbon.identity.oauth2.token.handlers.response.FederatedTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeIssuer;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
@@ -382,6 +384,8 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ScopeValidationHandler.class, new RoleBasedScopeValidationHandler(), null);
             bundleContext.registerService(ScopeValidationHandler.class, new NoPolicyScopeValidationHandler(), null);
             bundleContext.registerService(ScopeValidationHandler.class, new M2MScopeValidationHandler(), null);
+            bundleContext.registerService(AccessTokenResponseHandler.class, new FederatedTokenResponseHandler(),
+                    null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
@@ -441,7 +445,8 @@ public class OAuth2ServiceComponent {
         boolean restrictApimRestApiScopes = Boolean.parseBoolean(System.getProperty(
                 OAuthConstants.RESTRICT_APIM_REST_API_SCOPES));
         OAuth2ServiceComponentHolder.setRestrictApimRestApiScopes(restrictApimRestApiScopes);
-        if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()) {
+        if (OAuthServerConfiguration.getInstance().isUseLegacyScopesAsAliasForNewScopesEnabled()
+                || OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
             initializeLegacyScopeToNewScopeMappings();
         }
     }

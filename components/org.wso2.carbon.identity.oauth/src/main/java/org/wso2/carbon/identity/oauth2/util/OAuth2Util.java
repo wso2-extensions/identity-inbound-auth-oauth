@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -140,6 +140,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -156,6 +157,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -2279,7 +2281,7 @@ public class OAuth2Util {
 
     /**
      * Get Oauth application information.
-     * 
+     *
      * @param clientId      Client id of the application.
      * @param tenantDomain  Tenant domain of the application.
      * @return Oauth app information.
@@ -2614,9 +2616,8 @@ public class OAuth2Util {
             KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
 
             if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
+                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
                         .getPublicKey();
             } else {
                 publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
@@ -3126,7 +3127,8 @@ public class OAuth2Util {
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
-            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
+            Certificate certificate = getCertificate(tenantDomain, tenantId);
+            headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
             return signedJWT;
@@ -3152,10 +3154,9 @@ public class OAuth2Util {
 
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 // derive key store name
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
                 // obtain private key
-                privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                privateKey = tenantKSM.getPrivateKey(fileName, tenantDomain);
 
             } else {
                 try {
@@ -3260,26 +3261,45 @@ public class OAuth2Util {
      */
     public static String getThumbPrint(Certificate certificate) throws IdentityOAuth2Exception {
 
-        return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM);
+        return getThumbPrintWithAlgorithm(certificate, KID_HASHING_ALGORITHM, true);
     }
 
     public static String getThumbPrintWithPrevAlgorithm(Certificate certificate)
             throws IdentityOAuth2Exception {
 
-        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM);
+        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM, true);
     }
 
-    private static String getThumbPrintWithAlgorithm(Certificate certificate, String algorithm)
+    /**
+     * Method to obtain certificate thumbprint with SHA-1 algorithm.
+     *
+     * @param certificate      java.security.cert type certificate.
+     * @param requireHexifying True, if thumbprint needs to be hexified before encoding. It should not be hexified
+     *                         if used for the x5t value.
+     * @return Certificate thumbprint as a String.
+     * @throws IdentityOAuth2Exception When failed to obtain the thumbprint.
+     */
+    public static String getThumbPrintWithPrevAlgorithm(Certificate certificate, boolean requireHexifying)
             throws IdentityOAuth2Exception {
+
+        return getThumbPrintWithAlgorithm(certificate, PREVIOUS_KID_HASHING_ALGORITHM, requireHexifying);
+    }
+
+    private static String getThumbPrintWithAlgorithm(Certificate certificate, String algorithm,
+                                                     boolean requireHexifying) throws IdentityOAuth2Exception {
 
         try {
             MessageDigest digestValue = MessageDigest.getInstance(algorithm);
             byte[] der = certificate.getEncoded();
             digestValue.update(der);
             byte[] digestInBytes = digestValue.digest();
-            String publicCertThumbprint = hexify(digestInBytes);
-            String thumbprint = new String(new Base64(0, null, true).
-                    encode(publicCertThumbprint.getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            String thumbprint;
+            if (requireHexifying) {
+                thumbprint = new String(new Base64(0, null, true).encode(
+                        hexify(digestInBytes).getBytes(Charsets.UTF_8)), Charsets.UTF_8);
+            } else {
+                thumbprint = new String(new Base64(0, null, true).encode(digestInBytes), Charsets.UTF_8);
+            }
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Thumbprint value: %s calculated for Certificate: %s using algorithm: %s",
                         thumbprint, certificate, digestValue.getAlgorithm()));
@@ -3329,14 +3349,13 @@ public class OAuth2Util {
             KeyStore keyStore = null;
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 // derive key store name
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
                 if (log.isDebugEnabled()) {
                     log.debug(String.format("Loading default tenant certificate for tenant : %s from the KeyStore" +
-                            " %s", tenantDomain, ksName));
+                            " %s", tenantDomain, fileName));
                 }
                 try {
-                    keyStore = tenantKSM.getKeyStore(jksName);
+                    keyStore = tenantKSM.getKeyStore(fileName);
                     publicCert = keyStore.getCertificate(tenantDomain);
                 } catch (KeyStoreException e) {
                     throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
@@ -3924,6 +3943,33 @@ public class OAuth2Util {
             authenticatedUser.setUserStoreDomain(userStoreDomain);
         }
 
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param authzUser       authenticated user object
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName         idp name
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(AuthenticatedUser authzUser, String userStoreDomain,
+                                                            String tenantDomain, String idpName)
+            throws IdentityOAuth2Exception {
+
+        String username = authzUser.getUserName();
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        if (!authenticatedUser.isFederatedUser()) {
+            try {
+                String userId = authzUser.getUserId();
+                authenticatedUser.setUserId(userId);
+            } catch (UserIdNotFoundException e) {
+                throw new IdentityOAuth2Exception(
+                        "User id is not available for user: " + authzUser.getLoggableUserId(), e);
+            }
+        }
         return authenticatedUser;
     }
 
@@ -5009,7 +5055,7 @@ public class OAuth2Util {
 
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
-  
+
     /**
      * Retrieve the list of client authentication methods supported by the server.
      *
@@ -5210,5 +5256,28 @@ public class OAuth2Util {
             return callbackUrl;
         }
         return null;
+    }
+
+    /**
+     * Find the tenant domain of the user identity is managed.
+     *
+     * @param authenticatedUser authenticated user.
+     * @return The tenant domain.
+     * @throws IdentityOAuth2Exception
+     */
+    public static String getUserResidentTenantDomain(AuthenticatedUser authenticatedUser)
+            throws IdentityOAuth2Exception {
+
+        if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
+            return authenticatedUser.getTenantDomain();
+        }
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
+                    authenticatedUser.getUserResidentOrganization(), e);
+        }
     }
 }

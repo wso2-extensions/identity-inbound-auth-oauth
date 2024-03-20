@@ -60,6 +60,7 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.security.Key;
 import java.security.KeyStore;
@@ -454,10 +455,9 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
 
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 // derive key store name
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
                 // obtain private key
-                privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
+                privateKey = tenantKSM.getPrivateKey(fileName, tenantDomain);
 
             } else {
                 try {
@@ -502,9 +502,8 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
             KeyStore keyStore = null;
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
                 // derive key store name
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                keyStore = tenantKSM.getKeyStore(jksName);
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
+                keyStore = tenantKSM.getKeyStore(fileName);
                 publicCert = keyStore.getCertificate(tenantDomain);
             } else {
                 publicCert = tenantKSM.getDefaultPrimaryCertificate();

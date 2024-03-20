@@ -332,6 +332,8 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      ext_token_type:
+        type: string
       token_endpoint_auth_method:
         type: string
       token_endpoint_auth_signing_alg:
@@ -410,6 +412,8 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      ext_token_type:
+        type: string
       token_endpoint_auth_method:
         type: string
       token_endpoint_auth_signing_alg:
@@ -463,6 +467,8 @@ definitions:
           type: string
       client_name:
         type: string
+      ext_application_display_name:
+        type: string
       ext_application_owner:
         type: string
       ext_application_token_lifetime:
@@ -483,6 +489,43 @@ definitions:
         type: boolean
       ext_public_client:
         type: boolean
+      ext_token_type:
+        type: string
+      token_type_extension:
+        type: string
+      jwks_uri:
+        type: string
+      token_endpoint_auth_method:
+        type: string
+      token_endpoint_auth_signing_alg:
+        type: string
+      sector_identifier_uri:
+        type: string
+      id_token_signed_response_alg:
+        type: string
+      id_token_encrypted_response_alg:
+        type: string
+      id_token_encrypted_response_enc:
+        type: string
+      request_object_signing_alg:
+        type: string
+      tls_client_auth_subject_dn:
+        type: string
+      require_push_authorization_request:
+        type: boolean
+      require_signed_request_object:
+        type: boolean
+      tls_client_certificate_bound_access_token:
+        type: boolean
+      subject_type:
+        type: string
+      request_object_encryption_algorithm:
+        type: string
+      request_object_encryption_method:
+        type: string
+      software_statement:
+        type: string
+
 #-----------------------------------------------------
 # The Error Response object
 #-----------------------------------------------------

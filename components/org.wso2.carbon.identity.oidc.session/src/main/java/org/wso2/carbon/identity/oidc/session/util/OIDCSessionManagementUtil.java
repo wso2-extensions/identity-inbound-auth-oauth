@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -425,9 +426,8 @@ public class OIDCSessionManagementUtil {
 
         try {
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                privateKey = (RSAPrivateKey) keyStoreManager.getPrivateKey(jksName, tenantDomain);
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
+                privateKey = (RSAPrivateKey) keyStoreManager.getPrivateKey(fileName, tenantDomain);
             } else {
                 privateKey = (RSAPrivateKey) keyStoreManager.getDefaultPrivateKey();
             }

@@ -225,6 +225,13 @@ public interface AccessTokenDAO {
         return Collections.emptySet();
     }
 
+    default Set<AccessTokenDO> getActiveTokenSetWithTokenIdByConsumerKeyAndScope(String consumerKey,
+                                                                                  List<String> scopes)
+            throws IdentityOAuth2Exception {
+
+        return Collections.emptySet();
+    }
+
     /**
      * Retrieve the active access tokens of a given user with a given access token binding reference.
      *

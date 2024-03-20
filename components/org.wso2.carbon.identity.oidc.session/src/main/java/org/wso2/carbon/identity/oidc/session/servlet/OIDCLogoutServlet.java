@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oidc.session.model.APIError;
 import org.wso2.carbon.identity.oidc.session.model.LogoutContext;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -436,9 +437,8 @@ public class OIDCLogoutServlet extends HttpServlet {
             KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
 
             if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
+                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
                         .getPublicKey();
             } else {
                 publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
