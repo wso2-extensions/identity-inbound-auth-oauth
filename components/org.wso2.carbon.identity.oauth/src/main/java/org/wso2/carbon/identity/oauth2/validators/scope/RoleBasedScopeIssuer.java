@@ -283,14 +283,21 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
         List<String> authorizedScopes;
         List<String> requestedScopes = null;
         List<String> scopes = new ArrayList<>();
+        boolean isRestrictApimRestApiScopes = OAuth2ServiceComponentHolder.isRestrictApimRestApiScopes();
+        boolean isRestrictUnassignedScopes = OAuth2ServiceComponentHolder.isRestrictUnassignedScopes();
         if (oAuthAuthzReqMessageContext.getApprovedScope() != null) {
             requestedScopes = new ArrayList<>(Arrays.asList(oAuthAuthzReqMessageContext.getApprovedScope()));
-            for (String scope : requestedScopes) {
-                // If requestedScopes contains Product REST APIs (Publisher/DevPortal/Admin) scopes, just let them pass
-                // to the final scope list returned from RoleBasedScopeIssuer. This is because RoleBasedScopeIssuer is
-                // not responsible for validating Product REST API scopes. Those will be handled by SystemScopeIssuer.
-                if (checkForProductRestAPIScopes(scope)) {
-                    scopes.add(scope);
+            // If both system properties are true, it does not allowlist the APIM REST API scopes. This is to solve
+            // the security concern introduced by allow listing product REST APIs scopes.
+            if (!(isRestrictUnassignedScopes && isRestrictApimRestApiScopes)) {
+                for (String scope : requestedScopes) {
+                    // If requestedScopes contains Product REST APIs (Publisher/DevPortal/Admin) scopes, just let
+                    // them pass to the final scope list returned from RoleBasedScopeIssuer. This is because
+                    // RoleBasedScopeIssuer is not responsible for validating Product REST API scopes. Those will be
+                    // handled by SystemScopeIssuer.
+                    if (checkForProductRestAPIScopes(scope)) {
+                        scopes.add(scope);
+                    }
                 }
             }
             requestedScopes.removeAll(scopes);
@@ -352,12 +359,19 @@ public class RoleBasedScopeIssuer extends AbstractRoleBasedScopeIssuer implement
         List<String> authorizedScopes;
         List<String> scopes = new ArrayList<>();
         List<String> requestedScopes = new ArrayList<>(Arrays.asList(tokReqMsgCtx.getScope()));
-        for (String scope : requestedScopes) {
-            // If requestedScopes contains Product REST APIs (Publisher/DevPortal/Admin) scopes, just let them pass to
-            // the final scope list returned from RoleBasedScopeIssuer. This is because RoleBasedScopeIssuer is not
-            // responsible for validating Product REST API scopes. Those will be handled by the SystemScopeIssuer.
-            if (checkForProductRestAPIScopes(scope)) {
-                scopes.add(scope);
+        boolean isRestrictApimRestApiScopes = OAuth2ServiceComponentHolder.isRestrictApimRestApiScopes();
+        boolean isRestrictUnassignedScopes = OAuth2ServiceComponentHolder.isRestrictUnassignedScopes();
+        // If both system properties are true, it does not allowlist the APIM REST API scopes. This is to solve
+        // the security concern introduced by allow listing product REST APIs scopes.
+        if (!(isRestrictUnassignedScopes && isRestrictApimRestApiScopes)) {
+            for (String scope : requestedScopes) {
+                // If requestedScopes contains Product REST APIs (Publisher/DevPortal/Admin) scopes, just let
+                // them pass to the final scope list returned from RoleBasedScopeIssuer. This is because
+                // RoleBasedScopeIssuer is not responsible for validating Product REST API scopes. Those will be
+                // handled by the SystemScopeIssuer.
+                if (checkForProductRestAPIScopes(scope)) {
+                    scopes.add(scope);
+                }
             }
         }
         requestedScopes.removeAll(scopes);
