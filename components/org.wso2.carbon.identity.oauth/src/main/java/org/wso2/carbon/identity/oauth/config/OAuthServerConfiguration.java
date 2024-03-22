@@ -537,10 +537,10 @@ public class OAuthServerConfiguration {
         OMElement globalScopeValidatorsElem = oauthConfigElem.getFirstChildWithName(
                 getQNameWithIdentityNS(ConfigElements.GLOBAL_SCOPE_VALIDATORS));
         if (globalScopeValidatorsElem != null) {
-            OMElement roleBasedScopeIssuerEnabledElem = oauthConfigElem.getFirstChildWithName(
+            OMElement roleBasedScopeIssuerEnabledElem = globalScopeValidatorsElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.ROLE_BASED_SCOPE_ISSUER_ENABLED));
             if (roleBasedScopeIssuerEnabledElem != null) {
-                OMElement enableElem = oauthConfigElem.getFirstChildWithName(
+                OMElement enableElem = roleBasedScopeIssuerEnabledElem.getFirstChildWithName(
                         getQNameWithIdentityNS(ConfigElements.ENABLE));
                 roleBasedScopeIssuerEnabledConfig = Boolean.parseBoolean(enableElem.getText().trim());
             }
