@@ -241,6 +241,11 @@ public class OIDCSessionManagementUtil {
                             String tenantDomain;
                             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                                 tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+                                if (request.getParameter(
+                                        FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN) != null) {
+                                    tenantDomain = request.getParameter(
+                                            FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+                                }
                             } else {
                                 tenantDomain = resolveTenantDomain(request);
                             }
