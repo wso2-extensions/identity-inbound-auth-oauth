@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -41,6 +42,18 @@ import java.util.Map;
  * OAuth event interceptor.
  */
 public interface OAuthEventInterceptor extends IdentityHandler {
+
+    /**
+     * Called after issuing authorization codes.
+     *
+     * @param oAuthAuthzReqMessageContext
+     * @param authzCodeDO
+     * @throws IdentityOAuth2Exception
+     */
+    default void onPostAuthzCodeIssue(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext, AuthzCodeDO authzCodeDO)
+            throws IdentityOAuth2Exception {
+
+    }
 
     /**
      * Called prior to issuing tokens.
@@ -252,7 +265,6 @@ public interface OAuthEventInterceptor extends IdentityHandler {
      */
     default void onPostTokenRevocationBySystem(String userUUID, Map<String, Object> params)
             throws IdentityOAuth2Exception {
-
     }
 
     /**
