@@ -265,6 +265,7 @@ public interface OAuthEventInterceptor extends IdentityHandler {
      */
     default void onPostTokenRevocationBySystem(String userUUID, Map<String, Object> params)
             throws IdentityOAuth2Exception {
+
     }
 
     /**

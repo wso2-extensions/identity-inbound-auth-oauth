@@ -38,6 +38,9 @@ public final class OAuthConstants {
     public static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList("application/x-www-form-urlencoded",
                                                                            "application/json");
 
+    //OAuth2 resquest parameters
+    public static final String OAUTH_AUTHZ_REQUEST_PARAMS = "authzRequestParams";
+
     // OAuth2 response headers
     public static final String HTTP_RESP_HEADER_CACHE_CONTROL = "Cache-Control";
     public static final String HTTP_RESP_HEADER_PRAGMA = "Pragma";

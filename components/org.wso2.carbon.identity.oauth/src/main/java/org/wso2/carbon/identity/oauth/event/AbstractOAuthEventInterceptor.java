@@ -47,9 +47,7 @@ public class AbstractOAuthEventInterceptor extends AbstractIdentityHandler imple
     @Override
     public void onPostAuthzCodeIssue(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
                                      AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
-
         //nothing to implement
-
     }
 
     @Override

@@ -3714,9 +3714,12 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setState(oauth2Params.getState());
         authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
 
-        if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
-                .AMR) != null) {
-            authzReqDTO.addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
+        if (sessionDataCacheEntry.getParamMap() != null) {
+            authzReqDTO.addProperty(OAuthConstants.OAUTH_AUTHZ_REQUEST_PARAMS, sessionDataCacheEntry.getParamMap());
+            if (sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR) != null) {
+                authzReqDTO
+                        .addProperty(OAuthConstants.AMR, sessionDataCacheEntry.getParamMap().get(OAuthConstants.AMR));
+            }
         }
         // Set Selected acr value.
         String[] sessionIds = sessionDataCacheEntry.getParamMap().get(FrameworkConstants.SESSION_DATA_KEY);

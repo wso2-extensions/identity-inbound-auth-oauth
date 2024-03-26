@@ -50,6 +50,7 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
         AuthzCodeDO authorizationCode =
                 ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled);
         String sessionDataKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey();
+
         if (log.isDebugEnabled()) {
             log.debug("Issued code: " + authorizationCode + " for the session data key: " + sessionDataKey);
         }
