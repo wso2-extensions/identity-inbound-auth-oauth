@@ -919,7 +919,13 @@ public final class OAuthUtil {
                     accessTokens.add(accessTokenDO);
                 }
 
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Is hash disabled:" + OAuth2Util.isHashDisabled());
+                }
                 if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Revoke latest tokens with scopes for the clientId: " + clientId);
+                    }
                     revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
                 } else {
                     // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
@@ -954,6 +960,9 @@ public final class OAuthUtil {
     public static boolean revokeTokens(String username, UserStoreManager userStoreManager, String roleId)
             throws UserStoreException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Request received for token revocation for the user: " + username + " roleId:" + roleId);
+        }
         String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
         AuthenticatedUser authenticatedUser = buildAuthenticatedUser(userStoreManager, username, userStoreDomain,
@@ -978,9 +987,17 @@ public final class OAuthUtil {
             role = getRole(roleId, IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
             if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
                 // Get clientIds of associated applications for the specific application role.
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Get clientIds of associated applications for the application role: "
+                            + role.getName());
+                }
                 clientIds = getClientIdsOfAssociatedApplications(role, authenticatedUser);
             } else {
                 // Get all the distinct client Ids authorized by this user since this is an organization role.
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Get all the distinct client Ids authorized by user:" + username + " since this is " +
+                            "an organization role: " + role.getName());
+                }
                 getClientIdsFromUser = true;
             }
         } else {
@@ -990,6 +1007,9 @@ public final class OAuthUtil {
 
         if (getClientIdsFromUser) {
             // Get all the distinct client Ids authorized by this user
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Get all the distinct client Ids authorized by user: " + username);
+            }
             try {
                 clientIds = OAuthTokenPersistenceFactory.getInstance()
                         .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
@@ -1039,6 +1059,9 @@ public final class OAuthUtil {
             UserStoreException {
 
         for (String scope : scopes) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Revoking tokens for the scope: " + scope);
+            }
             AccessTokenDO scopedToken = null;
             try {
                 // Retrieve latest access token for particular client, user and scope combination
@@ -1055,6 +1078,9 @@ public final class OAuthUtil {
             if (scopedToken != null) {
                 try {
                     // Revoking token from database
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Revoking latest scoped token from database");
+                    }
                     revokeTokens(Collections.singletonList(scopedToken));
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking " + "Access Token : "
