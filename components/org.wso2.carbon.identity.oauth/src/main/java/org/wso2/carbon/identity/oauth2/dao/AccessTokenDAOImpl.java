@@ -503,8 +503,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             int appTenantId = IdentityTenantUtil.getLoginTenantId();
             if (rootTenantDomain != null) {
                 appTenantId = OAuth2Util.getTenantId(rootTenantDomain);
+                if (log.isDebugEnabled()) {
+                    log.debug("Root tenant domain is not null. Therefore application ID is: " + appTenantId);
+                }
             } else if (authzUser.isOrganizationUser()) {
                 appTenantId = OAuth2Util.getTenantId(authzUser.getTenantDomain());
+                if (log.isDebugEnabled()) {
+                    log.debug("Authorized user: " + authzUser.getUserName() + " is an organization user " +
+                            "therefore application ID is " + appTenantId);
+                }
             }
             prepStmt.setInt(2, appTenantId);
             if (isUsernameCaseSensitive) {
