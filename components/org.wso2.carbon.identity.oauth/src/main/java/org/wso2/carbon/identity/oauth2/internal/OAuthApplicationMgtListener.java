@@ -142,10 +142,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider);
         updateAuthApplication(serviceProvider);
+        removeEntriesFromCache(serviceProvider, tenantDomain);
 
-        if (threadLocalForClaimConfigUpdates.get()) {
-            removeEntriesFromCache(serviceProvider, tenantDomain);
-        }
         threadLocalForClaimConfigUpdates.remove();
         return true;
     }
@@ -463,11 +461,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(oauthKey));
             }
 
-            if (isNotEmpty(accessTokenDOSet)) {
+            if (isNotEmpty(accessTokenDOSet) && threadLocalForClaimConfigUpdates.get()) {
                 clearCacheEntriesAgainstToken(accessTokenDOSet);
             }
 
-            if (isNotEmpty(authzCodeDOSet)) {
+            if (isNotEmpty(authzCodeDOSet) && threadLocalForClaimConfigUpdates.get()) {
                 clearCacheEntriesAgainstAuthzCode(authzCodeDOSet);
             }
         }
