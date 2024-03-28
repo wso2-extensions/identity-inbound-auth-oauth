@@ -705,6 +705,11 @@ public class AccessTokenIssuer {
             } else {
                 // Engage new scope validator
                 authorizedScopes = getAuthorizedScopes(tokReqMsgCtx);
+                tokReqMsgCtx.setAuthorizedInternalScopes(authorizedScopes.stream()
+                        .filter(scope -> scope.startsWith(INTERNAL_SCOPE_PREFIX) ||
+                                scope.startsWith(CONSOLE_SCOPE_PREFIX) ||
+                                scope.equalsIgnoreCase(SYSTEM_SCOPE))
+                        .toArray(String[]::new));
             }
             if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
