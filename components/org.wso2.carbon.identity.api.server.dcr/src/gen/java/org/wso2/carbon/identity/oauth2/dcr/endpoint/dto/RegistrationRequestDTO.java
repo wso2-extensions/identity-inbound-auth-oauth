@@ -41,6 +41,7 @@ public class RegistrationRequestDTO  {
   private boolean extPkceMandatory;
   private boolean extPkceSupportPlain;
   private boolean extPublicClient;
+  private String extTokenType = null;
   private String tokenEndpointAuthMethod = null;
   private String tokenEndpointAuthSigningAlg = null;
   private String sectorIdentifierUri = null;
@@ -181,6 +182,16 @@ public class RegistrationRequestDTO  {
 
   public void setTokenType(String tokenType) {
     this.tokenType = tokenType;
+  }
+
+  @ApiModelProperty
+  @JsonProperty("ext_token_type")
+  public String getExtTokenType() {
+    return extTokenType;
+  }
+
+  public void setExtTokenType(String tokenType) {
+    this.extTokenType = tokenType;
   }
 
   @ApiModelProperty

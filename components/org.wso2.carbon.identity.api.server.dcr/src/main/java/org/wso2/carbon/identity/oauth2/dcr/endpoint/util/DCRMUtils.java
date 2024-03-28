@@ -78,6 +78,7 @@ public class DCRMUtils {
         appRegistrationRequest.setExtPkceMandatory(registrationRequestDTO.getExtPkceMandatory());
         appRegistrationRequest.setExtPkceSupportPlain(registrationRequestDTO.getExtPkceSupportPlain());
         appRegistrationRequest.setExtPublicClient(registrationRequestDTO.getExtPublicClient());
+        appRegistrationRequest.setExtTokenType(registrationRequestDTO.getExtTokenType());
         appRegistrationRequest.setJwksURI(registrationRequestDTO.getJwksUri());
         appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
         appRegistrationRequest.setTokenEndpointAuthSignatureAlgorithm
@@ -120,6 +121,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setExtPkceMandatory(updateRequestDTO.getExtPkceMandatory());
         applicationUpdateRequest.setExtPkceSupportPlain(updateRequestDTO.getExtPkceSupportPlain());
         applicationUpdateRequest.setExtPublicClient(updateRequestDTO.getExtPublicClient());
+        applicationUpdateRequest.setExtTokenType(updateRequestDTO.getExtTokenType());
         applicationUpdateRequest.setJwksURI(updateRequestDTO.getJwksUri());
         applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
         applicationUpdateRequest.setTokenEndpointAuthSignatureAlgorithm
@@ -227,6 +229,8 @@ public class DCRMUtils {
         applicationDTO.setExtPkceMandatory(application.getExtPkceMandatory());
         applicationDTO.setExtPkceSupportPlain(application.getExtPkceSupportPlain());
         applicationDTO.setExtPublicClient(application.getExtPublicClient());
+        applicationDTO.setTokenTypeExtension(application.getExtTokenType());
+        applicationDTO.setExtTokenType(application.getExtTokenType());
         applicationDTO.setJwksUri(application.getJwksURI());
         applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
         applicationDTO.setTokenEndpointAuthSigningAlg(application.getTokenEndpointAuthSignatureAlgorithm());

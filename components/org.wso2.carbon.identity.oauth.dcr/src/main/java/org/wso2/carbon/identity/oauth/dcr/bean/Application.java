@@ -42,6 +42,7 @@ public class Application implements Serializable {
     private Boolean extPkceMandatory = null;
     private Boolean extPkceSupportPlain = null;
     private Boolean extPublicClient = null;
+    private String extTokenType = null;
     private String jwksURI = null;
     private String tokenEndpointAuthMethod = null;
     private String tokenEndpointAuthSignatureAlgorithm = null;
@@ -207,6 +208,16 @@ public class Application implements Serializable {
     public void setExtPublicClient(Boolean extPublicClient) {
 
         this.extPublicClient = extPublicClient;
+    }
+
+    public String getExtTokenType() {
+
+        return extTokenType;
+    }
+
+    public void setExtTokenType(String extTokenType) {
+
+        this.extTokenType = extTokenType;
     }
 
     public String getJwksURI() {

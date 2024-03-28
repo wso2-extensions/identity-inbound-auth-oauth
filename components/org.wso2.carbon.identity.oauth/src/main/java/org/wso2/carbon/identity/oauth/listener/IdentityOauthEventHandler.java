@@ -41,10 +41,13 @@ import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.role.mgt.core.GroupBasicInfo;
 import org.wso2.carbon.identity.role.mgt.core.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.mgt.core.UserBasicInfo;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleDTO;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -54,8 +57,12 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.wso2.carbon.identity.event.IdentityEventConstants.EventProperty.DELETE_GROUP_ID_LIST;
 
 /**
  * This is an event handler listening for some of the core user management operations.
@@ -127,6 +134,23 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 terminateSession(deletedUserIDList, roleId, tenantDomain);
             }
 
+        } else if (IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
+            IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_V2_EVENT.equals(event.getEventName())) {
+
+            String tenantDomain = (String) event.getEventProperties()
+                    .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
+            List<String> deletedGroups = (ArrayList) event.getEventProperties().get(DELETE_GROUP_ID_LIST);
+            List<User> userListOfDeletedGroups = new ArrayList<>();
+            for (String groupId : deletedGroups) {
+                userListOfDeletedGroups.addAll(getUserListOfGroup(groupId, tenantDomain));
+            }
+
+            Set<String> userIds = new HashSet<>();
+            for (User user : userListOfDeletedGroups) {
+                userIds.add(user.getUserID());
+            }
+            terminateSession(new ArrayList<>(userIds), null, tenantDomain);
+
         } else if (IdentityEventConstants.Event.PRE_DELETE_ROLE_EVENT.equals(event.getEventName()) ||
                 IdentityEventConstants.Event.POST_SET_PERMISSIONS_FOR_ROLE_EVENT.equals(event.getEventName())) {
 
@@ -171,30 +195,17 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             try {
-                org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService =
-                        OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
-                // Users can be either directly linked to roles or groups.
-                // Get the users directly linked to roles.
-                List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfRole =
-                        roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
-                // Get the users directly linked to group associated with the role.
-                List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfRole =
-                        roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
-                List<User> userListOfGroup = new ArrayList<>();
-                for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfRole) {
-                    String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
-                    String groupName = UserCoreUtil.removeDomainFromName(group.getName());
-                    updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
-                }
+                // Terminate sessions associated with the primary role.
+                terminateSessionsForRole(roleId, tenantDomain);
 
-                List<String> userIdList = new ArrayList<>();
-                for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo : userListOfRole) {
-                    userIdList.add(userBasicInfo.getId());
+                List<RoleDTO> roleDTOList = OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService()
+                        .getSharedHybridRoles(roleId, IdentityTenantUtil.getTenantId(tenantDomain));
+                for (RoleDTO roleDTO : roleDTOList) {
+                    tenantDomain = IdentityTenantUtil.getTenantDomain(roleDTO.getTenantId());
+                    roleId = roleDTO.getId();
+                    // Terminate sessions associated with the given shared role.
+                    terminateSessionsForRole(roleId, tenantDomain);
                 }
-                for (User user : userListOfGroup) {
-                    userIdList.add(user.getUserID());
-                }
-                terminateSession(userIdList, roleId, tenantDomain);
             } catch (org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException e) {
                 String errorMsg = "Invalid role id :" + roleId + "in tenant domain " + tenantDomain;
                 throw new IdentityEventException(errorMsg);
@@ -249,6 +260,47 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
     }
 
     /**
+     * Terminate sessions associated for the given role.
+     *
+     * @param roleId       The ID of the role.
+     * @param tenantDomain The tenant domain of the role.
+     * @throws org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException if any error while
+     *                                                                                             listing users and
+     *                                                                                             groups for the role.
+     * @throws IdentityEventException                                                              if any error with
+     *                                                                                             session termination.
+     */
+    private void terminateSessionsForRole(String roleId, String tenantDomain) throws
+            org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException,
+            IdentityEventException {
+
+        org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService =
+                OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
+        // Users can be either directly linked to roles or groups.
+        // Get the users directly linked to roles.
+        List<org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo> userListOfRole =
+                roleV2ManagementService.getUserListOfRole(roleId, tenantDomain);
+        // Get the users directly linked to group associated with the role.
+        List<org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo> groupListOfRole =
+                roleV2ManagementService.getGroupListOfRole(roleId, tenantDomain);
+        List<User> userListOfGroup = new ArrayList<>();
+        for (org.wso2.carbon.identity.role.v2.mgt.core.model.GroupBasicInfo group : groupListOfRole) {
+            String userStoreDomainName = UserCoreUtil.extractDomainFromName(group.getName());
+            String groupName = UserCoreUtil.removeDomainFromName(group.getName());
+            updateUserListOfGroup(userListOfGroup, groupName, tenantDomain, userStoreDomainName);
+        }
+
+        List<String> userIdList = new ArrayList<>();
+        for (org.wso2.carbon.identity.role.v2.mgt.core.model.UserBasicInfo userBasicInfo : userListOfRole) {
+            userIdList.add(userBasicInfo.getId());
+        }
+        for (User user : userListOfGroup) {
+            userIdList.add(user.getUserID());
+        }
+        terminateSession(userIdList, roleId, tenantDomain);
+    }
+
+    /**
      * Get the users associated to a group and update the list object.
      *
      * @param userListOfGroup     Existing users of the group.
@@ -278,6 +330,27 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         }
     }
 
+    private List<User> getUserListOfGroup(String groupId, String tenantDomain) throws IdentityEventException {
+
+        try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            UserStoreManager userStoreManager;
+            try {
+                userStoreManager = (UserStoreManager) realmService.getTenantUserRealm(
+                        IdentityTenantUtil.getTenantId(tenantDomain)).getUserStoreManager();
+            } catch (org.wso2.carbon.user.api.UserStoreException e) {
+                String errorMsg = "Error while getting realm service in tenant domain " + tenantDomain;
+                throw new IdentityEventException(errorMsg, e);
+            }
+            return ((AbstractUserStoreManager) userStoreManager).getUserListOfGroup(groupId, null, null);
+
+        } catch (UserStoreException e) {
+            String errorMsg =
+                    "Error while getting user list of group: " + groupId + " in tenant domain " + tenantDomain;
+            throw new IdentityEventException(errorMsg, e);
+        }
+    }
+
     /**
      * Returns UserStoreManager.
      *
@@ -301,7 +374,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
     }
 
     private void revokeTokensOfLockedUser(String userName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+            throws IdentityEventException, UserStoreException {
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
@@ -313,6 +386,8 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             OAuth2ServiceComponentHolder.getInstance()
                     .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
+            // Handling the token revocation of invited users from parent organization.
+            revokeTokensOfAssociatedUsers(userName, userStoreManager);
         }
     }
 
@@ -331,7 +406,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
     }
 
     private void revokeTokensOfDisabledUser(String userName, UserStoreManager userStoreManager)
-            throws UserStoreException {
+            throws IdentityEventException, UserStoreException {
 
         String errorCode =
                 (String) IdentityUtil.threadLocalProperties.get().get(IdentityCoreConstants.USER_ACCOUNT_STATE);
@@ -342,6 +417,50 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             OAuth2ServiceComponentHolder.getInstance()
                     .getRevocationProcessor()
                     .revokeTokens(userName, userStoreManager);
+            // Handling the token revocation of invited users from parent organization.
+            revokeTokensOfAssociatedUsers(userName, userStoreManager);
+        }
+    }
+
+    /**
+     * Revoke access tokens of associated users.
+     *
+     * @param username         Username of the user.
+     * @param userStoreManager User store manager of the user.
+     * @throws IdentityEventException If an error occurs while revoking access tokens of associated users.
+     */
+    private void revokeTokensOfAssociatedUsers(String username, UserStoreManager userStoreManager)
+            throws IdentityEventException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking access tokens of associated users of user: " + username);
+        }
+        try {
+            String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, username).getUserID();
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            String orgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            List<UserAssociation> userAssociationList = OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService().getUserAssociationsOfGivenUser(userId, orgId);
+            if (CollectionUtils.isEmpty(userAssociationList)) {
+                return;
+            }
+            for (UserAssociation userAssociation : userAssociationList) {
+                String orgIdOfUserAssociation = userAssociation.getOrganizationId();
+                String tenantDomainOfUserAssociation = OAuthComponentServiceHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(orgIdOfUserAssociation);
+                RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+                UserStoreManager userStoreManagerOfUserAssociation = (UserStoreManager)
+                        realmService.getTenantUserRealm(
+                                IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
+                String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
+                        .getUserNameFromUserID(userAssociation.getUserId());
+                OAuth2ServiceComponentHolder.getInstance()
+                        .getRevocationProcessor()
+                        .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
+            }
+        } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
+            throw new IdentityEventException("Error occurred while revoking access tokens of associated users.", e);
         }
     }
 

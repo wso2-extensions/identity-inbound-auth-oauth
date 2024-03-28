@@ -144,6 +144,10 @@ public class OAuth2IntrospectionEndpoint {
                 .setExpiration(introspectionResponse.getExp())
                 .setAuthorizedUserType(introspectionResponse.getAut());
 
+        if (introspectionResponse.getAuthorizedUser() != null) {
+            respBuilder.setOrgId(introspectionResponse.getAuthorizedUser().getAccessingOrganization());
+        }
+
         if (StringUtils.equalsIgnoreCase(introspectionResponse.getTokenType(), JWT_TOKEN_TYPE)) {
             respBuilder.setAudience(introspectionResponse.getAud())
                     .setJwtId(introspectionResponse.getJti())

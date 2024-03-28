@@ -682,11 +682,11 @@ public final class OAuthConstants {
         public static final String SUCCESS = "SUCCESS";
         public static final String CLIENT_ID = "client id";
         public static final String TENANT_DOMAIN = "tenant domain";
-        public static final String CREATE_OAUTH_APPLICATION = "CREATE OAUTH APPLICATION";
-        public static final String UPDATE_OAUTH_APPLICATION = "UPDATE OAUTH APPLICATION";
-        public static final String DELETE_OAUTH_APPLICATION = "DELETE OAUTH APPLICATION";
-        public static final String REGENERATE_CLIENT_SECRET = "REGENERATE CLIENT SECRET";
-        public static final String UPDATE_APP_STATE = "UPDATE APP STATE";
+        public static final String CREATE_OAUTH_APPLICATION = "create-oauth-application";
+        public static final String UPDATE_OAUTH_APPLICATION = "update-oauth-application";
+        public static final String DELETE_OAUTH_APPLICATION = "delete-oauth-application";
+        public static final String REGENERATE_CLIENT_SECRET = "regenerate-client-secret";
+        public static final String UPDATE_APP_STATE = "update-app-state";
 
         /**
          * Define action IDs for diagnostic logs.

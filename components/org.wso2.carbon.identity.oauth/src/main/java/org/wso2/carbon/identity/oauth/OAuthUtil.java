@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -30,6 +30,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -51,15 +52,18 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
+import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
@@ -76,6 +80,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -83,7 +88,9 @@ import javax.crypto.spec.SecretKeySpec;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_SESSION_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
 
 /**
  * OAuth utility functionality.
@@ -93,6 +100,7 @@ public final class OAuthUtil {
     public static final Log LOG = LogFactory.getLog(OAuthUtil.class);
     private static final String ALGORITHM_SHA1 = "HmacSHA1";
     private static final String ALGORITHM_SHA256 = "HmacSHA256";
+    private static final String managedOrgClaim = "http://wso2.org/claims/identity/managedOrg";
 
     private OAuthUtil() {
 
@@ -353,6 +361,9 @@ public final class OAuthUtil {
                     LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
                     authorizedUser.getLoggableUserId()));
             return;
+        }
+        if (authorizedUser.getAccessingOrganization() != null) {
+            authorizedOrganization = authorizedUser.getAccessingOrganization();
         }
         clearOAuthCacheByTenant(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(consumerKey, scope, userId,
                 authenticatedIDP, tokenBindingReference, authorizedOrganization), tenantDomain);
@@ -693,36 +704,105 @@ public final class OAuthUtil {
 
     /**
      * This method can be used to build the AuthenticatedUser object.
+     * @param userStoreManager  userStoreManager.
      * @param username          username.
      * @param userStoreDomain   userStoreDomain.
      * @return AuthenticatedUser.
      */
-    private static AuthenticatedUser buildAuthenticatedUser(String username, String userStoreDomain,
-                                                            String tenantDomain) {
+    private static AuthenticatedUser buildAuthenticatedUser(UserStoreManager userStoreManager, String username,
+                                                            String userStoreDomain, String tenantDomain)
+            throws UserStoreException {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
         authenticatedUser.setUserName(username);
-        return authenticatedUser;
+        boolean isOrganization;
+        try {
+            isOrganization = OrganizationManagementUtil.isOrganization(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            String msg = "Error occurred while check whether organization for the tenant : " + tenantDomain;
+            throw new UserStoreException(msg, e);
+        }
+
+        if (!isOrganization) {
+            return authenticatedUser;
+        }
+
+        String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, username).getUserID();
+        Map<String, String> claimsMap = ((AbstractUserStoreManager) userStoreManager)
+                .getUserClaimValuesWithID(userId, new String[]{managedOrgClaim}, null);
+        String managedOrg = claimsMap.get(managedOrgClaim);
+        try {
+            String accessingOrg = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            String primaryOrganizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .getPrimaryOrganizationId(accessingOrg);
+            tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(primaryOrganizationId);
+            authenticatedUser.setTenantDomain(tenantDomain);
+
+            // Shared user flow.
+            if (managedOrg != null) {
+                authenticatedUser.setUserResidentOrganization(managedOrg);
+                authenticatedUser.setAccessingOrganization(accessingOrg);
+
+                // SSO login user shared flow.
+                if (!OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .isPrimaryOrganization(managedOrg)) {
+                    userId = OAuthComponentServiceHolder.getInstance().getOrganizationUserSharingService()
+                            .getUserAssociation(userId, accessingOrg).getAssociatedUserId();
+                    authenticatedUser.setUserName(userId);
+                    setOrganizationSSOUserDetails(authenticatedUser);
+                }
+                return authenticatedUser;
+            }
+
+            // Organization SSO user flow
+            authenticatedUser.setUserName(userId);
+            setOrganizationSSOUserDetails(authenticatedUser);
+            authenticatedUser.setUserResidentOrganization(accessingOrg);
+            authenticatedUser.setAccessingOrganization(accessingOrg);
+            return authenticatedUser;
+        } catch (OrganizationManagementException e) {
+            String msg = "Error occurred while resolving organization information for the tenant : " + tenantDomain;
+            throw new UserStoreException(msg, e);
+        } catch (IdentityProviderManagementException e) {
+            String msg = "Error occurred while resolving IDP name of the organization login IDP in : " + tenantDomain;
+            throw new UserStoreException(msg, e);
+        }
     }
 
     /**
      * Get clientIds of associated application of an application role.
      * @param role          Role object.
-     * @param tenantDomain  Tenant domain.
+     * @param authenticatedUser  Authenticated user.
      * @return Set of clientIds of associated applications.
      */
-    private static Set<String> getClientIdsOfAssociatedApplications(Role role, String tenantDomain) {
+    private static Set<String> getClientIdsOfAssociatedApplications(Role role, AuthenticatedUser authenticatedUser)
+            throws UserStoreException {
 
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
-        List<AssociatedApplication> associatedApplications = role.getAssociatedApplications();
+        List<String> associatedApplications = role.getAssociatedApplications().stream()
+                .map(AssociatedApplication::getId).collect(Collectors.toList());
+        try {
+            if (authenticatedUser.getUserResidentOrganization() != null) {
+                List<String> newAssociatedApplications = new ArrayList<>();
+                for (String app : associatedApplications) {
+                    newAssociatedApplications.add(
+                            SharedAppResolveDAO.getMainApplication(app, authenticatedUser.getAccessingOrganization()));
+                }
+                associatedApplications = newAssociatedApplications;
+            }
+        } catch (IdentityOAuth2Exception e) {
+            throw new UserStoreException("Error occurred while getting the main applications of the shared apps.", e);
+        }
         Set<String> clientIds = new HashSet<>();
         associatedApplications.forEach(associatedApplication -> {
             try {
                 ServiceProvider application = applicationManagementService
-                        .getApplicationByResourceId(associatedApplication.getId(), tenantDomain);
+                        .getApplicationByResourceId(associatedApplication, authenticatedUser.getTenantDomain());
                 if (application == null || application.getInboundAuthenticationConfig() == null) {
                     return;
                 }
@@ -735,7 +815,7 @@ public final class OAuthUtil {
                         });
             } catch (IdentityApplicationManagementException e) {
                 String errorMessage = "Error occurred while retrieving application of id : " +
-                        associatedApplication.getId();
+                        associatedApplication;
                 LOG.error(errorMessage);
             }
         });
@@ -839,7 +919,13 @@ public final class OAuthUtil {
                     accessTokens.add(accessTokenDO);
                 }
 
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Is hash disabled:" + OAuth2Util.isHashDisabled());
+                }
                 if (!tokenBindingEnabled && OAuth2Util.isHashDisabled()) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Revoke latest tokens with scopes for the clientId: " + clientId);
+                    }
                     revokeLatestTokensWithScopes(scopes, clientId, authenticatedUser);
                 } else {
                     // If the hashed token is enabled, there can be multiple active tokens with a user with same scope.
@@ -874,10 +960,13 @@ public final class OAuthUtil {
     public static boolean revokeTokens(String username, UserStoreManager userStoreManager, String roleId)
             throws UserStoreException {
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Request received for token revocation for the user: " + username + " roleId:" + roleId);
+        }
         String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
         String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
-        AuthenticatedUser authenticatedUser = buildAuthenticatedUser(username, userStoreDomain, tenantDomain);
-
+        AuthenticatedUser authenticatedUser = buildAuthenticatedUser(userStoreManager, username, userStoreDomain,
+                tenantDomain);
         /* This userStoreDomain variable is used for access token table partitioning. So it is set to null when access
         token table partitioning is not enabled.*/
         userStoreDomain = null;
@@ -895,12 +984,20 @@ public final class OAuthUtil {
         Role role;
         boolean getClientIdsFromUser = false;
         if (roleId != null) {
-            role = getRole(roleId, tenantDomain);
+            role = getRole(roleId, IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
             if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
                 // Get clientIds of associated applications for the specific application role.
-                clientIds = getClientIdsOfAssociatedApplications(role, tenantDomain);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Get clientIds of associated applications for the application role: "
+                            + role.getName());
+                }
+                clientIds = getClientIdsOfAssociatedApplications(role, authenticatedUser);
             } else {
                 // Get all the distinct client Ids authorized by this user since this is an organization role.
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Get all the distinct client Ids authorized by user:" + username + " since this is " +
+                            "an organization role: " + role.getName());
+                }
                 getClientIdsFromUser = true;
             }
         } else {
@@ -910,6 +1007,9 @@ public final class OAuthUtil {
 
         if (getClientIdsFromUser) {
             // Get all the distinct client Ids authorized by this user
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Get all the distinct client Ids authorized by user: " + username);
+            }
             try {
                 clientIds = OAuthTokenPersistenceFactory.getInstance()
                         .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
@@ -959,6 +1059,9 @@ public final class OAuthUtil {
             UserStoreException {
 
         for (String scope : scopes) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Revoking tokens for the scope: " + scope);
+            }
             AccessTokenDO scopedToken = null;
             try {
                 // Retrieve latest access token for particular client, user and scope combination
@@ -975,6 +1078,9 @@ public final class OAuthUtil {
             if (scopedToken != null) {
                 try {
                     // Revoking token from database
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Revoking latest scoped token from database");
+                    }
                     revokeTokens(Collections.singletonList(scopedToken));
                 } catch (IdentityOAuth2Exception e) {
                     String errorMsg = "Error occurred while revoking " + "Access Token : "
@@ -1106,5 +1212,17 @@ public final class OAuthUtil {
             }
         }
         return userId;
+    }
+
+    private static void setOrganizationSSOUserDetails(AuthenticatedUser authenticatedUser)
+            throws IdentityProviderManagementException {
+
+        authenticatedUser.setFederatedUser(true);
+        authenticatedUser.setUserStoreDomain(FEDERATED_USER_DOMAIN_PREFIX);
+        IdentityProvider orgSsoIdp = OAuthComponentServiceHolder.getInstance().getIdpManager()
+                .getIdPByRealmId(ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER, authenticatedUser.getTenantDomain());
+        if (orgSsoIdp != null) {
+            authenticatedUser.setFederatedIdPName(orgSsoIdp.getIdentityProviderName());
+        }
     }
 }

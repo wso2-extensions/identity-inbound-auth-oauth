@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 public class RefreshTokenValidator implements OAuth2TokenValidator {
 
     public static final String TOKEN_TYPE = "refresh_token";
+    public static final String TOKEN_TYPE_NAME = "Refresh";
 
     @Override
     public boolean validateAccessDelegation(OAuth2TokenValidationMessageContext messageContext)
@@ -55,6 +56,6 @@ public class RefreshTokenValidator implements OAuth2TokenValidator {
     @Override
     public String getTokenType() {
 
-        return "Refresh";
+        return TOKEN_TYPE_NAME;
     }
 }
