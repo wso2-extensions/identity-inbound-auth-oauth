@@ -91,7 +91,7 @@ public class DefaultOAuth2ScopeValidator {
             return new ArrayList<>();
         }
         List<String> requestedScopes = Arrays.asList(authzReqMessageContext.getAuthorizationReqDTO().getScopes());
-        String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
+        String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getUser().getTenantDomain();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String appId = getApplicationId(clientId, tenantDomain);
         // When user is not accessing the resident organization, resolve the application id from the shared app table.
@@ -124,7 +124,7 @@ public class DefaultOAuth2ScopeValidator {
             return new ArrayList<>();
         }
         List<String> requestedScopes = Arrays.asList(tokenReqMessageContext.getScope());
-        String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
+        String tenantDomain = tokenReqMessageContext.getAuthorizedUser().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
         // When user is not accessing the resident organization, resolve the application id from the shared app table.
