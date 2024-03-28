@@ -318,6 +318,17 @@ public class ResponseTypeHandlerUtil {
             }
         }
 
+        //Trigger post listners for authorization code issue.
+        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
+                .getOAuthEventInterceptorProxy();
+        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
+            if (log.isDebugEnabled()) {
+                log.debug("Triggering authorization code post issuer listeners for client : "
+                        + authorizationReqDTO.getConsumerKey());
+            }
+            oAuthEventInterceptorProxy.onPostAuthzCodeIssue(oauthAuthzMsgCtx, authzCodeDO);
+        }
+
         if (log.isDebugEnabled()) {
             log.debug("Issued Authorization Code to user : " + authorizationReqDTO.getUser() +
                     ", Using the redirect url : " + authorizationReqDTO.getCallbackUrl() +

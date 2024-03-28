@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -43,12 +42,6 @@ import java.util.Map;
  */
 public class AbstractOAuthEventInterceptor extends AbstractIdentityHandler implements OAuthEventInterceptor {
 
-
-    @Override
-    public void onPostAuthzCodeIssue(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
-                                     AuthzCodeDO authzCodeDO) throws IdentityOAuth2Exception {
-        //nothing to implement
-    }
 
     @Override
     public void onPreTokenIssue(OAuth2AccessTokenReqDTO tokenReqDTO, OAuthTokenReqMessageContext tokReqMsgCtx,

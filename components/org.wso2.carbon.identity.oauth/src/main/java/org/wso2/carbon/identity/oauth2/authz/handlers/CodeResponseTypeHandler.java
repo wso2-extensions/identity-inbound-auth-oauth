@@ -20,8 +20,6 @@ package org.wso2.carbon.identity.oauth2.authz.handlers;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.authz.handlers.util.ResponseTypeHandlerUtil;
@@ -54,7 +52,6 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
         if (log.isDebugEnabled()) {
             log.debug("Issued code: " + authorizationCode + " for the session data key: " + sessionDataKey);
         }
-        triggerPostListeners(oauthAuthzMsgCtx, authorizationCode);
         // Trigger an event to update request_object_reference table.
         OAuth2TokenUtil.postIssueCode(authorizationCode.getAuthzCodeId(), sessionDataKey,
                 oauthAuthzMsgCtx.getAuthorizationReqDTO().isRequestObjectFlow());
@@ -68,23 +65,6 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
         OAuth2AuthorizeRespDTO respDTO = initResponse(oauthAuthzMsgCtx);
         // Add authorization code details to the response.
         return ResponseTypeHandlerUtil.buildAuthorizationCodeResponseDTO(respDTO, authzCodeDO);
-    }
-
-    private void triggerPostListeners(OAuthAuthzReqMessageContext oAuthAuthzMsgCtx,
-                                      AuthzCodeDO authzCodeDO) {
-
-        OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
-                .getOAuthEventInterceptorProxy();
-        if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
-            try {
-                if (log.isDebugEnabled()) {
-                    log.debug("Triggering authorization code post issuer listeners for client: ");
-                }
-                oAuthEventInterceptorProxy.onPostAuthzCodeIssue(oAuthAuthzMsgCtx, authzCodeDO);
-            } catch (IdentityOAuth2Exception e) {
-                log.error("Oauth post issuer listener failed.", e);
-            }
-        }
     }
 
 }
