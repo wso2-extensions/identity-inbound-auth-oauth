@@ -271,6 +271,11 @@
                 <artifactId>org.wso2.carbon.identity.client.attestation.mgt</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
 
             <!--SAML Common Util dependency-->
             <dependency>

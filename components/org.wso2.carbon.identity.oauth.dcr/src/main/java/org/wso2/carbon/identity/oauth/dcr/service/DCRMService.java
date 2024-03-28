@@ -50,6 +50,8 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
+import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
+import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -58,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.api.UserStoreException;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -153,7 +156,8 @@ public class DCRMService {
      * @return
      * @throws DCRMException
      */
-    public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException {
+    public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException,
+            UserStoreException {
 
         return createOAuthApplication(registrationRequest);
     }
@@ -443,12 +447,28 @@ public class DCRMService {
     }
 
     private Application createOAuthApplication(ApplicationRegistrationRequest registrationRequest)
-            throws DCRMException {
+            throws DCRMException, UserStoreException {
 
         String applicationOwner = StringUtils.isNotBlank(registrationRequest.getExtApplicationOwner()) ?
                 registrationRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        /*
+        ApplicationOwner will be null and a server error is thrown when creating an app, if the api authentication/
+        api security is disabled for DCR endpoint.
+        In such cases, we set the tenant admin as the owner of the application.
+        */
+        if (StringUtils.isBlank(applicationOwner)) {
+            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+            boolean isClientAuthenticationRequired = dcrConfiguration.isAuthenticationRequired() != null ?
+                    dcrConfiguration.isAuthenticationRequired() : true;
+            if (!isClientAuthenticationRequired) {
+                applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
+                        .getRealmConfiguration().getAdminUserName();
+            }
+        }
+
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
         boolean isManagementApp = registrationRequest.isManagementApp();
@@ -469,6 +489,13 @@ public class DCRMService {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
         }
+
+        // Check whether the software statement is mandatory and throw error if it is not provided.
+        if (isSSAMandatedAndSSAisEmpty(registrationRequest.getSoftwareStatement())) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                    DCRMConstants.ErrorMessages.MANDATORY_SOFTWARE_STATEMENT.getMessage());
+        }
+
         // Validate software statement assertion signature.
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
@@ -515,6 +542,25 @@ public class DCRMService {
         Application application = buildResponse(createdApp, tenantDomain);
         application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
         return application;
+    }
+
+    /**
+     * Check whether the software statement is mandatory and the software statement is empty.
+     *
+     * @param softwareStatement Software statement.
+     * @return True if the software statement is mandatory and the software statement is empty.
+     * @throws DCRMServerException If an error occurred while checking the software statement.
+     */
+    public boolean isSSAMandatedAndSSAisEmpty(String softwareStatement)
+            throws DCRMServerException {
+
+        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+        Boolean isSSAMandated = dcrConfiguration.getMandateSSA();
+
+        if (isSSAMandated != null) {
+            return isSSAMandated && StringUtils.isEmpty(softwareStatement);
+        }
+        return false;
     }
 
     private Application buildResponse(OAuthConsumerAppDTO createdApp, String tenantDomain) throws DCRMException {
@@ -595,6 +641,7 @@ public class DCRMService {
         // Then Create OAuthApp
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(spName);
+        oAuthConsumerApp.setUsername(applicationOwner);
         oAuthConsumerApp.setCallbackUrl(
                 validateAndSetCallbackURIs(registrationRequest.getRedirectUris(), registrationRequest.getGrantTypes()));
         String grantType = StringUtils.join(registrationRequest.getGrantTypes(), GRANT_TYPE_SEPARATOR);
@@ -692,12 +739,9 @@ public class DCRMService {
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
-            boolean enableFAPIDCR = Boolean.parseBoolean(IdentityUtil.getProperty(
-                    OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
-            if (enableFAPIDCR) {
-                // Add FAPI conformant property to Oauth application.
-                oAuthConsumerApp.setFapiConformanceEnabled(true);
-            }
+            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+            boolean enableFAPIDCR = dcrConfiguration.isFAPIEnforced();
+            oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
         }
 
         if (log.isDebugEnabled()) {
@@ -1042,9 +1086,12 @@ public class DCRMService {
      * @throws DCRMClientException
      * @throws IdentityOAuth2Exception
      */
-    private void validateSSASignature(String softwareStatement) throws DCRMClientException, IdentityOAuth2Exception {
+    private void validateSSASignature(String softwareStatement) throws DCRMClientException,
+            IdentityOAuth2Exception, DCRMServerException {
 
-        String jwksURL = IdentityUtil.getProperty(SSA_VALIDATION_JWKS);
+        DCRConfiguration dcrConfiguration = DCRConfigUtils
+                .getDCRConfiguration();
+        String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {
                 SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
