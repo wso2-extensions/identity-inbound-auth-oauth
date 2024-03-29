@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -305,9 +304,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             } catch (UserIdNotFoundException e) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
                 throw new IdentityOAuth2Exception("User id is not available for user: " +
-                        (LoggerUtils.isLogMaskingEnable ?
-                                LoggerUtils.getMaskedContent(tokReqMsgCtx.getAuthorizedUser().getLoggableUserId()) :
-                                tokReqMsgCtx.getAuthorizedUser().getLoggableUserId()), e);
+                        tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
             }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
             String accessingOrganization = OAuthConstants.AuthorizedOrganization.NONE;

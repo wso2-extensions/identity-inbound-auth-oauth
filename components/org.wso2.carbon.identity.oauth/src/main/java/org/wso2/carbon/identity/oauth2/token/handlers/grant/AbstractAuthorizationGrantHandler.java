@@ -134,7 +134,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception(
-                    "User id is not available for user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
+                    "User id is not available for user: " +
+                            tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
         }
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
@@ -581,7 +582,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     }
                 } catch (UserIdNotFoundException e) {
                     throw new IdentityOAuth2Exception(
-                            "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
+                            "User id is not available for user: " +
+                                    tokenToCache.getAuthzUser().getLoggableMaskedUserId(), e);
                 }
 
                 String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());

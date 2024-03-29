@@ -3967,7 +3967,7 @@ public class OAuth2Util {
                 authenticatedUser.setUserId(userId);
             } catch (UserIdNotFoundException e) {
                 throw new IdentityOAuth2Exception(
-                        "User id is not available for user: " + authzUser.getLoggableUserId(), e);
+                        "User id is not available for user: " + authzUser.getLoggableMaskedUserId(), e);
             }
         }
         return authenticatedUser;
