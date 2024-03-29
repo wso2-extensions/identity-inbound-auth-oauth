@@ -305,9 +305,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             } catch (UserIdNotFoundException e) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
                 throw new IdentityOAuth2Exception("User id is not available for user: " +
-                        (LoggerUtils.isLogMaskingEnable ?
-                                LoggerUtils.getMaskedContent(tokReqMsgCtx.getAuthorizedUser().getLoggableUserId()) :
-                                tokReqMsgCtx.getAuthorizedUser().getLoggableUserId()), e);
+                        tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
             }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
             String accessingOrganization = OAuthConstants.AuthorizedOrganization.NONE;

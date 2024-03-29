@@ -303,8 +303,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
             userId = user.getUserId();
         } catch (UserIdNotFoundException e) {
             // Masking getLoggableUserId as it will return the username because the user id is not available.
-            log.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                    LoggerUtils.getMaskedContent(user.getLoggableUserId()) :  user.getLoggableUserId()) +
+            log.error("User id cannot be found for user: " + user.getLoggableMaskedUserId() +
                     ". Hence skip revoking relevant tokens");
             throw new IdentityOAuth2Exception("Unable to revoke tokens for the token binding reference: "
                     + tokenBindingReference);
@@ -336,9 +335,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     }
                 } catch (UserIdNotFoundException e) {
                     // Masking getLoggableUserId as it will return the username because the user id is not available.
-                    log.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                            LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
-                            authenticatedUser.getLoggableUserId()));
+                    log.error("User id cannot be found for user: " + user.getLoggableMaskedUserId());
                     throw new IdentityOAuth2Exception("Unable to revoke tokens of the app: " + consumerKey +
                             " for the token binding reference: " + tokenBindingReference);
                 }
