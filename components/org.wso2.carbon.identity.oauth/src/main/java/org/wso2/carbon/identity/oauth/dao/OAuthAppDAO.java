@@ -289,8 +289,8 @@ public class OAuthAppDAO {
                             authenticatedUser.setUserName(rSet.getString(8));
                             authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(rSet.getInt(9)));
                             authenticatedUser.setUserStoreDomain(rSet.getString(10));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString(11)));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(12)));
+                            oauthApp.setPkceMandatory(getBooleanValue(rSet.getString(11)));
+                            oauthApp.setPkceSupportPlain(getBooleanValue(rSet.getString(12)));
                             oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(13));
                             oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(14));
                             oauthApp.setRefreshTokenExpiryTime(rSet.getLong(15));
@@ -359,8 +359,8 @@ public class OAuthAppDAO {
                             oauthApp.setUser(authenticatedUser);
                             oauthApp.setGrantTypes(rSet.getString(8));
                             oauthApp.setId(rSet.getInt(9));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString(10)));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(11)));
+                            oauthApp.setPkceMandatory(getBooleanValue(rSet.getString(10)));
+                            oauthApp.setPkceSupportPlain(getBooleanValue(rSet.getString(11)));
                             oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(12));
                             oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(13));
                             oauthApp.setRefreshTokenExpiryTime(rSet.getLong(14));
@@ -430,8 +430,8 @@ public class OAuthAppDAO {
                             oauthApp.setCallbackUrl(rSet.getString(6));
                             oauthApp.setGrantTypes(rSet.getString(7));
                             oauthApp.setId(rSet.getInt(8));
-                            oauthApp.setPkceMandatory(!"0".equals(rSet.getString(9)));
-                            oauthApp.setPkceSupportPlain(!"0".equals(rSet.getString(10)));
+                            oauthApp.setPkceMandatory(getBooleanValue(rSet.getString(9)));
+                            oauthApp.setPkceSupportPlain(getBooleanValue(rSet.getString(10)));
                             oauthApp.setUserAccessTokenExpiryTime(rSet.getLong(11));
                             oauthApp.setApplicationAccessTokenExpiryTime(rSet.getLong(12));
                             oauthApp.setRefreshTokenExpiryTime(rSet.getLong(13));
@@ -1374,4 +1374,19 @@ public class OAuthAppDAO {
         }
         throw new InvalidOAuthClientException(message);
     }
+
+    /**
+     * Converts a string to a boolean, recognizing "1" or "true" (case-insensitive) as true,
+     * and treating any other value as false. Useful for interpreting boolean strings from
+     * various sources like databases or external inputs.
+     *
+     * @param booleanValueAsString The string representation of the boolean value to be evaluated.
+     * @return true if the string is "1" or "true" (case-insensitive), false otherwise.
+     * @throws SQLException if there is a database access error.
+     */
+    private boolean getBooleanValue(String booleanValueAsString) throws SQLException {
+
+        return "1".equals(booleanValueAsString) || "true".equalsIgnoreCase(booleanValueAsString);
+    }
+
 }
