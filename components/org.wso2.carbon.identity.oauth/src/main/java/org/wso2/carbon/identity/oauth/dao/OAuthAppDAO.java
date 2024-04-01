@@ -1386,7 +1386,8 @@ public class OAuthAppDAO {
      */
     private boolean getBooleanValue(String booleanValueAsString) throws SQLException {
 
-        return "1".equals(booleanValueAsString) || "true".equalsIgnoreCase(booleanValueAsString);
+        return OAuthConstants.BOOLEAN_ONE_AS_STRING.equals(booleanValueAsString)
+                || OAuthConstants.BOOLEAN_ONE_AS_STRING.equalsIgnoreCase(booleanValueAsString);
     }
 
 }

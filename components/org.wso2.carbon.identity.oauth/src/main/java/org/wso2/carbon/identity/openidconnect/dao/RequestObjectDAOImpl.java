@@ -28,6 +28,7 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -483,6 +484,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
      */
     private boolean getBooleanValue(String booleanValueAsString) throws SQLException {
 
-        return "1".equals(booleanValueAsString) || "true".equalsIgnoreCase(booleanValueAsString);
+        return OAuthConstants.BOOLEAN_ONE_AS_STRING.equals(booleanValueAsString)
+                || OAuthConstants.BOOLEAN_TRUE_AS_STRING.equalsIgnoreCase(booleanValueAsString);
     }
 }
