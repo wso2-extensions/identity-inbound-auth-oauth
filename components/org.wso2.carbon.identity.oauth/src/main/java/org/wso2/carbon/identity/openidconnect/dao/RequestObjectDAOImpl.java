@@ -28,6 +28,7 @@ import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -319,7 +320,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             while (resultSet.next()) {
                 RequestedClaim requestedClaim = new RequestedClaim();
                 requestedClaim.setName(resultSet.getString(1));
-                requestedClaim.setEssential(!"0".equals(resultSet.getString(2)));
+                requestedClaim.setEssential(getBooleanValue(resultSet.getString(2)));
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
@@ -362,7 +363,7 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
             while (resultSet.next()) {
                 RequestedClaim requestedClaim = new RequestedClaim();
                 requestedClaim.setName(resultSet.getString(1));
-                requestedClaim.setEssential(!"0".equals(resultSet.getString(2)));
+                requestedClaim.setEssential(getBooleanValue(resultSet.getString(2)));
                 requestedClaim.setValue(resultSet.getString(3));
                 essentialClaims.add(requestedClaim);
             }
@@ -470,5 +471,20 @@ public class RequestObjectDAOImpl implements RequestObjectDAO {
         } catch (SQLException e) {
             throw handleError("Error when executing the SQL : " + SQLQueries.DELETE_REQ_OBJECT_BY_CODE_ID, e);
         }
+    }
+
+    /**
+     * Converts a string to a boolean, recognizing "1" or "true" (case-insensitive) as true,
+     * and treating any other value as false. Useful for interpreting boolean strings from
+     * various sources like databases or external inputs.
+     *
+     * @param booleanValueAsString The string representation of the boolean value to be evaluated.
+     * @return true if the string is "1" or "true" (case-insensitive), false otherwise.
+     * @throws SQLException if there is a database access error.
+     */
+    private boolean getBooleanValue(String booleanValueAsString) throws SQLException {
+
+        return OAuthConstants.BOOLEAN_ONE_AS_STRING.equals(booleanValueAsString)
+                || OAuthConstants.BOOLEAN_TRUE_AS_STRING.equalsIgnoreCase(booleanValueAsString);
     }
 }

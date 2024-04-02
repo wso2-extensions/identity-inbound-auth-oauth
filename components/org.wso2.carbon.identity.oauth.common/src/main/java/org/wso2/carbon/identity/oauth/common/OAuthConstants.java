@@ -169,6 +169,9 @@ public final class OAuthConstants {
     // Context tenant domain passed with request parameters.
     public static final String TENANT_DOMAIN_FROM_CONTEXT = "tenant_domain_from_context";
 
+    public static final String BOOLEAN_TRUE_AS_STRING = "true";
+    public static final String BOOLEAN_ONE_AS_STRING = "1";
+
     private OAuthConstants() {
 
     }
