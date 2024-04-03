@@ -858,7 +858,7 @@ public final class OAuthUtil {
                 try {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Retrieving all ACTIVE or EXPIRED access tokens for the client: " + clientId
-                                + " for the user: " + username);
+                                + " authorized by user: " + username + "/" + userStoreDomain);
                     }
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
                     accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
