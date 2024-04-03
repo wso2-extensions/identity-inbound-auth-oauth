@@ -845,6 +845,10 @@ public final class OAuthUtil {
             try {
                 Set<AccessTokenDO> accessTokenDOs;
                 try {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Retrieving all ACTIVE or EXPIRED access tokens for the client: " + clientId
+                                + " authorized by user: " + username + "/" + userStoreDomain);
+                    }
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
                     accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                             .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
@@ -1006,6 +1010,9 @@ public final class OAuthUtil {
                 LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
                 throw new UserStoreException(e);
             }
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("The number of distinct client IDs for the user: " + username + " is " + clientIds.size());
         }
 
         boolean isErrorOnRevokingTokens;

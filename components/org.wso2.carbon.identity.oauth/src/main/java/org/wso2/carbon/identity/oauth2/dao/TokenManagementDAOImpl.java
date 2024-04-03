@@ -782,7 +782,10 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         String tenantDomain = getUserResidentTenantDomain(authzUser);
         String tenantAwareUsernameWithNoUserDomain = authzUser.getUserName();
         String userDomain = OAuth2Util.getSanitizedUserStoreDomain(authzUser.getUserStoreDomain());
-
+        if (log.isDebugEnabled()) {
+            log.debug("Obtain the User's(" + tenantAwareUsernameWithNoUserDomain + ") tenant domain: " + tenantDomain
+                    + "/" + OAuth2Util.getTenantId(tenantDomain) + "and user-domain: " + userDomain);
+        }
         try {
             int tenantId = OAuth2Util.getTenantId(tenantDomain);
 

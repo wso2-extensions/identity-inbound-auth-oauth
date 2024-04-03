@@ -5269,6 +5269,11 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         if (StringUtils.isEmpty(authenticatedUser.getUserResidentOrganization())) {
+            if (log.isDebugEnabled()) {
+                log.debug("User resident organization is empty for user: "
+                        + authenticatedUser.toFullQualifiedUsername() + ". Therefore user resident organization " +
+                        "is set to : " + authenticatedUser.getTenantDomain());
+            }
             return authenticatedUser.getTenantDomain();
         }
 
