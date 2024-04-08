@@ -360,8 +360,8 @@ public class AuthzUtil {
                         .getRoleIdByName(roleName, roleAudience, roleAudienceId, tenantDomain));
             }
         } catch (IdentityRoleManagementException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving role ids of  list of role anme : "
-                    + StringUtils.join(roleNames, ",") + "tenant domain : " + tenantDomain, e);
+            throw new IdentityOAuth2Exception("Error while retrieving role ids of  list of role name : "
+                    + StringUtils.join(roleNames, ",") + " tenant domain : " + tenantDomain, e);
         }
         return roleIds;
     }
