@@ -2346,7 +2346,12 @@ public class OAuth2Util {
         if (oAuthAppDO == null) {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, accessTokenDO);
             if (oAuthAppDO != null) {
-                AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                String tenantDomain = oAuthAppDO.getAppOwner().getTenantDomain();
+                if (StringUtils.isNotEmpty(tenantDomain)) {
+                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
+                } else {
+                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                }
             }
         }
         return oAuthAppDO;

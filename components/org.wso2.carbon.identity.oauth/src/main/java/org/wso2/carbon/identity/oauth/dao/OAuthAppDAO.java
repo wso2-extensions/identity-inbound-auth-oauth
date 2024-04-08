@@ -1161,6 +1161,12 @@ public class OAuthAppDAO {
     public void updateOAuthConsumerApp(ServiceProvider serviceProvider, String consumerKey)
             throws IdentityApplicationManagementException, IdentityOAuthAdminException {
 
+        int tenantId;
+        if (StringUtils.isNotEmpty(serviceProvider.getTenantDomain())) {
+            tenantId = IdentityTenantUtil.getTenantId(serviceProvider.getTenantDomain());
+        } else {
+            tenantId = IdentityTenantUtil.getLoginTenantId();
+        }
         if (validateUserForOwnerUpdate(serviceProvider)) {
             try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
                  try (PreparedStatement statement = connection.prepareStatement(
@@ -1169,7 +1175,7 @@ public class OAuthAppDAO {
                      statement.setString(2, serviceProvider.getOwner().getUserName());
                      statement.setString(3, serviceProvider.getOwner().getUserStoreDomain());
                      statement.setString(4, consumerKey);
-                     statement.setInt(5, IdentityTenantUtil.getLoginTenantId());
+                     statement.setInt(5, tenantId);
                      statement.execute();
                      IdentityDatabaseUtil.commitTransaction(connection);
                  } catch (SQLException e1) {
