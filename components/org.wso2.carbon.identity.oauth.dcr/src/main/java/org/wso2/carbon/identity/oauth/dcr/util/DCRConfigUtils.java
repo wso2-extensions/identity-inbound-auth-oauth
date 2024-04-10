@@ -76,15 +76,20 @@ public class DCRConfigUtils {
         }
     }
 
-    public static ConfigurationManager getConfigurationManager() {
+    private static ConfigurationManager getConfigurationManager() {
 
         return DCRDataHolder.getInstance().getConfigurationManager();
     }
 
     private static void validateMandateSSA (DCRConfiguration dcrConfiguration) throws DCRMClientException {
 
-        if (dcrConfiguration.getMandateSSA() != null && dcrConfiguration.getMandateSSA() &&
+        if (Boolean.FALSE.equals(dcrConfiguration.isAuthenticationRequired()) &&
+                !Boolean.TRUE.equals(dcrConfiguration.getMandateSSA())) {
+            // if authenticationRequired is False, mandateSSA should be True.
+            throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_NOT_MANDATED);
+        } else if (Boolean.TRUE.equals(dcrConfiguration.getMandateSSA()) &&
                 StringUtils.isBlank(dcrConfiguration.getSsaJwks())) {
+            // if mandateSSA is True, ssaJwks should be provided.
             throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_JWKS_REQUIRED);
         }
     }
@@ -143,21 +148,15 @@ public class DCRConfigUtils {
      *
      * @return DCRConfiguration The DCR configuration.
      */
-    private static DCRConfiguration getDCRServerConfiguration() throws DCRMServerException {
+    private static DCRConfiguration getDCRServerConfiguration() {
 
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
 
-        String enableDCRFapiValue = IdentityUtil.getProperty(OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT);
-        Boolean enableDCRFapi = enableDCRFapiValue != null ? Boolean.parseBoolean(enableDCRFapiValue) : null;
-
-        String clientAuthenticationRequiredValue = IdentityUtil.getProperty(
-                OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED);
-        Boolean clientAuthenticationRequired = clientAuthenticationRequiredValue != null ?
-                Boolean.parseBoolean(clientAuthenticationRequiredValue) : null;
-
-        String mandateSSAValue = IdentityUtil.getProperty(OAuthConstants.DCR_MANDATE_SSA);
-        Boolean mandateSSA = mandateSSAValue != null ? Boolean.parseBoolean(mandateSSAValue) : null;
-
+        Boolean enableDCRFapi = getBooleanFromString(
+                IdentityUtil.getProperty(OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT));
+        Boolean clientAuthenticationRequired = getBooleanFromString(IdentityUtil.getProperty(
+                OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED));
+        Boolean mandateSSA = getBooleanFromString(IdentityUtil.getProperty(OAuthConstants.DCR_MANDATE_SSA));
         String ssaJwks = IdentityUtil.getProperty(OAuthConstants.DCR_SSA_VALIDATION_JWKS);
 
         dcrConfiguration.setFAPIEnforced(enableDCRFapi);
@@ -173,26 +172,17 @@ public class DCRConfigUtils {
      *
      * @param resource Resource
      */
-    public static void overrideDCRServerConfigsWithDCRResourceConfig(Resource resource,
-                                                                     DCRConfiguration dcrConfiguration)
-            throws DCRMServerException {
+    private static void overrideDCRServerConfigsWithDCRResourceConfig(Resource resource,
+                                                                     DCRConfiguration dcrConfiguration) {
 
         if (resource.isHasAttribute()) {
             List<Attribute> attributes = resource.getAttributes();
             Map<String, String> attributeMap = getAttributeMap(attributes);
 
-            // preventing null values being converted to false
-
-            String enableDCRFapiValue = attributeMap.get(ENABLE_FAPI_ENFORCEMENT);
-            Boolean enableDCRFapi = enableDCRFapiValue != null ? Boolean.parseBoolean(enableDCRFapiValue) : null;
-
-            String clientAuthenticationRequiredValue = attributeMap.get(CLIENT_AUTHENTICATION_REQUIRED);
-            Boolean clientAuthenticationRequired = clientAuthenticationRequiredValue != null ?
-                    Boolean.parseBoolean(clientAuthenticationRequiredValue) : null;
-
-            String mandateSSAValue = attributeMap.get(MANDATE_SSA);
-            Boolean mandateSSA = mandateSSAValue != null ? Boolean.parseBoolean(mandateSSAValue) : null;
-
+            Boolean enableDCRFapi = getBooleanFromString(attributeMap.get(ENABLE_FAPI_ENFORCEMENT));
+            Boolean clientAuthenticationRequired = getBooleanFromString(
+                    attributeMap.get(CLIENT_AUTHENTICATION_REQUIRED));
+            Boolean mandateSSA = getBooleanFromString(attributeMap.get(MANDATE_SSA));
             String ssaJwks = attributeMap.get(SSA_JWKS);
 
             if (enableDCRFapi != null) {
@@ -211,6 +201,16 @@ public class DCRConfigUtils {
 
     }
 
+    /**
+     * Converts string to Boolean and prevent null values being converted to false.
+     * @param value String value.
+     * @return Boolean value.
+     */
+    private static Boolean getBooleanFromString(String value) {
+
+        return value != null ? Boolean.parseBoolean(value) : null;
+    }
+
     private static Map<String, String> getAttributeMap(List<Attribute> attributes) {
 
         if (CollectionUtils.isNotEmpty(attributes)) {
@@ -226,7 +226,7 @@ public class DCRConfigUtils {
      * @param dcrConfiguration Configuration Instance.
      * @return ResourceAdd Resource instance.
      */
-    public static ResourceAdd parseConfig(DCRConfiguration dcrConfiguration) {
+    private static ResourceAdd parseConfig(DCRConfiguration dcrConfiguration) {
 
         ResourceAdd resourceAdd = new ResourceAdd();
         resourceAdd.setName(DCR_CONFIG_RESOURCE_NAME);

@@ -239,9 +239,7 @@ public class DCRServiceComponent {
     )
     protected void registerConfigurationManager(ConfigurationManager configurationManager) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Registering the ConfigurationManager in DCR Service Component.");
-        }
+        log.debug("Registering the ConfigurationManager in DCR Service Component.");
         DCRDataHolder.getInstance().setConfigurationManager(configurationManager);
     }
 
@@ -253,10 +251,7 @@ public class DCRServiceComponent {
      */
     protected void unregisterConfigurationManager(ConfigurationManager configurationManager) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Unregistering the ConfigurationManager in DCR Service Component.");
-        }
+        log.debug("Unregistering the ConfigurationManager in DCR Service Component.");
         DCRDataHolder.getInstance().setConfigurationManager(null);
     }
-
 }

@@ -156,8 +156,7 @@ public class DCRMService {
      * @return
      * @throws DCRMException
      */
-    public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException,
-            UserStoreException {
+    public Application registerApplication(ApplicationRegistrationRequest registrationRequest) throws DCRMException {
 
         return createOAuthApplication(registrationRequest);
     }
@@ -447,25 +446,30 @@ public class DCRMService {
     }
 
     private Application createOAuthApplication(ApplicationRegistrationRequest registrationRequest)
-            throws DCRMException, UserStoreException {
+            throws DCRMException {
 
         String applicationOwner = StringUtils.isNotBlank(registrationRequest.getExtApplicationOwner()) ?
                 registrationRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+
         /*
-        ApplicationOwner will be null and a server error is thrown when creating an app, if the api authentication/
-        api security is disabled for DCR endpoint.
-        In such cases, we set the tenant admin as the owner of the application.
-        */
+         * ApplicationOwner will be null and a server error is thrown when creating an app, if the api authentication/
+         * api security is disabled for DCR endpoint. In such cases, we set the tenant admin as the application owner.
+         */
         if (StringUtils.isBlank(applicationOwner)) {
             DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
             boolean isClientAuthenticationRequired = dcrConfiguration.isAuthenticationRequired() != null ?
                     dcrConfiguration.isAuthenticationRequired() : true;
             if (!isClientAuthenticationRequired) {
-                applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
-                        .getRealmConfiguration().getAdminUserName();
+                try {
+                    applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
+                            .getRealmConfiguration().getAdminUserName();
+                } catch (UserStoreException e) {
+                    throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_GET_TENANT_ADMIN
+                            .getMessage()));
+                }
             }
         }
 
@@ -491,7 +495,7 @@ public class DCRMService {
         }
 
         // Check whether the software statement is mandatory and throw error if it is not provided.
-        if (isSSAMandatedAndSSAisEmpty(registrationRequest.getSoftwareStatement())) {
+        if (isSSAMandated() && StringUtils.isEmpty(registrationRequest.getSoftwareStatement())) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                     DCRMConstants.ErrorMessages.MANDATORY_SOFTWARE_STATEMENT.getMessage());
         }
@@ -544,23 +548,10 @@ public class DCRMService {
         return application;
     }
 
-    /**
-     * Check whether the software statement is mandatory and the software statement is empty.
-     *
-     * @param softwareStatement Software statement.
-     * @return True if the software statement is mandatory and the software statement is empty.
-     * @throws DCRMServerException If an error occurred while checking the software statement.
-     */
-    public boolean isSSAMandatedAndSSAisEmpty(String softwareStatement)
-            throws DCRMServerException {
+    private boolean isSSAMandated() throws DCRMServerException {
 
         DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
-        Boolean isSSAMandated = dcrConfiguration.getMandateSSA();
-
-        if (isSSAMandated != null) {
-            return isSSAMandated && StringUtils.isEmpty(softwareStatement);
-        }
-        return false;
+        return Boolean.TRUE.equals(dcrConfiguration.getMandateSSA());
     }
 
     private Application buildResponse(OAuthConsumerAppDTO createdApp, String tenantDomain) throws DCRMException {
@@ -1089,8 +1080,7 @@ public class DCRMService {
     private void validateSSASignature(String softwareStatement) throws DCRMClientException,
             IdentityOAuth2Exception, DCRMServerException {
 
-        DCRConfiguration dcrConfiguration = DCRConfigUtils
-                .getDCRConfiguration();
+        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
         String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {

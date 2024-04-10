@@ -46,7 +46,4 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
 
         DCRConfigUtils.setDCRConfiguration(dcrConfiguration);
     }
-
-
-
 }

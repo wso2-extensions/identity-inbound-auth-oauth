@@ -36,7 +36,7 @@ public class DCRConfigErrorUtils {
      */
     public static DCRMServerException handleServerException(DCRMConstants.DCRConfigErrorMessage error, String... data) {
 
-        return new DCRMServerException(String.format(error.getDescription(), data), error.getCode());
+        return new DCRMServerException(error.getCode(), String.format(error.getDescription(), data));
     }
 
     /**
@@ -50,7 +50,7 @@ public class DCRConfigErrorUtils {
     public static DCRMServerException handleServerException(DCRMConstants.DCRConfigErrorMessage error, Throwable e,
                                                             String... data) {
 
-        return new DCRMServerException(String.format(error.getDescription(), data), error.getCode(), e);
+        return new DCRMServerException(error.getCode(), String.format(error.getDescription(), data), e);
     }
 
     /**
@@ -62,7 +62,7 @@ public class DCRConfigErrorUtils {
      */
     public static DCRMClientException handleClientException(DCRMConstants.DCRConfigErrorMessage error, String... data) {
 
-        return new DCRMClientException(String.format(error.getDescription(), data), error.getCode());
+        return new DCRMClientException(error.getCode(), String.format(error.getDescription(), data));
     }
 
     /**
