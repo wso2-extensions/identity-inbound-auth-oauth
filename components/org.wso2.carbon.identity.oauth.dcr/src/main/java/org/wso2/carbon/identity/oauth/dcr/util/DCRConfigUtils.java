@@ -104,7 +104,7 @@ public class DCRConfigUtils {
     public static DCRConfiguration getDCRConfiguration() throws DCRMServerException {
 
         try {
-//            tenantDomain is resolved inside getResource() method.
+            // tenantDomain is resolved inside getResource() method.
             Resource resource = getResource(DCR_CONFIG_RESOURCE_TYPE_NAME, DCR_CONFIG_RESOURCE_NAME);
             DCRConfiguration dcrConfiguration = getDCRServerConfiguration();
             if (resource != null) {
