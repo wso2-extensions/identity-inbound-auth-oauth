@@ -23,19 +23,73 @@ package org.wso2.carbon.identity.oauth.dcr.model;
  */
 public class DCRConfiguration {
 
-    private Boolean isDCRFAPIEnforced;
+    private Boolean enableFapiEnforcement;
     private Boolean authenticationRequired;
     private Boolean mandateSSA;
     private String ssaJwks;
 
+    /**
+     * Get the value of enableFapiEnforcement.
+     *
+     * @return enableFapiEnforcement
+     */
+    public Boolean getEnableFapiEnforcement() {
+
+        return enableFapiEnforcement;
+    }
+
+    /**
+     * Get the value of authenticationRequired.
+     *
+     * @return authenticationRequired
+     */
+    public Boolean getAuthenticationRequired() {
+
+        return authenticationRequired;
+    }
+
+    /**
+     * Get the value of mandateSSA.
+     *
+     * @return mandateSSA
+     */
     public Boolean getMandateSSA() {
 
         return mandateSSA;
     }
 
     /**
+     * Get the value of ssaJwks.
+     *
+     * @return ssaJwks
+     */
+    public String getSsaJwks() {
+
+        return ssaJwks;
+    }
+
+    /**
+     * Set the value of enableFapiEnforcement.
+     *
+     * @param enableFapiEnforcement The value to set.
+     */
+    public void setEnableFapiEnforcement(Boolean enableFapiEnforcement) {
+
+        this.enableFapiEnforcement = enableFapiEnforcement;
+    }
+
+    /**
+     * Set the value of authenticationRequired.
+     *
+     * @param authenticationRequired The value to set.
+     */
+    public void setAuthenticationRequired(Boolean authenticationRequired) {
+
+        this.authenticationRequired = authenticationRequired;
+    }
+
+    /**
      * Set the value of mandateSSA.
-     * We only accept "true", "false" or null as valid values for this mandateSSA field.
      *
      * @param mandateSSA The value to set.
      */
@@ -44,31 +98,11 @@ public class DCRConfiguration {
         this.mandateSSA = mandateSSA;
     }
 
-    public Boolean isFAPIEnforced() {
-
-        return isDCRFAPIEnforced;
-    }
-
-    public void setFAPIEnforced(Boolean isDCRFAPIEnforced) {
-
-        this.isDCRFAPIEnforced = isDCRFAPIEnforced;
-    }
-
-    public Boolean isAuthenticationRequired() {
-
-        return authenticationRequired;
-    }
-
-    public void setAuthenticationRequired(Boolean authenticationRequired) {
-
-        this.authenticationRequired = authenticationRequired;
-    }
-
-    public String getSsaJwks() {
-
-        return ssaJwks;
-    }
-
+    /**
+     * Set the value of ssaJwks.
+     *
+     * @param ssaJwks The value to set.
+     */
     public void setSsaJwks(String ssaJwks) {
 
         this.ssaJwks = ssaJwks;

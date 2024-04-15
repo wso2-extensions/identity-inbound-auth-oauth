@@ -460,15 +460,15 @@ public class DCRMService {
          */
         if (StringUtils.isBlank(applicationOwner)) {
             DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
-            boolean isClientAuthenticationRequired = dcrConfiguration.isAuthenticationRequired() != null ?
-                    dcrConfiguration.isAuthenticationRequired() : true;
+            boolean isClientAuthenticationRequired = dcrConfiguration.getAuthenticationRequired() != null ?
+                    dcrConfiguration.getAuthenticationRequired() : true;
             if (!isClientAuthenticationRequired) {
                 try {
                     applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUserRealm()
                             .getRealmConfiguration().getAdminUserName();
                 } catch (UserStoreException e) {
                     throw new DCRMServerException(String.format(DCRMConstants.ErrorMessages.FAILED_TO_GET_TENANT_ADMIN
-                            .getMessage()));
+                            .getMessage()), e);
                 }
             }
         }
@@ -731,7 +731,7 @@ public class DCRMService {
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
             DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
-            boolean enableFAPIDCR = dcrConfiguration.isFAPIEnforced();
+            boolean enableFAPIDCR = dcrConfiguration.getEnableFapiEnforcement();
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
         }
 

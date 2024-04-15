@@ -61,8 +61,8 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
 
         DCRConfiguration dcrConfiguration = invokeMethod(DCRConfigUtils.class, "getDCRServerConfiguration");
 
-        assertEquals(true, dcrConfiguration.isFAPIEnforced());
-        assertEquals(true, dcrConfiguration.isAuthenticationRequired());
+        assertEquals(true, dcrConfiguration.getEnableFapiEnforcement());
+        assertEquals(true, dcrConfiguration.getAuthenticationRequired());
         assertEquals(dummySSAJwks, dcrConfiguration.getSsaJwks());
 
         this.dcrConfiguration = dcrConfiguration;
@@ -81,8 +81,8 @@ public class DCRConfigUtilsTest extends PowerMockTestCase {
         invokeMethod(DCRConfigUtils.class,
                 "overrideDCRServerConfigsWithDCRResourceConfig", resource, this.dcrConfiguration);
 
-        assertEquals(false, this.dcrConfiguration.isFAPIEnforced());
-        assertEquals(false, this.dcrConfiguration.isAuthenticationRequired());
+        assertEquals(false, this.dcrConfiguration.getEnableFapiEnforcement());
+        assertEquals(false, this.dcrConfiguration.getAuthenticationRequired());
     }
 
     @Test(priority = 3, description = "Test parseConfig method properly converts the DCRConfiguration object to " +
