@@ -478,7 +478,7 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                     }
                     dao.addOAuthApplication(app);
-                    AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app);
+                    AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
                                 " in tenant domain: " + tenantDomain);
