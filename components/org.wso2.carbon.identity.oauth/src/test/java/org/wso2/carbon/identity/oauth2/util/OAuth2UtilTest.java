@@ -255,6 +255,7 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
         mockStatic(CarbonUtils.class);
         mockStatic(IdentityCoreServiceComponent.class);
         mockStatic(NetworkUtils.class);
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
 
         when(IdentityCoreServiceComponent.getConfigurationContextService()).thenReturn(mockConfigurationContextService);
         when(mockConfigurationContextService.getServerConfigContext()).thenReturn(mockConfigurationContext);
