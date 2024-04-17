@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -51,7 +52,6 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
-import org.wso2.carbon.identity.oauth.dcr.util.DCRConfigUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRMUtils;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -80,6 +80,7 @@ public class DCRMService {
 
     private static final Log log = LogFactory.getLog(DCRMService.class);
     private static OAuthAdminService oAuthAdminService = new OAuthAdminService();
+    private static DCRConfigurationMgtServiceImpl dcrConfigurationMgtService = new DCRConfigurationMgtServiceImpl();
     private static final String AUTH_TYPE_OAUTH_2 = "oauth2";
     private static final String OAUTH_VERSION = "OAuth-2.0";
     private static final String GRANT_TYPE_SEPARATOR = " ";
@@ -459,7 +460,7 @@ public class DCRMService {
          * api security is disabled for DCR endpoint. In such cases, we set the tenant admin as the application owner.
          */
         if (StringUtils.isBlank(applicationOwner)) {
-            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+            DCRConfiguration dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
             boolean isClientAuthenticationRequired = dcrConfiguration.getAuthenticationRequired() != null ?
                     dcrConfiguration.getAuthenticationRequired() : true;
             if (!isClientAuthenticationRequired) {
@@ -550,7 +551,7 @@ public class DCRMService {
 
     private boolean isSSAMandated() throws DCRMServerException {
 
-        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+        DCRConfiguration dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
         return Boolean.TRUE.equals(dcrConfiguration.getMandateSSA());
     }
 
@@ -730,7 +731,7 @@ public class DCRMService {
         oAuthConsumerApp.setBypassClientCredentials(registrationRequest.isExtPublicClient());
         boolean enableFAPI = Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI));
         if (enableFAPI) {
-            DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+            DCRConfiguration dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
             boolean enableFAPIDCR = dcrConfiguration.getEnableFapiEnforcement();
             oAuthConsumerApp.setFapiConformanceEnabled(enableFAPIDCR);
         }
@@ -1080,7 +1081,7 @@ public class DCRMService {
     private void validateSSASignature(String softwareStatement) throws DCRMClientException,
             IdentityOAuth2Exception, DCRMServerException {
 
-        DCRConfiguration dcrConfiguration = DCRConfigUtils.getDCRConfiguration();
+        DCRConfiguration dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
         String jwksURL = dcrConfiguration.getSsaJwks();
         if (StringUtils.isNotEmpty(jwksURL)) {
             try {
