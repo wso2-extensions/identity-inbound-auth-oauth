@@ -103,6 +103,21 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         return tokenResp;
     }
 
+    /**
+     * Build and return a string to be used as a lock for synchronous token issuance for refresh token grant type.
+     *
+     * @param tokReqMsgCtx        OAuthTokenReqMessageContext
+     * @return A string to be used as a lock for synchronous token issuance for refresh token grant type.
+     */
+    public String buildSyncLockString(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        String authzCode = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode();
+        String tokenBindingReference = OAuth2Util.getTokenBindingReferenceString(tokReqMsgCtx);
+
+        return AUTHZ_CODE + ":" + clientId + ":" + authzCode + ":" + tokenBindingReference;
+    }
+
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  OAuth2AccessTokenReqDTO tokenReq, AuthzCodeDO authzCodeBean) {
         tokReqMsgCtx.setAuthorizedUser(authzCodeBean.getAuthorizedUser());
