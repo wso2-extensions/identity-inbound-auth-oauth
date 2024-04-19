@@ -122,8 +122,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
                     } else {
                         /* In order for client attestation to be enabled it requires API-based authentication to be
                          enabled. Therefore, if API-based authentication is disabled, client attestation is disabled.*/
-                        clientAttestationContext = new ClientAttestationContext();
-                        clientAttestationContext.setAttestationEnabled(false);
+                        clientAttestationContext = new ClientAttestationContext(false);
                         clientAttestationContext.setAttested(false);
                     }
                     // Set the client attestation context in the HTTP request.
