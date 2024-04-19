@@ -64,6 +64,7 @@ public class TokenValidationHandler {
     private Map<String, OAuth2TokenValidator> tokenValidators = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     private TokenProvider tokenValidationProcessor;
     private static final String BEARER_TOKEN_TYPE = "Bearer";
+    private static final String DPOP_TOKEN_TYPE = "DPoP";
     private static final String BEARER_TOKEN_TYPE_JWT = "jwt";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
     private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
@@ -748,7 +749,8 @@ public class TokenValidationHandler {
         }
 
         OAuth2TokenValidator tokenValidator;
-        if (isJWTTokenValidation(accessToken.getIdentifier())) {
+        if (!StringUtils.equalsIgnoreCase(accessToken.getTokenType(), DPOP_TOKEN_TYPE) &&
+                isJWTTokenValidation(accessToken.getIdentifier())) {
             /*
             If the token is a self-contained JWT based access token and the
             config EnableJWTTokenValidationDuringIntrospection is set to true
