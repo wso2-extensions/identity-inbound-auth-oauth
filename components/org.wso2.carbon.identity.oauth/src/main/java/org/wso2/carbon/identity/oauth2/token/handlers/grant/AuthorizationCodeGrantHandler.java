@@ -114,8 +114,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String authzCode = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode();
         String tokenBindingReference = OAuth2Util.getTokenBindingReferenceString(tokReqMsgCtx);
+        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
 
-        return AUTHZ_CODE + ":" + clientId + ":" + authzCode + ":" + tokenBindingReference;
+        return AUTHZ_CODE + ":" + clientId + ":" + authzCode + ":" + tokenBindingReference + ":" + scope;
     }
 
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,

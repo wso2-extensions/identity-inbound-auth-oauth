@@ -198,8 +198,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
         String refreshToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRefreshToken();
         String tokenBindingReference = OAuth2Util.getTokenBindingReferenceString(tokReqMsgCtx);
+        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
 
-        return REFRESH_TOKEN + ":" + clientId + ":" + refreshToken + ":" + tokenBindingReference;
+        return REFRESH_TOKEN + ":" + clientId + ":" + refreshToken + ":" + tokenBindingReference + ":" + scope;
     }
 
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
