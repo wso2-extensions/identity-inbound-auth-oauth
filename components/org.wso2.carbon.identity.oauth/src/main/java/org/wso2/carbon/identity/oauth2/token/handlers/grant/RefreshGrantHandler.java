@@ -61,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId;
@@ -184,6 +185,22 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokReqMsgCtx.setScope(requestedScopes);
         }
         return true;
+    }
+
+    /**
+     * Build and return a string to be used as a lock for synchronous token issuance for refresh token grant type.
+     *
+     * @param tokReqMsgCtx        OAuthTokenReqMessageContext
+     * @return A string to be used as a lock for synchronous token issuance for refresh token grant type.
+     */
+    public String buildSyncLockString(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        String refreshToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRefreshToken();
+        String tokenBindingReference = OAuth2Util.getTokenBindingReferenceString(tokReqMsgCtx);
+        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
+
+        return REFRESH_TOKEN + ":" + clientId + ":" + refreshToken + ":" + tokenBindingReference + ":" + scope;
     }
 
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,

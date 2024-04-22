@@ -111,4 +111,15 @@ public interface AuthorizationGrantHandler {
      * @throws IdentityOAuth2Exception
      */
     boolean isAuthorizedClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
+
+    /**
+     * Build the string to be used for the sync lock for synchoronized token issuance.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @return String to be used as the key for the sync lock
+     */
+    default String buildSyncLockString(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        return null;
+    }
 }

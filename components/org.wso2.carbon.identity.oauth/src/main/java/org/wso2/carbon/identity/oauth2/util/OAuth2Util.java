@@ -902,6 +902,27 @@ public class OAuth2Util {
         return DigestUtils.md5Hex(tokenBindingValue);
     }
 
+    /**
+     * Get token binding reference string from OAuthTokenReqMessageContext.
+     * Returns NONE if token binding is not enabled or token binding reference is not available.
+     *
+     * @param tokReqMsgCtx OAuthTokenReqMessageContext.
+     * @return token binding reference.
+     */
+    public static String getTokenBindingReferenceString(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.getTokenBinding() == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Token binding data is null.");
+            }
+            return NONE;
+        }
+        if (StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference())) {
+            return NONE;
+        }
+        return tokReqMsgCtx.getTokenBinding().getBindingReference();
+    }
+
     public static AccessTokenDO validateAccessTokenDO(AccessTokenDO accessTokenDO) {
 
         long validityPeriodMillis = accessTokenDO.getValidityPeriodInMillis();
