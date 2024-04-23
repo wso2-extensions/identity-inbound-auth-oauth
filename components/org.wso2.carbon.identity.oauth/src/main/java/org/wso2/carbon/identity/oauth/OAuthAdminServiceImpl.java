@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -478,6 +479,12 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                     }
                     dao.addOAuthApplication(app);
+                    if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
+                        String consoleCallBackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
+                        if (StringUtils.isNotEmpty(consoleCallBackURL)) {
+                            app.setCallbackUrl(consoleCallBackURL);
+                        }
+                    }
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
