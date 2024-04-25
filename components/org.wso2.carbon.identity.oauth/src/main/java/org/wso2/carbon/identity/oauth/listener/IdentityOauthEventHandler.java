@@ -241,11 +241,11 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 AuthorizedAPI authorizedAPI = OAuthComponentServiceHolder.getInstance()
                         .getAuthorizedAPIManagementService()
                         .getAuthorizedAPI(appId, apiId, tenantDomain);
-                List<String> removedScopes = new ArrayList<>();
-                removedScopes.addAll(authorizedAPI.getScopes().stream()
-                                .map(Scope::getName).filter(scope ->
-                        !removedScopes.contains(scope)).collect(Collectors.toList()));
-
+                if (authorizedAPI.getScopes() == null) {
+                    return;
+                }
+                List<String> removedScopes = authorizedAPI.getScopes().stream()
+                        .map(Scope::getName).collect(Collectors.toList());
                 if (!removedScopes.isEmpty()) {
                     OAuth2ServiceComponentHolder.getInstance()
                             .getRevocationProcessor().revokeTokens(appId, apiId, removedScopes, tenantDomain);
