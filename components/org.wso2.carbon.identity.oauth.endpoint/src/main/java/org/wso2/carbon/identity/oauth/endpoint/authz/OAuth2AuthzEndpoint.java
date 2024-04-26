@@ -1920,20 +1920,20 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.getSuccessResponseDTO().setAuthorizationCode(authorizationCode);
 
         AccessTokenExtendedAttributes tokenExtendedAttributes = null;
-        tokenExtendedAttributes = getExtendedTokenAttributes(oAuthMessage, oauth2Params);
+        ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
+        if (implementsTokenAttributeExtension(serviceProvider)) {
+            tokenExtendedAttributes = getExtendedTokenAttributes(oAuthMessage, oauth2Params, serviceProvider);
+        }
         addUserAttributesToOAuthMessage(oAuthMessage, authorizationCode, authzRespDTO.getCodeId(),
                 tokenBindingValue, tokenExtendedAttributes);
     }
 
     private AccessTokenExtendedAttributes getExtendedTokenAttributes(OAuthMessage oAuthMessage,
-                                                                     OAuth2Parameters oauth2Params) {
+                                                                     OAuth2Parameters oauth2Params,
+                                                                     ServiceProvider serviceProvider) {
 
         try {
-            ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            if (!implementsTokenAttributeExtension(serviceProvider)) {
-                return null;
-            }
             Gson gson = new Gson();
             JSEngine jsEngine = EngineUtils.getEngineFromConfig();
             JsLogger jsLogger = new JsLogger();
