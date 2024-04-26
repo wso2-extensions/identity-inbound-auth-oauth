@@ -263,6 +263,7 @@ public class OAuth2AuthzEndpoint {
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
     private static final String REGEX_PATTERN = "regexp";
     private static final String OIDC_SESSION_ID = "OIDC_SESSION_ID";
+    public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData = function (";
 
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
@@ -1918,9 +1919,7 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.getSuccessResponseDTO().setAuthorizationCode(authorizationCode);
 
         AccessTokenExtendedAttributes tokenExtendedAttributes = null;
-        if (isConsentResponseFromUser(oAuthMessage)) {
-            tokenExtendedAttributes = getExtendedTokenAttributes(oAuthMessage, oauth2Params);
-        }
+        tokenExtendedAttributes = getExtendedTokenAttributes(oAuthMessage, oauth2Params);
         addUserAttributesToOAuthMessage(oAuthMessage, authorizationCode, authzRespDTO.getCodeId(),
                 tokenBindingValue, tokenExtendedAttributes);
     }
@@ -1931,8 +1930,8 @@ public class OAuth2AuthzEndpoint {
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            if (!EndpointUtil.isExternalConsentPageEnabledForSP(serviceProvider) ||
-                    serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig() == null) {
+            if (!serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig()
+                    .getContent().contains(DYNAMIC_TOKEN_DATA_FUNCTION)) {
                 return null;
             }
             Gson gson = new Gson();
