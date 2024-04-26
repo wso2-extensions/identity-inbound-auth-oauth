@@ -264,7 +264,7 @@ public class OAuth2AuthzEndpoint {
     private static final String SET_COOKIE_HEADER = "Set-Cookie";
     private static final String REGEX_PATTERN = "regexp";
     private static final String OIDC_SESSION_ID = "OIDC_SESSION_ID";
-    public static final String DYNAMIC_TOKEN_DATA_FUNCTION = "dynamicTokenData = function (";
+    private static final String DYNAMIC_TOKEN_FUNCTION_IDENTIFIER = "dynamicTokenData = function (";
 
     private static final String PARAMETERS = "params";
     private static final String FORM_POST_REDIRECT_URI = "redirectURI";
@@ -1931,11 +1931,7 @@ public class OAuth2AuthzEndpoint {
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            AuthenticationScriptConfig scriptConfig = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                    .getAuthenticationScriptConfig();
-            boolean isValidScript = scriptConfig != null && scriptConfig.getContent() != null &&
-                    scriptConfig.getContent().contains(DYNAMIC_TOKEN_DATA_FUNCTION);
-            if (!isValidScript) {
+            if (implementsTokenAttributeExtension(serviceProvider)) {
                 return null;
             }
             Gson gson = new Gson();
@@ -1977,6 +1973,20 @@ public class OAuth2AuthzEndpoint {
             log.warn(msg, e);
         }
         return null;
+    }
+
+    /**
+     * Checks if the given ServiceProvider has an authentication script that contains the dynamic token function.
+     *
+     * @param sp The ServiceProvider to check.
+     * @return true if the dynamic token function is implemented in the authentication script; false otherwise.
+     */
+    private boolean implementsTokenAttributeExtension(ServiceProvider sp) {
+
+        AuthenticationScriptConfig scriptConfig = sp.getLocalAndOutBoundAuthenticationConfig()
+                .getAuthenticationScriptConfig();
+        return scriptConfig != null && scriptConfig.getContent() != null &&
+                scriptConfig.getContent().contains(DYNAMIC_TOKEN_FUNCTION_IDENTIFIER);
     }
 
     private void setAccessToken(OAuth2AuthorizeRespDTO authzRespDTO,
