@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
+import org.wso2.carbon.identity.application.common.model.script.AuthenticationScriptConfig;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -1930,8 +1931,11 @@ public class OAuth2AuthzEndpoint {
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            if (!serviceProvider.getLocalAndOutBoundAuthenticationConfig().getAuthenticationScriptConfig()
-                    .getContent().contains(DYNAMIC_TOKEN_DATA_FUNCTION)) {
+            AuthenticationScriptConfig scriptConfig = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getAuthenticationScriptConfig();
+            boolean isValidScript = scriptConfig != null && scriptConfig.getContent() != null &&
+                    scriptConfig.getContent().contains(DYNAMIC_TOKEN_DATA_FUNCTION);
+            if (!isValidScript) {
                 return null;
             }
             Gson gson = new Gson();
