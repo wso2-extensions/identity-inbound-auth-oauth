@@ -334,7 +334,8 @@ public class OAuthAppDAO {
                             oauthApp.setCallbackUrl(rSet.getString(5));
                             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
-                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5)));
+                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5),
+                                                oauthApp.getApplicationName()));
                                 if (isRootOrganization(tenantId)) {
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
                                 }
@@ -445,7 +446,8 @@ public class OAuthAppDAO {
                             oauthApp.setCallbackUrl(rSet.getString(5));
                             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
-                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5)));
+                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(5),
+                                                oauthApp.getApplicationName()));
                                 if (isRootOrganization(tenantId)) {
                                     String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
@@ -537,7 +539,9 @@ public class OAuthAppDAO {
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
                         if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
-                                    ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL)));
+                                    ApplicationMgtUtil.
+                                            resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL),
+                                                    oauthApp.getApplicationName()));
                             if (isRootOrganization(rSet.getInt(TENANT_ID))) {
                                 String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
                                 resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
@@ -615,7 +619,9 @@ public class OAuthAppDAO {
                         oauthApp.setCallbackUrl(rSet.getString(CALLBACK_URL));
                         if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                             oauthApp.setCallbackUrl(
-                                    ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL)));
+                                    ApplicationMgtUtil
+                                            .resolveOriginUrlFromPlaceholders(rSet.getString(CALLBACK_URL),
+                                                    oauthApp.getApplicationName()));
                             if (isRootOrganization(rSet.getInt(TENANT_ID))) {
                                 String tenantDomain = IdentityTenantUtil.getTenantDomain(rSet.getInt(TENANT_ID));
                                 resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
@@ -703,7 +709,9 @@ public class OAuthAppDAO {
                             oauthApp.setCallbackUrl(rSet.getString(6));
                             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthApp.getApplicationName())) {
                                 oauthApp.setCallbackUrl(
-                                        ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(rSet.getString(6)));
+                                        ApplicationMgtUtil
+                                                .resolveOriginUrlFromPlaceholders(rSet.getString(6),
+                                                        oauthApp.getApplicationName()));
                                 if (isRootOrganization(tenantID)) {
                                     String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantID);
                                     resolveCallbackFromServerConfigForSystemApps(tenantDomain, oauthApp);
