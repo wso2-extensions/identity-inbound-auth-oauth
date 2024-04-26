@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dcr.service;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.internal.util.reflection.FieldSetter;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.testng.PowerMockTestCase;
@@ -37,13 +38,13 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -52,7 +53,6 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
-import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
@@ -91,8 +91,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
  * Unit test covering DCRMService
  */
 @PrepareForTest({DCRMService.class, ServiceProvider.class, IdentityProviderManager.class,
-        OAuth2Util.class, OAuthServerConfiguration.class, JWTSignatureValidationUtils.class, IdentityUtil.class,
-        DCRDataHolder.class, DCRConfigurationMgtServiceImpl.class})
+        OAuth2Util.class, OAuthServerConfiguration.class, JWTSignatureValidationUtils.class, IdentityUtil.class})
 public class DCRMServiceTest extends PowerMockTestCase {
 
     private final String dummyConsumerKey = "dummyConsumerKey";
@@ -106,14 +105,9 @@ public class DCRMServiceTest extends PowerMockTestCase {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
-    private final String dummyJwskUri = "http://localhost.com/jwks";
 
     @Mock
     private OAuthConsumerAppDTO dto;
-
-    @Mock
-    DCRDataHolder dataHolder;
-
     private DCRMService dcrmService;
     private OAuthAdminService mockOAuthAdminService;
     private ApplicationRegistrationRequest applicationRegistrationRequest;
@@ -123,6 +117,7 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
     private UserRealm mockedUserRealm;
     private AbstractUserStoreManager mockedUserStoreManager;
+    private ConfigurationManager mockConfigurationManager;
 
     @ObjectFactory
     public IObjectFactory getObjectFactory() {
@@ -149,6 +144,8 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         mockedUserRealm = mock(UserRealm.class);
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+        mockConfigurationManager = Mockito.mock(ConfigurationManager.class);
+        DCRDataHolder.getInstance().setConfigurationManager(mockConfigurationManager);
     }
 
     @DataProvider(name = "DTOProvider")
@@ -490,11 +487,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
                 .getServiceProvider(dummyClientName, dummyTenantDomain);
 
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
-
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
@@ -516,11 +508,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
@@ -595,11 +582,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
@@ -676,11 +658,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 "  grantTypes: " + Arrays.asList(oAuthConsumerApp.getGrantTypes().split(" ")) + "\n" +
                 "}\n";
 
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
-
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClientName(), dummyClientName);
         assertEquals(application.getGrantTypes(), dummyGrantTypes);
@@ -711,11 +688,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(new OAuthConsumerAppDTO());
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenThrow(IdentityOAuthAdminException.class);
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
@@ -783,11 +755,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService)
                 .registerOAuthApplicationData(oAuthConsumerApp);
 
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
-
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
@@ -834,11 +801,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
                 .deleteApplication(dummyClientName, dummyTenantDomain, dummyUserName);
 
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
-
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
@@ -859,10 +821,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
-            DCRConfiguration dcrConfiguration = new DCRConfiguration();
-            dcrConfiguration.setMandateSSA(false);
-            mockStatic(DCRConfigurationMgtServiceImpl.class);
-            when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_SP.toString());
@@ -880,11 +838,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
 
         applicationRegistrationRequest.setRedirectUris(redirectUri);
         applicationRegistrationRequest.setSpTemplateName("");
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
@@ -920,11 +873,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 .thenReturn(true);
         doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
                 .createApplicationWithTemplate(serviceProvider, dummyTenantDomain, dummyUserName, dummyTemplateName);
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
@@ -972,11 +920,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
-
-            DCRConfiguration dcrConfiguration = new DCRConfiguration();
-            dcrConfiguration.setMandateSSA(false);
-            mockStatic(DCRConfigurationMgtServiceImpl.class);
-            when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
@@ -1215,11 +1158,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
         when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class)))
                 .thenReturn(oAuthConsumerApp);
 
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setMandateSSA(false);
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
-
         Application application = dcrmService.registerApplication(applicationRegistrationRequest);
         assertEquals(application.getClientName(), dummyClientName);
         String regexp = application.getRedirectUris().get(0)
@@ -1255,12 +1193,6 @@ public class DCRMServiceTest extends PowerMockTestCase {
                 "dHBzOlwvXC8xMC4xMDAuOC4yOjk0NDNcL29hdXRoMlwvdG9rZW4iLCJleHAiOjE1MjUyMzk5MzcsImlhdCI6MTUyNTIzNjMzN30" +
                 ".DOPv7UHymV3zJJpxxWqbGcrvjY-OOzmdJVUxwHorDlOGABP_X_Krd584rLIbcYFmd8q5wSUuX21wXCLCOXFli1CUC-ZfP0S" +
                 "0fJqUZv_ynNo6NTFY9d3-sv0b7QYT-8mnxSmjqqsmDrOcxlD7gcYkkr1pLLQe9ZK2B_lR5KZlMW0";
-
-        DCRConfiguration dcrConfiguration = new DCRConfiguration();
-        dcrConfiguration.setSsaJwks(dummyJwskUri);
-
-        mockStatic(DCRConfigurationMgtServiceImpl.class);
-        when(DCRConfigurationMgtServiceImpl.getDCRServerConfiguration()).thenReturn(dcrConfiguration);
 
         mockStatic(JWTSignatureValidationUtils.class);
         when(JWTSignatureValidationUtils.validateUsingJWKSUri(any(), anyString())).thenReturn(false);
