@@ -1931,7 +1931,7 @@ public class OAuth2AuthzEndpoint {
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
             // TODO: Improve to read the script separately instead of reading from adaptive script.
-            if (implementsTokenAttributeExtension(serviceProvider)) {
+            if (!implementsTokenAttributeExtension(serviceProvider)) {
                 return null;
             }
             Gson gson = new Gson();
