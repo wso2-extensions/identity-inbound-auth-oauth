@@ -21,6 +21,7 @@
 
     <test name="oauth-common-test">
         <classes>
+            <class name="org.wso2.carbon.identity.oauth.common.SubjectTokenResponseValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.common.IDTokenResponseValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth.common.NTLMAuthenticationValidatorTest"/>

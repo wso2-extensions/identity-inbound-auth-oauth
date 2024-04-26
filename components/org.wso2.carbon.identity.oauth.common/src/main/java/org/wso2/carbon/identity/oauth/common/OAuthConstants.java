@@ -186,6 +186,9 @@ public final class OAuthConstants {
     public static final String CODE_TOKEN = "code token";
     public static final String CODE_IDTOKEN = "code id_token";
     public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
+    public static final String SUBJECT_TOKEN = "subject_token";
+    public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
+    public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
     public static final String IDTOKEN_TOKEN = "id_token token";
     public static final String SCOPE = "scope";
 
@@ -351,6 +354,7 @@ public final class OAuthConstants {
         public static final String RESPONSE_TYPE = "response_type";
         public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
+        public static final String REQUESTED_SUBJECT = "requested_subject";
 
         private OAuth20Params() {
 
