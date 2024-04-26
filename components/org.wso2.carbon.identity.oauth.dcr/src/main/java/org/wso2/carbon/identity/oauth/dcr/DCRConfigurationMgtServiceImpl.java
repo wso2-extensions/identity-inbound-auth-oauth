@@ -100,7 +100,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      * @return Retrieved resource from the configuration store. Returns {@code null} if the resource is not found.
      * @throws ConfigurationManagementException exception
      */
-    private static Resource getResource(String resourceTypeName, String resourceName)
+    private Resource getResource(String resourceTypeName, String resourceName)
             throws ConfigurationManagementException {
 
         try {
@@ -117,7 +117,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         }
     }
 
-    private static ConfigurationManager getConfigurationManager() {
+    private ConfigurationManager getConfigurationManager() {
 
         return DCRDataHolder.getInstance().getConfigurationManager();
     }
@@ -127,7 +127,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      *
      * @return DCRConfiguration The DCR configuration.
      */
-    public static DCRConfiguration getDCRServerConfiguration() {
+    private DCRConfiguration getDCRServerConfiguration() {
 
         DCRConfiguration dcrConfiguration = new DCRConfiguration();
 
@@ -148,10 +148,11 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
 
     /**
      * Converts string to Boolean and prevent null values being converted to false.
+     *
      * @param value String value.
      * @return Boolean value.
      */
-    private static Boolean getBooleanFromString(String value) {
+    private Boolean getBooleanFromString(String value) {
 
         return value != null ? Boolean.parseBoolean(value) : null;
     }
@@ -161,7 +162,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      *
      * @param resource Resource
      */
-    private static void overrideDCRServerConfigsWithDCRResourceConfig(Resource resource,
+    private void overrideDCRServerConfigsWithDCRResourceConfig(Resource resource,
                                                                       DCRConfiguration dcrConfiguration) {
 
         if (resource.isHasAttribute()) {
@@ -189,7 +190,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         }
     }
 
-    private static Map<String, String> getAttributeMap(List<Attribute> attributes) {
+    private Map<String, String> getAttributeMap(List<Attribute> attributes) {
 
         if (CollectionUtils.isNotEmpty(attributes)) {
             return attributes.stream().collect(Collectors.toMap(Attribute::getKey, Attribute::getValue));
@@ -198,7 +199,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         return Collections.emptyMap();
     }
 
-    private static void validateMandateSSA (DCRConfiguration dcrConfiguration) throws DCRMClientException {
+    private void validateMandateSSA (DCRConfiguration dcrConfiguration) throws DCRMClientException {
 
         if (Boolean.FALSE.equals(dcrConfiguration.getAuthenticationRequired()) &&
                 !Boolean.TRUE.equals(dcrConfiguration.getMandateSSA())) {
@@ -217,7 +218,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
      * @param dcrConfiguration Configuration Instance.
      * @return ResourceAdd Resource instance.
      */
-    private static ResourceAdd parseConfig(DCRConfiguration dcrConfiguration) {
+    private ResourceAdd parseConfig(DCRConfiguration dcrConfiguration) {
 
         ResourceAdd resourceAdd = new ResourceAdd();
         resourceAdd.setName(DCR_CONFIG_RESOURCE_NAME);
@@ -246,7 +247,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
         return resourceAdd;
     }
 
-    private static void addAttribute(List<Attribute> attributeList, String key, String value) {
+    private void addAttribute(List<Attribute> attributeList, String key, String value) {
 
         if (StringUtils.isNotBlank(value)) {
             Attribute attribute = new Attribute();
