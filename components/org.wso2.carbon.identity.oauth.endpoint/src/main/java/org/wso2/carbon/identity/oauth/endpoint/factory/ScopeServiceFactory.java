@@ -18,11 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.factory;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
@@ -51,43 +53,63 @@ public class ScopeServiceFactory extends AbstractFactoryBean<ScopeMetadataServic
         if (this.scopeMetadataService != null) {
             return this.scopeMetadataService;
         }
+
+        ScopeMetadataService scopeMetadataService = getScopeMetadataService();
+        if (scopeMetadataService != null) {
+            this.scopeMetadataService = scopeMetadataService;
+            return this.scopeMetadataService;
+        }
         // Get the OSGi services registered for ScopeService interface.
         List<Object> scopeServices = PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiServices(ScopeMetadataService.class, null);
-        if (scopeServices == null || scopeServices.isEmpty()) {
-            throw new IdentityOAuth2ServerException("No ScopeService implementation found.");
-        }
-
-        ScopeMetadataService selectedService = null;
-        if (scopeServices.size() <= 2) {
-            for (Object scopeService : scopeServices) {
-                if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME && scopeService instanceof OAuth2ScopeService) {
-                    selectedService = (ScopeMetadataService) scopeService;
-                    break;
-                } else if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
-                        scopeService instanceof APIResourceBasedScopeMetadataService) {
-                    selectedService = (ScopeMetadataService) scopeService;
-                    break;
+        if (scopeServices != null && !scopeServices.isEmpty()) {
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                for (Object scopeService : scopeServices) {
+                    if (scopeService instanceof OAuth2ScopeService) {
+                        scopeMetadataService = (ScopeMetadataService) scopeService;
+                    }
                 }
-            }
-        } else {
-            for (Object scopeService : scopeServices) {
-                if (scopeService instanceof OAuth2ScopeService ||
-                        scopeService instanceof APIResourceBasedScopeMetadataService) {
-                    continue;
+            } else {
+                for (Object scopeService : scopeServices) {
+                    if (scopeService instanceof APIResourceBasedScopeMetadataService) {
+                        scopeMetadataService = (APIResourceBasedScopeMetadataService) scopeService;
+                    }
                 }
-                selectedService = (ScopeMetadataService) scopeService;
-                break;
             }
         }
 
-        if (selectedService == null) {
-            throw new IdentityOAuth2ServerException("Suitable ScopeService implementation not found.");
+        if (scopeMetadataService == null) {
+            throw new IdentityOAuth2ServerException("ScopeMetadataService is not available.");
         }
-        if (log.isDebugEnabled()) {
-            log.debug("Returning the ScopeService: " + selectedService.getClass().getName());
-        }
-        this.scopeMetadataService = selectedService;
+        this.scopeMetadataService = scopeMetadataService;
         return this.scopeMetadataService;
+    }
+
+    private ScopeMetadataService getScopeMetadataService() {
+
+        String scopeMetadataServiceClassName = OAuthServerConfiguration.getInstance()
+                .getScopeMetadataExtensionImpl();
+        if (scopeMetadataServiceClassName != null) {
+            try {
+                String className = StringUtils.trimToEmpty(scopeMetadataServiceClassName);
+                Class<?> clazz = Class.forName(className);
+                Object obj = clazz.newInstance();
+                if (obj instanceof ScopeMetadataService) {
+                    return (ScopeMetadataService) obj;
+                } else {
+                    log.error(scopeMetadataServiceClassName + " is not an instance of " +
+                            ScopeMetadataService.class.getName());
+                }
+            } catch (ClassNotFoundException e) {
+                log.error("ClassNotFoundException while trying to find class " + scopeMetadataServiceClassName);
+            } catch (InstantiationException e) {
+                log.error("InstantiationException while trying to instantiate class " +
+                        scopeMetadataServiceClassName);
+            } catch (IllegalAccessException e) {
+                log.error("IllegalAccessException while trying to instantiate class " +
+                        scopeMetadataServiceClassName);
+            }
+        }
+        return null;
     }
 }
