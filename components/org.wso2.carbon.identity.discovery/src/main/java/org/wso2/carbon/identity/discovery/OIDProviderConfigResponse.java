@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.discovery;
 
 
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -83,6 +85,8 @@ public class OIDProviderConfigResponse {
     private Boolean tlsClientCertificateBoundAccessTokens;
     private String mtlsTokenEndpoint;
     private String mtlsPushedAuthorizationRequestEndpoint;
+
+    private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
     public String getIssuer() {
         return issuer;
@@ -593,7 +597,7 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);
         configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN.toLowerCase(),
                 this.tlsClientCertificateBoundAccessTokens);
-        if (DiscoveryUtil.isMutualTLSAliasesEnabled()) {
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED))) {
             Map<String, String> mtlsAliases = new HashMap<String, String>();
             mtlsAliases.put(DiscoveryConstants.TOKEN_ENDPOINT.toLowerCase(), this.mtlsTokenEndpoint);
             mtlsAliases.put(DiscoveryConstants.PUSHED_AUTHORIZATION_REQUEST_ENDPOINT.toLowerCase(),

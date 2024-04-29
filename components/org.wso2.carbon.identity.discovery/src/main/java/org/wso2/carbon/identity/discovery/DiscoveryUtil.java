@@ -28,7 +28,6 @@ public class DiscoveryUtil {
 
     public static final String OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY = "OAuth" +
             ".UseEntityIdAsIssuerInOidcDiscovery";
-    private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
     /**
      * Resident Idp entity id is honoured as the OIDC issuer location based on the configuration. This addresses
@@ -44,17 +43,4 @@ public class DiscoveryUtil {
         return Boolean.parseBoolean(useEntityIdAsIssuerInDiscovery);
     }
 
-    /**
-     * Check whether mutual TLS aliases are enabled. This is used to determine whether to display the mutual TLS
-     * endpoints in the well-known endpoint.
-     * @return true if mutual TLS aliases are enabled.
-     */
-    public static boolean isMutualTLSAliasesEnabled() {
-
-        String mutualTLSAliasesEnabled = IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED);
-        if (StringUtils.isEmpty(mutualTLSAliasesEnabled)) {
-            return false;
-        }
-        return Boolean.parseBoolean(mutualTLSAliasesEnabled);
-    }
 }

@@ -1724,9 +1724,9 @@ public class OAuth2Util {
             try {
                 String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
                 return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId)
-                        .buildURL(hostname).getAbsolutePublicURL();
+                        .build(hostname).getAbsolutePublicURL();
             } catch (URLBuilderException e) {
-                throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
+                throw new OAuthRuntimeException("Error while building url for context: " + defaultContext, e);
             }
         } else if (StringUtils.isNotBlank(oauth2EndpointURLInFile)) {
             // Use the value configured in the file.
@@ -1734,9 +1734,9 @@ public class OAuth2Util {
         }
         // Use the default context.
         try {
-            return ServiceURLBuilder.create().addPath(defaultContext).buildURL(hostname).getAbsolutePublicURL();
+            return ServiceURLBuilder.create().addPath(defaultContext).build(hostname).getAbsolutePublicURL();
         } catch (URLBuilderException e) {
-            throw new OAuthRuntimeException("Error while building url for context: " + defaultContext);
+            throw new OAuthRuntimeException("Error while building url for context: " + defaultContext, e);
         }
     }
 
