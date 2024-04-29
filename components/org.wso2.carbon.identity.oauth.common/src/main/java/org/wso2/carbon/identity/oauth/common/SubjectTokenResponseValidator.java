@@ -55,6 +55,7 @@ public class SubjectTokenResponseValidator extends TokenValidator {
 
     /**
      * Validates the required parameters for the subject_token response type.
+     * The 'requested_subject' parameter contains the subject that the impersonator intends to impersonate.
      * The 'requested_subject' parameter should contain a valid string.
      *
      * @param request The HttpServletRequest object representing the incoming request.
