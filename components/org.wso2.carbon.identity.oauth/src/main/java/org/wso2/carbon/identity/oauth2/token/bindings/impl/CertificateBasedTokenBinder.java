@@ -36,10 +36,14 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 
 import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -162,7 +166,7 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
         if (StringUtils.isNotBlank(certificateInHeader)) {
             try {
                 certificate = parseCertificate(certificateInHeader);
-            } catch (CertificateException e) {
+            } catch (CertificateException | UnsupportedEncodingException e) {
                 /* Adding a debug log as these errors cannot be thrown as per the TokenBinder interface implementation.
                    But null checks have been performed where these methods are being executed. */
                 if (log.isDebugEnabled()) {
@@ -188,14 +192,43 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
         }
     }
 
-    private X509Certificate parseCertificate(String content) throws CertificateException {
+    /**
+     * Return Certificate for give Certificate Content.
+     *
+     * @param content   Certificate Content
+     * @return X509Certificate X.509 certificate after decoding the certificate content.
+     * @throws CertificateException Certificate Exception.
+     */
+    private X509Certificate parseCertificate(String content) throws CertificateException, UnsupportedEncodingException {
 
-        byte[] decodedContent = java.util.Base64.getDecoder().decode(StringUtils.trim(content
-                .replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
-                .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY)
-        ));
+        byte[] decoded;
+        String sanitizedCertificate = sanitizeCertificate(content);
+        // First we try to Base64 decode, if it is not decodable, we try to url decode first and then Base64 decode.
+        try {
+            decoded = Base64.getDecoder().decode(sanitizedCertificate);
+        } catch (IllegalArgumentException e) {
+            log.debug("Error while base64 decoding the certificate. Trying URL decoding first.");
+            String urlDecodedContent = URLDecoder.decode(content, StandardCharsets.UTF_8.name());
+            sanitizedCertificate = sanitizeCertificate(urlDecodedContent);
+            decoded = Base64.getDecoder().decode(sanitizedCertificate);
+        }
 
-        return (X509Certificate) CertificateFactory.getInstance(Constants.X509)
-                .generateCertificate(new ByteArrayInputStream(decodedContent));
+        return (java.security.cert.X509Certificate) CertificateFactory.getInstance(Constants.X509)
+                .generateCertificate(new ByteArrayInputStream(decoded));
+    }
+
+    /**
+     * Sanitize the certificate before decoding.
+     * @param content certificate as a string.
+     * @return sanitized certificate.
+     */
+    private String sanitizeCertificate(String content) {
+
+        String certContent = StringUtils.trim(content);
+        // Remove Certificate Headers.
+        String certBody = certContent.replaceAll(OAuthConstants.BEGIN_CERT, StringUtils.EMPTY)
+                .replaceAll(OAuthConstants.END_CERT, StringUtils.EMPTY);
+        // Removing all whitespaces and new lines.
+        return certBody.replaceAll("\\s", StringUtils.EMPTY).replace("\\n", StringUtils.EMPTY);
     }
 }
