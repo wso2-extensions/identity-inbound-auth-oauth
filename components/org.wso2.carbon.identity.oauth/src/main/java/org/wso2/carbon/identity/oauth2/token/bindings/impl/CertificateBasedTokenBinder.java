@@ -201,9 +201,6 @@ public class CertificateBasedTokenBinder extends AbstractTokenBinder {
      */
     private X509Certificate parseCertificate(String content) throws CertificateException, UnsupportedEncodingException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Trying to parse the client certificate: " + content);
-        }
         byte[] decoded;
         String sanitizedCertificate = sanitizeCertificate(content);
         // First we try to Base64 decode, if it is not decodable, we try to url decode first and then Base64 decode.
