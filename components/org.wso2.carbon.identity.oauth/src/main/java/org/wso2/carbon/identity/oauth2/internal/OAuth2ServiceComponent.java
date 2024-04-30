@@ -85,6 +85,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.ClientRequestTokenBin
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.FederatedTokenResponseHandler;
@@ -261,6 +262,8 @@ public class OAuth2ServiceComponent {
             PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
                     null);
+            bundleContext.registerService(JWTAccessTokenClaimProvider.class.getName(),
+                    new ImpersonatedAccessTokenClaimProvider(), null);
 
             // Register cookie based access token binder.
             CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
