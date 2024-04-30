@@ -370,4 +370,11 @@ public class DiscoveryConstants {
      * If omitted, the default value is false.
      */
     public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
+
+    /**
+     * mtls_endpoint_aliases
+     * OPTIONAL. JSON Object containing a list of the aliases of the mTLS endpoints supported by the
+     * Authorization Server.
+     */
+    public static final String MTLS_ENDPOINT_ALIASES = "mtls_endpoint_aliases";
 }

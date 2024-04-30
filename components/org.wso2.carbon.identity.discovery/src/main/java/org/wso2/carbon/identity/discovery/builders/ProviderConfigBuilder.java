@@ -148,6 +148,8 @@ public class ProviderConfigBuilder {
         providerConfig.setWebFingerEndpoint(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl());
         providerConfig.setTlsClientCertificateBoundAccessTokens(OAuth2Util.getSupportedTokenBindingTypes()
                 .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
+        providerConfig.setMtlsTokenEndpoint(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl());
+        providerConfig.setMtlsPushedAuthorizationRequestEndpoint(OAuth2Util.OAuthURL.getOAuth2MTLSParEPUrl());
         return providerConfig;
     }
 }
