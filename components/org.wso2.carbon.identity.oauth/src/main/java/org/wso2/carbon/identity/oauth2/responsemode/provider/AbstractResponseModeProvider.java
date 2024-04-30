@@ -28,7 +28,7 @@ import java.util.Arrays;
  */
 public abstract class AbstractResponseModeProvider implements ResponseModeProvider {
 
-    public static final String SPACE_SEPARATOR = " ";
+    private static final String SPACE_SEPARATOR = " ";
 
     /**
      * Checks if the given response type contains either "id_token" or "token".
