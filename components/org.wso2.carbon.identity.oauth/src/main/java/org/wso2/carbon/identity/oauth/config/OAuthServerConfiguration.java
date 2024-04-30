@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.common.IDTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.IDTokenTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.SAML2GrantValidator;
+import org.wso2.carbon.identity.oauth.common.SubjectTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
