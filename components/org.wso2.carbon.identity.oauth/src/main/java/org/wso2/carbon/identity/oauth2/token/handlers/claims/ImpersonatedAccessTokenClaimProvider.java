@@ -31,12 +31,13 @@ import java.util.Map;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 
 /**
- * Adds new claims into JWT Access Tokens.
+ * A class that provides additional claims for JWT access tokens when impersonation is requested.
  */
 public class ImpersonatedAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
 
     private static final String ACT = "act";
     private static final String SUB = "SUB";
+
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context) throws IdentityOAuth2Exception {
 
@@ -47,6 +48,7 @@ public class ImpersonatedAccessTokenClaimProvider implements JWTAccessTokenClaim
     public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context) throws IdentityOAuth2Exception {
 
         if (context.isImpersonationRequest()
+                && (context.getProperty(IMPERSONATING_ACTOR) != null)
                 && StringUtils.isNotBlank(context.getProperty(IMPERSONATING_ACTOR).toString())) {
 
             Map<String, Object> actorMap = new HashMap<>();
