@@ -192,7 +192,7 @@ public class AuthzUtil {
      * @return The user ID.
      * @throws IdentityOAuth2Exception If an error occurs while resolving the user ID.
      */
-    private static String getUserIdOfAssociatedUser(AuthenticatedUser authenticatedUser)
+    public static String getUserIdOfAssociatedUser(AuthenticatedUser authenticatedUser)
             throws IdentityOAuth2Exception {
 
         String associatedUserId;
