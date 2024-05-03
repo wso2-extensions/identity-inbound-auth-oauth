@@ -210,9 +210,7 @@ public final class OAuthUtil {
             userId = resolveUserIdFromUsername(authorizedUser);
             if (StringUtils.isEmpty(userId)) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
-                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                        LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
-                        authorizedUser.getLoggableUserId()));
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableMaskedUserId());
                 return;
             }
         }
@@ -243,9 +241,7 @@ public final class OAuthUtil {
                 userId = authenticatedUser.getUserId();
             } catch (UserIdNotFoundException e) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
-                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                        LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
-                        authenticatedUser.getLoggableUserId()));
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableMaskedUserId());
                 return;
             }
             clearOAuthCache(consumerKey, userId, scope);
@@ -272,9 +268,7 @@ public final class OAuthUtil {
             userId = resolveUserIdFromUsername(authorizedUser);
             if (StringUtils.isEmpty(userId)) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
-                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                        LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
-                        authorizedUser.getLoggableUserId()));
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableMaskedUserId());
                 return;
             }
         }
@@ -308,9 +302,7 @@ public final class OAuthUtil {
                 userId = authenticatedUser.getUserId();
             } catch (UserIdNotFoundException e) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
-                LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                        LoggerUtils.getMaskedContent(authenticatedUser.getLoggableUserId()) :
-                        authenticatedUser.getLoggableUserId()));
+                LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableMaskedUserId());
                 return;
             }
             clearOAuthCache(consumerKey, userId, scope);
@@ -356,10 +348,7 @@ public final class OAuthUtil {
             tenantDomain = authorizedUser.getTenantDomain();
 
         } catch (UserIdNotFoundException e) {
-            // Masking getLoggableUserId as it will return the username because the user id is not available.
-            LOG.error("User id cannot be found for user: " + (LoggerUtils.isLogMaskingEnable ?
-                    LoggerUtils.getMaskedContent(authorizedUser.getLoggableUserId()) :
-                    authorizedUser.getLoggableUserId()));
+            LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableMaskedUserId());
             return;
         }
         if (authorizedUser.getAccessingOrganization() != null) {
@@ -856,6 +845,10 @@ public final class OAuthUtil {
             try {
                 Set<AccessTokenDO> accessTokenDOs;
                 try {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Retrieving all ACTIVE or EXPIRED access tokens for the client: " + clientId
+                                + " authorized by user: " + username + "/" + userStoreDomain);
+                    }
                     // retrieve all ACTIVE or EXPIRED access tokens for particular client authorized by this user
                     accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                             .getAccessTokens(clientId, authenticatedUser, userStoreDomain, true);
@@ -1017,6 +1010,9 @@ public final class OAuthUtil {
                 LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
                 throw new UserStoreException(e);
             }
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("The number of distinct client IDs for the user: " + username + " is " + clientIds.size());
         }
 
         boolean isErrorOnRevokingTokens;

@@ -26,7 +26,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -62,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId;
@@ -187,6 +187,22 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
+    /**
+     * Build and return a string to be used as a lock for synchronous token issuance for refresh token grant type.
+     *
+     * @param tokReqMsgCtx        OAuthTokenReqMessageContext
+     * @return A string to be used as a lock for synchronous token issuance for refresh token grant type.
+     */
+    public String buildSyncLockString(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        String clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        String refreshToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getRefreshToken();
+        String tokenBindingReference = OAuth2Util.getTokenBindingReferenceString(tokReqMsgCtx);
+        String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
+
+        return REFRESH_TOKEN + ":" + clientId + ":" + refreshToken + ":" + tokenBindingReference + ":" + scope;
+    }
+
     private void setPropertiesForTokenGeneration(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                  RefreshTokenValidationDataDO validationBean)
             throws IdentityOAuth2Exception {
@@ -305,9 +321,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             } catch (UserIdNotFoundException e) {
                 // Masking getLoggableUserId as it will return the username because the user id is not available.
                 throw new IdentityOAuth2Exception("User id is not available for user: " +
-                        (LoggerUtils.isLogMaskingEnable ?
-                                LoggerUtils.getMaskedContent(tokReqMsgCtx.getAuthorizedUser().getLoggableUserId()) :
-                                tokReqMsgCtx.getAuthorizedUser().getLoggableUserId()), e);
+                        tokReqMsgCtx.getAuthorizedUser().getLoggableMaskedUserId(), e);
             }
             String authenticatedIDP = tokReqMsgCtx.getAuthorizedUser().getFederatedIdPName();
             String accessingOrganization = OAuthConstants.AuthorizedOrganization.NONE;

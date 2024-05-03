@@ -241,10 +241,16 @@ public class OIDCSessionManagementUtil {
                             String tenantDomain;
                             if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
                                 tenantDomain = IdentityTenantUtil.resolveTenantDomain();
-                                if (request.getParameter(
-                                        FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN) != null) {
-                                    tenantDomain = request.getParameter(
-                                            FrameworkConstants.RequestParams.LOGIN_TENANT_DOMAIN);
+                                /*
+                                Above tenantDomain will be resolved as carbon.super during tenanted my account
+                                logout. However, this should be resolved as the tenant domain in the logout request.
+                                This will be fixed once the new authorization runtime is onboarded.
+                                Adding a temporary fix until it is onboarded.
+                                 */
+                                if (tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME) &&
+                                        StringUtils.equals(request.getParameter(
+                                                OIDCSessionConstants.OIDC_CLIENT_ID_PARAM), "MY_ACCOUNT")) {
+                                    tenantDomain = resolveTenantDomain(request);
                                 }
                             } else {
                                 tenantDomain = resolveTenantDomain(request);

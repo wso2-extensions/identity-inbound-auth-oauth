@@ -302,9 +302,6 @@ public class AccessTokenIssuer {
 
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
 
-        boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
-                .isUseClientIdAsSubClaimForAppTokensEnabled();
-
         if (!isOfTypeApplicationUser) {
             tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
@@ -351,8 +348,33 @@ public class AccessTokenIssuer {
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
         }
+
+        String syncLockString = authzGrantHandler.buildSyncLockString(tokReqMsgCtx);
+        if (StringUtils.isBlank(syncLockString)) {
+            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+                    tenantDomainOfApp, oAuthAppDO);
+        }
+        synchronized (syncLockString.intern()) {
+            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+                    tenantDomainOfApp, oAuthAppDO);
+        }
+    }
+
+    private OAuth2AccessTokenRespDTO validateGrantAndIssueToken(OAuth2AccessTokenReqDTO tokenReqDTO,
+                                                                OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                                OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                                AuthorizationGrantHandler authzGrantHandler,
+                                                                String tenantDomainOfApp,
+                                                                OAuthAppDO oAuthAppDO) throws IdentityException {
+
+        String grantType = tokenReqDTO.getGrantType();
+        boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
+        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+        boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
+                .isUseClientIdAsSubClaimForAppTokensEnabled();
+
         boolean isValidGrant = false;
-        error = "Provided Authorization Grant is invalid";
+        String error = "Provided Authorization Grant is invalid";
         String errorCode = OAuthError.TokenResponse.INVALID_GRANT;
         try {
             isValidGrant = authzGrantHandler.validateGrant(tokReqMsgCtx);
@@ -705,6 +727,11 @@ public class AccessTokenIssuer {
             } else {
                 // Engage new scope validator
                 authorizedScopes = getAuthorizedScopes(tokReqMsgCtx);
+                tokReqMsgCtx.setAuthorizedInternalScopes(authorizedScopes.stream()
+                        .filter(scope -> scope.startsWith(INTERNAL_SCOPE_PREFIX) ||
+                                scope.startsWith(CONSOLE_SCOPE_PREFIX) ||
+                                scope.equalsIgnoreCase(SYSTEM_SCOPE))
+                        .toArray(String[]::new));
             }
             if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {

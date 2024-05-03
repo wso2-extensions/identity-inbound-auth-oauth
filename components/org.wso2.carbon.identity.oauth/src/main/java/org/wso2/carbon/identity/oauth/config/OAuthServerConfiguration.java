@@ -320,6 +320,7 @@ public class OAuthServerConfiguration {
     private String deviceAuthzEPUrl = null;
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
+    private String scopeMetadataExtensionImpl = null;
 
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
@@ -525,6 +526,9 @@ public class OAuthServerConfiguration {
 
         // Read config for using legacy permission access for user based auth.
         parseUseLegacyPermissionAccessForUserBasedAuth(oauthElem);
+
+        // Read config for scope metadata extension implementation.
+        parseScopeMetadataExtensionImpl(oauthElem);
     }
 
     /**
@@ -3723,6 +3727,31 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parse the OAuth2ScopeMetadataExtensionImpl configuration that used to set the scope metadata extension impl
+     * class.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseScopeMetadataExtensionImpl(OMElement oauthConfigElem) {
+
+        OMElement scopeMetadataExtensionImplElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.SCOPE_METADATA_EXTENSION_IMPL));
+        if (scopeMetadataExtensionImplElem != null) {
+            scopeMetadataExtensionImpl = scopeMetadataExtensionImplElem.getText();
+        }
+    }
+
+    /**
+     * Get scope metadata service extension impl class.
+     *
+     * @return ScopeMetadataExtensionImpl class name.
+     */
+    public String getScopeMetadataExtensionImpl() {
+
+        return scopeMetadataExtensionImpl;
+    }
+
+    /**
      * Localpart names for the OAuth configuration in identity.xml.
      */
     private class ConfigElements {
@@ -3986,6 +4015,7 @@ public class OAuthServerConfiguration {
         private static final String USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES = "UseLegacyScopesAsAliasForNewScopes";
         private static final String USE_LEGACY_PERMISSION_ACCESS_FOR_USER_BASED_AUTH =
                 "UseLegacyPermissionAccessForUserBasedAuth";
+        private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
     }
 
 }

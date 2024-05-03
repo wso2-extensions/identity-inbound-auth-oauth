@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2019-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
@@ -418,8 +419,9 @@ public class JDBCPermissionBasedInternalScopeValidator {
                 }
                 /* Retrieve the user ID of the shared user if a user association exists. This logic should be executed
                 when accessed organization is different from the user's resident organization. */
-                if (authenticatedUser.getAccessingOrganization() != null && !authenticatedUser
-                        .getAccessingOrganization().equals(authenticatedUser.getUserResidentOrganization())) {
+                if (!AuthzUtil.isLegacyAuthzRuntime() && authenticatedUser.getAccessingOrganization() != null &&
+                        !authenticatedUser.getAccessingOrganization()
+                                .equals(authenticatedUser.getUserResidentOrganization())) {
                     Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
                             .getUserIdOfAssociatedUserByOrgId(userId, organizationId);
                     if (optionalOrganizationUserId.isPresent()) {

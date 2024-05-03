@@ -42,4 +42,5 @@ public class DiscoveryUtil {
         }
         return Boolean.parseBoolean(useEntityIdAsIssuerInDiscovery);
     }
+
 }
