@@ -91,7 +91,7 @@ public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
         }
     }
 
-    @Test(priority =  2, description = "Test setDCRConfiguration method properly sets DCRConfiguration" )
+    @Test(priority =  2, description = "Test setDCRConfiguration method properly sets DCRConfiguration")
     public void testSetDCRConfiguration() {
 
         mockStatic(IdentityUtil.class);
