@@ -200,12 +200,29 @@ public class OAuthAdminServiceImpl {
      * @param consumerKey Consumer Key
      * @return <code>OAuthConsumerAppDTO</code> with application information
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
+     * @deprecated use {@link #getOAuthApplicationData(String, String)} instead.
      */
+    @Deprecated
     public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey) throws IdentityOAuthAdminException {
+
+        String tenantDomain = getTenantDomain();
+        return getOAuthApplicationData(consumerKey, tenantDomain);
+    }
+
+    /**
+     * Get OAuth application data by the consumer key and tenant domain.
+     *
+     * @param consumerKey Consumer Key
+     * @param tenantDomain Tenant domain
+     * @return <code>OAuthConsumerAppDTO</code> with application information
+     * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
+     */
+    public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
 
         OAuthConsumerAppDTO dto;
         try {
-            OAuthAppDO app = getOAuthApp(consumerKey);
+            OAuthAppDO app = getOAuthApp(consumerKey, tenantDomain);
             if (app != null) {
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
@@ -726,7 +743,7 @@ public class OAuthAdminServiceImpl {
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oauthappdo;
         try {
-            oauthappdo = getOAuthApp(oauthConsumerKey);
+            oauthappdo = getOAuthApp(oauthConsumerKey, tenantDomain);
             if (oauthappdo == null) {
                 String msg = "OAuth application cannot be found for consumerKey: " + oauthConsumerKey;
                 if (LOG.isDebugEnabled()) {
@@ -902,7 +919,7 @@ public class OAuthAdminServiceImpl {
             oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
         }
         dao.updateConsumerApplication(oauthappdo);
-        AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo);
+        AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo, tenantDomain);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
@@ -1192,7 +1209,7 @@ public class OAuthAdminServiceImpl {
         }
 
         try {
-            OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey);
+            OAuthAppDO oAuthAppDO = getOAuthApp(consumerKey, getTenantDomain());
             // change the state
             oAuthAppDO.setState(newState);
 
@@ -1228,6 +1245,15 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while updating state of OAuth app with consumerKey: " + consumerKey, e);
         }
+    }
+
+    private String getTenantDomain() {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = IdentityTenantUtil.getTenantDomainFromContext();
+        }
+        return tenantDomain;
     }
 
     /**
@@ -1511,7 +1537,7 @@ public class OAuthAdminServiceImpl {
                                 getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
                                 scopeString, true);
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
-                            OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey());
+                            OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Found App: " + appDO.getApplicationName() + " for user: " + username);
                             }
@@ -1529,11 +1555,11 @@ public class OAuthAdminServiceImpl {
         return appDTOs.toArray(new OAuthConsumerAppDTO[0]);
     }
 
-    private OAuthAppDO getOAuthAppDO(String consumerKey) throws IdentityOAuthAdminException {
+    private OAuthAppDO getOAuthAppDO(String consumerKey, String tenantDomain) throws IdentityOAuthAdminException {
 
         OAuthAppDO appDO;
         try {
-            appDO = getOAuthApp(consumerKey);
+            appDO = getOAuthApp(consumerKey, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw handleClientError(INVALID_OAUTH_CLIENT, "Invalid ConsumerKey: " + consumerKey, e);
         } catch (IdentityOAuth2Exception e) {
@@ -2253,25 +2279,27 @@ public class OAuthAdminServiceImpl {
         return OAuthComponentServiceHolder.getInstance().getOauth2Service();
     }
 
-    OAuthAppDO getOAuthApp(String consumerKey) throws InvalidOAuthClientException, IdentityOAuth2Exception {
+    OAuthAppDO getOAuthApp(String consumerKey, String tenantDomain) throws InvalidOAuthClientException,
+            IdentityOAuth2Exception {
 
-        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey);
+        OAuthAppDO oauthApp = AppInfoCache.getInstance().getValueFromCache(consumerKey, tenantDomain);
         if (oauthApp != null) {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from AppInfoCache.");
+                LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from AppInfoCache of tenant " +
+                        "domain: " + tenantDomain);
             }
             return oauthApp;
         }
 
         OAuthAppDAO dao = new OAuthAppDAO();
-        oauthApp = dao.getAppInformation(consumerKey);
+        int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
+        oauthApp = dao.getAppInformation(consumerKey, tenantID);
         if (oauthApp != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
             }
-            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp);
+            AppInfoCache.getInstance().addToCache(consumerKey, oauthApp, tenantDomain);
         }
-
         return oauthApp;
     }
 
