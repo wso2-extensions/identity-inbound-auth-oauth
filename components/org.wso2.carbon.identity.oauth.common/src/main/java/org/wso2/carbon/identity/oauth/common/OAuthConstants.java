@@ -623,6 +623,9 @@ public final class OAuthConstants {
         public static final String REQUEST_OBJECT_ENCRYPTION_ALGORITHM = "requestObjectEncryptionAlgorithm";
         public static final String REQUEST_OBJECT_ENCRYPTION_METHOD = "requestObjectEncryptionMethod";
         public static final String IS_FAPI_CONFORMANT_APP = "isFAPIConformant";
+        public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
+        public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
+        public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
 
         private OIDCConfigProperties() {
 

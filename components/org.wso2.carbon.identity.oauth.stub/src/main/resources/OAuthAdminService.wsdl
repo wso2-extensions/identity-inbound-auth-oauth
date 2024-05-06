@@ -409,6 +409,8 @@
                     <xs:element minOccurs="0" name="idTokenEncryptionMethod" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="idTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="idTokenSignatureAlgorithm" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="impersonationEmailNotificationEnabled" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="impersonationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="jwksURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
@@ -424,6 +426,8 @@
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="sectorIdentifierURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="subjectTokenEnabled" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="subjectTokenExpiryTime" type="xs:int"/>
                     <xs:element minOccurs="0" name="subjectType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tlsClientAuthSubjectDN" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>
