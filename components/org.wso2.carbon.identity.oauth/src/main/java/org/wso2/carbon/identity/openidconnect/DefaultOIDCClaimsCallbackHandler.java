@@ -59,6 +59,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -79,6 +80,7 @@ import java.util.regex.Pattern;
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.APP_ROLES_CLAIM;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.GROUPS_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
@@ -159,11 +161,20 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         // Get any user attributes that were cached against the access token
         // Map<(http://wso2.org/claims/email, email), "peter@example.com">
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx);
-        if (userAttributes.isEmpty() && (isLocalUser(requestMsgCtx.getAuthorizedUser())
+        if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
+                && (isLocalUser(requestMsgCtx.getAuthorizedUser())
                 || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
+            }
+            if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
+                    requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
+                    StringUtils.isNotEmpty(AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx.getAuthorizedUser()))) {
+                requestMsgCtx.getAuthorizedUser().setSharedUserId(AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx
+                        .getAuthorizedUser()));
+                requestMsgCtx.getAuthorizedUser().setUserSharedOrganizationId(requestMsgCtx.getAuthorizedUser()
+                        .getAccessingOrganization());
             }
             // Get claim in oidc dialect from user store.
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
@@ -550,6 +561,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
         String userTenantDomain = authenticatedUser.getTenantDomain();
         String userResidentTenantDomain = userTenantDomain;
+        String userAccessingTenantDomain = userTenantDomain;
         if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
             userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                     .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
@@ -569,6 +581,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             fullQualifiedUsername = userStoreManager.getUser(userId, null)
                     .getFullQualifiedUsername();
         }
+
         UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
         if (realm == null) {
             log.warn("Invalid tenant domain: " + userTenantDomain + " provided. Cannot get claims for user: "
@@ -604,6 +617,15 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
         }
 
+        /*
+        If the application requested for groups and a shared user is accessing a shared org of that user,
+        get the groups of the shared user from the shared organization.
+        */
+        if (requestedClaimUris.contains(GROUPS_CLAIM) && isSharedUserAccessingSharedOrg(authenticatedUser) &&
+                StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
+            addSharedUserGroupsFromSharedOrganization(authenticatedUser, userClaims);
+        }
+
         if (isEmpty(userClaims)) {
             // User claims can be empty if user does not exist in user stores. Probably a federated user.
             if (log.isDebugEnabled()) {
@@ -625,6 +647,38 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         }
 
         return userClaimsMappedToOIDCDialect;
+    }
+
+    private void addSharedUserGroupsFromSharedOrganization(AuthenticatedUser authenticatedUser,
+                                                           Map<String, String> userClaims) throws
+            OrganizationManagementException, UserStoreException, IdentityException {
+
+        String userAccessingTenantDomain;
+        List<String> requestedClaimForSharedUser = new ArrayList<>();
+        requestedClaimForSharedUser.add(GROUPS_CLAIM);
+        // Getting the accessing tenant domain to get the userstore manager of the shared organization.
+        userAccessingTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                .resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+        AbstractUserStoreManager userStoreManager =
+                (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                        .getTenantUserRealm(IdentityTenantUtil.getTenantId(userAccessingTenantDomain))
+                        .getUserStoreManager();
+        String fullQualifiedSharedUsername = userStoreManager.getUser(authenticatedUser.getSharedUserId(), null)
+                .getFullQualifiedUsername();
+        UserRealm sharedUserRealm = IdentityTenantUtil.getRealm(userAccessingTenantDomain,
+                fullQualifiedSharedUsername);
+        // Getting the shared user's group claim from the shared organization.
+        Map<String, String> sharedUserGroupClaim = getUserClaimsInLocalDialect(fullQualifiedSharedUsername,
+                sharedUserRealm, requestedClaimForSharedUser);
+        userClaims.put(GROUPS_CLAIM, sharedUserGroupClaim.get(GROUPS_CLAIM));
+    }
+
+    private boolean isSharedUserAccessingSharedOrg(AuthenticatedUser authenticatedUser) {
+
+        return StringUtils.isNotEmpty(authenticatedUser.getUserSharedOrganizationId()) &&
+                StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization()) &&
+                StringUtils.equals(authenticatedUser.getUserSharedOrganizationId(),
+                        authenticatedUser.getAccessingOrganization());
     }
 
     private ClaimMapping[] getRequestedClaimMappings(ServiceProvider serviceProvider) {
@@ -671,6 +725,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
            organization. */
         return authorizedUser.isFederatedUser() && userResidentOrganization != null && !userResidentOrganization.equals
                 (accessingOrganization);
+    }
+
+    private boolean isOrganizationSwitchGrantType(OAuthTokenReqMessageContext requestMsgCtx) {
+
+        return StringUtils.equals(requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
+                OAuthConstants.GrantTypes.ORGANIZATION_SWITCH);
     }
 
     /**
