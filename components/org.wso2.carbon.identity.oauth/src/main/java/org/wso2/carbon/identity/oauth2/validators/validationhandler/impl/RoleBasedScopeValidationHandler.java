@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
-import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
@@ -51,7 +50,7 @@ import java.util.stream.Collectors;
  */
 public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
-    private static final Log LOG = LogFactory.getLog(DefaultOAuth2ScopeValidator.class);
+    private static final Log LOG = LogFactory.getLog(RoleBasedScopeValidationHandler.class);
 
     @Override
     public boolean canHandle(ScopeValidationContext scopeValidationContext) {
