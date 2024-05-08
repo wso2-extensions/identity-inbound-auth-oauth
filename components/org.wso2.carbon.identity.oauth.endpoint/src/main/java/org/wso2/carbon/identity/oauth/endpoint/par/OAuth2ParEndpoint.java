@@ -132,8 +132,8 @@ public class OAuth2ParEndpoint {
             }
 
             handleValidation(httpRequest, params);
-            ParAuthData parAuthData =
-                    getParAuthService().handleParAuthRequest(parameters);
+            EndpointUtil.preHandleParRequest(httpRequest, parameters);
+            ParAuthData parAuthData = getParAuthService().handleParAuthRequest(parameters);
             return createAuthResponse(response, parAuthData);
         } catch (ParClientException e) {
             return handleParClientException(e);

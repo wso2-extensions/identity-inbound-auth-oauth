@@ -423,6 +423,9 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
             return null;
         }).when(httpServletRequest).setAttribute(anyString(), any());
 
+        Map<String, String[]> headers = new HashMap<>();
+        headers.put("Content-Type", new String[]{"application/x-www-form-urlencoded"});
+        when(httpServletRequest.getHeaderNames()).thenReturn(Collections.enumeration(headers.keySet()));
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
         when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(requestParams.keySet()));
         when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);

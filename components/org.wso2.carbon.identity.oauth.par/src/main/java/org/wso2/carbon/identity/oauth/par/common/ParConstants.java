@@ -27,6 +27,9 @@ public class ParConstants {
     public static final long SEC_TO_MILLISEC_FACTOR = 1000;
     public static final String UTC = "UTC";
     public static final String EXPIRES_IN = "expires_in";
+    public static final String REQUEST_PARAMETERS = "request_parameters";
+    public static final String REQUEST_HEADERS = "request_headers";
+    public static final String PRE_HANDLE_PAR_REQUEST = "PRE_HANDLE_PAR_REQUEST";
     public static final String REQUEST_URI_PREFIX = "urn:ietf:params:oauth:par:request_uri:";
     public static final String CACHE_NAME = "ParCache";
     public static final String COL_LBL_PARAMETERS = "PARAMETERS";
