@@ -29,7 +29,10 @@ import org.wso2.carbon.identity.application.authentication.framework.inbound.Htt
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponseFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.IdentityProcessor;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
+import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtService;
+import org.wso2.carbon.identity.oauth.dcr.DCRConfigurationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
@@ -80,6 +83,8 @@ public class DCRServiceComponent {
                     new UnRegistrationHandler(), null);
             componentContext.getBundleContext().registerService(DCRMService.class.getName(),
                     new DCRMService(), null);
+            componentContext.getBundleContext().registerService(DCRConfigurationMgtService.class.getName(),
+                    new DCRConfigurationMgtServiceImpl(), null);
         } catch (Throwable e) {
             log.error("Error occurred while activating DCRServiceComponent", e);
         }
@@ -220,4 +225,33 @@ public class DCRServiceComponent {
         }
     }
 
+    /**
+     * Set the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    @Reference(
+            name = "resource.configuration.manager",
+            service = ConfigurationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterConfigurationManager"
+    )
+    protected void registerConfigurationManager(ConfigurationManager configurationManager) {
+
+        log.debug("Registering the ConfigurationManager in DCR Service Component.");
+        DCRDataHolder.getInstance().setConfigurationManager(configurationManager);
+    }
+
+
+    /**
+     * Unset the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    protected void unregisterConfigurationManager(ConfigurationManager configurationManager) {
+
+        log.debug("Unregistering the ConfigurationManager in DCR Service Component.");
+        DCRDataHolder.getInstance().setConfigurationManager(null);
+    }
 }

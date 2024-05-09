@@ -55,7 +55,9 @@ public class DCRMConstants {
         TENANT_DOMAIN_MISMATCH("NOT_FOUND_60001", "Tenant domain in request does not match with the application " +
                 "tenant domain for consumer key: %s"),
         FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s"),
-        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement");
+        FAILED_TO_GET_TENANT_ADMIN("Error occurred during white getting tenant admin."),
+        SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement"),
+        MANDATORY_SOFTWARE_STATEMENT("Mandatory software statement is missing");
 
         private final String message;
         private final String errorCode;
@@ -95,4 +97,96 @@ public class DCRMConstants {
     }
 
     public static final String OAUTH2 = "oauth2";
+    public static final String DCR_CONFIG_RESOURCE_TYPE_NAME = "DCR_CONFIGURATION";
+    public static final String DCR_CONFIG_RESOURCE_NAME = "TENANT_DCR_CONFIGURATION";
+    public static final String ENABLE_FAPI_ENFORCEMENT = "enableFapiEnforcement";
+    public static final String CLIENT_AUTHENTICATION_REQUIRED = "clientAuthenticationRequired";
+    public static final String SSA_JWKS = "ssaJwks";
+    public static final String MANDATE_SSA = "mandateSSA";
+
+    /**
+     * Enum for DCR Configuration related error messages.
+     */
+    public enum DCRConfigErrorMessage {
+
+        /**
+         * Unable to retrieve DCR configuration.
+         */
+        ERROR_CODE_DCR_CONFIGURATION_RETRIEVE("65020",
+                "Unable to retrieve DCR configuration.",
+                "Server encountered an error while retrieving the DCR configuration of %s."),
+
+        /**
+         * SSA JWKS not found.
+         */
+        ERROR_CODE_SSA_JWKS_REQUIRED("65021",
+                "SSA JWKS not found.",
+                "SSA JWKS url is required to mandate SSA validation."),
+
+        /**
+         * SSA not Mandated Error.
+         */
+        ERROR_CODE_SSA_NOT_MANDATED("65022",
+                                             "SSA not mandated.",
+                                             "Authentication is disabled but mandateSSA is not set to True.");
+
+        /**
+         * The error code.
+         */
+        private final String code;
+
+        /**
+         * The error message.
+         */
+        private final String message;
+
+        /**
+         * The error description.
+         */
+        private final String description;
+
+
+        DCRConfigErrorMessage(String code, String message, String description) {
+
+            this.code = code;
+            this.message = message;
+            this.description = description;
+        }
+
+        /**
+         * Get the {@code code}.
+         *
+         * @return Returns the {@code code} to be set.
+         */
+        public String getCode() {
+
+            return code;
+        }
+
+        /**
+         * Get the {@code message}.
+         *
+         * @return Returns the {@code message} to be set.
+         */
+        public String getMessage() {
+
+            return message;
+        }
+
+        /**
+         * Get the {@code description}.
+         *
+         * @return Returns the {@code description} to be set.
+         */
+        public String getDescription() {
+
+            return description;
+        }
+
+        @Override
+        public String toString() {
+
+            return code + ":" + message;
+        }
+    }
 }
