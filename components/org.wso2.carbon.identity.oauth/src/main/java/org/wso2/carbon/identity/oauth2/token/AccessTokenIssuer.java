@@ -727,11 +727,13 @@ public class AccessTokenIssuer {
             } else {
                 // Engage new scope validator
                 authorizedScopes = getAuthorizedScopes(tokReqMsgCtx);
-                tokReqMsgCtx.setAuthorizedInternalScopes(authorizedScopes.stream()
+                authorizedInternalScopes = authorizedScopes.stream()
                         .filter(scope -> scope.startsWith(INTERNAL_SCOPE_PREFIX) ||
                                 scope.startsWith(CONSOLE_SCOPE_PREFIX) ||
                                 scope.equalsIgnoreCase(SYSTEM_SCOPE))
-                        .toArray(String[]::new));
+                        .toArray(String[]::new);
+                // Remove internal scopes from the authorized scopes since internal scopes are handled separately.
+                authorizedScopes.removeAll(Arrays.asList(authorizedInternalScopes));
             }
             if (isManagementApp && GrantType.CLIENT_CREDENTIALS.toString().equals(grantType) &&
                     ArrayUtils.contains(requestedScopes, SYSTEM_SCOPE)) {
@@ -747,6 +749,9 @@ public class AccessTokenIssuer {
             }
         }
 
+        // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
+        tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
+
         /*
          Clear the internal scopes. Internal scopes should only handle in JDBCPermissionBasedInternalScopeValidator.
          Those scopes should not send to the other scopes validators. Thus remove the scopes from the tokReqMsgCtx.
@@ -754,10 +759,8 @@ public class AccessTokenIssuer {
         */
         if (AuthzUtil.isLegacyAuthzRuntime()) {
             removeInternalScopes(tokReqMsgCtx);
-
-            // Adding the authorized internal scopes to tokReqMsgCtx for any special validators to use.
-            tokReqMsgCtx.setAuthorizedInternalScopes(authorizedInternalScopes);
         } else {
+            removeAuthorizedScopes(tokReqMsgCtx, Arrays.asList(authorizedInternalScopes));
             removeAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
         }
 
@@ -777,9 +780,9 @@ public class AccessTokenIssuer {
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
         if (isValidScope) {
             // Add authorized internal scopes to the request for sending in the response.
-            if (AuthzUtil.isLegacyAuthzRuntime()) {
-                addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
-            } else {
+            addAuthorizedInternalScopes(tokReqMsgCtx, tokReqMsgCtx.getAuthorizedInternalScopes());
+            if (!AuthzUtil.isLegacyAuthzRuntime()) {
+                // Add authorized scopes to the request for sending in the response in new runtime.
                 addAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
             }
             addAllowedScopes(tokReqMsgCtx, requestedAllowedScopes.toArray(new String[0]));
