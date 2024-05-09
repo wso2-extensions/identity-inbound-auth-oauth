@@ -170,6 +170,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             if (!StringUtils.equals(requestMsgCtx.getAuthorizedUser().getUserResidentOrganization(),
                     requestMsgCtx.getAuthorizedUser().getAccessingOrganization()) &&
+                    !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
                     StringUtils.isNotEmpty(AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx.getAuthorizedUser()))) {
                 requestMsgCtx.getAuthorizedUser().setSharedUserId(AuthzUtil.getUserIdOfAssociatedUser(requestMsgCtx
                         .getAuthorizedUser()));
@@ -621,7 +622,9 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         If the application requested for groups and a shared user is accessing a shared org of that user,
         get the groups of the shared user from the shared organization.
         */
-        if (requestedClaimUris.contains(GROUPS_CLAIM) && isSharedUserAccessingSharedOrg(authenticatedUser) &&
+        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
+                requestedClaimUris.contains(GROUPS_CLAIM) &&
+                isSharedUserAccessingSharedOrg(authenticatedUser) &&
                 StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
             addSharedUserGroupsFromSharedOrganization(authenticatedUser, userClaims);
         }
