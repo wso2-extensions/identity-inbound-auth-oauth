@@ -65,6 +65,9 @@ import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
+import org.wso2.carbon.identity.event.IdentityEventException;
+import org.wso2.carbon.identity.event.event.Event;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
@@ -83,6 +86,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
+import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -107,6 +111,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
@@ -126,6 +131,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -147,6 +153,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
+import static org.wso2.carbon.identity.oauth.par.common.ParConstants.PRE_HANDLE_PAR_REQUEST;
+import static org.wso2.carbon.identity.oauth.par.common.ParConstants.REQUEST_HEADERS;
+import static org.wso2.carbon.identity.oauth.par.common.ParConstants.REQUEST_PARAMETERS;
 
 /**
  * Util class which contains common methods used by all the OAuth endpoints.
@@ -2030,5 +2039,46 @@ public class EndpointUtil {
     public static HttpServletResponseWrapper getHttpServletResponseWrapper (HttpServletResponse response) {
 
         return (HttpServletResponseWrapper) response;
+    }
+
+    /**
+     * Trigger an PRE_HANDLE_PAR_REQUEST event with the request parameters and headers contained in PAR
+     * request, as its properties.
+     *
+     * @param request     HttpServletRequest
+     * @param parameters  Map of parameters
+     * @throws ParClientException If an error occurs while triggering the event.
+     */
+    public static void preHandleParRequest(HttpServletRequest request, Map<String, String> parameters)
+            throws ParClientException {
+
+        Map<String, Enumeration<String>> headers = new HashMap<>();
+        Enumeration<String> headerNames = request.getHeaderNames();
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            headers.put(headerName, request.getHeaders(headerName));
+        }
+        HashMap<String, Object> properties = new HashMap<>();
+        properties.put(REQUEST_PARAMETERS, parameters);
+        properties.put(REQUEST_HEADERS, headers);
+
+        // Trigger an event of type PRE_HANDLE_PAR_REQUEST.
+        String eventName = PRE_HANDLE_PAR_REQUEST;
+        try {
+            Event requestObjectPersistanceEvent = new Event(eventName, properties);
+            IdentityEventService identityEventService =
+                    OpenIDConnectServiceComponentHolder.getIdentityEventService();
+            if (identityEventService != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("The event: " + eventName + " triggered.");
+                }
+
+                identityEventService.handleEvent(requestObjectPersistanceEvent);
+            }
+        } catch (IdentityEventException e) {
+            String message = "Error while triggering the event: " + eventName;
+            log.error(message, e);
+            throw new ParClientException(e.getErrorCode(), e.getMessage());
+        }
     }
 }
