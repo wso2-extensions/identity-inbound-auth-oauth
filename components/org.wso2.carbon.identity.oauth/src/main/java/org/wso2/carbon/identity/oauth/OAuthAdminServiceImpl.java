@@ -1780,6 +1780,9 @@ public class OAuthAdminServiceImpl {
         }
 
         List<AccessTokenDO> accessTokenDOs = getActiveAccessTokensByConsumerKey(consumerKey);
+        accessTokenDOs.removeIf(token -> OAuthConstants.AuthorizedOrganization.NONE.equals(
+                token.getAuthorizedOrganizationId()));
+
         if (!accessTokenDOs.isEmpty()) {
             List<String> accessTokens = new ArrayList<>();
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
