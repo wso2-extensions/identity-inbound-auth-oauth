@@ -2374,10 +2374,14 @@ public class OAuth2AuthzEndpoint {
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            String clientID = oAuth2Parameters.getClientId();
+            if (clientID == null) {
+                clientID = oAuthMessage.getClientId();
+            }
             diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.VALIDATE_PKCE)
-                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuth2Parameters.getClientId())
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, clientID)
                     .inputParam("PKCE challenge", pkceChallengeCode)
                     .inputParam("PKCE method", pkceChallengeMethod)
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
