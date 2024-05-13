@@ -137,6 +137,8 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         } else if (IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_EVENT.equals(event.getEventName()) ||
             IdentityEventConstants.Event.PRE_UPDATE_GROUP_LIST_OF_ROLE_V2_EVENT.equals(event.getEventName())) {
 
+            // PRE_UPDATE_IDP_GROUP_LIST_OF_ROLE_V2_EVENT will not be handled since we can not resolve the users.
+            // To resolve the users affected by the update, we need to fetch all the users assigned with these group.
             String tenantDomain = (String) event.getEventProperties()
                     .get(IdentityEventConstants.EventProperty.TENANT_DOMAIN);
             List<String> deletedGroups = (ArrayList) event.getEventProperties().get(DELETE_GROUP_ID_LIST);
