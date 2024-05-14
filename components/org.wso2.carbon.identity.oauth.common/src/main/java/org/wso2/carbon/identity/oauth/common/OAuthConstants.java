@@ -243,6 +243,8 @@ public final class OAuthConstants {
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
     public static final String MTLS_HOSTNAME = "OAuth.MutualTLSAliases.Hostname";
+    public static final String X_WSO2_MTLS_REQUEST = "x-wso2-mtls-request";
+    public static final String IS_MTLS_REQUEST = "isMtlsRequest";
 
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
