@@ -142,7 +142,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         RoleManagementService roleManagementService = OAuthComponentServiceHolder.getInstance()
                 .getRoleV2ManagementService();
         List<RoleBasicInfo> chunkOfRoles;
-        int offset = 0;
+        int offset = 1;
         int maximumPage = IdentityUtil.getMaximumItemPerPage();
         List<RoleBasicInfo> allRoles = new ArrayList<>();
         if (roleManagementService != null) {
@@ -154,7 +154,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
                     allRoles.addAll(chunkOfRoles);
                     offset += chunkOfRoles.size(); // Move to the next chunk
                 }
-            } while (!chunkOfRoles.isEmpty());
+            } while (chunkOfRoles.size() == maximumPage);
         }
         return allRoles;
     }
