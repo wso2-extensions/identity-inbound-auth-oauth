@@ -110,7 +110,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
-        String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, clientId);
         String accessToken = tokenRespDTO.getAccessToken();
         JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
