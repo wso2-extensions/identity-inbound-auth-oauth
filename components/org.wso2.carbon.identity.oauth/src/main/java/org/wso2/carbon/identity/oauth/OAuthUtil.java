@@ -884,7 +884,8 @@ public final class OAuthUtil {
                 boolean isOrganizationUserTokenRevocation = !StringUtils.isEmpty(
                         authenticatedUser.getAccessingOrganization());
                 for (AccessTokenDO accessTokenDO : accessTokenDOs) {
-                    if (isOrganizationUserTokenRevocation && accessTokenDO.getAuthzUser().getAccessingOrganization() == null) {
+                    if (isOrganizationUserTokenRevocation
+                            && accessTokenDO.getAuthzUser().getAccessingOrganization() == null) {
                         continue;
                     }
                     // Clear cache
