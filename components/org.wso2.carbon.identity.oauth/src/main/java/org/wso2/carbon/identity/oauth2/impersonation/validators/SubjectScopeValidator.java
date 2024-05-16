@@ -19,9 +19,6 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
@@ -30,34 +27,63 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
 
-
 /**
- * class.
+ * The {@code SubjectScopeValidator} class implements the {@link ImpersonationValidator} interface
+ * to validate impersonation requests based on subject scopes.
+ * It checks the authorization scopes associated with the impersonation request to determine if the request is valid.
  */
 public class SubjectScopeValidator implements ImpersonationValidator {
 
+    /**
+     * The name of the subject scope validator.
+     */
     private static final String NAME = "SubjectScopeValidator";
-    private static final Log LOG = LogFactory.getLog(SubjectScopeValidator.class);
-    private DefaultOAuth2ScopeValidator scopeValidator;
 
+    /**
+     * The scope validator used to validate authorization scopes.
+     */
+    private final DefaultOAuth2ScopeValidator scopeValidator;
+
+    /**
+     * Constructs a new instance of the {@code SubjectScopeValidator} class.
+     */
     public SubjectScopeValidator() {
 
         this.scopeValidator = new DefaultOAuth2ScopeValidator();
     }
 
-
+    /**
+     * Gets the priority of the subject scope validator.
+     *
+     * @return the priority of the subject scope validator
+     */
     @Override
     public int getPriority() {
 
-        return 80;
+        return 100;
     }
 
+    /**
+     * Gets the name of the subject scope validator.
+     *
+     * @return the name of the subject scope validator
+     */
     @Override
     public String getImpersonationValidatorName() {
 
         return NAME;
     }
 
+    /**
+     * Validates an impersonation request based on the provided impersonation context and request DTO.
+     * It checks the scopes associated with the impersonation request to determine if the request is valid.
+     *
+     * @param impersonationContext    the impersonation context containing information about the validation process
+     * @param impersonationRequestDTO the impersonation request DTO containing information about the request
+     * @return an {@code ImpersonationContext} object representing the validation context,
+     *         including validation status and any validation failure details
+     * @throws IdentityOAuth2Exception if an error occurs during impersonation request validation
+     */
     @Override
     public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext,
                                                       ImpersonationRequestDTO impersonationRequestDTO)
@@ -65,75 +91,9 @@ public class SubjectScopeValidator implements ImpersonationValidator {
 
         OAuthAuthzReqMessageContext authzReqMessageContext = impersonationRequestDTO.getoAuthAuthzReqMessageContext();
 
-//        List<String> requestedScopes = Arrays.asList(authzReqMessageContext.getRequestedScopes());
-//        String tenantDomain = authzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
-//        String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
-//        String appId = getApplicationId(clientId, tenantDomain);
-//        String subjectUserId = authzReqMessageContext.getAuthorizationReqDTO().getRequestedSubjectId();
-
-//        AuthenticatedUser subjectUser = getAuthenticatedSubjectUser(subjectUserId, tenantDomain);
-
-//        scopeValidator = new DefaultOAuth2ScopeValidator();
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
-//        handleInternalLoginScope(requestedScopes, authorizedScopes);
-//        authorizedScopes.addAll(Arrays.asList(authzReqMessageContext.getApprovedScope()));
-//        Set<String> authorizedScopesSet = new HashSet<>(authorizedScopes);
         authzReqMessageContext.setApprovedScope(authorizedScopes.toArray(new String[0]));
         impersonationContext.setValidated(true);
         return impersonationContext;
     }
-
-//    private AuthenticatedUser getAuthenticatedSubjectUser(String subjectUserId, String tenantDomain)
-//            throws IdentityOAuth2Exception {
-//
-//        AuthenticatedUser authenticatedUser;
-//
-//        String username;
-//        try {
-//            username = OAuth2Util.resolveUsernameFromUserId(tenantDomain, subjectUserId);
-//        } catch (UserStoreException e) {
-//            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
-//                    "Use mapped local subject is mandatory but a local user couldn't be found");
-//        }
-//        String userStore = OAuth2Util.getUserStoreDomainFromUserId(subjectUserId);
-//
-//        authenticatedUser = OAuth2Util.getUserFromUserName(username);
-//        authenticatedUser.setUserId(subjectUserId);
-//        authenticatedUser.setUserStoreDomain(userStore);
-//        authenticatedUser.setAuthenticatedSubjectIdentifier(subjectUserId);
-//        return authenticatedUser;
-//    }
-
-//    /**
-//     * Get the application resource id for the given client id
-//     *
-//     * @param clientId   Client Id.
-//     * @param tenantName Tenant name.
-//     * @return Application resource id.
-//     * @throws IdentityOAuth2Exception if an error occurs while retrieving application resource id.
-//     */
-//    private String getApplicationId(String clientId, String tenantName) throws IdentityOAuth2Exception {
-//
-//        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-//        try {
-//            return applicationMgtService.getApplicationResourceIDByInboundKey(clientId, CLIENT_TYPE, tenantName);
-//        } catch (IdentityApplicationManagementException e) {
-//            throw new IdentityOAuth2Exception("Error while retrieving application resource id for client : " +
-//                    clientId + " tenant : " + tenantName, e);
-//        }
-//    }
-
-//    /**
-//     * This is to persist the previous behaviour with the "internal_login" scope.
-//     *
-//     * @param requestedScopes requested scopes.
-//     * @param authorizedScopes authorized scopes.
-//     */
-//    private void handleInternalLoginScope(List<String> requestedScopes, List<String> authorizedScopes) {
-//
-//        if ((requestedScopes.contains(SYSTEM_SCOPE) || requestedScopes.contains(INTERNAL_LOGIN_SCOPE))
-//                && !authorizedScopes.contains(INTERNAL_LOGIN_SCOPE)) {
-//            authorizedScopes.add(INTERNAL_LOGIN_SCOPE);
-//        }
-//    }
 }

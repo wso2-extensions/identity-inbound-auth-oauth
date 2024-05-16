@@ -24,14 +24,33 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 
 /**
- * interface.
+ * The {@code ImpersonationValidator} interface defines the contract for classes that validate impersonation requests.
  */
 public interface ImpersonationValidator {
 
+    /**
+     * Gets the priority of the impersonation validator.
+     *
+     * @return the priority of the impersonation validator
+     */
     public int getPriority();
 
+    /**
+     * Gets the name of the impersonation validator.
+     *
+     * @return the name of the impersonation validator
+     */
     public String getImpersonationValidatorName();
 
+    /**
+     * Validates an impersonation request based on the provided impersonation context and request DTO.
+     *
+     * @param impersonationContext      the impersonation context containing information about the validation process
+     * @param impersonationRequestDTO   the impersonation request DTO containing information about the request
+     * @return an {@code ImpersonationContext} object representing the validation context,
+     *         including validation status and any validation failure details
+     * @throws IdentityOAuth2Exception if an error occurs during impersonation request validation
+     */
     public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext,
                                                       ImpersonationRequestDTO impersonationRequestDTO)
             throws IdentityOAuth2Exception;

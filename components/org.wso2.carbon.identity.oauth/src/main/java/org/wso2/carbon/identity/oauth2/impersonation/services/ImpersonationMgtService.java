@@ -25,10 +25,18 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 
 /**
- * Interface.
+ * Interface for Impersonation Management.
  */
 public interface ImpersonationMgtService {
 
+    /**
+     * Validates an impersonation request based on the provided impersonation request DTO.
+     *
+     * @param impersonationRequestDTO the impersonation request DTO containing information about the request.
+     * @return an {@code ImpersonationContext} object representing the validation context,
+     *         including validation status and any validation failure details
+     * @throws IdentityOAuth2Exception if an error occurs during impersonation request validation
+     */
     public ImpersonationContext validateImpersonationRequest(ImpersonationRequestDTO impersonationRequestDTO)
             throws IdentityOAuth2Exception;
 }

@@ -33,19 +33,28 @@ import org.wso2.carbon.identity.oauth2.model.SubjectTokenDO;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
 
 /**
- * This class is used to issue subject token.
+ * The {@code SubjectTokenIssuer} class is responsible for issuing subject tokens for OAuth authorization requests
+ * with impersonation. It validates impersonation requests and issues subject tokens based on the provided context.
  */
 public class SubjectTokenIssuer {
 
+    /**
+     * Issues a subject token for the given OAuth authorization request message context.
+     *
+     * @param oauthAuthzMsgCtx the OAuth authorization request message context
+     * @return the subject token data object containing the issued subject token
+     * @throws IdentityOAuth2Exception if an error occurs during subject token issuance
+     */
     public SubjectTokenDO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
+        // Validate impersonation request
         ImpersonationMgtService impersonationMgtService = OAuth2ServiceComponentHolder.getInstance()
                 .getImpersonationMgtService();
-        ImpersonationContext impersonationContext = impersonationMgtService.validateImpersonationRequest
-                (buildImpersonationRequestDTO(oauthAuthzMsgCtx));
+        ImpersonationContext impersonationContext = impersonationMgtService.validateImpersonationRequest(
+                buildImpersonationRequestDTO(oauthAuthzMsgCtx));
 
+        // If impersonation request is not validated, throw an exception
         if (!impersonationContext.isValidated()) {
-
             String client = impersonationContext.getImpersonationRequestDTO().getClientId();
             AuthenticatedUser impersonator = impersonationContext.getImpersonationRequestDTO().getImpersonator();
             String subject = impersonationContext.getImpersonationRequestDTO().getSubject();
@@ -54,7 +63,6 @@ public class SubjectTokenIssuer {
 
             if (StringUtils.isNotBlank(impersonationContext.getValidationFailureErrorCode()) ||
                     StringUtils.isNotBlank(impersonationContext.getValidationFailureErrorMessage())) {
-
                 throw new IdentityOAuth2Exception(impersonationContext.getValidationFailureErrorCode(),
                         errorMsg + " Error Message : " + impersonationContext.getValidationFailureErrorMessage());
             }
@@ -62,6 +70,7 @@ public class SubjectTokenIssuer {
             throw new IdentityOAuth2Exception(errorMsg);
         }
 
+        // Issue subject token using OAuth token issuer
         OauthTokenIssuer oauthTokenIssuer = OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()
                 .get(JWT_TOKEN_TYPE);
         SubjectTokenDO subjectTokenDO = new SubjectTokenDO();
@@ -69,6 +78,12 @@ public class SubjectTokenIssuer {
         return subjectTokenDO;
     }
 
+    /**
+     * Builds an impersonation request DTO based on the provided OAuth authorization request message context.
+     *
+     * @param context the OAuth authorization request message context
+     * @return the impersonation request DTO containing information about the impersonation request
+     */
     private ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext context) {
 
         ImpersonationRequestDTO impersonationRequestDTO = new ImpersonationRequestDTO();

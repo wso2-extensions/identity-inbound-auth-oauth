@@ -19,7 +19,6 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.services;
 
-
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
@@ -29,9 +28,14 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import java.util.List;
 
 /**
- * class.
+ * The {@code ImpersonationMgtServiceImpl} class implements the {@link ImpersonationMgtService} interface
+ * and provides functionality for validating impersonation requests.
  */
 public class ImpersonationMgtServiceImpl implements ImpersonationMgtService {
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public ImpersonationContext validateImpersonationRequest(ImpersonationRequestDTO impersonationRequestDTO)
             throws IdentityOAuth2Exception {

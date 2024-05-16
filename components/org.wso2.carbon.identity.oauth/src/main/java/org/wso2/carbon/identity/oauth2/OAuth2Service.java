@@ -391,6 +391,13 @@ public class OAuth2Service extends AbstractAdmin {
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
     }
 
+    /**
+     * Issues a subject token for the given OAuth authorization request message context.
+     *
+     * @param oauthAuthzMsgCtx the OAuth authorization request message context
+     * @return the subject token data object containing the issued subject token
+     * @throws IdentityOAuth2Exception if an error occurs during subject token issuance
+     */
     public SubjectTokenDO issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
 

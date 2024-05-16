@@ -61,6 +61,7 @@ public class OAuth2AuthorizeReqDTO {
     private boolean isRequestObjectFlow;
     private String state;
     private String requestedSubjectId;
+
     public String getRequestedSubjectId() {
 
         return requestedSubjectId;

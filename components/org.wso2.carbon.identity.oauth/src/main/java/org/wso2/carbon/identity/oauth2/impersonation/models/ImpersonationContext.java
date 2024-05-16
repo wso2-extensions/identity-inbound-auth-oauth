@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
+ *  Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
  *
  *  WSO2 LLC. licenses this file to you under the Apache License,
  *  Version 2.0 (the "License"); you may not use this file except
@@ -19,11 +19,10 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.models;
 
-
-/**
- * The object which will contain context information which are passed through API based Authentication process.
- * All information related to client attestation will be available in this context including the attestation
- * status, attested client information, type and errors.
+ /**
+ * The object which will contain context information which are passed through Impersonation validation process.
+ * The {@code ImpersonationContext} class represents the context for impersonation requests, including
+ * information about the request, validation status, and any validation failure details.
  */
 public class ImpersonationContext {
 

@@ -23,6 +23,7 @@ package org.wso2.carbon.identity.oauth2.model;
  * Subject token data object.
  */
 public class SubjectTokenDO {
+
     private String subjectToken;
 
     public String getSubjectToken() {

@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
 /**
- * Exception class for handling client attestation metadata management errors.
+ * Request DTO class for Impersonation validation.
  */
 public class ImpersonationRequestDTO {
 
