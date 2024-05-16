@@ -128,7 +128,7 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
                 return respDTO;
             }
         }).when(ResponseTypeHandlerUtil.class, "buildIDTokenResponseDTO", any(OAuth2AuthorizeRespDTO.class),
-                isNull(),any(OAuthAuthzReqMessageContext.class));
+                isNull(), any(OAuthAuthzReqMessageContext.class));
 
         AuthenticatedUser user = new AuthenticatedUser();
         user.setUserStoreDomain("PRIMARY");
