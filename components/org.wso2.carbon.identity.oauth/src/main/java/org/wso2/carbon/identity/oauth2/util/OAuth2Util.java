@@ -384,7 +384,7 @@ public class OAuth2Util {
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
 
-    private static final List<String> SAAS_APP_IDS = Arrays.asList(
+    private static final List<String> PORTAL_APP_IDS = Arrays.asList(
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
             ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
@@ -4166,12 +4166,8 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                ServiceURLBuilder serviceURLBuilder = ServiceURLBuilder.create();
-                if (SAAS_APP_IDS.contains(clientId)) {
-                    serviceURLBuilder.setSkipCustomDomain(true);
-                }
-
-                return serviceURLBuilder.addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
+                        PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
