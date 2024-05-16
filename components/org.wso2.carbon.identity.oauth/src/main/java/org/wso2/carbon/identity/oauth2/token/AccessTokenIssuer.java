@@ -629,6 +629,20 @@ public class AccessTokenIssuer {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
+        if (tokReqMsgCtx.isImpersonationRequest() && OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
+            /*
+             In the impersonation flow, we have already completed scope validation during the /authorize call and
+             issued a subject token with the authorized scopes. During the token flow we only consider the
+             scopes bound to the issued subject token and simply ignore any 'scope' parameter sent in the
+             subsequent token request. Therefore, it does not make sense to go through scope validation again as
+             there won't be any new scopes to validate.
+            */
+            if (log.isDebugEnabled()) {
+                log.debug("Skipping scope validation for impersonation flow as scope validation has already " +
+                        "happened in the authorize flow.");
+            }
+            return true;
+        }
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             /*
              In the authorization code flow, we have already completed scope validation during the /authorize call and
