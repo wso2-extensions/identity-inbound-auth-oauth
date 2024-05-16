@@ -57,7 +57,9 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.model.SubjectTokenDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
@@ -387,6 +389,13 @@ public class OAuth2Service extends AbstractAdmin {
                     registeredCallbackUrl);
         }
         return (regexp != null && callbackURI.matches(regexp)) || registeredCallbackUrl.equals(callbackURI);
+    }
+
+    public SubjectTokenDO issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        SubjectTokenIssuer subjectTokenIssuer = new SubjectTokenIssuer();
+        return subjectTokenIssuer.issue(oauthAuthzMsgCtx);
     }
 
     /**
