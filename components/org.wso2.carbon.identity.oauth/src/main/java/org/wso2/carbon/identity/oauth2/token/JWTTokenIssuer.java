@@ -477,7 +477,19 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        boolean isMTLSrequest;
+        if (authAuthzReqMessageContext != null) {
+            /* If the auth request is originated from a request object reference(ex: PAR), then that endpoint should be
+            considered when determining the audience and issuer claims. */
+            Object isMTLSProp = authAuthzReqMessageContext.getProperty(OAuthConstants.IS_MTLS_REQUEST);
+            isMTLSrequest = isMTLSProp != null && Boolean.parseBoolean(isMTLSProp.toString());
+        } else {
+            // For the token requests, the token gateway is considered when determining the issuer and the audience.
+            isMTLSrequest = OAuth2Util.isMtlsRequest(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getHttpServletRequestWrapper().getRequestURL().toString());
+        }
+        String issuer = isMTLSrequest ? OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl() :
+                OAuth2Util.getIdTokenIssuer(spTenantDomain);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);

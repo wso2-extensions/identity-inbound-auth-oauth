@@ -77,6 +77,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.servlet.http.HttpServletRequestWrapper;
+
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Matchers.any;
@@ -127,6 +129,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
+    private static final String DUMMY_TOKEN_ENDPOINT = "https://localhost:9443/oauth2/token";
     private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
     private static final String DUMMY_USER_ID = "DUMMY_USER_ID";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
@@ -179,6 +182,9 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
         accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
         accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+        HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+        when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+        accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
         OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         reqMessageContext.setScope(requestScopes);
         reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
@@ -310,6 +316,9 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         AuthenticatedUser authenticatedUserForTokenReq = new AuthenticatedUser(authenticatedUserForAuthz);
         tokenReqMessageContext.setAuthorizedUser(authenticatedUserForTokenReq);
         tokenReqMessageContext.setConsentedToken(false);
+        HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+        when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+        tokenReqMessageContext.getOauth2AccessTokenReqDTO().setHttpServletRequestWrapper(httpServletRequestWrapper);
         Calendar cal = Calendar.getInstance(); // creates calendar
         cal.setTime(new Date()); // sets calendar time/date
         cal.add(Calendar.HOUR_OF_DAY, 1); // adds one hour

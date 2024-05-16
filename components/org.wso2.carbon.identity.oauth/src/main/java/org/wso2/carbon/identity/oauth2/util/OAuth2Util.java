@@ -5406,4 +5406,14 @@ public class OAuth2Util {
                     authenticatedUser.getUserResidentOrganization(), e);
         }
     }
+
+    /**
+     * Check whether the request URL is a mtls endpoint.
+     * @param requestUrl Request URL.
+     * @return True if the request URL is a mtls endpoint.
+     */
+    public static boolean isMtlsRequest(String requestUrl) {
+
+        return requestUrl.contains(IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
+    }
 }

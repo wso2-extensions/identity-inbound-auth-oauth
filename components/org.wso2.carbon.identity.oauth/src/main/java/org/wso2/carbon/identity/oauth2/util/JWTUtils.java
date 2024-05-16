@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -74,6 +75,7 @@ public class JWTUtils {
     private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
     private static final String ALGO_PREFIX = "RS";
     private static final String ALGO_PREFIX_PS = "PS";
+    private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
     /**
      * Parse JWT Token.
@@ -188,6 +190,11 @@ public class JWTUtils {
         }
         // Compare JWT issuer with the resource issuer.
         if (!jwtIssuer.equals(resourceIssuer)) {
+            // Check the mutual TLS aliases enablement if the token is issued from mTLS endpoint.
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED)) &&
+                    jwtIssuer.equals(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl())) {
+                return residentIdentityProvider;
+            }
             // Check for organization management enablement.
             if (!OAuth2ServiceComponentHolder.getInstance().isOrganizationManagementEnabled()) {
                 throw new IdentityOAuth2Exception("No registered IDP found for the token with issuer name : "

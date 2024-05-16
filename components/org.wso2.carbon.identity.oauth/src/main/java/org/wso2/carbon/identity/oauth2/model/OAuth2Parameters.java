@@ -53,6 +53,7 @@ public class OAuth2Parameters implements Serializable {
     private String sessionDataKey;
     private String loginTenantDomain;
     private boolean isRequestObjectFlow;
+    private boolean isMtlsRequest;
 
     public String getSessionDataKey() {
         return sessionDataKey;
@@ -297,5 +298,12 @@ public class OAuth2Parameters implements Serializable {
     public void setRequestObjectFlow(boolean isRequestObjectFlow) {
 
         this.isRequestObjectFlow = isRequestObjectFlow;
+    }
+
+    public boolean isMtlsRequest() {
+        return isMtlsRequest;
+    }
+    public void setIsMtlsRequest(boolean isMtlsRequest) {
+        this.isMtlsRequest = isMtlsRequest;
     }
 }

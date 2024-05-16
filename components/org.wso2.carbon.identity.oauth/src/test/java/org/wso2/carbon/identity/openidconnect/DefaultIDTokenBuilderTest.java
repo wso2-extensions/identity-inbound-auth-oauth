@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -93,6 +94,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.servlet.http.HttpServletRequestWrapper;
+
 import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -114,6 +117,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
     private static final String AUTHORIZATION_CODE_VALUE = "55fe926f-3b43-3681-aecc-dc3ed7938325";
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;
     private static final String ACCESS_TOKEN = TestConstants.ACCESS_TOKEN;
+    private static final String DUMMY_TOKEN_ENDPOINT = "https://localhost:9443/oauth2/token";
     private DefaultIDTokenBuilder defaultIDTokenBuilder;
     private OAuthTokenReqMessageContext messageContext;
     private OAuth2AccessTokenRespDTO tokenRespDTO;
@@ -142,6 +146,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         configuration.put("SSOService.SAMLECPEndpoint", "https://localhost:9443/samlecp");
         configuration.put("SSOService.ArtifactResolutionEndpoint", "https://localhost:9443/samlartresolve");
         configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
+        configuration.put(OAuthConstants.MTLS_HOSTNAME, "https://mtls.localhost:9443/");
         WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
         SecretsProcessor<IdentityProvider> identityProviderSecretsProcessor = mock(
                 IdPSecretsProcessor.class);
@@ -482,6 +487,9 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         accessTokenReqDTO.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
         accessTokenReqDTO.setClientId(clientId);
         accessTokenReqDTO.setCallbackURI(TestConstants.CALLBACK);
+        HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+        when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+        accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
 
         OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         requestMsgCtx.setAuthorizedUser(user);
