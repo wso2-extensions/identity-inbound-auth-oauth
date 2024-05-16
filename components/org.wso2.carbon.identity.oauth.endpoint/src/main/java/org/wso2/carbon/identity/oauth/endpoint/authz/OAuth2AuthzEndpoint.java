@@ -641,6 +641,7 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setState(oauth2Params.getState());
         authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
         authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
+        authorizationResponseDTO.setMtlsRequest(oauth2Params.isMtlsRequest());
 
         return authorizationResponseDTO;
     }

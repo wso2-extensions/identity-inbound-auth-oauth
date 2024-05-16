@@ -488,8 +488,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             isMTLSrequest = OAuth2Util.isMtlsRequest(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
                     .getHttpServletRequestWrapper().getRequestURL().toString());
         }
-        String issuer = isMTLSrequest ? OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl() :
-                OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
