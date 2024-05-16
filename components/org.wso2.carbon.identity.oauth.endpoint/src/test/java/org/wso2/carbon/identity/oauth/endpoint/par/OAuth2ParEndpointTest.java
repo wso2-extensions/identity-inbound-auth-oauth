@@ -119,6 +119,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
     private static final String REQUEST_URI_REF = "c0143cb3-7ae0-43a3-a023-b7218c7182df";
     private static final String REQUEST_URI = "urn:ietf:params:oauth:par:request_uri:c0143cb3-7ae0-43a3-a023" +
             "-b7218c7182df";
+    private static final String PAR_EP_URL = "https://localhost:9443/oauth2/par";
+    private static final String SERVER_BASE_PATH = "https://localhost:9443";
     private static final Long EXPIRY_TIME = 60L;
     private OAuth2ParEndpoint oAuth2ParEndpoint;
 
@@ -342,6 +344,11 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         // Set authenticated client context
         request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+
+        mockStatic(IdentityUtil.class);
+        doReturn(SERVER_BASE_PATH).when(IdentityUtil.class, "getProperty",
+                OAuthConstants.MTLS_HOSTNAME);
+        request.setAttribute(OAuthConstants.TRANSPORT_ENDPOINT_ADDRESS, PAR_EP_URL);
 
         spy(EndpointUtil.class);
         doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");

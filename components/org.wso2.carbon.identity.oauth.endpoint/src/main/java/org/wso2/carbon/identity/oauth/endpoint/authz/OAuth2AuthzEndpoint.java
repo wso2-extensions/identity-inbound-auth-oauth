@@ -1590,6 +1590,7 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                 oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
+        oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
         if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
@@ -2527,6 +2528,13 @@ public class OAuth2AuthzEndpoint {
         }
 
         handleMaxAgeParameter(oauthRequest, params);
+
+        Object isMtls = oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_MTLS_REQUEST);
+        if (isMtls != null) {
+            params.setIsMtlsRequest(Boolean.parseBoolean(isMtls.toString()));
+        } else {
+            params.setIsMtlsRequest(false);
+        }
 
         /*
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
