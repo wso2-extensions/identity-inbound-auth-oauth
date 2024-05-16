@@ -300,10 +300,21 @@ public class OAuth2Parameters implements Serializable {
         this.isRequestObjectFlow = isRequestObjectFlow;
     }
 
+    /**
+     * @return  Whether the request is a mutual TLS request or not.
+     */
     public boolean isMtlsRequest() {
+
         return isMtlsRequest;
     }
+
+    /**
+     * Sets whether the request is a mutual TLS request or not.
+     *
+     * @param isMtlsRequest Whether the request is a mutual TLS request or not.
+     */
     public void setIsMtlsRequest(boolean isMtlsRequest) {
+
         this.isMtlsRequest = isMtlsRequest;
     }
 }
