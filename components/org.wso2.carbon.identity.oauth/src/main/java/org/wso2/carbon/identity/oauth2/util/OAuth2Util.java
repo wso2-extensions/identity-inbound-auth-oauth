@@ -78,6 +78,7 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -382,6 +383,10 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
+
+    private static final List<String> PORTAL_APP_IDS = Arrays.asList(
+            ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
+            ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
     private OAuth2Util() {
 
@@ -4147,6 +4152,22 @@ public class OAuth2Util {
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
                 return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+            } catch (URLBuilderException e) {
+                String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
+                        " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
+                throw new IdentityOAuth2Exception(errorMsg, e);
+            }
+        } else {
+            return getIssuerLocation(tenantDomain);
+        }
+    }
+
+    public static String getIdTokenIssuer(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
+
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            try {
+                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
+                        PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);

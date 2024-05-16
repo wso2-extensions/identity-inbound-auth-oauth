@@ -226,7 +226,7 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.testutil</artifactId>
-            <version>${carbon.identity.framework.version}</version>
+            <version>${carbon.identity.framework.testutil.version}</version>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
