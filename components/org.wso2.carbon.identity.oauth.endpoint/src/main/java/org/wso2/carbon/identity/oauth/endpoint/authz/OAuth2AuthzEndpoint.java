@@ -347,6 +347,17 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
+        if (StringUtils.isNotEmpty(oAuthMessage.getClientId())) {
+            try {
+                ServiceProvider serviceProvider = getServiceProvider(oAuthMessage.getClientId());
+                if (!serviceProvider.isApplicationAccessEnabled()) {
+                    return handleApplicationAccessDisabled(request);
+                }
+            } catch (OAuthSystemException e) {
+                return handleOAuthSystemException(oAuthMessage, e);
+            }
+        }
+
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
@@ -556,6 +567,13 @@ public class OAuth2AuthzEndpoint {
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(request,
                 e.getErrorCode(), OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
                 e.getMessage(), null))).build();
+    }
+
+    private Response handleApplicationAccessDisabled(HttpServletRequest request) throws URISyntaxException {
+
+        return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(request,
+                OAuth2ErrorCodes.ACCESS_DENIED, OAuth2ErrorCodes.OAuth2SubErrorCodes.ACCESS_DISABLED,
+               "Login access is disabled for the application", null))).build();
     }
 
     private Response handleOAuthProblemException(OAuthMessage oAuthMessage, OAuthProblemException e) throws

@@ -719,6 +719,7 @@ public final class OAuthConstants {
             public static final String VALIDATE_AUTHZ_REQUEST = "validate-authz-request";
             public static final String VALIDATE_INPUT_PARAMS = "validate-input-parameters";
             public static final String VALIDATE_OAUTH_CLIENT = "validate-oauth-client";
+            public static final String VALIDATE_APP_ACCESS = "validate-application-access";
             public static final String REVOKE_TOKEN = "revoke-token";
             public static final String VALIDATE_TOKEN_BINDING = "validate-token-binding";
             public static final String VALIDATE_PKCE = "validate-pkce";
