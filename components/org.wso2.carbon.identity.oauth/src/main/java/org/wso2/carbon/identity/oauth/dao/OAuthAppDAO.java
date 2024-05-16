@@ -77,6 +77,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
@@ -1031,6 +1033,16 @@ public class OAuthAppDAO {
                 SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        if (oauthAppDO.isHybridFlowEnabled()) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    HYBRID_FLOW_RESPONSE_TYPE, oauthAppDO.getHybridFlowResponseType(),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1668,6 +1680,14 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    HYBRID_FLOW_ENABLED,
+                    String.valueOf(consumerAppDO.isHybridFlowEnabled()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
+                    String.valueOf(consumerAppDO.getHybridFlowResponseType()));
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1833,6 +1853,15 @@ public class OAuthAppDAO {
         if (subjectTokenExpiryTime != null) {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
         }
+
+        boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
+                HYBRID_FLOW_ENABLED));
+        oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+
+        String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
+                OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+
+        oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

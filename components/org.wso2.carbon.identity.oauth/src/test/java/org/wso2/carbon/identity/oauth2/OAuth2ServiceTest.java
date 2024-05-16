@@ -344,6 +344,58 @@ public class OAuth2ServiceTest {
         }
     }
 
+    @Test(dataProvider = "ValidateClientInfoDataProvider")
+    public void testValidateHybridFlowValidRequest(String clientId, String grantType,
+                                                   String callbackUrl, String tenantDomain,
+                                                   int tenantId, String callbackURI) throws Exception {
+
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain, tenantId);
+        oAuthAppDO.setHybridFlowEnabled(true);
+        oAuthAppDO.setHybridFlowResponseType("code token");
+        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
+        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
+        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code token");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(mockHttpServletRequest);
+        assertNotNull(oAuth2ClientValidationResponseDTO);
+        assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+    }
+
+    @Test(dataProvider = "ValidateClientInfoDataProvider")
+    public void testValidateHybridFlowDisabledCase(String clientId, String grantType,
+                                                   String callbackUrl, String tenantDomain,
+                                                   int tenantId, String callbackURI) throws Exception {
+
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain, tenantId);
+        oAuthAppDO.setHybridFlowEnabled(false);
+        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
+        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
+        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code id_token");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(mockHttpServletRequest);
+        assertNotNull(oAuth2ClientValidationResponseDTO);
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "invalid_client");
+        assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
+    }
+
+    @Test(dataProvider = "ValidateClientInfoDataProvider")
+    public void testValidateHybridFlowInValidResponseType(String clientId, String grantType,
+                                                          String callbackUrl, String tenantDomain,
+                                                          int tenantId, String callbackURI) throws Exception {
+
+        OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain, tenantId);
+        oAuthAppDO.setHybridFlowEnabled(true);
+        oAuthAppDO.setHybridFlowResponseType("code token");
+        when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
+        when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
+        when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code id_token");
+        OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                validateClientInfo(mockHttpServletRequest);
+        assertNotNull(oAuth2ClientValidationResponseDTO);
+        assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), "invalid_client");
+        assertFalse(oAuth2ClientValidationResponseDTO.isValidClient());
+    }
+
     private OAuthAppDO getOAuthAppDO(String clientId, String grantType, String callbackUrl, String tenantDomain,
                                      int tenantId, MockedStatic<IdentityTenantUtil> identityTenantUtil,
                                      MockedStatic<OAuth2Util> oAuth2Util)

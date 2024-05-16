@@ -36,7 +36,10 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -149,6 +152,9 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 }
                 throw new InvalidOAuthClientException("Oauth application is not in active state.");
             }
+
+            validateHybridFlowRequest(request, appDO);
+
             return validateCallBack(clientId, callbackURI, appDO);
         } catch (InvalidOAuthClientException e) {
             // There is no such Client ID being registered. So it is a request from an invalid client.
@@ -185,6 +191,46 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
             return validationResponseDTO;
         }
+    }
+
+    private void validateHybridFlowRequest(HttpServletRequest request, OAuthAppDO appDO)
+            throws InvalidOAuthClientException {
+
+        String responseType = request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE);
+        boolean hybridFlowEnabled = appDO.isHybridFlowEnabled();
+
+        if (OAuth2Util.isHybridResponseType(responseType)) {
+            if (!hybridFlowEnabled) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Hybrid flow is not enabled for the application with client ID: "
+                            + appDO.getOauthConsumerKey());
+                }
+                throw new InvalidOAuthClientException("Hybrid flow is not enabled for the application.");
+            }
+
+            String configuredHybridFlowResponseType = appDO.getHybridFlowResponseType();
+            if (!isRequestedResponseTypeConfigured(responseType, configuredHybridFlowResponseType)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Requested response type " + responseType + " is not configured for the hybrid flow " +
+                            "for the application with client ID: " + appDO.getOauthConsumerKey());
+                }
+
+                throw new InvalidOAuthClientException("Requested response type " + responseType +
+                        " is not configured for the hybrid flow for the application.");
+            }
+        }
+    }
+
+    private boolean isRequestedResponseTypeConfigured(String responseType, String configuredHybridFlowResponseType) {
+
+        Set<String> configuredResponseTypes = new HashSet<>(Arrays.asList(configuredHybridFlowResponseType.split(" ")));
+        String[] requestedResponseTypes = responseType.split(" ");
+        for (String requestedType : requestedResponseTypes) {
+            if (!configuredResponseTypes.contains(requestedType)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private OAuth2ClientValidationResponseDTO validateCallBack(String clientId, String callbackURI, OAuthAppDO appDO) {
