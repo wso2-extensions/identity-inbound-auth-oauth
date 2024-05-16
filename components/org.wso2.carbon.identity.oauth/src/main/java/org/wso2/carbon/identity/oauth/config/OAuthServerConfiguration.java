@@ -1066,6 +1066,8 @@ public class OAuthServerConfiguration {
                             CodeTokenResponseValidator.class);
                     supportedResponseTypeValidatorsTemp.put(OAuthConstants.SUBJECT_TOKEN,
                             SubjectTokenResponseValidator.class);
+                    supportedResponseTypeValidatorsTemp.put(OAuthConstants.ID_TOKEN_SUBJECT_TOKEN,
+                            SubjectTokenResponseValidator.class);
                     if (supportedResponseTypeValidatorNames != null) {
                         // Load configured grant type validators
                         for (Map.Entry<String, String> entry : supportedResponseTypeValidatorNames
