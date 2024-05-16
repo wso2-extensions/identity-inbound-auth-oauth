@@ -213,6 +213,7 @@ public final class OAuthConstants {
 
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
     public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
+    public static final String TRANSPORT_ENDPOINT_ADDRESS = "org.apache.cxf.transport.endpoint.address";
 
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
