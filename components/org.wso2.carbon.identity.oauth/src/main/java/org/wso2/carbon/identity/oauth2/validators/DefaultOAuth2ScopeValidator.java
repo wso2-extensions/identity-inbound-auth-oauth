@@ -158,7 +158,7 @@ public class DefaultOAuth2ScopeValidator {
      * @return Authorized scopes.
      * @throws IdentityOAuth2Exception if any error occurs during getting authorized scopes.
      */
-    private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
+    public List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
                                              String appId, String grantType, String userType, String tenantDomain)
             throws IdentityOAuth2Exception {
 
