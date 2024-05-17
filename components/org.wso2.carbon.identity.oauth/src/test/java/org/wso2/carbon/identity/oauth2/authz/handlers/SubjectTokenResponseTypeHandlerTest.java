@@ -78,7 +78,7 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
     }
 
     @Test(dataProvider = "IsAuthorizedDataProvider")
-    public void isAuthorizedTest(boolean isImpersonationEnabled, String responseType, boolean isAuthorized)
+    public void isAuthorizedTest(boolean isSubjectTokenEnabled, String responseType, boolean isAuthorized)
             throws Exception {
 
         authorizationReqDTO = new OAuth2AuthorizeReqDTO();
@@ -93,7 +93,7 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);
         oAuthAppDO.setState("active");
         oAuthAppDO.setApplicationName("testApp");
-        oAuthAppDO.setImpersonationEnabled(isImpersonationEnabled);
+        oAuthAppDO.setSubjectTokenEnabled(isSubjectTokenEnabled);
         authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
 
         SubjectTokenResponseTypeHandler subjectTokenResponseTypeHandler = new SubjectTokenResponseTypeHandler();
@@ -148,7 +148,7 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
         oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);
         oAuthAppDO.setState("active");
         oAuthAppDO.setApplicationName("testApp");
-        oAuthAppDO.setImpersonationEnabled(true);
+        oAuthAppDO.setSubjectTokenEnabled(true);
 
         oAuthAppDO.setAppOwner(user);
         authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);

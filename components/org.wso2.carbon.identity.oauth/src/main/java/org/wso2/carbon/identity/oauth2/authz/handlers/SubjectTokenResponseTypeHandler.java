@@ -33,7 +33,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.SubjectTokenDO;
 
 /**
- * Device response type handler.
+ * The {@code SubjectTokenResponseTypeHandler} class is responsible for handling the "subject_token" response type
+ * in OAuth authorization requests. It extends the {@link AbstractResponseTypeHandler} class and implements the logic
+ * to issue subject tokens and build responses accordingly.
  */
 public class SubjectTokenResponseTypeHandler extends AbstractResponseTypeHandler {
 
@@ -71,12 +73,9 @@ public class SubjectTokenResponseTypeHandler extends AbstractResponseTypeHandler
         OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
 
         OAuthAppDO oAuthAppDO = (OAuthAppDO) authzReqMsgCtx.getProperty(OAUTH_APP_DO);
-        if (!oAuthAppDO.isImpersonationEnabled()) {
-            return false;
-        }
 
         String responseType = authzReqDTO.getResponseType();
-        if (StringUtils.contains(responseType, SUBJECT_TOKEN)) {
+        if (oAuthAppDO.isSubjectTokenEnabled() && StringUtils.contains(responseType, SUBJECT_TOKEN)) {
             authzReqMsgCtx.setSubjectTokenFLow(true);
             return true;
         }
