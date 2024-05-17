@@ -105,13 +105,13 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
     public void testValidateImpersonation() throws IdentityException, NoSuchFieldException, IllegalAccessException
             , UserStoreException {
 
-        when(OAuth2Util.resolveUsernameFromUserId("carbon.super","dummySubjectId"))
+        when(OAuth2Util.resolveUsernameFromUserId("carbon.super", "dummySubjectId"))
                 .thenReturn("dummyUserName");
         when(OAuth2Util.getUserStoreDomainFromUserId("dummySubjectId")).thenReturn("dummyUserStore");
         when(OAuth2Util.createAuthenticatedUser("dummyUserName", "dummyUserStore",
                 "carbon.super", null)).thenReturn(authenticatedUser);
         when(defaultOAuth2ScopeValidator.getAuthorizedScopes(Arrays.asList(SCOPES_WITHOUT_OPENID),
-                authenticatedUser,"dummyAppId", null,null, "carbon.super"))
+                authenticatedUser, "dummyAppId", null, null, "carbon.super"))
                 .thenReturn(Arrays.asList("scope1", "scope2"));
 
         ImpersonationContext impersonationContext = new ImpersonationContext();
@@ -133,13 +133,13 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
     public void testValidateImpersonationNegativeCase() throws IdentityException, NoSuchFieldException,
             IllegalAccessException, UserStoreException {
 
-        when(OAuth2Util.resolveUsernameFromUserId("carbon.super","dummySubjectId"))
+        when(OAuth2Util.resolveUsernameFromUserId("carbon.super", "dummySubjectId"))
                 .thenReturn("dummyUserName");
         when(OAuth2Util.getUserStoreDomainFromUserId("dummySubjectId")).thenReturn("dummyUserStore");
         when(OAuth2Util.createAuthenticatedUser("dummyUserName", "dummyUserStore",
                 "carbon.super", null)).thenReturn(authenticatedUser);
         when(defaultOAuth2ScopeValidator.getAuthorizedScopes(Arrays.asList(SCOPES_WITHOUT_OPENID),
-                authenticatedUser,"dummyAppId", null,null, "carbon.super"))
+                authenticatedUser, "dummyAppId", null, null, "carbon.super"))
                 .thenThrow(IdentityOAuth2Exception.class);
 
         ImpersonationContext impersonationContext = new ImpersonationContext();
