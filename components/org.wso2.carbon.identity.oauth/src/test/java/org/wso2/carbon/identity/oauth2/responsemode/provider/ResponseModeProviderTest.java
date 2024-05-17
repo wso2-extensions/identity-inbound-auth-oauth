@@ -30,10 +30,10 @@ public class ResponseModeProviderTest {
                         "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz#access_token=access_token_1" +
                                 "&expires_in=3600&code=code3&scope=randomScope"},
                 {getAuthResponseDTO("https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
-                        "code3", null, "subject_token_1"),
+                        null, null, "subject_token_1"),
                         "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
-                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz#code=code3" +
-                                "&subject_token=subject_token_1"},
+                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz#" +
+                                "subject_token=subject_token_1"},
 
         };
     }
@@ -49,7 +49,10 @@ public class ResponseModeProviderTest {
         Assert.assertTrue(redirectUrl.contains(callbackUrl), "Redirect url does not " +
                 "contain the callback url provided.");
         Assert.assertTrue(redirectUrl.contains("#"), "Redirect url does not contain a fragment part.");
-        Assert.assertTrue(redirectUrl.contains("code="), "Redirect url does not contain the authorization code.");
+        if (authorizationResponseDTO.getSuccessResponseDTO().getAuthorizationCode() != null) {
+            Assert.assertTrue(redirectUrl.contains("code="),
+                    "Redirect url does not contain the authorization code.");
+        }
         Assert.assertEquals(redirectUrl, expectedRedirectUrl, "Redirect url is not as expected.");
     }
 
@@ -72,9 +75,9 @@ public class ResponseModeProviderTest {
                         "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz&access_token=access_token_1" +
                                 "&expires_in=3600&code=code3&scope=randomScope"},
                 {getAuthResponseDTO("https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
-                        "code3", null, "subject_token_1"),
+                        null, null, "subject_token_1"),
                         "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz",
-                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz&code=code3" +
+                        "https://www.google.com/redirects/redirect2?param1=abc&param2=xyz" +
                                 "&subject_token=subject_token_1"},
 
         };
@@ -91,7 +94,10 @@ public class ResponseModeProviderTest {
         Assert.assertTrue(redirectUrl.contains(callbackUrl), "Redirect url does not " +
                 "contain the callback url provided.");
         Assert.assertTrue(redirectUrl.contains("?"), "Redirect url does not contain a query part.");
-        Assert.assertTrue(redirectUrl.contains("code="), "Redirect url does not contain the authorization code.");
+        if (authorizationResponseDTO.getSuccessResponseDTO().getAuthorizationCode() != null) {
+            Assert.assertTrue(redirectUrl.contains("code="),
+                    "Redirect url does not contain the authorization code.");
+        }
         Assert.assertEquals(redirectUrl, expectedRedirectUrl, "Redirect url is not as expected.");
     }
 
