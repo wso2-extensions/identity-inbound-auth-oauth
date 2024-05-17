@@ -881,7 +881,7 @@ public final class OAuthUtil {
                 Set<String> scopes = new HashSet<>();
                 List<AccessTokenDO> accessTokens = new ArrayList<>();
                 boolean tokenBindingEnabled = false;
-                boolean isOrganizationUserTokenRevocation = !StringUtils.isEmpty(
+                boolean isOrganizationUserTokenRevocation = StringUtils.isNotEmpty(
                         authenticatedUser.getAccessingOrganization());
                 for (AccessTokenDO accessTokenDO : accessTokenDOs) {
                     if (isOrganizationUserTokenRevocation
