@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -122,4 +122,17 @@ public interface AuthorizationGrantHandler {
 
         return null;
     }
+
+    /**
+     * Tells if the access tokens issued for this grant type go as APPLICATION tokens or APPLICATION_USER tokens.
+     *
+     * @param tokReqMsgCtx Token request message context.
+     * @return <Code>true</Code>|<Code>false</Code> if this grant type issues APPLICATION_USER tokens.
+     * @throws IdentityOAuth2Exception Error when checking if this grant type issues APPLICATION tokens or not
+     */
+    default boolean isOfTypeApplicationUser(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        return isOfTypeApplicationUser();
+    }
+
 }
