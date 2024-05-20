@@ -758,17 +758,17 @@ public class OAuthAdminServiceImpl {
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
         OAuthAppDAO dao = new OAuthAppDAO();
-        OAuthAppDO oauthappdo;
+        OAuthAppDO oAuthAppDO;
         try {
-            oauthappdo = getOAuthApp(oauthConsumerKey, tenantDomain);
-            if (oauthappdo == null) {
+            oAuthAppDO = getOAuthApp(oauthConsumerKey, tenantDomain);
+            if (oAuthAppDO == null) {
                 String msg = "OAuth application cannot be found for consumerKey: " + oauthConsumerKey;
                 if (LOG.isDebugEnabled()) {
                     LOG.debug(msg);
                 }
                 throw handleClientError(INVALID_OAUTH_CLIENT, msg);
             }
-            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oauthappdo.getOauthConsumerSecret())) {
+            if (!StringUtils.equals(consumerAppDTO.getOauthConsumerSecret(), oAuthAppDO.getOauthConsumerSecret())) {
                 errorMessage = "Invalid ConsumerSecret is provided for updating the OAuth application with " +
                         "consumerKey: " + oauthConsumerKey;
                 if (LOG.isDebugEnabled()) {
@@ -783,62 +783,62 @@ public class OAuthAdminServiceImpl {
             throw handleError("Error while updating the app information.", e);
         }
 
-        AuthenticatedUser defaultAppOwner = oauthappdo.getAppOwner();
+        AuthenticatedUser defaultAppOwner = oAuthAppDO.getAppOwner();
         AuthenticatedUser appOwner = getAppOwner(consumerAppDTO, defaultAppOwner);
-        oauthappdo.setAppOwner(appOwner);
+        oAuthAppDO.setAppOwner(appOwner);
 
-        oauthappdo.setOauthConsumerKey(oauthConsumerKey);
-        oauthappdo.setOauthConsumerSecret(consumerAppDTO.getOauthConsumerSecret());
+        oAuthAppDO.setOauthConsumerKey(oauthConsumerKey);
+        oAuthAppDO.setOauthConsumerSecret(consumerAppDTO.getOauthConsumerSecret());
 
         validateCallbackURI(consumerAppDTO);
-        oauthappdo.setCallbackUrl(consumerAppDTO.getCallbackUrl());
+        oAuthAppDO.setCallbackUrl(consumerAppDTO.getCallbackUrl());
 
-        oauthappdo.setApplicationName(consumerAppDTO.getApplicationName());
-        oauthappdo.setPkceMandatory(consumerAppDTO.getPkceMandatory());
-        oauthappdo.setPkceSupportPlain(consumerAppDTO.getPkceSupportPlain());
+        oAuthAppDO.setApplicationName(consumerAppDTO.getApplicationName());
+        oAuthAppDO.setPkceMandatory(consumerAppDTO.getPkceMandatory());
+        oAuthAppDO.setPkceSupportPlain(consumerAppDTO.getPkceSupportPlain());
         // Validate access token expiry configurations.
         validateTokenExpiryConfigurations(consumerAppDTO);
-        oauthappdo.setUserAccessTokenExpiryTime(consumerAppDTO.getUserAccessTokenExpiryTime());
-        oauthappdo.setApplicationAccessTokenExpiryTime(consumerAppDTO.getApplicationAccessTokenExpiryTime());
-        oauthappdo.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
-        oauthappdo.setIdTokenExpiryTime(consumerAppDTO.getIdTokenExpiryTime());
-        oauthappdo.setTokenType(consumerAppDTO.getTokenType());
-        oauthappdo.setBypassClientCredentials(consumerAppDTO.isBypassClientCredentials());
+        oAuthAppDO.setUserAccessTokenExpiryTime(consumerAppDTO.getUserAccessTokenExpiryTime());
+        oAuthAppDO.setApplicationAccessTokenExpiryTime(consumerAppDTO.getApplicationAccessTokenExpiryTime());
+        oAuthAppDO.setRefreshTokenExpiryTime(consumerAppDTO.getRefreshTokenExpiryTime());
+        oAuthAppDO.setIdTokenExpiryTime(consumerAppDTO.getIdTokenExpiryTime());
+        oAuthAppDO.setTokenType(consumerAppDTO.getTokenType());
+        oAuthAppDO.setBypassClientCredentials(consumerAppDTO.isBypassClientCredentials());
         if (OAuthConstants.OAuthVersions.VERSION_2.equals(consumerAppDTO.getOAuthVersion())) {
             validateGrantTypes(consumerAppDTO);
-            oauthappdo.setGrantTypes(consumerAppDTO.getGrantTypes());
+            oAuthAppDO.setGrantTypes(consumerAppDTO.getGrantTypes());
 
             validateAudiences(consumerAppDTO);
-            oauthappdo.setAudiences(consumerAppDTO.getAudiences());
-            oauthappdo.setScopeValidators(filterScopeValidators(consumerAppDTO));
-            oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
+            oAuthAppDO.setAudiences(consumerAppDTO.getAudiences());
+            oAuthAppDO.setScopeValidators(filterScopeValidators(consumerAppDTO));
+            oAuthAppDO.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
 
             // Validate IdToken Encryption configurations.
-            oauthappdo.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
+            oAuthAppDO.setIdTokenEncryptionEnabled(consumerAppDTO.isIdTokenEncryptionEnabled());
             boolean isFAPIConformanceEnabled = consumerAppDTO.isFapiConformanceEnabled();
             if (consumerAppDTO.isIdTokenEncryptionEnabled()) {
                 if (isFAPIConformanceEnabled) {
                     validateFAPIEncryptionAlgorithms(consumerAppDTO.getIdTokenEncryptionAlgorithm());
                 }
-                oauthappdo.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
+                oAuthAppDO.setIdTokenEncryptionAlgorithm(filterEncryptionAlgorithms(
                         consumerAppDTO.getIdTokenEncryptionAlgorithm(), OAuthConstants.ID_TOKEN_ENCRYPTION_ALGORITHM));
-                oauthappdo.setIdTokenEncryptionMethod(filterEncryptionMethod(
+                oAuthAppDO.setIdTokenEncryptionMethod(filterEncryptionMethod(
                         consumerAppDTO.getIdTokenEncryptionMethod(), OAuthConstants.ID_TOKEN_ENCRYPTION_METHOD));
             }
 
-            oauthappdo.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
-            oauthappdo.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
-            oauthappdo.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
+            oAuthAppDO.setBackChannelLogoutUrl(consumerAppDTO.getBackChannelLogoutUrl());
+            oAuthAppDO.setFrontchannelLogoutUrl(consumerAppDTO.getFrontchannelLogoutUrl());
+            oAuthAppDO.setRenewRefreshTokenEnabled(consumerAppDTO.getRenewRefreshTokenEnabled());
             if (isFAPIConformanceEnabled) {
                 validateFAPIBindingType(consumerAppDTO.getTokenBindingType());
             } else {
                 validateBindingType(consumerAppDTO.getTokenBindingType());
             }
-            oauthappdo.setTokenBindingType(consumerAppDTO.getTokenBindingType());
-            oauthappdo.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
+            oAuthAppDO.setTokenBindingType(consumerAppDTO.getTokenBindingType());
+            oAuthAppDO.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
-            oauthappdo.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
+            oAuthAppDO.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
 
             String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
             if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
@@ -848,7 +848,7 @@ public class OAuthAdminServiceImpl {
                     filterTokenEndpointAuthMethods(tokenEndpointAuthMethod);
                 }
             }
-            oauthappdo.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
+            oAuthAppDO.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
@@ -859,11 +859,11 @@ public class OAuthAdminServiceImpl {
                             OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
                 }
             }
-            oauthappdo.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSignatureAlgorithm);
+            oAuthAppDO.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSignatureAlgorithm);
 
             if (StringUtils.isEmpty(consumerAppDTO.getSubjectType())) {
                 // Set default subject type if not set.
-                oauthappdo.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
+                oAuthAppDO.setSubjectType(OIDCClaimUtil.getDefaultSubjectType().toString());
             }
             OAuthConstants.SubjectType subjectType = OAuthConstants.SubjectType.fromValue(
                     consumerAppDTO.getSubjectType());
@@ -882,14 +882,14 @@ public class OAuthAdminServiceImpl {
                     }
                     if (StringUtils.isNotEmpty(consumerAppDTO.getSectorIdentifierURI())) {
                         validateSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI(), callBackURIList);
-                        oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+                        oAuthAppDO.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
                     } else {
                         validateRedirectURIForPPID(callBackURIList);
                     }
                 }
             }
-            oauthappdo.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
-            oauthappdo.setSubjectType(consumerAppDTO.getSubjectType());
+            oAuthAppDO.setSectorIdentifierURI(consumerAppDTO.getSectorIdentifierURI());
+            oAuthAppDO.setSubjectType(consumerAppDTO.getSubjectType());
 
             String idTokenSignatureAlgorithm = consumerAppDTO.getIdTokenSignatureAlgorithm();
             if (StringUtils.isNotEmpty(idTokenSignatureAlgorithm)) {
@@ -900,7 +900,7 @@ public class OAuthAdminServiceImpl {
                             OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
                 }
             }
-            oauthappdo.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
+            oAuthAppDO.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
 
             String requestObjectSignatureAlgorithm = consumerAppDTO.getRequestObjectSignatureAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectSignatureAlgorithm)) {
@@ -911,11 +911,11 @@ public class OAuthAdminServiceImpl {
                             OAuthConstants.REQUEST_OBJECT_SIGNATURE_ALG_CONFIGURATION);
                 }
             }
-            oauthappdo.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
-            oauthappdo.setRequestObjectSignatureValidationEnabled(consumerAppDTO
+            oAuthAppDO.setRequestObjectSignatureAlgorithm(requestObjectSignatureAlgorithm);
+            oAuthAppDO.setRequestObjectSignatureValidationEnabled(consumerAppDTO
                     .isRequestObjectSignatureValidationEnabled());
 
-            oauthappdo.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
+            oAuthAppDO.setTlsClientAuthSubjectDN(consumerAppDTO.getTlsClientAuthSubjectDN());
 
             String requestObjectEncryptionAlgorithm = consumerAppDTO.getRequestObjectEncryptionAlgorithm();
             if (StringUtils.isNotEmpty(requestObjectEncryptionAlgorithm)) {
@@ -926,24 +926,24 @@ public class OAuthAdminServiceImpl {
                             requestObjectEncryptionAlgorithm, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_ALGORITHM);
                 }
             }
-            oauthappdo.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
+            oAuthAppDO.setRequestObjectEncryptionAlgorithm(requestObjectEncryptionAlgorithm);
             String requestObjectEncryptionMethod = consumerAppDTO.getRequestObjectEncryptionMethod();
             if (StringUtils.isNotEmpty(requestObjectEncryptionMethod)) {
                 filterEncryptionMethod(requestObjectEncryptionMethod, OAuthConstants.REQUEST_OBJECT_ENCRYPTION_METHOD);
 
             }
-            oauthappdo.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
-            oauthappdo.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
-            oauthappdo.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
-            oauthappdo.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());;
+            oAuthAppDO.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
+            oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
+            oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
+            oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());;
         }
-        dao.updateConsumerApplication(oauthappdo);
-        AppInfoCache.getInstance().addToCache(oauthappdo.getOauthConsumerKey(), oauthappdo, tenantDomain);
+        dao.updateConsumerApplication(oAuthAppDO);
+        AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
                     "tenant domain: " + tenantDomain);
         }
-        Map<String, Object> oidcDataMap = buildSPData(oauthappdo);
+        Map<String, Object> oidcDataMap = buildSPData(oAuthAppDO);
         oidcDataMap.put("allowedOrigins", consumerAppDTO.getAllowedOrigins());
         consumerAppDTO.setAuditLogData(oidcDataMap);
         if (enableAuditing && isEnableV2AuditLogs()) {
