@@ -1007,6 +1007,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String tokenId = resultSet.getString(9);
                     String subjectIdentifier = resultSet.getString(10);
                     String tokenBindingReference = resultSet.getString(11);
+                    String authorizedOrganization = resultSet.getString(12);
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
                             userDomain, tenantDomain, authenticatedIDP);
@@ -1019,10 +1020,14 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                 "for client id " + consumerKey, e);
                     }
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
-                    if (StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization())) {
-                        user.setAccessingOrganization(authenticatedUser.getAccessingOrganization());
-                        user.setUserResidentOrganization(authenticatedUser.getUserResidentOrganization());
-                        user.setTenantDomain(authenticatedUser.getTenantDomain());
+                    /* For organization bound access tokens, the authenticated user should be populated considering
+                    below factors. */
+                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
+                        user.setAccessingOrganization(authorizedOrganization);
+                        String userResidentOrg = resolveOrganizationId(user.getTenantDomain());
+                        user.setUserResidentOrganization(userResidentOrg);
+                        // Set authorized user tenant domain to the tenant domain of the application.
+                        user.setTenantDomain(IdentityTenantUtil.getTenantDomain(appTenantId));
                     }
                     AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                             refreshTokenIssuedTime, validityPeriodInMillis,
