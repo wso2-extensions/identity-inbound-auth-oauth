@@ -2531,7 +2531,7 @@ public class OAuth2AuthzEndpoint {
         handleMaxAgeParameter(oauthRequest, params);
 
         Object isMtls = oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_MTLS_REQUEST);
-        params.setIsMtlsRequest(isMtls!= null && Boolean.parseBoolean(isMtls.toString()));
+        params.setIsMtlsRequest(isMtls != null && Boolean.parseBoolean(isMtls.toString()));
 
         /*
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
