@@ -59,6 +59,18 @@ public interface AuthorizationGrantHandler {
     boolean issueRefreshToken() throws IdentityOAuth2Exception;
 
     /**
+     * Tells if this grant type could issue refresh tokens.
+     *
+     * @param  tokenType The type of the token whether APPLICATION token or APPLICATION_USER token.
+     * @return <Code>true</Code>|<Code>false</Code> if this grant type can issue refresh tokens or not.
+     * @throws IdentityOAuth2Exception Error when checking if this grant type can issue refresh tokens or not
+     */
+    default boolean issueRefreshToken(String tokenType) throws IdentityOAuth2Exception {
+
+        return issueRefreshToken();
+    }
+
+    /**
      * Tells if the access tokens issued for this grant type go as APPLICATION tokens or APPLICATION_USER tokens.
      *
      * @return <Code>true</Code>|<Code>false</Code> if this grant type issues APPLICATION_USER tokens.

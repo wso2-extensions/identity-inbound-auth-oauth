@@ -727,7 +727,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     e);
         }
 
-        if (issueRefreshToken() && OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
+        if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
+                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
                 GrantType.REFRESH_TOKEN.toString())) {
             String grantTypes = oAuthAppDO.getGrantTypes();
             List<String> supportedGrantTypes = new ArrayList<>();
@@ -789,7 +790,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      */
     private long getAccessTokenExpiryTimeMillis(AccessTokenDO existingAccessTokenDO) throws IdentityOAuth2Exception {
         long expireTimeMillis;
-        if (issueRefreshToken()) {
+        if (issueRefreshToken(existingAccessTokenDO.getTokenType())) {
             // Consider both access and refresh expiry time
             expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO, false);
         } else {
