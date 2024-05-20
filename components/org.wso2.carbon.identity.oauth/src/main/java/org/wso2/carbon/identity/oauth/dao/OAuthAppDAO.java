@@ -1660,6 +1660,10 @@ public class OAuthAppDAO {
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_SUBJECT_TOKEN_ENABLED, String.valueOf(consumerAppDO.isSubjectTokenEnabled()));
+
+            if (consumerAppDO.getSubjectTokenExpiryTime() <= 0) {
+                consumerAppDO.setSubjectTokenExpiryTime(SUBJECT_TOKEN_EXPIRY_TIME_VALUE);
+            }
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
 
