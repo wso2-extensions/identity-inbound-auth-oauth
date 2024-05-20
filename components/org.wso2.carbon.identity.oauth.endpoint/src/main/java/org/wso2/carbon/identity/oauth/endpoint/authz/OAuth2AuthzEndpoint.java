@@ -4684,11 +4684,6 @@ public class OAuth2AuthzEndpoint {
                 clientAttestationContext.getValidationFailureMessage(), log);
     }
 
-    private Response handleAppAccessDisabledFailure() {
-
-        return ApiAuthnUtils.buildResponseForAuthorizationFailure("Application access is disabled.", log);
-    }
-
     private Response handleUnsupportedGrantForApiBasedAuth() {
 
         return ApiAuthnUtils.buildResponseForClientError(
