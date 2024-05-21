@@ -1943,6 +1943,7 @@ public class OAuth2Util {
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.VALIDATE_PKCE)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthApp.getOauthConsumerKey())
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("PKCE validation is successful for the token request."));
