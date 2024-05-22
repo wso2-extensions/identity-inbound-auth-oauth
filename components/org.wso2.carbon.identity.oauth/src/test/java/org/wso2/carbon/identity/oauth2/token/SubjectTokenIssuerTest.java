@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
-import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -115,8 +114,7 @@ public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
         }
 
         @Override
-        public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext,
-                                                          ImpersonationRequestDTO impersonationRequestDTO)
+        public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext)
                 throws IdentityOAuth2Exception {
 
             impersonationContext.setValidated(true);
@@ -125,7 +123,7 @@ public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
     }
 
     @Test
-    public void testIssueNegativeCase() throws IdentityException {
+    public void testIssueNegativeCase() {
 
         try {
             when(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
@@ -157,8 +155,7 @@ public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
         }
 
         @Override
-        public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext,
-                                                          ImpersonationRequestDTO impersonationRequestDTO)
+        public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext)
                 throws IdentityOAuth2Exception {
 
             impersonationContext.setValidated(false);

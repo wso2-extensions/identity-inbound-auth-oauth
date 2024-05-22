@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
-import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 
 /**
  * The {@code ImpersonationValidator} interface defines the contract for classes that validate impersonation requests.
@@ -43,15 +42,13 @@ public interface ImpersonationValidator {
     public String getImpersonationValidatorName();
 
     /**
-     * Validates an impersonation request based on the provided impersonation context and request DTO.
+     * Validates an impersonation request based on the provided impersonation context.
      *
      * @param impersonationContext      the impersonation context containing information about the validation process
-     * @param impersonationRequestDTO   the impersonation request DTO containing information about the request
      * @return an {@code ImpersonationContext} object representing the validation context,
      *         including validation status and any validation failure details
      * @throws IdentityOAuth2Exception if an error occurs during impersonation request validation
      */
-    public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext,
-                                                      ImpersonationRequestDTO impersonationRequestDTO)
+    public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext)
             throws IdentityOAuth2Exception;
 }

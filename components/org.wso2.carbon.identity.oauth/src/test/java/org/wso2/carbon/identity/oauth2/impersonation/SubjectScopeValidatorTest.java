@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
-import org.wso2.carbon.user.api.UserStoreException;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -71,7 +70,7 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
     @Mock
     private ApplicationManagementService applicationManagementService;
     @Mock
-    private AuthenticatedUser authenticatedUser;
+    private AuthenticatedUser endUser;
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
 
@@ -99,20 +98,18 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
         when(oAuthAuthzReqMessageContext.getRequestedScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
         impersonationRequestDTO = new ImpersonationRequestDTO();
         impersonationRequestDTO.setoAuthAuthzReqMessageContext(oAuthAuthzReqMessageContext);
-    }
-
-    @Test
-    public void testValidateImpersonation() throws IdentityException, NoSuchFieldException, IllegalAccessException
-            , UserStoreException {
 
         when(OAuth2Util.resolveUsernameFromUserId("carbon.super", "dummySubjectId"))
                 .thenReturn("dummyUserName");
-        when(OAuth2Util.getUserStoreDomainFromUserId("dummySubjectId")).thenReturn("dummyUserStore");
-        when(OAuth2Util.createAuthenticatedUser("dummyUserName", "dummyUserStore",
-                "carbon.super", null)).thenReturn(authenticatedUser);
-        when(defaultOAuth2ScopeValidator.getAuthorizedScopes(Arrays.asList(SCOPES_WITHOUT_OPENID),
-                authenticatedUser, "dummyAppId", null, null, "carbon.super"))
-                .thenReturn(Arrays.asList("scope1", "scope2"));
+        when(OAuth2Util.getUserFromUserName("dummyUserName")).thenReturn(endUser);
+    }
+
+    @Test
+    public void testValidateImpersonation() throws IdentityException, NoSuchFieldException, IllegalAccessException {
+
+
+        when(defaultOAuth2ScopeValidator.validateScope(oAuthAuthzReqMessageContext)).thenReturn(
+                Arrays.asList("scope1", "scope2"));
 
         ImpersonationContext impersonationContext = new ImpersonationContext();
         impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
@@ -122,7 +119,7 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
         field.set(subjectScopeValidator, defaultOAuth2ScopeValidator);
 
         impersonationContext =
-                subjectScopeValidator.validateImpersonation(impersonationContext, impersonationRequestDTO);
+                subjectScopeValidator.validateImpersonation(impersonationContext);
 
         assertTrue(impersonationContext.isValidated(), "Impersonation context's validated attribute should be true");
         assertNull(impersonationContext.getValidationFailureErrorMessage(),
@@ -131,16 +128,10 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testValidateImpersonationNegativeCase() throws IdentityException, NoSuchFieldException,
-            IllegalAccessException, UserStoreException {
+            IllegalAccessException {
 
-        when(OAuth2Util.resolveUsernameFromUserId("carbon.super", "dummySubjectId"))
-                .thenReturn("dummyUserName");
-        when(OAuth2Util.getUserStoreDomainFromUserId("dummySubjectId")).thenReturn("dummyUserStore");
-        when(OAuth2Util.createAuthenticatedUser("dummyUserName", "dummyUserStore",
-                "carbon.super", null)).thenReturn(authenticatedUser);
-        when(defaultOAuth2ScopeValidator.getAuthorizedScopes(Arrays.asList(SCOPES_WITHOUT_OPENID),
-                authenticatedUser, "dummyAppId", null, null, "carbon.super"))
-                .thenThrow(IdentityOAuth2Exception.class);
+        when(defaultOAuth2ScopeValidator.validateScope(oAuthAuthzReqMessageContext)).thenThrow
+                (IdentityOAuth2Exception.class);
 
         ImpersonationContext impersonationContext = new ImpersonationContext();
         impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
@@ -151,7 +142,7 @@ public class SubjectScopeValidatorTest extends PowerMockIdentityBaseTest {
 
         try {
             impersonationContext =
-                    subjectScopeValidator.validateImpersonation(impersonationContext, impersonationRequestDTO);
+                    subjectScopeValidator.validateImpersonation(impersonationContext);
         } catch (IdentityOAuth2Exception e) {
 
             assertFalse(impersonationContext.isValidated(), "Impersonation context's validated" +
