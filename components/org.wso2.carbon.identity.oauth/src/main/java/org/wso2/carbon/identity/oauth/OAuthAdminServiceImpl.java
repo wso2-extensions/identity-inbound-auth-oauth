@@ -515,7 +515,12 @@ public class OAuthAdminServiceImpl {
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationMgtUtil.isConsoleOrMyAccount(app.getApplicationName())) {
-                        String callbackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
+                        String callbackURL;
+                        if (ApplicationMgtUtil.isConsole(app.getApplicationName())) {
+                            callbackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
+                        } else {
+                            callbackURL = OAuth2Util.getMyAccountCallbackFromServerConfig(tenantDomain);
+                        }
                         if (StringUtils.isEmpty(callbackURL)) {
                             callbackURL = ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(callbackURL);
                         }
