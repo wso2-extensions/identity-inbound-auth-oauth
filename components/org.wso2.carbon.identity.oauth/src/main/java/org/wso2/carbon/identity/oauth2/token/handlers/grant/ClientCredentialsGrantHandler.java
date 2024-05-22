@@ -20,9 +20,13 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 /**
@@ -52,5 +56,32 @@ public class ClientCredentialsGrantHandler extends AbstractAuthorizationGrantHan
 
         return OAuthServerConfiguration.getInstance()
                 .getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS);
+    }
+
+    public boolean checkIfApplicationEnabled(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
+        ServiceProvider serviceProvider = getServiceProvider(tokenReq);
+        return serviceProvider.isApplicationAccessEnabled();
+    }
+
+    private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
+
+        ServiceProvider serviceProvider;
+        try {
+            serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
+                    tokenReq.getClientId(), OAuthConstants.Scope.OAUTH2, tokenReq.getTenantDomain());
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id " +
+                    tokenReq.getClientId(), e);
+        }
+        if (serviceProvider == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not find an application for client id: " + tokenReq.getClientId()
+                        + ", scope: " + OAuthConstants.Scope.OAUTH2 + ", tenant: " + tokenReq.getTenantDomain());
+            }
+            throw new IdentityOAuth2Exception("Service Provider not found");
+        }
+        return serviceProvider;
     }
 }

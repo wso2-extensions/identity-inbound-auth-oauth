@@ -72,7 +72,6 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getHttpS
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateAppAccess;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
@@ -166,7 +165,6 @@ public class OAuth2TokenEndpoint {
             }
 
             validateOAuthApplication(oauthClientAuthnContext);
-            validateIfApplicationAccessEnabled(oauthClientAuthnContext);
             OAuth2AccessTokenRespDTO oauth2AccessTokenResp = issueAccessToken(oauthRequest,
                     httpRequest, getHttpServletResponseWrapper(response));
 
@@ -234,14 +232,6 @@ public class OAuth2TokenEndpoint {
         if (isNotBlank(oAuthClientAuthnContext.getClientId()) && !oAuthClientAuthnContext
                 .isMultipleAuthenticatorsEngaged()) {
             validateOauthApplication(oAuthClientAuthnContext.getClientId());
-        }
-    }
-
-    private void validateIfApplicationAccessEnabled(OAuthClientAuthnContext oAuthClientAuthnContext)
-            throws InvalidApplicationClientException, OAuthSystemException {
-
-        if (isNotBlank(oAuthClientAuthnContext.getClientId())) {
-            validateAppAccess(oAuthClientAuthnContext.getClientId());
         }
     }
 

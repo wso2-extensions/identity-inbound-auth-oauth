@@ -1570,40 +1570,6 @@ public class EndpointUtil {
         }
     }
 
-    /**
-     * This API validate the oauth application access status.
-     * Check whether an application exits for given consumerKey and check whether user can login into.
-     *
-     * @param consumerKey clientId
-     * @throws InvalidApplicationClientException
-     */
-    public static void validateAppAccess(String consumerKey) throws InvalidApplicationClientException,
-            OAuthSystemException {
-
-        try {
-            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey);
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
-            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_APP_ACCESS);
-                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
-                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-            }
-            if (!serviceProvider.isApplicationAccessEnabled()) {
-                throw new InvalidApplicationClientException("Oauth application access is disabled.");
-            }
-            if (log.isDebugEnabled()) {
-                log.debug("Oauth application access is disabled for client_id: " + consumerKey);
-            }
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException("Error while retrieving service provider for client id: "
-                    + consumerKey, e);
-        }
-
-    }
-
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);

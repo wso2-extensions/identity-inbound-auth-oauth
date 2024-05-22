@@ -372,7 +372,18 @@ public class AccessTokenIssuer {
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
         boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
                 .isUseClientIdAsSubClaimForAppTokensEnabled();
-
+        // Check if the application is disabled. We have moved this validation here to avoid loading service provider at
+        // layers above.
+        if (!authzGrantHandler.checkIfApplicationEnabled(tokReqMsgCtx)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Application is disabled for the client : " + tokenReqDTO.getClientId());
+            }
+            tokenRespDTO = handleError(OAuthError.TokenResponse.INVALID_CLIENT,
+                    "Application is disabled and access is restricted.", tokenReqDTO);
+            setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+            triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
+            return tokenRespDTO;
+        }
         boolean isValidGrant = false;
         String error = "Provided Authorization Grant is invalid";
         String errorCode = OAuthError.TokenResponse.INVALID_GRANT;

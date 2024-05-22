@@ -113,6 +113,17 @@ public interface AuthorizationGrantHandler {
     boolean isAuthorizedClient(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception;
 
     /**
+     * check whether the application is enabled.
+     *
+     * @param tokReqMsgCtx Message context of token request.
+     * @return true if the application is enabled.
+     */
+    default boolean checkIfApplicationEnabled(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        return true;
+    }
+
+    /**
      * Build the string to be used for the sync lock for synchoronized token issuance.
      *
      * @param tokReqMsgCtx Token request message context.
