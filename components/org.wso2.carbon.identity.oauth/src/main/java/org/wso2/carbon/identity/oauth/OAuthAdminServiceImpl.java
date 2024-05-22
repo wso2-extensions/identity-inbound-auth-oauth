@@ -34,11 +34,12 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -513,11 +514,12 @@ public class OAuthAdminServiceImpl {
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                     }
                     dao.addOAuthApplication(app);
-                    if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
-                        String consoleCallBackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
-                        if (StringUtils.isNotEmpty(consoleCallBackURL)) {
-                            app.setCallbackUrl(consoleCallBackURL);
+                    if (ApplicationMgtUtil.isConsoleOrMyAccount(app.getApplicationName())) {
+                        String callbackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
+                        if (StringUtils.isEmpty(callbackURL)) {
+                            callbackURL = ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(callbackURL);
                         }
+                        app.setCallbackUrl(callbackURL);
                     }
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     if (LOG.isDebugEnabled()) {
@@ -560,6 +562,9 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityApplicationManagementException e) {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuthAdminException("Server error encountered when building the callback URL of portal " +
+                    "apps.", e);
         }
         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
         oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
