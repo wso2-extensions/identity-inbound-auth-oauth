@@ -524,8 +524,9 @@ public class OAuthAdminServiceImpl {
                             callbackURL = OAuth2Util.getMyAccountCallbackFromServerConfig(tenantDomain);
                         }
                         if (StringUtils.isEmpty(callbackURL)) {
-                            callbackURL = ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(callbackURL);
+                            callbackURL = app.getCallbackUrl();
                         }
+                        callbackURL = ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(callbackURL);
                         app.setCallbackUrl(callbackURL);
                     }
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
