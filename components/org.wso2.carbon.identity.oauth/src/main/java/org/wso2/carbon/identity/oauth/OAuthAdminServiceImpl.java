@@ -1,17 +1,19 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
  * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package org.wso2.carbon.identity.oauth;
@@ -34,11 +36,12 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -513,11 +516,18 @@ public class OAuthAdminServiceImpl {
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                     }
                     dao.addOAuthApplication(app);
-                    if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
-                        String consoleCallBackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
-                        if (StringUtils.isNotEmpty(consoleCallBackURL)) {
-                            app.setCallbackUrl(consoleCallBackURL);
+                    if (ApplicationMgtUtil.isConsoleOrMyAccount(app.getApplicationName())) {
+                        String callbackURL;
+                        if (ApplicationMgtUtil.isConsole(app.getApplicationName())) {
+                            callbackURL = OAuth2Util.getConsoleCallbackFromServerConfig(tenantDomain);
+                        } else {
+                            callbackURL = OAuth2Util.getMyAccountCallbackFromServerConfig(tenantDomain);
                         }
+                        if (StringUtils.isEmpty(callbackURL)) {
+                            callbackURL = app.getCallbackUrl();
+                        }
+                        callbackURL = ApplicationMgtUtil.resolveOriginUrlFromPlaceholders(callbackURL);
+                        app.setCallbackUrl(callbackURL);
                     }
                     AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
                     if (LOG.isDebugEnabled()) {
@@ -560,6 +570,9 @@ public class OAuthAdminServiceImpl {
         } catch (IdentityApplicationManagementException e) {
             throw handleClientError(AUTHENTICATED_USER_NOT_FOUND,
                     "Error resolving user. Failed to register OAuth App", e);
+        } catch (URLBuilderException e) {
+            throw new IdentityOAuthAdminException("Server error encountered when building the callback URL of portal " +
+                    "apps.", e);
         }
         OAuthConsumerAppDTO oAuthConsumerAppDTO = OAuthUtil.buildConsumerAppDTO(app);
         oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
