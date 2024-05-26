@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -603,7 +604,7 @@ public class TokenValidationHandler {
             if (!OAuth2Util.isJWT(validationRequest.getAccessToken().getIdentifier())) {
                 OAuthAppDO oAuthAppDO;
                 try {
-                    String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                    String tenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
                     oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain);
                 } catch (InvalidOAuthClientException e) {
                     throw new IdentityOAuth2Exception("Error while retrieving OAuth app information for clientId: " +
