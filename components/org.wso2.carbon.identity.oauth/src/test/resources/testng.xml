@@ -116,6 +116,7 @@
             <class name="org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
             <class name="org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProviderTest"></class>
         </classes>
     </test>
 
