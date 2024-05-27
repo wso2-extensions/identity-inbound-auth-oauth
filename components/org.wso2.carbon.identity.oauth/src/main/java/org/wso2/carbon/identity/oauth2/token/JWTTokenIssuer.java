@@ -119,19 +119,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         signatureAlgorithm = mapSignatureAlgorithm(config.getSignatureAlgorithm());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public String subjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws OAuthSystemException {
+    public String subjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Subject token request with authorization request message context message context. " +
                     "Authorized user " + oauthAuthzMsgCtx.getAuthorizationReqDTO().getUser().getLoggableUserId());
         }
 
-        try {
-            return this.buildSubjectJWTToken(oauthAuthzMsgCtx);
-        } catch (IdentityOAuth2Exception e) {
-            throw new OAuthSystemException(e);
-        }
+        return this.buildSubjectJWTToken(oauthAuthzMsgCtx);
     }
 
     private String buildSubjectJWTToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
@@ -467,7 +466,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
 
-            if (authorizationContext != null && authorizationContext.isSubjectTokenFLow()) {
+            if (authorizationContext != null && authorizationContext.isSubjectTokenFlow()) {
                 headerBuilder.type(new JOSEObjectType(JWT_TYP_HEADER_VALUE));
             } else {
                 // Set the required "typ" header "at+jwt" for access tokens issued by the issuer

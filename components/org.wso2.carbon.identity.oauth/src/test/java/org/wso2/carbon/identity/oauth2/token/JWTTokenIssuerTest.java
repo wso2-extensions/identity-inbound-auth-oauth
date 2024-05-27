@@ -819,7 +819,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         authorizeReqDTO.setTenantDomain("carbon.super");
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.setApprovedScope(new String[]{"scope1", "scope2"});
-        authzReqMessageContext.setSubjectTokenFLow(true);
+        authzReqMessageContext.setSubjectTokenFlow(true);
 
         OAuthAppDO appDO = spy(new OAuthAppDO());
         mockStatic(OAuth2Util.class);
@@ -829,7 +829,6 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
                 ("dummyConsumerKey"));
         when(OAuth2Util.buildScopeString(any(String[].class))).thenReturn("scope1 scope2");
 
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
         when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
         when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
 
@@ -838,6 +837,12 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         KeyStore wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
         RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        Certificate cert = wso2KeyStore.getCertificate("wso2carbon");
+        when(OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
+        when(OAuth2Util.class, "getThumbPrintWithPrevAlgorithm",
+                any(), anyBoolean()).thenCallRealMethod();
+        when(OAuth2Util.class, "getThumbPrintWithAlgorithm",
+                any(), anyString(), anyBoolean()).thenCallRealMethod();
 
         when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
         JWSSigner signer = new RSASSASigner(rsaPrivateKey);
