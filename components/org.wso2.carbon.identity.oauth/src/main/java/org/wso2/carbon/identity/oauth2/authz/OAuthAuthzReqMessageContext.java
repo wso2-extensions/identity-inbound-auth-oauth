@@ -52,7 +52,7 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     private boolean isConsentedToken;
 
-    private boolean isSubjectTokenFLow;
+    private boolean isSubjectTokenFlow;
 
     private Properties properties = new Properties();
 
@@ -203,13 +203,13 @@ public class OAuthAuthzReqMessageContext implements Serializable {
         isConsentedToken = consentedToken;
     }
 
-    public boolean isSubjectTokenFLow() {
+    public boolean isSubjectTokenFlow() {
 
-        return isSubjectTokenFLow;
+        return isSubjectTokenFlow;
     }
 
-    public void setSubjectTokenFLow(boolean subjectTokenFLow) {
+    public void setSubjectTokenFlow(boolean subjectTokenFlow) {
 
-        isSubjectTokenFLow = subjectTokenFLow;
+        isSubjectTokenFlow = subjectTokenFlow;
     }
 }

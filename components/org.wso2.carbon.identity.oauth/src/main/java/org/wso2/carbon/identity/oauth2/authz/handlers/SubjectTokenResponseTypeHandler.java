@@ -76,7 +76,7 @@ public class SubjectTokenResponseTypeHandler extends AbstractResponseTypeHandler
 
         String responseType = authzReqDTO.getResponseType();
         if (oAuthAppDO.isSubjectTokenEnabled() && StringUtils.contains(responseType, SUBJECT_TOKEN)) {
-            authzReqMsgCtx.setSubjectTokenFLow(true);
+            authzReqMsgCtx.setSubjectTokenFlow(true);
             return true;
         }
         return false;
