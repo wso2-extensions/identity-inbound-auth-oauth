@@ -36,7 +36,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING
 public class ImpersonatedAccessTokenClaimProvider implements JWTAccessTokenClaimProvider {
 
     private static final String ACT = "act";
-    private static final String SUB = "SUB";
+    private static final String SUB = "sub";
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context) throws IdentityOAuth2Exception {

@@ -40,7 +40,7 @@ public class ImpersonatedAccessTokenClaimProviderTest extends PowerMockIdentityB
     private OAuthTokenReqMessageContext tokReqMsgCtx;
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
     private static final String ACT = "act";
-    private static final String SUB = "SUB";
+    private static final String SUB = "sub";
 
 
     @BeforeMethod
