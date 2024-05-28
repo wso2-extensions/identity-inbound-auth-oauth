@@ -46,6 +46,7 @@ public class OAuth2ErrorCodes {
 
         public static final String INVALID_PKCE_CHALLENGE_CODE = "invalid_pkce_challenge_code";
         public static final String INVALID_CLIENT = "invalid_client";
+        public static final String ACCESS_DISABLED = "application_disabled";
         public static final String INVALID_REDIRECT_URI = "invalid_redirect_uri";
         public static final String SESSION_TIME_OUT = "session_time_out";
         public static final String CERTIFICATE_ERROR = "certificate_error";
