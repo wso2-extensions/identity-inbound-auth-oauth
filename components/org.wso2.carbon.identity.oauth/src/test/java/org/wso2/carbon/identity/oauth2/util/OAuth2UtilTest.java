@@ -1148,22 +1148,21 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
     public Object[][] organizationValidityData() {
 
         return new Object[][]{
-                {"id1", false, null, "null", false},
-                {"id2", true, organization, "ACTIVE", true},
-                {"id3", true, organization, "DISABLED", false},
-                {"id4", true, organization, "InvalidState", false},
-                {"id5", true, null, "null", false},
+                {"id1", false, "null", false},
+                {"id2", true, "ACTIVE", true},
+                {"id3", true, "DISABLED", false},
+                {"id4", true, "InvalidState", false},
+                {"id5", true, "null", false}
         };
     }
 
     @Test(dataProvider = "organizationValidityData")
-    public void testIsOrganizationValidAndActive(String organizationId, boolean isExistingOrganization,
-                                                 Organization orgObject, String status, boolean isValid)
-            throws Exception {
+    public void testIsOrganizationValidAndActive(String organizationId, boolean isExistingOrganization, String status,
+                                                 boolean isValid) throws Exception {
 
         OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
         when(organizationManagerMock.isOrganizationExistById(organizationId)).thenReturn(isExistingOrganization);
-        when(organizationManagerMock.getOrganization(organizationId, false, false)).thenReturn(orgObject);
+        when(organizationManagerMock.getOrganization(organizationId, false, false)).thenReturn(organization);
         when(organization.getStatus()).thenReturn(status);
         assertEquals(OAuth2Util.isOrganizationValidAndActive(organizationId), isValid);
     }
