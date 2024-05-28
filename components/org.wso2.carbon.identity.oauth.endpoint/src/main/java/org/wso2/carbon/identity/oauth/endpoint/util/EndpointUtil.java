@@ -1586,7 +1586,7 @@ public class EndpointUtil {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_APP_ACCESS);
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_APP_STATUS);
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
