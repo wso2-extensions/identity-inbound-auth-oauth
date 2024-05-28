@@ -1436,6 +1436,9 @@ public class OAuth2Util {
             }
             Organization organization = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .getOrganization(organizationId, false, false);
+            if (organization == null) {
+                return false;
+            }
             return OrganizationManagementConstants.OrganizationStatus.ACTIVE.name().equals(organization.getStatus());
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2Exception(e.getMessage(), e);
