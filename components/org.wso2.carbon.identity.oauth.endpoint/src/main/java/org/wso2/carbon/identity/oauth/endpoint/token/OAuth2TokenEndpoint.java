@@ -67,7 +67,14 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.*;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.PROP_CLIENT_ID;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getHttpServletResponseWrapper;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.startSuperTenantFlow;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.triggerOnTokenExceptionListeners;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateAppAccess;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateOauthApplication;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
 
 /**
  * Rest implementation for OAuthu2 token endpoint.
