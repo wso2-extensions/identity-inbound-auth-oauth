@@ -72,6 +72,9 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -85,6 +88,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.ClientRequestTokenBin
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.FederatedTokenResponseHandler;
@@ -261,6 +265,8 @@ public class OAuth2ServiceComponent {
             PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
                     null);
+            bundleContext.registerService(JWTAccessTokenClaimProvider.class.getName(),
+                    new ImpersonatedAccessTokenClaimProvider(), null);
 
             // Register cookie based access token binder.
             CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
@@ -386,6 +392,9 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ScopeValidationHandler.class, new M2MScopeValidationHandler(), null);
             bundleContext.registerService(AccessTokenResponseHandler.class, new FederatedTokenResponseHandler(),
                     null);
+
+            OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(new ImpersonationMgtServiceImpl());
+            bundleContext.registerService(ImpersonationValidator.class, new SubjectScopeValidator(), null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
@@ -1544,5 +1553,22 @@ public class OAuth2ServiceComponent {
             log.debug("Removing Role Management  Service V2: " + roleManagementService.getClass().getName());
         }
         OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(null);
+    }
+
+    @Reference(
+            name = "impersonation.validator.handler",
+            service = ImpersonationValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetImpersonationValidator"
+    )
+    protected void setImpersonationValidator(ImpersonationValidator impersonationValidator) {
+
+        OAuth2ServiceComponentHolder.getInstance().addImpersonationValidator(impersonationValidator);
+    }
+
+    protected void unsetImpersonationValidator(ImpersonationValidator impersonationValidator) {
+
+        OAuth2ServiceComponentHolder.getInstance().removeImpersonationValidator(impersonationValidator);
     }
 }

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,13 +11,15 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.listener;
 
+import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -25,7 +27,9 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.stratos.common.beans.TenantInfoBean;
 import org.wso2.carbon.stratos.common.exception.StratosException;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
@@ -34,6 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
  * This is an implementation of TenantMgtListener. This uses
@@ -108,6 +114,14 @@ public class TenantCreationEventListener implements TenantMgtListener {
         try {
             Set<AccessTokenDO> accessTokenDOs = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessTokensByTenant(tenantId);
+            String organizationId =
+                    OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().resolveOrganizationId(
+                            IdentityTenantUtil.getTenantDomain(tenantId));
+            Set<AccessTokenDO> accessTokensByAuthorizedOrg =
+                    OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                            .getAccessTokensByAuthorizedOrg(organizationId);
+            accessTokenDOs.addAll(accessTokensByAuthorizedOrg);
+
             Map<String, AccessTokenDO> latestAccessTokens = new HashMap<>();
 
             for (AccessTokenDO accessTokenDO : accessTokenDOs) {
@@ -127,6 +141,13 @@ public class TenantCreationEventListener implements TenantMgtListener {
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDO);
+                TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
+                String tokenBindingReference = (tokenBinding != null &&
+                        StringUtils.isNotBlank(tokenBinding.getBindingReference())) ?
+                        tokenBinding.getBindingReference() : NONE;
+                OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
+                        accessTokenDO.getAuthorizedOrganizationId());
             }
 
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessTokens(
@@ -149,6 +170,8 @@ public class TenantCreationEventListener implements TenantMgtListener {
                     .getAuthorizationCodeDAO().deactivateAuthorizationCodes(latestAuthzCodes);
         } catch (IdentityOAuth2Exception e) {
             throw new StratosException("Error occurred while revoking Access Token of tenant: " + tenantId, e);
+        } catch (OrganizationManagementException e) {
+            throw new StratosException(e.getMessage(), e);
         }
     }
 

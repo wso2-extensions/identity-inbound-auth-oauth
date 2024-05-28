@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -300,7 +300,7 @@ public class AccessTokenIssuer {
 
         tokReqMsgCtx.addProperty(OAUTH_APP_DO, oAuthAppDO);
 
-        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
 
         if (!isOfTypeApplicationUser) {
             tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
@@ -369,7 +369,7 @@ public class AccessTokenIssuer {
 
         String grantType = tokenReqDTO.getGrantType();
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
-        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser();
+        boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
         boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
                 .isUseClientIdAsSubClaimForAppTokensEnabled();
         // Check if the application is disabled. We have moved this validation here to avoid loading service provider at

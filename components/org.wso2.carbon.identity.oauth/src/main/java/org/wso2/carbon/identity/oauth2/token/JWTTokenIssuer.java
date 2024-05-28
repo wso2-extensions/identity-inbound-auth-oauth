@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -696,7 +696,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                                                   String consumerKey) throws IdentityOAuth2Exception {
         long lifetimeInMillis;
         boolean isUserAccessTokenType =
-                isUserAccessTokenType(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType());
+                isUserAccessTokenType(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                        tokenReqMessageContext);
 
         if (isUserAccessTokenType) {
             lifetimeInMillis = oAuthAppDO.getUserAccessTokenExpiryTime() * 1000;
@@ -778,12 +779,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
 
-    private boolean isUserAccessTokenType(String grantType) throws IdentityOAuth2Exception {
+    private boolean isUserAccessTokenType(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
         AuthorizationGrantHandler grantHandler =
                 OAuthServerConfiguration.getInstance().getSupportedGrantTypes().get(grantType);
         // If grant handler is null ideally we would not come to this point as the flow will be broken before. So we
         // can guarantee grantHandler will not be null
-        return grantHandler.isOfTypeApplicationUser();
+        return grantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
     }
 
     private JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,

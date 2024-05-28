@@ -36,6 +36,8 @@
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.TokenResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authz.handlers.NoneResponseTypeHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.authcontext.JWTTokenGeneratorTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.impersonation.SubjectScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RememberMeStoreTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.RequestParamRequestObjectBuilderTest"/>
@@ -114,6 +116,7 @@
             <class name="org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
             <class name="org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProviderTest"></class>
         </classes>
     </test>
 
@@ -177,6 +180,8 @@
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML1BearerGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.JWTTokenIssuerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.impersonation.SubjectScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>

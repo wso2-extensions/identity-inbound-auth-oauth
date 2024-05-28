@@ -552,6 +552,8 @@ public final class OAuthUtil {
         dto.setRequestObjectEncryptionMethod(appDO.getRequestObjectEncryptionMethod());
         dto.setRequirePushedAuthorizationRequests(appDO.isRequirePushedAuthorizationRequests());
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
+        dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
+        dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
         return dto;
     }
 
@@ -881,7 +883,13 @@ public final class OAuthUtil {
                 Set<String> scopes = new HashSet<>();
                 List<AccessTokenDO> accessTokens = new ArrayList<>();
                 boolean tokenBindingEnabled = false;
+                boolean isOrganizationUserTokenRevocation = StringUtils.isNotEmpty(
+                        authenticatedUser.getAccessingOrganization());
                 for (AccessTokenDO accessTokenDO : accessTokenDOs) {
+                    if (isOrganizationUserTokenRevocation
+                            && accessTokenDO.getAuthzUser().getAccessingOrganization() == null) {
+                        continue;
+                    }
                     // Clear cache
                     String tokenBindingReference = NONE;
                     if (accessTokenDO.getTokenBinding() != null && StringUtils

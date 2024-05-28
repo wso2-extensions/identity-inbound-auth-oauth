@@ -638,6 +638,45 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @DataProvider(name = "testGetAppInformationWithOIDCPropertiesForImpersonationData")
+    public Object[][] testGetAppInformationWithOIDCPropertiesForImpersonationData() {
+
+        return new Object[][]{
+                {true, 3600},
+                {false, 600},
+        };
+    }
+    @Test(dataProvider = "testGetAppInformationWithOIDCPropertiesForImpersonationData")
+    public void testGetAppInformationWithOIDCPropertiesForImpersonationTest
+            (boolean subjectTokenEnabled, int subjectTokenExpiryTime) throws Exception {
+
+        setupMocksForTest();
+        mockUserstore();
+        try (Connection connection = getConnection(DB_NAME)) {
+            mockIdentityUtilDataBaseConnection(connection);
+            OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+
+            // Add Impersonation OIDC properties.
+            defaultOAuthAppDO.setSubjectTokenEnabled(subjectTokenEnabled);
+            defaultOAuthAppDO.setSubjectTokenExpiryTime(subjectTokenExpiryTime);
+            addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+            OAuthAppDAO appDAO = new OAuthAppDAO();
+            OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+            assertNotNull(oAuthAppDO);
+            assertEquals(oAuthAppDO.isSubjectTokenEnabled(), subjectTokenEnabled);
+            assertEquals(oAuthAppDO.getSubjectTokenExpiryTime(), subjectTokenExpiryTime);
+
+            // Update Impersonation OIDC properties.
+            oAuthAppDO.setSubjectTokenEnabled(!subjectTokenEnabled);
+
+            appDAO.updateConsumerApplication(oAuthAppDO);
+            OAuthAppDO retrievedOAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+            assertNotNull(retrievedOAuthAppDO);
+            assertEquals(retrievedOAuthAppDO.isSubjectTokenEnabled(), !subjectTokenEnabled);
+        }
+    }
+
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetAppInformationWithExceptions() throws Exception {
 

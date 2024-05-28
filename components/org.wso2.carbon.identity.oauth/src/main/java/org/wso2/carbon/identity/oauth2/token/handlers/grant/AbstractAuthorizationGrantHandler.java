@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -335,6 +335,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 OAuthConstants.UserType.APPLICATION_USER : OAuthConstants.UserType.APPLICATION;
     }
 
+    protected String getTokenType(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        return isOfTypeApplicationUser(tokReqMsgCtx) ?
+                OAuthConstants.UserType.APPLICATION_USER : OAuthConstants.UserType.APPLICATION;
+    }
+
     protected void storeAccessToken(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String userStoreDomain,
                                     AccessTokenDO newTokenBean, String newAccessToken, AccessTokenDO
                                             existingTokenBean) throws IdentityOAuth2Exception {
@@ -483,7 +489,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             tokReqMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
         }
-        newTokenBean.setTokenType(getTokenType());
+        newTokenBean.setTokenType(getTokenType(tokReqMsgCtx));
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setAccessToken(getNewAccessToken(tokReqMsgCtx, oauthTokenIssuer));
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
@@ -721,7 +727,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     e);
         }
 
-        if (issueRefreshToken() && OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
+        if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
+                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
                 GrantType.REFRESH_TOKEN.toString())) {
             String grantTypes = oAuthAppDO.getGrantTypes();
             List<String> supportedGrantTypes = new ArrayList<>();
@@ -783,7 +790,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      */
     private long getAccessTokenExpiryTimeMillis(AccessTokenDO existingAccessTokenDO) throws IdentityOAuth2Exception {
         long expireTimeMillis;
-        if (issueRefreshToken()) {
+        if (issueRefreshToken(existingAccessTokenDO.getTokenType())) {
             // Consider both access and refresh expiry time
             expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO, false);
         } else {
@@ -827,7 +834,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                                        OAuthAppDO oAuthAppBean) throws IdentityOAuth2Exception {
         long validityPeriodInMillis;
 
-        if (isOfTypeApplicationUser()) {
+        if (isOfTypeApplicationUser(tokReqMsgCtx)) {
             validityPeriodInMillis = getValidityPeriodForApplicationUser(consumerKey, oAuthAppBean);
         } else {
             validityPeriodInMillis = getValidityPeriodForApplication(consumerKey, oAuthAppBean);
