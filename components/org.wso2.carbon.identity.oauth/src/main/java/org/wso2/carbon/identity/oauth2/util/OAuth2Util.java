@@ -141,7 +141,9 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -1422,6 +1424,25 @@ public class OAuth2Util {
             issuer = OAuthURL.getOAuth2TokenEPUrl();
         }
         return issuer;
+    }
+
+    public static boolean isOrganizationValidAndActive(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            boolean organizationExistById = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .isOrganizationExistById(organizationId);
+            if (!organizationExistById) {
+                return false;
+            }
+            Organization organization = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .getOrganization(organizationId, false, false);
+            if (organization == null) {
+                return false;
+            }
+            return OrganizationManagementConstants.OrganizationStatus.ACTIVE.name().equals(organization.getStatus());
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
+        }
     }
 
     /**
