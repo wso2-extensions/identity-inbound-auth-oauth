@@ -88,6 +88,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -197,6 +198,9 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private TenantManager tenantManagerMock;
+
+    @Mock
+    private OrganizationManager organizationManagerMock;
 
     @Mock
     private AuthorizationGrantHandler authorizationGrantHandlerMock;
@@ -1134,6 +1138,27 @@ public class OAuth2UtilTest extends PowerMockIdentityBaseTest {
                 .thenReturn(serverUrl);
 
         assertEquals(OAuth2Util.getIDTokenIssuer(), issuer);
+    }
+
+    @DataProvider(name = "organizationValidityData")
+    public Object[][] organizationValidityData() {
+
+        return new Object[][]{
+                {"id1", false, "null", false},
+                {"id2", true, "ACTIVE", true},
+                {"id3", true, "DISABLED", false},
+                {"id4", true, "InvalidState", false}
+        };
+    }
+
+    @Test(dataProvider = "organizationValidityData")
+    public void testIsOrganizationValidAndActive(String organizationId, boolean isExistingOrganization,
+                                                 String status, boolean isValid) throws Exception {
+
+        when(oAuthComponentServiceHolderMock.getOrganizationManager()).thenReturn(organizationManagerMock);
+        when(organizationManagerMock.isOrganizationExistById(organizationId)).thenReturn(isExistingOrganization);
+        when(organizationManagerMock.getOrganization(organizationId, false, false).getStatus()).thenReturn(status);
+        assertEquals(OAuth2Util.isOrganizationValidAndActive(organizationId), isValid);
     }
 
     @DataProvider(name = "TenantQualifiedURLsIDTokenIssuerData")

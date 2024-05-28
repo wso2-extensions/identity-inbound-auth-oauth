@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -140,6 +141,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
         String authorizedOrganization = getAuthorizedOrganization(tokReqMsgCtx);
+
+        // If the authorizedOrganization is deactivated or not available, return an error.
+        if (!(OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization) ||
+                StringUtils.isBlank(authorizedOrganization)) &&
+                !OAuth2Util.isOrganizationValidAndActive(authorizedOrganization)) {
+            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Organization : " + authorizedOrganization + " is invalid or inactive.");
+        }
 
         OauthTokenIssuer oauthTokenIssuer;
         try {
