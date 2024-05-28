@@ -629,12 +629,4 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             throw new IdentityOAuth2Exception("Authentication Failed! " + e.getMessage(), e); // Password has expired
         }
     }
-
-    @Override
-    public boolean checkIfApplicationEnabled(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
-
-        OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
-        ServiceProvider serviceProvider = getServiceProvider(tokenReq);
-        return serviceProvider.isApplicationAccessEnabled();
-    }
 }
