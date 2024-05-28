@@ -1574,8 +1574,8 @@ public class EndpointUtil {
      * This API validate the oauth application access status.
      * Check whether an application exits for given consumerKey and check whether user can login into.
      *
-     * @param consumerKey clientId
-     * @throws InvalidApplicationClientException
+     * @param consumerKey clientId.
+     * @throws InvalidApplicationClientException If the application access is disabled.
      */
     public static void validateAppAccess(String consumerKey) throws InvalidApplicationClientException,
             OAuthSystemException {
@@ -1586,16 +1586,24 @@ public class EndpointUtil {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_APP_STATUS);
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_APPLICATION_ENABLED_STATUS);
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
-                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             }
             if (!serviceProvider.isApplicationAccessEnabled()) {
-                throw new InvalidApplicationClientException("Oauth application access is disabled.");
+                if (diagnosticLogBuilder != null) {
+                    diagnosticLogBuilder
+                            .resultMessage("Application is disabled.")
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+                }
+                throw new InvalidApplicationClientException("Application is disabled.");
             }
-            if (log.isDebugEnabled()) {
-                log.debug("Oauth application access is disabled for client_id: " + consumerKey);
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder
+                        .resultMessage("Application is enabled.")
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error while retrieving service provider for client id: "
