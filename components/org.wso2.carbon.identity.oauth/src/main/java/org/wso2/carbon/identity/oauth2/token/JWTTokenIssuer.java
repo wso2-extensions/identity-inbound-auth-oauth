@@ -123,7 +123,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
      * {@inheritDoc}
      */
     @Override
-    public String subjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
+    public String issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
             log.debug("Subject token request with authorization request message context message context. " +

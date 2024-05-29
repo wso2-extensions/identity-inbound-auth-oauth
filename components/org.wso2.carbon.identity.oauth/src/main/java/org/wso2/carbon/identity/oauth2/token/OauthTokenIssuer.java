@@ -96,7 +96,7 @@ public interface OauthTokenIssuer {
      * @return the subject token generated for the OAuth authorization request
      * @throws IdentityOAuth2Exception if an error occurs while generating the subject token
      */
-    default String subjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
+    default String issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
         return StringUtils.EMPTY;
     }
 }
