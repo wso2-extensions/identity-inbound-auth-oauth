@@ -1246,7 +1246,7 @@ public class OAuth2AuthzEndpoint {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                         OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHENTICATION_RESPONSE)
-                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oauth2Params.getApplicationName())
+                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
                         .resultMessage("Authentication status is empty")
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION));
