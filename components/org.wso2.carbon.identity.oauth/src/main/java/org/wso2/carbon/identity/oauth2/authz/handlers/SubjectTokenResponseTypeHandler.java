@@ -42,6 +42,7 @@ public class SubjectTokenResponseTypeHandler extends AbstractResponseTypeHandler
     private static final Log LOG = LogFactory.getLog(SubjectTokenResponseTypeHandler.class);
     private static final String SUBJECT_TOKEN = "subject_token";
     private static final String OAUTH_APP_DO = "OAuthAppDO";
+    private static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
 
     /**
      * This method is used to handle the response type. After authentication process finish this will redirect to the
@@ -71,10 +72,23 @@ public class SubjectTokenResponseTypeHandler extends AbstractResponseTypeHandler
     public boolean isAuthorizedClient(OAuthAuthzReqMessageContext authzReqMsgCtx) throws IdentityOAuth2Exception {
 
         OAuth2AuthorizeReqDTO authzReqDTO = authzReqMsgCtx.getAuthorizationReqDTO();
+        String consumerKey = authzReqDTO.getConsumerKey();
 
         OAuthAppDO oAuthAppDO = (OAuthAppDO) authzReqMsgCtx.getProperty(OAUTH_APP_DO);
 
         String responseType = authzReqDTO.getResponseType();
+        if (StringUtils.isBlank(oAuthAppDO.getGrantTypes())) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Could not find authorized grant types for subject token response type" +
+                        " for client id: " + consumerKey);
+            }
+            return false;
+        }
+        if (!oAuthAppDO.getGrantTypes().contains(TOKEN_EXCHANGE)) {
+            LOG.error("Unable to handle subject token response type. Token exchange Grant Type is not " +
+                    "enabled for client id: " + consumerKey);
+            return false;
+        }
         if (oAuthAppDO.isSubjectTokenEnabled() && StringUtils.contains(responseType, SUBJECT_TOKEN)) {
             authzReqMsgCtx.setSubjectTokenFlow(true);
             return true;

@@ -89,7 +89,7 @@ public class SubjectTokenResponseTypeHandlerTest extends PowerMockTestCase {
         authAuthzReqMessageContext.setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setGrantTypes("code");
+        oAuthAppDO.setGrantTypes("code urn:ietf:params:oauth:grant-type:token-exchange");
         oAuthAppDO.setOauthConsumerKey(TEST_CONSUMER_KEY);
         oAuthAppDO.setState("active");
         oAuthAppDO.setApplicationName("testApp");
