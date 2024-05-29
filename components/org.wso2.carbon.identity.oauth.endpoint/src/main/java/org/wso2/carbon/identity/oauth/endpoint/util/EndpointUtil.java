@@ -1590,7 +1590,7 @@ public class EndpointUtil {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, consumerKey)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
             }
-            if (!serviceProvider.isApplicationAccessEnabled()) {
+            if (!serviceProvider.isApplicationEnabled()) {
                 if (diagnosticLogBuilder != null) {
                     diagnosticLogBuilder
                             .resultMessage("Application is disabled.")
