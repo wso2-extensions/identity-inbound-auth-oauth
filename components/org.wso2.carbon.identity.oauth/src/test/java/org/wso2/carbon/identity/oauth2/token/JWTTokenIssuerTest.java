@@ -853,7 +853,7 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
         JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
-        String jwtToken = jwtTokenIssuer.subjectToken(authzReqMessageContext);
+        String jwtToken = jwtTokenIssuer.issueSubjectToken(authzReqMessageContext);
         assertNotNull(jwtToken);
         SignedJWT signedJWT = SignedJWT.parse(jwtToken);
         assertNotNull(signedJWT.getHeader());
