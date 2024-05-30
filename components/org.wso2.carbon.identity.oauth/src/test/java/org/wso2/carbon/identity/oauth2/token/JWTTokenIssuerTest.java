@@ -799,4 +799,74 @@ public class JWTTokenIssuerTest extends PowerMockIdentityBaseTest {
             return null;
         }
     }
+
+    @Test
+    public void testIssueSubjectToken() throws Exception {
+
+        when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_RSA);
+        AuthenticatedUser impersonator = new AuthenticatedUser();
+        impersonator.setUserId("dummyUserId");
+        impersonator.setUserName("dummyUserName");
+        impersonator.setUserStoreDomain("dummyUserStoreDomain");
+        impersonator.setTenantDomain("carbon.super");
+        impersonator.setAuthenticatedSubjectIdentifier("dummyUserId");
+
+        OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        authorizeReqDTO.setUser(impersonator);
+        authorizeReqDTO.setResponseType("subject_token");
+        authorizeReqDTO.setRequestedSubjectId("dummySubjectId");
+        authorizeReqDTO.setConsumerKey("dummyConsumerKey");
+        authorizeReqDTO.setTenantDomain("carbon.super");
+        OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
+        authzReqMessageContext.setApprovedScope(new String[]{"scope1", "scope2"});
+        authzReqMessageContext.setSubjectTokenFlow(true);
+
+        OAuthAppDO appDO = spy(new OAuthAppDO());
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+        when(OAuth2Util.getIdTokenIssuer("carbon.super")).thenReturn(ID_TOKEN_ISSUER);
+        when(OAuth2Util.getOIDCAudience("dummyConsumerKey", appDO)).thenReturn(Collections.singletonList
+                ("dummyConsumerKey"));
+        when(OAuth2Util.buildScopeString(any(String[].class))).thenReturn("scope1 scope2");
+
+        when(OAuth2Util.getThumbPrint(anyString(), anyInt())).thenReturn(THUMBPRINT);
+        when(OAuth2Util.isTokenPersistenceEnabled()).thenReturn(true);
+
+        System.setProperty(CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
+        KeyStore wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        Certificate cert = wso2KeyStore.getCertificate("wso2carbon");
+        when(OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
+        when(OAuth2Util.class, "getThumbPrintWithPrevAlgorithm",
+                any(), anyBoolean()).thenCallRealMethod();
+        when(OAuth2Util.class, "getThumbPrintWithAlgorithm",
+                any(), anyString(), anyBoolean()).thenCallRealMethod();
+
+        when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
+        JWSSigner signer = new RSASSASigner(rsaPrivateKey);
+        when(OAuth2Util.createJWSSigner(any())).thenReturn(signer);
+        when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_RSA);
+
+        mockStatic(IdentityTenantUtil.class);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+
+        JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
+        String jwtToken = jwtTokenIssuer.issueSubjectToken(authzReqMessageContext);
+        assertNotNull(jwtToken);
+        SignedJWT signedJWT = SignedJWT.parse(jwtToken);
+        assertNotNull(signedJWT.getHeader());
+        assertNotNull(signedJWT.getHeader().getType());
+        assertEquals(signedJWT.getHeader().getType().toString(), "jwt");
+        JWTClaimsSet jwtClaimsSet = signedJWT.getJWTClaimsSet();
+        assertNotNull(jwtClaimsSet);
+        assertEquals(jwtClaimsSet.getSubject(), "dummySubjectId");
+        assertEquals(jwtClaimsSet.getAudience().get(0), "dummyConsumerKey");
+        assertEquals(jwtClaimsSet.getIssuer(), ID_TOKEN_ISSUER);
+        Map<String, String> map = (Map<String, String>) jwtClaimsSet.getClaim("may_act");
+        assertNotNull(map);
+        assertNotNull(map.get("sub"));
+        assertEquals(map.get("sub"), "dummyUserId");
+    }
 }

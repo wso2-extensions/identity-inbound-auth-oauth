@@ -79,7 +79,7 @@ public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(oAuth2AuthorizeReqDTO.getScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
         when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn("carbon.super");
 
-        when(jwtTokenIssuer.subjectToken(oAuthAuthzReqMessageContext)).thenReturn("dummySubjectToken");
+        when(jwtTokenIssuer.issueSubjectToken(oAuthAuthzReqMessageContext)).thenReturn("dummySubjectToken");
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, jwtTokenIssuer);
         when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
