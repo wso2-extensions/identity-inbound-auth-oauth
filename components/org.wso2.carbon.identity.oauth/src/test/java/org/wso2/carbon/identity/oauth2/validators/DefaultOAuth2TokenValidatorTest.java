@@ -34,10 +34,12 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.mockStatic;
@@ -59,6 +61,7 @@ public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
         //todo - match the dependencies in the originating repo
         mockStatic(IdentityTenantUtil.class);
         when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
