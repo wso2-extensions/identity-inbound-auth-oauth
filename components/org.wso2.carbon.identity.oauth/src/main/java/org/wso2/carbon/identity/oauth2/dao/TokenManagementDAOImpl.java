@@ -691,6 +691,66 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
     }
 
+    public void revokeTokensAndAuthzCodes(String consumerKey, String[] authorizationCodes, String[] accessTokens)
+            throws IdentityOAuth2Exception, IdentityApplicationManagementException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Updating state of client: " + consumerKey + " and revoking all access tokens and " +
+                    "authorization codes.");
+        }
+        Connection connection = null;
+        PreparedStatement revokeActiveTokensStatement = null;
+        PreparedStatement deactivateActiveCodesStatement = null;
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
+        try {
+            connection = IdentityDatabaseUtil.getDBConnection();
+            //Revoke all active access tokens
+            if (ArrayUtils.isNotEmpty(accessTokens)) {
+                if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+                    for (String token : accessTokens) {
+                        String sqlQuery = OAuth2Util.getTokenPartitionedSqlByToken(SQLQueries.REVOKE_APP_ACCESS_TOKEN,
+                                token);
+
+                        revokeActiveTokensStatement = connection.prepareStatement(sqlQuery);
+                        revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
+                        revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
+                        revokeActiveTokensStatement.setString(3, consumerKey);
+                        revokeActiveTokensStatement.setInt(4, appTenantId);
+                        int count = revokeActiveTokensStatement.executeUpdate();
+                        if (log.isDebugEnabled()) {
+                            log.debug("Number of rows being updated : " + count);
+                        }
+                    }
+                } else {
+                    revokeActiveTokensStatement = connection.prepareStatement(SQLQueries.REVOKE_APP_ACCESS_TOKEN);
+                    revokeActiveTokensStatement.setString(1, OAuthConstants.TokenStates.TOKEN_STATE_REVOKED);
+                    revokeActiveTokensStatement.setString(2, UUID.randomUUID().toString());
+                    revokeActiveTokensStatement.setString(3, consumerKey);
+                    revokeActiveTokensStatement.setInt(4, appTenantId);
+                    revokeActiveTokensStatement.setString(5, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+                    revokeActiveTokensStatement.execute();
+                }
+            }
+
+            //Deactivate all active authorization codes
+            String sqlQuery = SQLQueries.UPDATE_AUTHORIZATION_CODE_STATE_FOR_CONSUMER_KEY;
+            deactivateActiveCodesStatement = connection.prepareStatement(sqlQuery);
+            deactivateActiveCodesStatement.setString(1, OAuthConstants.AuthorizationCodeState.REVOKED);
+            deactivateActiveCodesStatement.setString(2, consumerKey);
+            deactivateActiveCodesStatement.setInt(3, appTenantId);
+            deactivateActiveCodesStatement.executeUpdate();
+
+            IdentityDatabaseUtil.commitTransaction(connection);
+
+        } catch (SQLException e) {
+            IdentityDatabaseUtil.rollbackTransaction(connection);
+            throw new IdentityApplicationManagementException("Error while executing the SQL statement.", e);
+        } finally {
+            IdentityDatabaseUtil.closeStatement(revokeActiveTokensStatement);
+            IdentityDatabaseUtil.closeAllConnections(connection, null, deactivateActiveCodesStatement);
+        }
+    }
+
     /**
      * Revokes access tokens issued against specified consumer key and specified tenant id when SaaS is disabled.
      *
