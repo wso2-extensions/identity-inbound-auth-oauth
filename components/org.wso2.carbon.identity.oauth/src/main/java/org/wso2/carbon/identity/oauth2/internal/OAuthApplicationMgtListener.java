@@ -87,7 +87,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private static final String OAUTH = "oauth";
     private static final String SAAS_PROPERTY = "saasProperty";
     private static final Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
-    private ThreadLocal<Boolean> threadLocalForClaimConfigUpdates = ThreadLocal.withInitial(()->true);
+    private ThreadLocal<Boolean> threadLocalForClaimConfigUpdates = ThreadLocal.withInitial(() -> true);
 
     @Override
     public int getDefaultOrderId() {
@@ -142,6 +142,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider, tenantDomain);
         updateAuthApplication(serviceProvider);
+        revokeTokensWhenApplicationDisabled(serviceProvider, tenantDomain);
+//        revokeConsentWhenApplicationDisabled(serviceProvider, tenantDomain);
+//        revokeSessionsWhenApplicationDisabled(serviceProvider, tenantDomain);
 
         removeEntriesFromCache(serviceProvider, tenantDomain);
         threadLocalForClaimConfigUpdates.remove();
@@ -288,12 +291,12 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             return oAuthAppDO;
         } else if (StringUtils.isNotBlank(inboundConfiguration)) {
             oAuthAppDO = marshelOAuthDO(inboundConfiguration, serviceProvider.getApplicationName(),
-                                        serviceProvider.getOwner().getTenantDomain());
+                    serviceProvider.getOwner().getTenantDomain());
             authConfig.setInboundConfigurationProtocol(oAuthAppDO);
             return oAuthAppDO;
         }
         String errorMsg = String.format("No inbound configurations found for oauth in the imported %s",
-                                        serviceProvider.getApplicationName());
+                serviceProvider.getApplicationName());
         throw new IdentityApplicationManagementException(errorMsg);
     }
 
@@ -461,8 +464,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
-
-
 
         if (isNotEmpty(consumerKeys)) {
             Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
@@ -646,6 +647,56 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     /**
+     * Revokes access tokens of OAuth applications if application is disabled.
+     *
+     * @param serviceProvider Service Provider
+     * @param tenantDomain    Application tenant domain
+     */
+    private void revokeTokensWhenApplicationDisabled(final ServiceProvider serviceProvider,
+                                                     final String tenantDomain) {
+
+        if (serviceProvider.isApplicationEnabled()) {
+            return;
+        }
+        InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
+                .getInboundAuthenticationRequestConfigs();
+        for (InboundAuthenticationRequestConfig config : configs) {
+            if (IdentityApplicationConstants.OAuth2.NAME
+                    .equalsIgnoreCase(config.getInboundAuthType()) &&
+                    config.getInboundAuthKey() != null) {
+                String oauthKey = config.getInboundAuthKey();
+                int countToken = 0;
+                Set<AccessTokenDO> activeDetailedTokens;
+                try {
+                    activeDetailedTokens = OAuthTokenPersistenceFactory
+                            .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(oauthKey);
+                    String[] accessTokens = new String[activeDetailedTokens.size()];
+                    for (AccessTokenDO detailToken : activeDetailedTokens) {
+                        String token = detailToken.getAccessToken();
+                        accessTokens[countToken] = token;
+                        countToken++;
+                    }
+                    //todo : Cache clear should be done now or in later stages.
+                    // clearTokenCacheEntry(consumerKey, activeDetailedTokens);
+                    Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                            .getActiveAuthorizationCodesByConsumerKey(oauthKey);
+//                    for (String authorizationCode : authorizationCodes) {
+//                        OAuthCacheKey cacheKey = new OAuthCacheKey(authorizationCode);
+//                        OAuthCache.getInstance().clearCacheEntry(cacheKey);
+//                    }
+                    OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                            .revokeTokensAndAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]),
+                                    accessTokens);
+                    //todo : This should invalidate refresh token as well. Let's see.
+                } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+                    log.error("Error occurred while revoking access tokens for client ID: "
+                            + config.getInboundAuthKey() + " and tenant domain: " + tenantDomain, e);
+                }
+            }
+        }
+    }
+
+    /**
      * Validate Oauth inbound config.
      *
      * @param serviceProvider service provider.
@@ -721,7 +772,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * Validate requested grants in the oauth app.
      *
      * @param requestedGrants list of requested grants
-     * @param validationMsg      validation msg list
+     * @param validationMsg   validation msg list
      */
     private void validateGrants(String[] requestedGrants, List<String> validationMsg) {
 
