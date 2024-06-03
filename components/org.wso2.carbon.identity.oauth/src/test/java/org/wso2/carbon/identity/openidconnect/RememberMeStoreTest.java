@@ -17,11 +17,11 @@ package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.map.HashedMap;
 import org.junit.Assert;
-import org.powermock.reflect.Whitebox;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 
+import java.lang.reflect.Field;
 import java.util.Calendar;
 import java.util.Map;
 
@@ -49,13 +49,20 @@ public class RememberMeStoreTest {
     }
 
     @Test
-    public void testStoreTimeOut() {
+    public void testStoreTimeOut() throws Exception {
         long timeInMillis = Calendar.getInstance().getTimeInMillis();
         Map<String, Long> rememberMeMap = new HashedMap();
         rememberMeMap.put(TestConstants.USER_NAME, timeInMillis - 1400000);
-        Whitebox.setInternalState(rememberMeStore, "rememberMeMap", rememberMeMap);
+        setPrivateField(rememberMeStore, "rememberMeMap", rememberMeMap);
         boolean userInStore = rememberMeStore.isUserInStore(TestConstants.USER_NAME);
         Assert.assertFalse("Session is not expired", userInStore);
+    }
+
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
     }
 
 }

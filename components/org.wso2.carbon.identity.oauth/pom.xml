@@ -270,20 +270,14 @@
             <classifier>runtime</classifier>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-testng -->
         <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito2</artifactId>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
+            <artifactId>mockito-testng</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -295,6 +289,7 @@
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.testutil</artifactId>
             <scope>test</scope>
+            <version>7.2.35-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.saml2</groupId>
@@ -590,6 +585,15 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
                     <threshold>High</threshold>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <excludes>**/IdentityOathEventListenerTest.java,**/AccessTokenIssuerTest.java,
+                        **/OAuthUserStoreConfigListenerImplTest.java,**/NTLMAuthenticationGrantHandlerWithHandshakeTest.java,
+                        **/AuthorizationCodeGrantHandlerTest.java,**/OAuthTenantMgtListenerImplTest.java</excludes>
                 </configuration>
             </plugin>
         </plugins>

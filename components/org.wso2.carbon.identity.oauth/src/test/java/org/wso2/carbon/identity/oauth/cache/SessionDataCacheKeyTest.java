@@ -22,7 +22,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertNotEquals;
 
 public class SessionDataCacheKeyTest {
     String sessionDataId = "org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey@54d4dc7";
@@ -43,14 +43,14 @@ public class SessionDataCacheKeyTest {
     }
 
     @Test(dataProvider = "TestEquals")
-    public void testEquals(boolean istrue) throws Exception {
+    public void testEquals(boolean isTrue) throws Exception {
         Object object = new Object();
         SessionDataCacheKey sessionDataCacheKey = new SessionDataCacheKey(sessionDataId);
         SessionDataCacheKey sessionDataCacheKeySample = new SessionDataCacheKey(sessionDataId);
-        if (istrue) {
-            assertTrue(sessionDataCacheKey.equals(sessionDataCacheKeySample));
+        if (isTrue) {
+            assertEquals(sessionDataCacheKeySample, sessionDataCacheKey);
         }
-        assertTrue(!sessionDataCacheKey.equals(object));
+        assertNotEquals(object, sessionDataCacheKey);
     }
 
     @Test

@@ -21,8 +21,7 @@ package org.wso2.carbon.identity.oauth.cache;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotEquals;
 import static org.testng.Assert.assertEquals;
 
 public class OAuthCacheKeyTest {
@@ -36,7 +35,7 @@ public class OAuthCacheKeyTest {
     }
 
     @DataProvider(name = "TestEqualsOauthCache")
-    public Object[][] testequals() {
+    public Object[][] testEquals() {
         return new Object[][]{
                 {true},
                 {false}
@@ -44,14 +43,14 @@ public class OAuthCacheKeyTest {
     }
 
     @Test(dataProvider = "TestEqualsOauthCache")
-    public void testEquals(boolean istrue) throws Exception {
+    public void testEquals(boolean isTrue) throws Exception {
         Object object = new Object();
         OAuthCacheKey oAuthCacheKey = new OAuthCacheKey(cacheKeyString);
         OAuthCacheKey oAuthCacheKeySample = new OAuthCacheKey(cacheKeyString);
-        if (istrue) {
-            assertTrue(oAuthCacheKey.equals(oAuthCacheKeySample));
+        if (isTrue) {
+            assertEquals(oAuthCacheKey, oAuthCacheKeySample);
         }
-        assertFalse(oAuthCacheKey.equals(object));
+        assertNotEquals(oAuthCacheKey, object);
     }
 
     @Test

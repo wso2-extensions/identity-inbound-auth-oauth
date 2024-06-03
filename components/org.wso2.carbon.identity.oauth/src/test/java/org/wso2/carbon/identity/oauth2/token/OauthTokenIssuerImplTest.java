@@ -19,25 +19,24 @@ package org.wso2.carbon.identity.oauth2.token;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuerImpl;
 import org.apache.oltu.oauth2.as.issuer.UUIDValueGenerator;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.UUID;
 
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest(OAuthServerConfiguration.class)
-public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
+public class OauthTokenIssuerImplTest {
 
     @Mock
-    private OAuthServerConfiguration oAuthServerConfiguration;
+    private OAuthServerConfiguration mockOAuthServerConfiguration;
 
     private OauthTokenIssuerImpl accessTokenIssuer;
 
@@ -47,15 +46,22 @@ public class OauthTokenIssuerImplTest extends PowerMockIdentityBaseTest {
     @Mock
     private OAuthTokenReqMessageContext tokenReqMessageContext;
 
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+
     @BeforeMethod
     public void setUp() throws Exception {
         initMocks(this);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getOAuthTokenGenerator())
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+        when(mockOAuthServerConfiguration.getOAuthTokenGenerator())
                 .thenReturn(new OAuthIssuerImpl(new UUIDValueGenerator()));
 
         accessTokenIssuer = new OauthTokenIssuerImpl();
+    }
+
+    @AfterMethod
+    public void tearDown() {
+        oAuthServerConfiguration.close();
     }
 
     @Test

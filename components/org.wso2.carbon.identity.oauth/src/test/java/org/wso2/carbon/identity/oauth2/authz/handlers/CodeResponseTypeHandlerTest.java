@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -43,12 +42,12 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
  */
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
+@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID,
         tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true,
         injectToSingletons = {OAuthComponentServiceHolder.class})
-public class CodeResponseTypeHandlerTest extends PowerMockTestCase {
+public class CodeResponseTypeHandlerTest {
 
     private static final String TEST_CONSUMER_KEY =  "testconsumenrkey";
     private static final String TEST_CALLBACK_URL = "https://localhost:8000/callback";

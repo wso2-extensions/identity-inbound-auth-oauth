@@ -20,10 +20,12 @@ package org.wso2.carbon.identity.oauth2.client.authentication;
 
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -32,7 +34,6 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -42,21 +43,18 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
 /**
  * This class contains the test cased related to the public client authentication functionality.
  */
-@PrepareForTest({
-        HttpServletRequest.class,
-        OAuth2Util.class,
-        IdentityUtil.class,
-        OAuthServerConfiguration.class
-})
+@Listeners(MockitoTestNGListener.class)
 @WithCarbonHome
-public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
+public class PublicClientAuthenticatorTest {
 
     private PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
     private static final String SIMPLE_CASE_AUTHORIZATION_HEADER = "authorization";
@@ -65,6 +63,7 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
 
     @Mock
     private OAuthServerConfiguration mockedServerConfig;
+    private MockedStatic<IdentityUtil> identityUtil;
 
     @BeforeMethod
     public void setUp() {
@@ -72,14 +71,20 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
         );
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getIdentityConfigDirPath())
+        identityUtil = mockStatic(IdentityUtil.class);
+        identityUtil.when(IdentityUtil::getIdentityConfigDirPath)
                 .thenReturn(System.getProperty("user.dir")
                         + File.separator + "src"
                         + File.separator + "test"
                         + File.separator + "resources"
                         + File.separator + "conf");
     }
+
+    @AfterMethod
+    public void tearDown() {
+        identityUtil.close();
+    }
+
     @Test
     public void testGetPriority() {
 
@@ -102,21 +107,23 @@ public class PublicClientAuthenticatorTest extends PowerMockIdentityBaseTest {
                                     boolean publicClient, boolean canHandle,
                                     List<String> publicClientSupportedGrantTypes) throws Exception {
 
-        PowerMockito.mockStatic(OAuth2Util.class);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+        MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class)) {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        when(mockedServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(publicClientSupportedGrantTypes);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
+            when(mockedServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(
+                    publicClientSupportedGrantTypes);
 
-        OAuthAppDO appDO = new OAuthAppDO();
-        appDO.setBypassClientCredentials(publicClient);
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setBypassClientCredentials(publicClient);
 
-        PowerMockito.when(OAuth2Util.getAppInformationByClientId(CLIENT_ID)).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID)).thenReturn(appDO);
 
-        HttpServletRequest httpServletRequest = PowerMockito.mock(HttpServletRequest.class);
-        PowerMockito.when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);
-        assertEquals(publicClientAuthenticator.canAuthenticate(httpServletRequest, bodyContent, new
-                OAuthClientAuthnContext()), canHandle, "Expected can authenticate evaluation not received");
+            HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
+            lenient().when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);
+            assertEquals(publicClientAuthenticator.canAuthenticate(httpServletRequest, bodyContent, new
+                    OAuthClientAuthnContext()), canHandle, "Expected can authenticate evaluation not received");
+        }
     }
 
     /**

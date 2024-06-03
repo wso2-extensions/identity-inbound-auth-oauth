@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -54,15 +53,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @WithCarbonHome
 @WithRegistry
 @WithRealmService
 @WithH2Database(files = {"dbScripts/scope_claim.sql"})
-public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
+public class OpenIDConnectClaimFilterImplTest {
 
     private static final String SP_TENANT_DOMAIN = "carbon.super";
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;

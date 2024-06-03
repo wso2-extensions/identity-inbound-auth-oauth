@@ -20,36 +20,37 @@ package org.wso2.carbon.identity.oauth.callback;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 
 /**
  * Unit tests for OAuthCallbackHandlerRegistryTest.
  */
-@PrepareForTest({OAuthServerConfiguration.class})
-public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class OAuthCallbackHandlerRegistryTest {
 
     private static final int CALLBACK_HANDLER_PRIORITY = 0;
     private static final int METADATA_SET_SIZE = 2;
 
     @Mock
-    private OAuthServerConfiguration oAuthServerConfiguration;
+    private OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @DataProvider(name = "testGetOAuthAuthzHandler")
     public Object[][] oAuthHandlerClassName() {
@@ -61,36 +62,47 @@ public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest 
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetInstance() throws Exception {
-        String className = "org.wso2.carbon.identity.oauth.callback.NonExistingCallbackHandler";
-        getOAuthCallbackHandlerRegistry(className, METADATA_SET_SIZE);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            String className = "org.wso2.carbon.identity.oauth.callback.NonExistingCallbackHandler";
+            getOAuthCallbackHandlerRegistry(className, METADATA_SET_SIZE, oAuthServerConfiguration);
+        }
     }
 
     @Test(dataProvider = "testGetOAuthAuthzHandler")
     public void testGetOAuthAuthzHandler(String className) throws Exception {
 
-        // Create OAuthCallbackHandlerRegistry.
-        OAuthCallbackHandlerRegistry oAuthCallbackHandlerRegistry =
-                getOAuthCallbackHandlerRegistry(className, METADATA_SET_SIZE);
-        // Create OAuthCallback to be handled.
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
-                .ACCESS_DELEGATION_AUTHZ);
-        oAuthCallback.setAuthorized(false);
-        oAuthCallback.setValidScope(false);
-        // Get the OAuthCallBackHandler that can handle the above OAuthCallback.
-        OAuthCallbackHandler oAuthCallbackHandler = oAuthCallbackHandlerRegistry.getOAuthAuthzHandler(oAuthCallback);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            // Create OAuthCallbackHandlerRegistry.
+            OAuthCallbackHandlerRegistry oAuthCallbackHandlerRegistry =
+                    getOAuthCallbackHandlerRegistry(className, METADATA_SET_SIZE, oAuthServerConfiguration);
+            // Create OAuthCallback to be handled.
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
+                    .ACCESS_DELEGATION_AUTHZ);
+            oAuthCallback.setAuthorized(false);
+            oAuthCallback.setValidScope(false);
+            // Get the OAuthCallBackHandler that can handle the above OAuthCallback.
+            OAuthCallbackHandler oAuthCallbackHandler =
+                    oAuthCallbackHandlerRegistry.getOAuthAuthzHandler(oAuthCallback);
 
-        if (StringUtils.isNotEmpty(className)) {
-            assertEquals(oAuthCallbackHandler.getPriority(), CALLBACK_HANDLER_PRIORITY,
-                    "OAuthHandlers priority should be equal to the given priority in the OAuthCallBackHandlerMetaData" +
-                            ".");
-        } else {
-            assertNull(oAuthCallbackHandler, "Should return null when there is no OAuthCallbackHandler can handle the" +
-                    " given OAuthCallback.");
+            if (StringUtils.isNotEmpty(className)) {
+                assertEquals(oAuthCallbackHandler.getPriority(), CALLBACK_HANDLER_PRIORITY,
+                        "OAuthHandlers priority should be equal to the given priority in the " +
+                                "OAuthCallBackHandlerMetaData.");
+            } else {
+                assertNull(oAuthCallbackHandler,
+                        "Should return null when there is no OAuthCallbackHandler can handle the" +
+                                " given OAuthCallback.");
+            }
         }
     }
 
-    private OAuthCallbackHandlerRegistry getOAuthCallbackHandlerRegistry(String className, int metaDataSetSize)
+    private OAuthCallbackHandlerRegistry getOAuthCallbackHandlerRegistry(String className, int metaDataSetSize,
+                                                                         MockedStatic<OAuthServerConfiguration>
+                                                                                 oAuthServerConfiguration)
             throws IdentityOAuth2Exception, NoSuchFieldException, IllegalAccessException {
 
         // Clear the OAuthCallbackHandlerRegistry.
@@ -107,9 +119,8 @@ public class OAuthCallbackHandlerRegistryTest extends PowerMockIdentityBaseTest 
                 oAuthCallbackHandlerMetaDataSet.add(oAuthCallbackHandlerMetaData);
             }
         }
-        when(oAuthServerConfiguration.getCallbackHandlerMetaData()).thenReturn(oAuthCallbackHandlerMetaDataSet);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        when(mockOAuthServerConfiguration.getCallbackHandlerMetaData()).thenReturn(oAuthCallbackHandlerMetaDataSet);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
         return OAuthCallbackHandlerRegistry.getInstance();
     }

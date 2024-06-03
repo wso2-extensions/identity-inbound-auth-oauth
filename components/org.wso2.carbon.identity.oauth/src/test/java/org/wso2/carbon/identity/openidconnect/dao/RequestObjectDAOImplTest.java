@@ -23,7 +23,6 @@ package org.wso2.carbon.identity.openidconnect.dao;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -49,10 +48,11 @@ import java.util.List;
  */
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
+                "dbScripts/insert_local_idp.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {IdentityCoreServiceDataHolder.class})
-public class RequestObjectDAOImplTest extends PowerMockTestCase {
+public class RequestObjectDAOImplTest {
 
     private static final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
     private final String consumerKey = "ca19a540f544777860e44e75f605d927";

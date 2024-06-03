@@ -25,13 +25,14 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.net.MalformedURLException;
 import java.text.ParseException;
@@ -39,20 +40,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
-@PrepareForTest({JWKSourceDataProvider.class, JWKSBasedJWTValidator.class})
-public class JWKSBasedJWTValidatorTest extends PowerMockIdentityBaseTest {
+public class JWKSBasedJWTValidatorTest {
 
     private JWKSBasedJWTValidator validator;
 
@@ -83,42 +81,48 @@ public class JWKSBasedJWTValidatorTest extends PowerMockIdentityBaseTest {
             opts) throws
             Exception {
 
-        mockStatic(JWKSourceDataProvider.class);
-        when(JWKSourceDataProvider.getInstance()).thenReturn(dataProvider);
-        whenNew(DefaultJWTProcessor.class).withNoArguments().thenReturn(jwtProcessor);
-        validator = new JWKSBasedJWTValidator();
+        try (MockedStatic<JWKSourceDataProvider> jwkSourceDataProvider = mockStatic(JWKSourceDataProvider.class)) {
+            jwkSourceDataProvider.when(JWKSourceDataProvider::getInstance).thenReturn(dataProvider);
 
-        TestScenario testScenario = (TestScenario) test;
+            TestScenario testScenario = (TestScenario) test;
 
-        if (testScenario == TestScenario.INVALID_JWKS) {
-            doThrow(testScenario.throwError()).when(dataProvider).getJWKSource(jwksUri);
-        } else {
-            when(JWKSourceDataProvider.getInstance().getJWKSource(anyString())).thenReturn(jwkSet);
-        }
+            try (MockedConstruction<DefaultJWTProcessor> mockedConstruction = Mockito.mockConstruction(
+                    DefaultJWTProcessor.class,
+                    (mock, context) -> {
+                        if (testScenario == TestScenario.VALID_JWT) {
+                            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder().build();
+                            when(mock.process(jwtString, null)).thenReturn(jwtClaimsSet);
+                        } else if (testScenario != TestScenario.INVALID_JWKS) {
+                            when(mock.process(anyString(), any(SecurityContext.class))).thenThrow(
+                                    testScenario.throwError());
+                        }
+                    })) {
+                validator = new JWKSBasedJWTValidator();
 
-        if (testScenario == TestScenario.VALID_JWT) {
-            JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder().build();
-            doReturn(jwtClaimsSet).when(jwtProcessor).process(jwtString, null);
-        } else if (testScenario != TestScenario.INVALID_JWKS) {
-            doThrow(testScenario.throwError()).when(jwtProcessor).process(anyString(), any(SecurityContext
-                    .class));
-        }
+                if (testScenario == TestScenario.INVALID_JWKS) {
+                    doThrow(testScenario.throwError()).when(dataProvider).getJWKSource(jwksUri);
+                } else {
+                    when(dataProvider.getJWKSource(anyString())).thenReturn(jwkSet);
+                }
 
-        try {
-            boolean isValid = validator.validateSignature(jwt, jwksUri, algorithm, opts);
-            assertTrue(isValid, "JWT validation failed with unexpected error.");
-        } catch (IdentityOAuth2Exception e) {
+                try {
+                    boolean isValid = validator.validateSignature(jwt, jwksUri, algorithm, opts);
+                    assertTrue(isValid, "JWT validation failed with unexpected error.");
+                } catch (IdentityOAuth2Exception e) {
 
-            if (testScenario == TestScenario.INVALID_JWT) {
-                assertEquals("Error occurred while parsing JWT string.", e.getMessage(),
-                        "Signature validation not handled properly.");
-            }
-            if (testScenario == TestScenario.INVALID_JWKS) {
-                assertEquals("Provided jwks_uri: " + jwksUri + " is malformed.", e.getMessage(), "Failed to validate " +
-                        "jwks_uri.");
-            }
-            if (testScenario == TestScenario.INVALID_SIGNATURE) {
-                assertEquals("Signature validation failed for the provided JWT.", e.getMessage(), "invalid algorithm");
+                    if (testScenario == TestScenario.INVALID_JWT) {
+                        assertEquals("Error occurred while parsing JWT string.", e.getMessage(),
+                                "Signature validation not handled properly.");
+                    }
+                    if (testScenario == TestScenario.INVALID_JWKS) {
+                        assertEquals("Provided jwks_uri: " + jwksUri + " is malformed.", e.getMessage(),
+                                "Failed to validate jwks_uri.");
+                    }
+                    if (testScenario == TestScenario.INVALID_SIGNATURE) {
+                        assertEquals("Signature validation failed for the provided JWT.", e.getMessage(),
+                                "invalid algorithm");
+                    }
+                }
             }
         }
     }

@@ -43,8 +43,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
 import java.util.Collections;
@@ -63,19 +61,17 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-                files = { "dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql" })
+        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
+                "dbScripts/insert_local_idp.sql"})
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
 
 public class AbstractAuthorizationGrantHandlerTest {
 
     private AbstractAuthorizationGrantHandler handler;
 
-    private OauthTokenIssuer oauthIssuer;
-
     private RefreshGrantHandler refreshGrantHandler;
     private AuthenticatedUser authenticatedUser;
     private String clientId;
-    private String tokenId;
     private String appId = "TestApp1";
     private static final String OAUTH_APP_PROPERTY = "OAuthAppDO";
 
@@ -96,10 +92,8 @@ public class AbstractAuthorizationGrantHandlerTest {
         authenticatedUser.setUserStoreDomain("Street");
         authenticatedUser.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         clientId = UUID.randomUUID().toString();
-        tokenId = clientId;
         appId = clientId;
 
-        oauthIssuer = new OauthTokenIssuerImpl();
         handler = new MockAuthzGrantHandler();
         handler.init();
 
@@ -122,7 +116,8 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @DataProvider(name = "IssueDataProvider")
     public Object[][] issueDataProvider() {
-        return new Object[][] { { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
+        return new Object[][] {
+                { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
                 { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false },
                 { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true },
                 { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, false },

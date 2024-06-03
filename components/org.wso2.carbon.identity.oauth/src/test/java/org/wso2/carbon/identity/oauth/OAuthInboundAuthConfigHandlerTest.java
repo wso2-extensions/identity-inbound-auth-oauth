@@ -23,15 +23,10 @@ import org.apache.axis2.engine.AxisConfiguration;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.mockito.internal.util.reflection.FieldSetter;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -47,21 +42,19 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.when;
 
-@PrepareForTest({ OAuth2ServiceComponentHolder.class, OAuthComponentServiceHolder.class, PrivilegedCarbonContext.class})
-public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
+public class OAuthInboundAuthConfigHandlerTest {
     
     @Mock
     private OAuthAdminServiceImpl oAuthAdminService;
@@ -99,8 +92,11 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
     @Test
     public void testCreateInboundOAuthProtocol() throws Exception {
 
-        mockOAuth2ServiceComponentHolder();
-        when(OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()).thenReturn(oAuthAdminService);
+//        mockOAuth2ServiceComponentHolder();
+//        when(OAuth2ServiceComponentHolder.getInstance().getOAuthAdminService()).thenReturn(oAuthAdminService);
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oAuthAdminService);
+//        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+//        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
         
         InboundProtocolsDTO inboundProtocolsDTO = new InboundProtocolsDTO();
         inboundProtocolsDTO.addProtocolConfiguration(new OAuthConsumerAppDTO());
@@ -125,10 +121,13 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
     @Test
     public void testUpdateOAuthProtocol() throws Exception {
         
-        mockPrivilegeCarbonContext();
-        mockApplicationManagementService();
-        mockCorsManagementService();
-        mockOAuth2ServiceComponentHolder();
+//        mockPrivilegeCarbonContext();
+//        mockApplicationManagementService();
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+//        mockCorsManagementService();
+        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
+//        mockOAuth2ServiceComponentHolder();
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oAuthAdminService);
         mockServiceProvider();
         
         OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
@@ -149,8 +148,10 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
     @Test
     public void testUpdateOAuthProtocol_CreateNewApplication() throws Exception {
 
-        mockOAuth2ServiceComponentHolder();
-        mockCorsManagementService();
+//        mockOAuth2ServiceComponentHolder();
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oAuthAdminService);
+//        mockCorsManagementService();
+        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
 
         OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
         oAuthConsumerAppDTO.setAuditLogData(getDummyMap());
@@ -176,10 +177,13 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
     @Test
     public void testUpdateOAuthProtocol_RollbackOnException() throws Exception {
 
-        mockPrivilegeCarbonContext();
-        mockApplicationManagementService();
-        mockCorsManagementService();
-        mockOAuth2ServiceComponentHolder();
+//        mockPrivilegeCarbonContext();
+//        mockApplicationManagementService();
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+//        mockCorsManagementService();
+        OAuthComponentServiceHolder.getInstance().setCorsManagementService(corsManagementService);
+//        mockOAuth2ServiceComponentHolder();
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oAuthAdminService);
         mockServiceProvider();
 
         OAuthConsumerAppDTO oAuthConsumerAppDTO = new OAuthConsumerAppDTO();
@@ -209,8 +213,9 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
     @Test
     public void testDeleteProtocol() throws Exception {
 
-        mockPrivilegeCarbonContext();
-        mockOAuth2ServiceComponentHolder();
+//        mockPrivilegeCarbonContext();
+//        mockOAuth2ServiceComponentHolder();
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oAuthAdminService);
         mockServiceProvider();
 
         authConfigHandler.handleConfigDeletion(CLIENT_ID);
@@ -218,34 +223,36 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
         verify(oAuthAdminService, times(1)).removeOAuthApplicationData(eq(CLIENT_ID), eq(false));
     }
     
-    private void mockOAuth2ServiceComponentHolder() {
-        
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        Mockito.when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(mockOAuth2ComponentServiceHolder);
-        when(mockOAuth2ComponentServiceHolder.getOAuthAdminService()).thenReturn(oAuthAdminService);
-    }
+//    private void mockOAuth2ServiceComponentHolder() {
+//
+//        mockStatic(OAuth2ServiceComponentHolder.class);
+//        Mockito.when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(mockOAuth2ComponentServiceHolder);
+//        when(mockOAuth2ComponentServiceHolder.getOAuthAdminService()).thenReturn(oAuthAdminService);
+//    }
     
-    private void mockApplicationManagementService() {
-        
-        mockStatic(OAuthComponentServiceHolder.class);
-        Mockito.when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
-        Mockito.when(mockOAuthComponentServiceHolder.getApplicationManagementService()).thenReturn(
-                applicationManagementService);
-    }
-    
-    private void mockCorsManagementService() {
-        
-        mockStatic(OAuthComponentServiceHolder.class);
-        Mockito.when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
-        Mockito.when(mockOAuthComponentServiceHolder.getCorsManagementService()).thenReturn(corsManagementService);
-    }
-    
-    private void mockPrivilegeCarbonContext() {
-        
-        mockStatic(PrivilegedCarbonContext.class);
-        PrivilegedCarbonContext privilegedCarbonContext = mock(PrivilegedCarbonContext.class);
-        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
-    }
+//    private void mockApplicationManagementService() {
+//
+//        mockStatic(OAuthComponentServiceHolder.class);
+//        Mockito.when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
+//        Mockito.when(mockOAuthComponentServiceHolder.getApplicationManagementService()).thenReturn(
+//                applicationManagementService);
+//    }
+//
+//    private void mockCorsManagementService() {
+//
+//        mockStatic(OAuthComponentServiceHolder.class);
+//        Mockito.when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
+//        Mockito.when(mockOAuthComponentServiceHolder.getCorsManagementService()).thenReturn(corsManagementService);
+//    }
+
+//    private void mockPrivilegeCarbonContext() {
+//
+//        MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
+//                mockStatic(PrivilegedCarbonContext.class);
+//        PrivilegedCarbonContext mockPrivilegedCarbonContext = mock(PrivilegedCarbonContext.class);
+//        privilegedCarbonContext.when(
+//                PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPrivilegedCarbonContext);
+//    }
     
     private Map<String, Object> getDummyMap() {
         
@@ -271,11 +278,21 @@ public class OAuthInboundAuthConfigHandlerTest extends PowerMockTestCase {
     
     private void initConfigsAndRealm() throws Exception {
         
-        IdentityCoreServiceComponent identityCoreServiceComponent = new IdentityCoreServiceComponent();
+//        IdentityCoreServiceComponent identityCoreServiceComponent = new IdentityCoreServiceComponent();
         ConfigurationContextService configurationContextService = new ConfigurationContextService
                 (configurationContext, null);
-        FieldSetter.setField(identityCoreServiceComponent, identityCoreServiceComponent.getClass().
-                getDeclaredField("configurationContextService"), configurationContextService);
+//        FieldSetter.setField(identityCoreServiceComponent, identityCoreServiceComponent.getClass().
+//                getDeclaredField("configurationContextService"), configurationContextService);
+        setPrivateStaticField(IdentityCoreServiceComponent.class, "configurationContextService",
+                configurationContextService);
         when(configurationContext.getAxisConfiguration()).thenReturn(axisConfiguration);
+    }
+
+    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(null, newValue);
     }
 }

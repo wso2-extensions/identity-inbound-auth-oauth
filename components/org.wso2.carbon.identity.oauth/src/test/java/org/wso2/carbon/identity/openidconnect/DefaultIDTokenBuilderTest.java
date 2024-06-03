@@ -24,8 +24,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.json.JSONObject;
 import org.mockito.Mockito;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -78,6 +76,7 @@ import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -93,8 +92,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.mockito.ArgumentMatchers.anyObject;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
@@ -104,10 +103,11 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 
 @WithCarbonHome
 @WithAxisConfiguration
-@WithH2Database(files = { "dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql" })
+@WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
+        "dbScripts/insert_local_idp.sql"})
 @WithRealmService
 @WithKeyStore
-public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
+public class DefaultIDTokenBuilderTest {
 
     public static final String TEST_APPLICATION_NAME = "DefaultIDTokenBuilderTest";
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
@@ -142,13 +142,13 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         configuration.put("SSOService.SAMLECPEndpoint", "https://localhost:9443/samlecp");
         configuration.put("SSOService.ArtifactResolutionEndpoint", "https://localhost:9443/samlartresolve");
         configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
-        WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
+        setPrivateStaticField(IdentityUtil.class, "configuration", configuration);
         SecretsProcessor<IdentityProvider> identityProviderSecretsProcessor = mock(
                 IdPSecretsProcessor.class);
         IdpMgtServiceComponentHolder.getInstance().setIdPSecretsProcessorService(identityProviderSecretsProcessor);
-        when(identityProviderSecretsProcessor.encryptAssociatedSecrets(anyObject())).thenAnswer(
+        when(identityProviderSecretsProcessor.encryptAssociatedSecrets(any())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
-        when(identityProviderSecretsProcessor.decryptAssociatedSecrets(anyObject())).thenAnswer(
+        when(identityProviderSecretsProcessor.decryptAssociatedSecrets(any())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
         IdentityProviderManager.getInstance().addResidentIdP(idp, SUPER_TENANT_DOMAIN_NAME);
         defaultIDTokenBuilder =  new DefaultIDTokenBuilder();
@@ -251,8 +251,7 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         ClaimProvider claimProvider = new OpenIDConnectSystemClaimImpl();
         List claimProviders = new ArrayList();
         claimProviders.add(claimProvider);
-        WhiteboxImpl.setInternalState(OpenIDConnectServiceComponentHolder.getInstance(),
-                "claimProviders", claimProviders);
+        setPrivateField(OpenIDConnectServiceComponentHolder.getInstance(), "claimProviders", claimProviders);
     }
 
     @Test
@@ -526,4 +525,18 @@ public class DefaultIDTokenBuilderTest extends PowerMockTestCase {
         return essentialClaims.toString();
     }
 
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+
+    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(null, newValue);
+    }
 }

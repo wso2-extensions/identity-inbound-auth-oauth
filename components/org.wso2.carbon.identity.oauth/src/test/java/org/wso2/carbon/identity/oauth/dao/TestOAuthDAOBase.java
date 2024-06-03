@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.DBUtils;
 
 import java.nio.file.Paths;
@@ -30,7 +29,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
+public class TestOAuthDAOBase {
 
     private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 

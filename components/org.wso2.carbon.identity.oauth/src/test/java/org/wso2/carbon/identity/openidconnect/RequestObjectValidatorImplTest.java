@@ -21,12 +21,9 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.mockito.Mock;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -41,10 +38,10 @@ import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
-import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
@@ -65,15 +62,16 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWE;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWT;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.buildJWTWithExpiry;
@@ -81,16 +79,12 @@ import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreF
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
+@WithRealmService
 @WithKeyStore
 @WithAxisConfiguration
-@PrepareForTest({RequestObjectValidatorImpl.class, IdentityUtil.class, IdentityTenantUtil.class,
-        OAuthServerConfiguration.class, OAuth2Util.class, IdentityProviderManager.class,
-        IdentityApplicationManagementUtil.class, LoggerUtils.class, IdentityEventService.class,
-        CentralLogMgtServiceComponentHolder.class, RequestObjectValidatorUtil.class})
-@PowerMockIgnore({"javax.crypto.*"})
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/identity_req_obj.sql"}, dbName = "testdb2")
-public class RequestObjectValidatorImplTest extends PowerMockTestCase {
+public class RequestObjectValidatorImplTest {
 
     public static final String SOME_SERVER_URL = "some-server-url";
     public static final String CLIENT_PUBLIC_CERT_ALIAS = "wso2carbon";
@@ -102,7 +96,7 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
     @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
-    @BeforeTest
+    @BeforeClass
     public void setUp() throws Exception {
 
         System.setProperty(CarbonBaseConstants.CARBON_HOME,
@@ -206,99 +200,114 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
                                        String errorMsg,
                                        boolean validAlgorithm) throws Exception {
 
-        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-        oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
-        oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
-        oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
+                     mockStatic(CentralLogMgtServiceComponentHolder.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class);
+             MockedStatic<IdentityProviderManager> identityProviderManager =
+                     mockStatic(IdentityProviderManager.class);) {
+            OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+            oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+            oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
+            oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn("some-server-url");
-        when(IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
-                .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
-                        JWSAlgorithm.RS256.getName()));
+            identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
+                    .thenReturn("some-server-url");
+            identityUtil.when(() -> IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
+                    .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
+                            JWSAlgorithm.RS256.getName()));
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
-        mockStatic(CentralLogMgtServiceComponentHolder.class);
-        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
-        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
-        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
+            IdentityEventService eventServiceMock = mock(IdentityEventService.class);
 
-        OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
+            centralLogMgtServiceComponentHolder.when(
+                            CentralLogMgtServiceComponentHolder::getInstance)
+                    .thenReturn(centralLogMgtServiceComponentHolderMock);
+            when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+            doNothing().when(eventServiceMock).handleEvent(any());
 
-        rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
-        when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(oauthServerConfigurationMock);
 
-        // Mock OAuth2Util returning public cert of the service provider
-        when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
-        when(OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
-        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
+            rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
 
-        RequestObjectValidatorImpl requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
-        doReturn(true).when(requestObjectValidator, "isValidNbfExp", any());
-        RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
-        when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
+            oAuth2Util.when(() -> OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
+            oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
 
-        mockIdentityProviderManager();
-        PowerMockito.mockStatic(IdentityApplicationManagementUtil.class);
-        FederatedAuthenticatorConfig config = new FederatedAuthenticatorConfig();
-        when(IdentityApplicationManagementUtil.getFederatedAuthenticator(any(), any())).thenReturn(config);
-        Property property = new Property();
-        property.setValue(SOME_SERVER_URL);
-        when(IdentityApplicationManagementUtil.getProperty(config.getProperties(), "IdPEntityId"))
-                .thenReturn(property);
-        OAuthAppDO appDO = spy(new OAuthAppDO());
-        appDO.setRequestObjectSignatureAlgorithm("RS256");
-        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            // Mock OAuth2Util returning public cert of the service provider
+            oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
+            oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+            oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
-        RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
+            RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
+            doReturn(true).when(requestObjectValidator).isValidNbfExp(any());
+            RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
+            when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
-                "Payload is encrypted:" + isEncrypted);
-        Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
-                "Request object isSigned: " + isSigned);
+            mockIdentityProviderManager(identityProviderManager);
 
-        if (isSigned) {
-            boolean isValidSignature;
-            try {
-                isValidSignature = requestObjectValidator.validateSignature(requestObject, oAuth2Parameters);
-            } catch (Exception e) {
-                isValidSignature = false;
+            FederatedAuthenticatorConfig config = new FederatedAuthenticatorConfig();
+            identityApplicationManagementUtil.when(
+                    () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(any(), any())).thenReturn(config);
+            Property property = new Property();
+            property.setValue(SOME_SERVER_URL);
+            identityApplicationManagementUtil.when(
+                            () -> IdentityApplicationManagementUtil.getProperty(config.getProperties(), "IdPEntityId"))
+                    .thenReturn(property);
+            OAuthAppDO appDO = spy(new OAuthAppDO());
+            appDO.setRequestObjectSignatureAlgorithm("RS256");
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+
+            RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
+
+            Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
+                    "Payload is encrypted:" + isEncrypted);
+            Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
+                    "Request object isSigned: " + isSigned);
+
+            if (isSigned) {
+                boolean isValidSignature;
+                try {
+                    isValidSignature = requestObjectValidator.validateSignature(requestObject, oAuth2Parameters);
+                } catch (Exception e) {
+                    isValidSignature = false;
+                }
+                Assert.assertEquals(isValidSignature, validSignature,
+                        errorMsg + "Request Object Signature Validation failed.");
             }
-            Assert.assertEquals(isValidSignature, validSignature,
-                    errorMsg + "Request Object Signature Validation failed.");
-        }
-        if (isSigned && !validAlgorithm) {
-            Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
-                    validSignature, errorMsg);
-        }
+            if (isSigned && !validAlgorithm) {
+                Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
+                        validSignature, errorMsg);
+            }
 
-        boolean validObject;
-        try {
-            validObject = requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
-        } catch (Exception e) {
-            validObject = false;
+            boolean validObject;
+            try {
+                validObject = requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
+            } catch (Exception e) {
+                validObject = false;
+            }
+            Assert.assertEquals(validObject, validRequestObj, errorMsg);
         }
-        Assert.assertEquals(validObject, validRequestObj, errorMsg);
     }
 
-    private void mockIdentityProviderManager() throws Exception {
+    private void mockIdentityProviderManager(MockedStatic<IdentityProviderManager> identityProviderManager)
+            throws Exception {
 
         IdentityProvider idp = new IdentityProvider();
         idp.setIdentityProviderName("LOCAL");
         idp.setEnable(true);
 
-        PowerMockito.mockStatic(IdentityProviderManager.class);
-        IdentityProviderManager identityProviderManager = mock(IdentityProviderManager.class);
-        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
-        when(identityProviderManager.getResidentIdP(anyString())).thenReturn(idp);
+        IdentityProviderManager mockIdentityProviderManager = mock(IdentityProviderManager.class);
+        identityProviderManager.when(IdentityProviderManager::getInstance).thenReturn(mockIdentityProviderManager);
+        when(mockIdentityProviderManager.getResidentIdP(anyString())).thenReturn(idp);
     }
 
     @DataProvider(name = "nbfExpDataProvider")
@@ -325,30 +334,31 @@ public class RequestObjectValidatorImplTest extends PowerMockTestCase {
     @Test(dataProvider = "nbfExpDataProvider")
     public void testNbfExpClaims(Date nbfTime, Date expTime, boolean shouldPass, String errorMsg) throws Exception {
 
-        RequestObjectValidatorImpl requestObjectValidator = new RequestObjectValidatorImpl();
-        RequestObject requestObject = mock(RequestObject.class);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
+            RequestObjectValidatorImpl requestObjectValidator = new RequestObjectValidatorImpl();
+            RequestObject requestObject = mock(RequestObject.class);
 
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-        jwtClaimsSetBuilder.notBeforeTime(nbfTime);
-        jwtClaimsSetBuilder.expirationTime(expTime);
-        when(requestObject.getClaimsSet()).thenReturn(jwtClaimsSetBuilder.build());
-        OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
-        when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(0L);
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(false);
-        if (shouldPass) {
-            requestObjectValidator.isValidNbfExp(requestObject);
-        } else {
-            try {
+            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+            jwtClaimsSetBuilder.notBeforeTime(nbfTime);
+            jwtClaimsSetBuilder.expirationTime(expTime);
+            when(requestObject.getClaimsSet()).thenReturn(jwtClaimsSetBuilder.build());
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(0L);
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(false);
+            if (shouldPass) {
                 requestObjectValidator.isValidNbfExp(requestObject);
-                Assert.fail("Request validation should have failed");
-            } catch (RequestObjectException e) {
-                Assert.assertEquals(e.getMessage(), errorMsg, "Invalid error message received");
+            } else {
+                try {
+                    requestObjectValidator.isValidNbfExp(requestObject);
+                    Assert.fail("Request validation should have failed");
+                } catch (RequestObjectException e) {
+                    Assert.assertEquals(e.getMessage(), errorMsg, "Invalid error message received");
+                }
             }
         }
-
     }
-
 }

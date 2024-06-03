@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.openidconnect;
 
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -47,8 +46,9 @@ import java.util.List;
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {IdentityCoreServiceDataHolder.class})
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
-public class RequestObjectServiceTest extends PowerMockTestCase {
+        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
+                "dbScripts/insert_local_idp.sql"})
+public class RequestObjectServiceTest {
 
     private static final String consumerKey = TestConstants.CLIENT_ID;
     private static final String sessionKey = "d43e8da324a33bdc941b9b95cad6a6a2";

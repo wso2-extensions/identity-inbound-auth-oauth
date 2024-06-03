@@ -20,18 +20,18 @@ package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.utils.CarbonUtils;
 
 import java.nio.file.Paths;
 
@@ -39,7 +39,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
-@PrepareForTest(CarbonUtils.class)
+@WithRealmService(injectToSingletons = {OAuthComponentServiceHolder.class})
 public class OIDCScopeHandlerTest {
 
     private OIDCScopeHandler oidcScopeHandler;
@@ -51,7 +51,6 @@ public class OIDCScopeHandlerTest {
     public void setUp() throws Exception {
 
         oidcScopeHandler = new OIDCScopeHandler();
-
     }
 
     @DataProvider(name = "ValidateScopeData")
