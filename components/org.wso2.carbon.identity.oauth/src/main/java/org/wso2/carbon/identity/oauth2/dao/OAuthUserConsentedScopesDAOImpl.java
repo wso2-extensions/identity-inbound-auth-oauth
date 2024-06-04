@@ -194,6 +194,32 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         }
     }
 
+    /**
+     * Revoke user's consent given for an application.
+     *
+     * @param appId     Application identifier.
+     * @param tenantId  Tenant Id.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    @Override
+    public void revokeConsentOfApplication(String appId, int tenantId) throws IdentityOAuth2ScopeConsentException {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking scope consents for appId : " + appId + " and tenantId : " + tenantId);
+        }
+        try (Connection conn = IdentityDatabaseUtil.getDBConnection(false)) {
+            try (PreparedStatement ps = conn.prepareStatement(SQLQueries.REMOVE_OAUTH2_CONSENT_FOR_APP)) {
+                ps.setString(1, appId);
+                ps.setInt(2, tenantId);
+                ps.execute();
+            }
+        } catch (SQLException e) {
+            String msg = "Error occurred while deleting scope consents for app id : " + appId + " and tenantId : " +
+                    tenantId;
+            throw new IdentityOAuth2ScopeConsentException(msg, e);
+        }
+    }
+
     @Override
     public void deleteUserConsents(String userId, int tenantId) throws IdentityOAuth2ScopeConsentException {
 

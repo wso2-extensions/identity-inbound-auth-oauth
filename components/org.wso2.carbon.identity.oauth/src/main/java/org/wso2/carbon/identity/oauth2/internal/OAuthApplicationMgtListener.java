@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -142,9 +143,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider, tenantDomain);
         updateAuthApplication(serviceProvider);
-        revokeTokensWhenApplicationDisabled(serviceProvider, tenantDomain);
-//        revokeConsentWhenApplicationDisabled(serviceProvider, tenantDomain);
-//        revokeSessionsWhenApplicationDisabled(serviceProvider, tenantDomain);
+        if (!serviceProvider.isApplicationEnabled()) {
+            revokeTokensWhenApplicationDisabled(serviceProvider, tenantDomain);
+            revokeConsentWhenApplicationDisabled(serviceProvider, tenantDomain);
+        }
 
         removeEntriesFromCache(serviceProvider, tenantDomain);
         threadLocalForClaimConfigUpdates.remove();
@@ -647,17 +649,14 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     /**
-     * Revokes access tokens of OAuth applications if application is disabled.
+     * Revokes tokens of OAuth applications if application is disabled.
      *
      * @param serviceProvider Service Provider
      * @param tenantDomain    Application tenant domain
      */
-    private void revokeTokensWhenApplicationDisabled(final ServiceProvider serviceProvider,
-                                                     final String tenantDomain) {
+    private void revokeTokensWhenApplicationDisabled(ServiceProvider serviceProvider, String tenantDomain)
+            throws IdentityApplicationManagementException {
 
-        if (serviceProvider.isApplicationEnabled()) {
-            return;
-        }
         InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
                 .getInboundAuthenticationRequestConfigs();
         for (InboundAuthenticationRequestConfig config : configs) {
@@ -676,25 +675,44 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         accessTokens[countToken] = token;
                         countToken++;
                     }
-                    //todo : Cache clear should be done now or in later stages.
-                    // clearTokenCacheEntry(consumerKey, activeDetailedTokens);
                     Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                             .getActiveAuthorizationCodesByConsumerKey(oauthKey);
-//                    for (String authorizationCode : authorizationCodes) {
-//                        OAuthCacheKey cacheKey = new OAuthCacheKey(authorizationCode);
-//                        OAuthCache.getInstance().clearCacheEntry(cacheKey);
-//                    }
+
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                             .revokeTokensAndAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]),
                                     accessTokens);
-                    //todo : This should invalidate refresh token as well. Let's see.
                 } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
-                    log.error("Error occurred while revoking access tokens for client ID: "
-                            + config.getInboundAuthKey() + " and tenant domain: " + tenantDomain, e);
+                    throw new IdentityApplicationManagementException("Error occurred while revoking tokens and " +
+                            "authz code for client ID: " + config.getInboundAuthKey() + " and tenant domain: " +
+                            tenantDomain, e);
                 }
             }
         }
     }
+
+    /**
+     * Revokes consent given against OAuth applications when application is disabled.
+     *
+     * @param serviceProvider Service Provider
+     * @param tenantDomain    Application tenant domain
+     */
+    private void revokeConsentWhenApplicationDisabled(final ServiceProvider serviceProvider, final String tenantDomain)
+            throws IdentityApplicationManagementException {
+
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        try {
+            // revoke oauth consents
+            OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
+                    .revokeConsentOfApplication(serviceProvider.getApplicationResourceId(), tenantId);
+            // revoke old oidc consents from IDN_OPENID_USER_RPS
+            OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().revokeOAuthConsentsByApplication(
+                    serviceProvider.getApplicationName(), tenantDomain);
+        } catch (IdentityOAuth2Exception | IdentityOAuth2ScopeConsentException  e) {
+            throw new IdentityApplicationManagementException("error occurred while revoking consent for application: "
+                    + serviceProvider.getApplicationName(), e);
+        }
+    }
+
 
     /**
      * Validate Oauth inbound config.
