@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -486,6 +487,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setTenantID(OAuth2Util.getTenantId(tenantDomain));
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setGrantType(tokenReq.getGrantType());
+        newTokenBean.setAppResidentTenantId(IdentityTenantUtil.getLoginTenantId());
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
