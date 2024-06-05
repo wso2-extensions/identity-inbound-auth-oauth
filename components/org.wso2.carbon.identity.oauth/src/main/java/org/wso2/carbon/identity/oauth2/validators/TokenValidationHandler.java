@@ -873,18 +873,19 @@ public class TokenValidationHandler {
     private void addAudienceToIntrospectionResponse(OAuth2IntrospectionResponseDTO introResp,
                                                       AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO;
+        String tenantDomain = null;
         try {
             int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
             if (appResidentTenantId != MultitenantConstants.INVALID_TENANT_ID) {
-                String tenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain);
+                tenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                        tenantDomain);
                 List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
                 introResp.setAud(String.join(",", audience));
             }
         } catch (InvalidOAuthClientException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving OAuth app information for clientId: " +
-                    accessTokenDO.getConsumerKey());
+            log.warn("Unable to set the audience in the introspection response. Failed to retrieve the " +
+                    "application for client id: " + accessTokenDO.getConsumerKey() + " in tenant: " + tenantDomain);
         }
     }
 }
