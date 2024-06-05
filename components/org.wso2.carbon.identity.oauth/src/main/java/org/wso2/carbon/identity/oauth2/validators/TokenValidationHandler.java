@@ -22,6 +22,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -874,13 +875,16 @@ public class TokenValidationHandler {
 
         OAuthAppDO oAuthAppDO;
         try {
-            String tenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain);
+            int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+            if (appResidentTenantId != MultitenantConstants.INVALID_TENANT_ID) {
+                String tenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
+                oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain);
+                List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
+                introResp.setAud(String.join(",", audience));
+            }
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving OAuth app information for clientId: " +
                     accessTokenDO.getConsumerKey());
         }
-        List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
-        introResp.setAud(String.join(",", audience));
     }
 }
