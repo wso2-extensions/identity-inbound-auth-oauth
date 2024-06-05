@@ -675,7 +675,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         accessTokens[countToken] = token;
                         countToken++;
                     }
-                    Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
+                    Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
+                            .getAuthorizationCodeDAO()
                             .getActiveAuthorizationCodesByConsumerKey(oauthKey);
 
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
