@@ -144,7 +144,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         addClientSecret(serviceProvider, tenantDomain);
         updateAuthApplication(serviceProvider);
         if (!serviceProvider.isApplicationEnabled()) {
-            revokeTokensWhenApplicationDisabled(serviceProvider, tenantDomain);
+            revokeTokens(serviceProvider, tenantDomain);
+            revokeAuthzCode(serviceProvider, tenantDomain);
             revokeConsentWhenApplicationDisabled(serviceProvider, tenantDomain);
         }
 
@@ -654,7 +655,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * @param serviceProvider Service Provider
      * @param tenantDomain    Application tenant domain
      */
-    private void revokeTokensWhenApplicationDisabled(ServiceProvider serviceProvider, String tenantDomain)
+    private void revokeTokens(ServiceProvider serviceProvider, String tenantDomain)
             throws IdentityApplicationManagementException {
 
         InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
@@ -675,13 +676,39 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         accessTokens[countToken] = token;
                         countToken++;
                     }
+                    OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                            .revokeTokens(oauthKey, accessTokens);
+                } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+                    throw new IdentityApplicationManagementException("Error occurred while revoking tokens and " +
+                            "authz code for client ID: " + config.getInboundAuthKey() + " and tenant domain: " +
+                            tenantDomain, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Revokes active authz code of OAuth applications if application is disabled.
+     *
+     * @param serviceProvider Service Provider
+     * @param tenantDomain    Application tenant domain
+     */
+    private void revokeAuthzCode(ServiceProvider serviceProvider, String tenantDomain)
+            throws IdentityApplicationManagementException {
+
+        InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
+                .getInboundAuthenticationRequestConfigs();
+        for (InboundAuthenticationRequestConfig config : configs) {
+            if (IdentityApplicationConstants.OAuth2.NAME
+                    .equalsIgnoreCase(config.getInboundAuthType()) &&
+                    config.getInboundAuthKey() != null) {
+                String oauthKey = config.getInboundAuthKey();
+                try {
                     Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
                             .getAuthorizationCodeDAO()
                             .getActiveAuthorizationCodesByConsumerKey(oauthKey);
-
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
-                            .revokeTokensAndAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]),
-                                    accessTokens);
+                            .revokeAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]));
                 } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
                     throw new IdentityApplicationManagementException("Error occurred while revoking tokens and " +
                             "authz code for client ID: " + config.getInboundAuthKey() + " and tenant domain: " +

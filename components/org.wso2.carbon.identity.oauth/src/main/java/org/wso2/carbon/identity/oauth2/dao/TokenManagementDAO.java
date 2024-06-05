@@ -67,8 +67,15 @@ public interface TokenManagementDAO {
                                                String[] authorizationCodes, String[] accessTokens)
             throws IdentityOAuth2Exception, IdentityApplicationManagementException;
 
-    void revokeTokensAndAuthzCodes(String consumerKey, String[] authorizationCodes, String[] accessTokens)
-            throws IdentityOAuth2Exception, IdentityApplicationManagementException;
+    default void revokeTokens(String consumerKey, String[] accessTokens)
+            throws IdentityOAuth2Exception, IdentityApplicationManagementException {
+
+    }
+
+    default void revokeAuthzCodes(String consumerKey, String[] authorizationCodes)
+            throws IdentityApplicationManagementException {
+
+    }
 
     void revokeSaaSTokensOfOtherTenants(String consumerKey, int tenantId) throws IdentityOAuth2Exception;
 
