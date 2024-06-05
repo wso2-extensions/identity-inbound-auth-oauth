@@ -164,7 +164,8 @@ public class OAuthAppDAO {
                             persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
 
                     String templatedCallbackUrl = consumerAppDO.getCallbackUrl();
-                    if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName())) {
+                    if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName()) &&
+                            isRootOrganization(spTenantId)) {
                         templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(
                                 templatedCallbackUrl);
                     }
