@@ -146,7 +146,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         if (!serviceProvider.isApplicationEnabled()) {
             revokeTokens(serviceProvider, tenantDomain);
             revokeAuthzCode(serviceProvider, tenantDomain);
-            revokeConsentWhenApplicationDisabled(serviceProvider, tenantDomain);
+            revokeConsent(serviceProvider, tenantDomain);
         }
 
         removeEntriesFromCache(serviceProvider, tenantDomain);
@@ -654,6 +654,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      *
      * @param serviceProvider Service Provider
      * @param tenantDomain    Application tenant domain
+     * @throws IdentityApplicationManagementException
      */
     private void revokeTokens(ServiceProvider serviceProvider, String tenantDomain)
             throws IdentityApplicationManagementException {
@@ -692,6 +693,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      *
      * @param serviceProvider Service Provider
      * @param tenantDomain    Application tenant domain
+     * @throws IdentityApplicationManagementException
      */
     private void revokeAuthzCode(ServiceProvider serviceProvider, String tenantDomain)
             throws IdentityApplicationManagementException {
@@ -724,7 +726,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * @param serviceProvider Service Provider
      * @param tenantDomain    Application tenant domain
      */
-    private void revokeConsentWhenApplicationDisabled(final ServiceProvider serviceProvider, final String tenantDomain)
+    private void revokeConsent(final ServiceProvider serviceProvider, final String tenantDomain)
             throws IdentityApplicationManagementException {
 
         int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
