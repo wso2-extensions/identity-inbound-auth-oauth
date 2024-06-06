@@ -67,11 +67,25 @@ public interface TokenManagementDAO {
                                                String[] authorizationCodes, String[] accessTokens)
             throws IdentityOAuth2Exception, IdentityApplicationManagementException;
 
+    /**
+     * Revoke active access tokens issued against application.
+     *
+     * @param consumerKey    OAuth application consumer key.
+     * @param accessTokens   Active access tokens.
+     * @throws IdentityOAuth2Exception, IdentityApplicationManagementException
+     */
     default void revokeTokens(String consumerKey, String[] accessTokens)
             throws IdentityOAuth2Exception, IdentityApplicationManagementException {
 
     }
 
+    /**
+     * Revoke authorize codes issued against application.
+     *
+     * @param consumerKey          OAuth application consumer key.
+     * @param authorizationCodes   Active authorization codes.
+     * @throws IdentityApplicationManagementException
+     */
     default void revokeAuthzCodes(String consumerKey, String[] authorizationCodes)
             throws IdentityApplicationManagementException {
 

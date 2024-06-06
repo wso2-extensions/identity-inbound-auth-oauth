@@ -691,6 +691,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
     }
 
+    /**
+     * Revoke active access tokens issued against application.
+     *
+     * @param consumerKey    OAuth application consumer key.
+     * @param accessTokens   Active access tokens.
+     * @throws IdentityOAuth2Exception, IdentityApplicationManagementException
+     */
+    @Override
     public void revokeTokens(String consumerKey, String[] accessTokens)
             throws IdentityOAuth2Exception, IdentityApplicationManagementException {
 
@@ -737,7 +745,14 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
         }
     }
 
-
+    /**
+     * Revoke authorize codes issued against application.
+     *
+     * @param consumerKey          OAuth application consumer key.
+     * @param authorizationCodes   Active authorization codes.
+     * @throws IdentityApplicationManagementException
+     */
+    @Override
     public void revokeAuthzCodes(String consumerKey, String[] authorizationCodes)
             throws IdentityApplicationManagementException {
 

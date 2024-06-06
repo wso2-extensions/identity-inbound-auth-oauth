@@ -108,7 +108,7 @@ public interface OAuthUserConsentedScopesDAO {
             throws IdentityOAuth2ScopeConsentException;
 
     /**
-     * Remove user's consent given for an application.
+     * Remove users' consent given for an application.
      *
      * @param appId     Application identifier.
      * @param tenantId  Tenant Id.
