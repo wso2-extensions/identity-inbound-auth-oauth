@@ -1430,6 +1430,10 @@ public class OAuth2AuthzEndpoint {
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
+                        if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
+                            Arrays.setAll(value, i ->
+                                    LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(value[i]) : value[i]);
+                        }
                         diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
                     }
                 });
