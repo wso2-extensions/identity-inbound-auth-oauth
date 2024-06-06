@@ -1431,10 +1431,14 @@ public class OAuth2AuthzEndpoint {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
                         if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
-                            Arrays.setAll(value, i ->
-                                    LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(value[i]) : value[i]);
+                            String[] maskedValue = Arrays.copyOf(value, value.length);
+                            Arrays.setAll(maskedValue, i ->
+                                    LoggerUtils.isLogMaskingEnable ?
+                                            LoggerUtils.getMaskedContent(maskedValue[i]) : maskedValue[i]);
+                            diagnosticLogBuilder.inputParam(key, Arrays.asList(maskedValue));
+                        } else {
+                            diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
                         }
-                        diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
                     }
                 });
             }
