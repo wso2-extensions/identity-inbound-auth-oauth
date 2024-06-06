@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.dcr.bean;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This object contains the context related to OAuth application registration request.
@@ -64,6 +65,15 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String subjectType;
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
+    private Map<String, Object> additionalAttributes;
+
+    public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
+        this.additionalAttributes = additionalAttributes;
+    }
+
+    public Map<String, Object> getAdditionalAttributes() {
+        return additionalAttributes;
+    }
 
     public String getJwksURI() {
 

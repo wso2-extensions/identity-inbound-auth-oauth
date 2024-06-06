@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dcr.bean;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This object contains the context related to OAuth application.
@@ -59,6 +60,16 @@ public class Application implements Serializable {
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareStatement = null;
+
+    private Map<String, Object> additionalAttributes;
+
+    public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
+        this.additionalAttributes = additionalAttributes;
+    }
+
+    public Map<String, Object> getAdditionalAttributes() {
+        return additionalAttributes;
+    }
 
     public String getSoftwareStatement() {
 

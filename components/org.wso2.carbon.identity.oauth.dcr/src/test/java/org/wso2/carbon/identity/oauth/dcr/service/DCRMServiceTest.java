@@ -135,7 +135,7 @@ public class DCRMServiceTest {
         lenient().when(mockApplicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
                         anyString())).thenReturn(new ServiceProvider());
         mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        
+
         oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         oAuth2Util = mockStatic(OAuth2Util.class);
@@ -145,7 +145,7 @@ public class DCRMServiceTest {
         mockConfigurationManager = mock(ConfigurationManager.class);
         DCRDataHolder.getInstance().setConfigurationManager(mockConfigurationManager);
     }
-    
+
     @AfterMethod
     public void tearDown() {
 
@@ -1207,7 +1207,7 @@ public class DCRMServiceTest {
         ServiceProvider serviceProvider = new ServiceProvider();
         Map<String, Object> spProperties = new HashMap<>();
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
-        invokePrivateMethod(dcrmService, "addSPProperties", spProperties, serviceProvider);
+        invokePrivateMethod(dcrmService, "addSPProperties", spProperties, serviceProvider, false);
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         boolean propertyExists = Arrays.stream(serviceProviderProperties)
                 .anyMatch(property -> property.getName().equals(OAuthConstants.IS_THIRD_PARTY_APP));

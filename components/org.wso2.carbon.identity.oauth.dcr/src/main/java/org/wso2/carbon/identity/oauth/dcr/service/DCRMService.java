@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.IdentityOAuthClientException;
 import org.wso2.carbon.identity.oauth.OAuthAdminService;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
@@ -62,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.UserStoreException;
 
+import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -109,7 +112,29 @@ public class DCRMService {
         if (StringUtils.isNotEmpty(jwksURI)) {
             consumerAppDTO.setJwksURI(jwksURI);
         }
-        return buildResponse(consumerAppDTO, tenantDomain);
+        Application application = buildResponse(consumerAppDTO, tenantDomain);
+
+        String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
+        if (StringUtils.isNotBlank(attributeFilterName)) {
+            AdditionalAttributeFilter attributeHandler;
+            try {
+                attributeHandler = (AdditionalAttributeFilter)
+                        Class.forName(attributeFilterName).getDeclaredConstructor().newInstance();
+            } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+                     IllegalAccessException | InvocationTargetException e) {
+                log.error("Configured DCR additional attribute handler cannot be loaded");
+                throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
+                        DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
+            }
+            List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
+            Map<String, String> storedAttributes = Arrays.stream(serviceProvider.getSpProperties())
+                    .filter(entry -> responseAttributes.contains(entry.getName()))
+                    .collect(HashMap::new, (map, entry) -> map.put(entry.getName(),
+                            entry.getValue()), HashMap::putAll);
+            application.setAdditionalAttributes(attributeHandler.processDCRGetAttributes(storedAttributes));
+        }
+
+        return application;
     }
 
     /**
@@ -215,6 +240,8 @@ public class DCRMService {
                 updateRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String clientName = updateRequest.getClientName();
+        AdditionalAttributeFilter attributeHandler = null;
+        Map<String, Object> processedAttributes = null;
 
         // Update Service Provider
         ServiceProvider sp = getServiceProvider(appDTO.getApplicationName(), tenantDomain);
@@ -235,6 +262,7 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.FAILED_TO_GET_SP,
                         appDTO.getApplicationName(), null);
             }
+            Map<String, Object> ssaClaims = null;
             // Validate software statement assertion signature.
             if (StringUtils.isNotEmpty(updateRequest.getSoftwareStatement())) {
                 try {
@@ -243,7 +271,28 @@ public class DCRMService {
                     throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                             DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
                 }
+                ssaClaims = getSSAClaims(updateRequest.getSoftwareStatement());
             }
+
+            //Validating and filtering additional attributes via extension
+            String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
+            if (StringUtils.isNotBlank(attributeFilterName)) {
+                try {
+                    attributeHandler = (AdditionalAttributeFilter)
+                            Class.forName(attributeFilterName).getDeclaredConstructor().newInstance();
+                } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
+                         IllegalAccessException | InvocationTargetException e) {
+                    log.error("Configured DCR additional attribute handler cannot be loaded");
+                    throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
+                            DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
+                }
+                if (ssaClaims != null || !updateRequest.getAdditionalAttributes().isEmpty()) {
+                    processedAttributes = attributeHandler.filterDCRUpdateAttributes(updateRequest, ssaClaims,
+                            sp.getSpProperties());
+                    addSPProperties(processedAttributes, sp, true);
+                }
+            }
+
             // Update the service provider properties list with the display name property.
             updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
             // Update jwksURI.
@@ -362,6 +411,13 @@ public class DCRMService {
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
         Application application = buildResponse(oAuthConsumerAppDTO, tenantDomain);
         application.setSoftwareStatement(updateRequest.getSoftwareStatement());
+
+        if (processedAttributes != null) {
+            List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
+            application.setAdditionalAttributes(processedAttributes.entrySet().stream()
+                    .filter(entry -> responseAttributes.contains(entry.getKey()))
+                    .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll));
+        }
         return application;
     }
 
@@ -477,7 +533,6 @@ public class DCRMService {
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
         boolean isManagementApp = registrationRequest.isManagementApp();
-
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
@@ -501,6 +556,7 @@ public class DCRMService {
                     DCRMConstants.ErrorMessages.MANDATORY_SOFTWARE_STATEMENT.getMessage());
         }
 
+        Map<String, Object> ssaClaims = null;
         // Validate software statement assertion signature.
         if (StringUtils.isNotEmpty(registrationRequest.getSoftwareStatement())) {
             try {
@@ -509,11 +565,35 @@ public class DCRMService {
                 throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
                         DCRMConstants.ErrorMessages.SIGNATURE_VALIDATION_FAILED.getMessage(), e);
             }
+            ssaClaims = getSSAClaims(registrationRequest.getSoftwareStatement());
         }
 
-        // Create a service provider.
-        ServiceProvider serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
-                isManagementApp);
+        ServiceProvider serviceProvider;
+        Map<String, Object> processedAttributes = null;
+        AdditionalAttributeFilter attributeHandler = null;
+
+        //Validating and filtering additional attributes via extension
+        String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
+        if (StringUtils.isNotBlank(attributeFilterName)) {
+            try {
+                attributeHandler = (AdditionalAttributeFilter)
+                        Class.forName(attributeFilterName).getDeclaredConstructor().newInstance();
+            } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
+                     InvocationTargetException e) {
+                log.error("Configured DCR additional attribute handler cannot be loaded");
+                throw new DCRMServerException(OAuth2ErrorCodes.SERVER_ERROR,
+                                        DCRMConstants.ErrorMessages.ADDITIONAL_ATTRIBUTE_ERROR.getMessage(), e);
+            }
+            if (ssaClaims != null || !registrationRequest.getAdditionalAttributes().isEmpty()) {
+                processedAttributes = attributeHandler.filterDCRRegisterAttributes(registrationRequest, ssaClaims);
+            }
+            serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
+                    isManagementApp, processedAttributes);
+        } else {
+            // Create a service provider.
+            serviceProvider = createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
+                    isManagementApp);
+        }
 
         OAuthConsumerAppDTO createdApp;
         try {
@@ -546,6 +626,12 @@ public class DCRMService {
         }
         Application application = buildResponse(createdApp, tenantDomain);
         application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
+        if (processedAttributes != null) {
+            List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
+            application.setAdditionalAttributes(processedAttributes.entrySet().stream()
+                    .filter(entry -> responseAttributes.contains(entry.getKey()))
+                    .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll));
+        }
         return application;
     }
 
@@ -762,6 +848,14 @@ public class DCRMService {
 
     private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain, String spName,
                                                   String templateName, boolean isManagementApp) throws DCRMException {
+
+        return createServiceProvider(applicationOwner, tenantDomain, spName, templateName,
+                isManagementApp, null);
+    }
+
+    private ServiceProvider createServiceProvider(String applicationOwner, String tenantDomain, String spName,
+                                                  String templateName, boolean isManagementApp,
+                                                  Map<String, Object> additionalProperties) throws DCRMException {
         // Create the Service Provider
         ServiceProvider sp = new ServiceProvider();
         sp.setApplicationName(spName);
@@ -773,8 +867,11 @@ public class DCRMService {
         sp.setManagementApp(isManagementApp);
 
         Map<String, Object> spProperties = new HashMap<>();
+        if (additionalProperties != null) {
+            spProperties.putAll(additionalProperties);
+        }
         spProperties.put(OAuthConstants.IS_THIRD_PARTY_APP, true);
-        addSPProperties(spProperties, sp);
+        addSPProperties(spProperties, sp, false);
 
         createServiceProvider(sp, tenantDomain, applicationOwner, templateName);
 
@@ -1101,22 +1198,45 @@ public class DCRMService {
     }
 
     /**
-     * Add the properties to the service provider.
+     * Extracted SSA claims from the software statement.
+     * @param softwareStatement Software Statement
+     * @throws DCRMClientException
+     * @throws IdentityOAuth2Exception
+     */
+    private Map<String, Object> getSSAClaims(String softwareStatement) throws DCRMClientException {
+
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(softwareStatement);
+            return signedJWT.getJWTClaimsSet().getClaims();
+        } catch (ParseException e) {
+            throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT,
+                    DCRMConstants.ErrorMessages.FAILED_TO_READ_SSA.getMessage(), e);
+        }
+    }
+
+    /**
+     * Add or update the properties of the service provider.
      * @param spProperties Map of property name and values to be added.
      * @param serviceProvider ServiceProvider object.
+     * @param update Boolean indicating whether to update property values if the key already exists
      */
-    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider) {
+    private void addSPProperties(Map<String, Object> spProperties, ServiceProvider serviceProvider, Boolean update) {
 
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
         for (Map.Entry<String, Object> entry : spProperties.entrySet()) {
-            boolean propertyExists = Arrays.stream(serviceProviderProperties)
-                    .anyMatch(property -> property.getName().equals(entry.getKey()));
-            if (!propertyExists) {
-                ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
-                serviceProviderProperty.setName(entry.getKey());
-                serviceProviderProperty.setValue(entry.getValue().toString());
+            Optional<ServiceProviderProperty> spPropertyResult = Arrays.stream(serviceProviderProperties)
+                    .filter(property -> property.getName().equals(entry.getKey()))
+                    .findFirst();
+            ServiceProviderProperty spProperty;
+            if (!spPropertyResult.isPresent()) {
+                spProperty = new ServiceProviderProperty();
+                spProperty.setName(entry.getKey());
+                spProperty.setValue(entry.getValue().toString());
                 serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
-                        serviceProviderProperty);
+                        spProperty);
+            } else if (update) {
+                spProperty = spPropertyResult.get();
+                spProperty.setValue(entry.getValue().toString());
             }
         }
         serviceProvider.setSpProperties(serviceProviderProperties);
