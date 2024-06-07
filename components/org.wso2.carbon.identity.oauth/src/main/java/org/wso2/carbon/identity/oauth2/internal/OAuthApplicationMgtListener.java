@@ -57,6 +57,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
@@ -87,7 +88,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     private static final String OAUTH = "oauth";
     private static final String SAAS_PROPERTY = "saasProperty";
     private static final Log log = LogFactory.getLog(OAuthApplicationMgtListener.class);
-    private ThreadLocal<Boolean> threadLocalForClaimConfigUpdates = ThreadLocal.withInitial(()->true);
+    private ThreadLocal<Boolean> threadLocalForClaimConfigUpdates = ThreadLocal.withInitial(() -> true);
 
     @Override
     public int getDefaultOrderId() {
@@ -142,6 +143,11 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         revokeAccessTokensWhenSaaSDisabled(serviceProvider, tenantDomain);
         addClientSecret(serviceProvider, tenantDomain);
         updateAuthApplication(serviceProvider);
+        if (!serviceProvider.isApplicationEnabled()) {
+            revokeTokens(serviceProvider, tenantDomain);
+            revokeAuthzCode(serviceProvider, tenantDomain);
+            revokeConsent(serviceProvider, tenantDomain);
+        }
 
         removeEntriesFromCache(serviceProvider, tenantDomain);
         threadLocalForClaimConfigUpdates.remove();
@@ -288,12 +294,12 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             return oAuthAppDO;
         } else if (StringUtils.isNotBlank(inboundConfiguration)) {
             oAuthAppDO = marshelOAuthDO(inboundConfiguration, serviceProvider.getApplicationName(),
-                                        serviceProvider.getOwner().getTenantDomain());
+                    serviceProvider.getOwner().getTenantDomain());
             authConfig.setInboundConfigurationProtocol(oAuthAppDO);
             return oAuthAppDO;
         }
         String errorMsg = String.format("No inbound configurations found for oauth in the imported %s",
-                                        serviceProvider.getApplicationName());
+                serviceProvider.getApplicationName());
         throw new IdentityApplicationManagementException(errorMsg);
     }
 
@@ -461,8 +467,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     private void removeEntriesFromCache(Set<String> consumerKeys) throws IdentityOAuth2Exception {
-
-
 
         if (isNotEmpty(consumerKeys)) {
             Set<AccessTokenDO> accessTokenDOSet = new HashSet<>();
@@ -646,6 +650,101 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
     }
 
     /**
+     * Revokes tokens of OAuth applications if application is disabled.
+     *
+     * @param serviceProvider Service Provider
+     * @param tenantDomain    Application tenant domain
+     * @throws IdentityApplicationManagementException
+     */
+    private void revokeTokens(ServiceProvider serviceProvider, String tenantDomain)
+            throws IdentityApplicationManagementException {
+
+        InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
+                .getInboundAuthenticationRequestConfigs();
+        for (InboundAuthenticationRequestConfig config : configs) {
+            if (IdentityApplicationConstants.OAuth2.NAME
+                    .equalsIgnoreCase(config.getInboundAuthType()) &&
+                    config.getInboundAuthKey() != null) {
+                String oauthKey = config.getInboundAuthKey();
+                int countToken = 0;
+                Set<AccessTokenDO> activeDetailedTokens;
+                try {
+                    activeDetailedTokens = OAuthTokenPersistenceFactory
+                            .getInstance().getAccessTokenDAO().getActiveAcessTokenDataByConsumerKey(oauthKey);
+                    String[] accessTokens = new String[activeDetailedTokens.size()];
+                    for (AccessTokenDO detailToken : activeDetailedTokens) {
+                        String token = detailToken.getAccessToken();
+                        accessTokens[countToken] = token;
+                        countToken++;
+                    }
+                    OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                            .revokeTokens(oauthKey, accessTokens);
+                } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+                    throw new IdentityApplicationManagementException("Error occurred while revoking tokens and " +
+                            "authz code for client ID: " + config.getInboundAuthKey() + " and tenant domain: " +
+                            tenantDomain, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Revokes active authz code of OAuth applications if application is disabled.
+     *
+     * @param serviceProvider Service Provider
+     * @param tenantDomain    Application tenant domain
+     * @throws IdentityApplicationManagementException
+     */
+    private void revokeAuthzCode(ServiceProvider serviceProvider, String tenantDomain)
+            throws IdentityApplicationManagementException {
+
+        InboundAuthenticationRequestConfig[] configs = serviceProvider.getInboundAuthenticationConfig()
+                .getInboundAuthenticationRequestConfigs();
+        for (InboundAuthenticationRequestConfig config : configs) {
+            if (IdentityApplicationConstants.OAuth2.NAME
+                    .equalsIgnoreCase(config.getInboundAuthType()) &&
+                    config.getInboundAuthKey() != null) {
+                String oauthKey = config.getInboundAuthKey();
+                try {
+                    Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
+                            .getAuthorizationCodeDAO()
+                            .getActiveAuthorizationCodesByConsumerKey(oauthKey);
+                    OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
+                            .revokeAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]));
+                } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
+                    throw new IdentityApplicationManagementException("Error occurred while revoking tokens and " +
+                            "authz code for client ID: " + config.getInboundAuthKey() + " and tenant domain: " +
+                            tenantDomain, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Revokes consent given against OAuth applications when application is disabled.
+     *
+     * @param serviceProvider Service Provider
+     * @param tenantDomain    Application tenant domain
+     */
+    private void revokeConsent(final ServiceProvider serviceProvider, final String tenantDomain)
+            throws IdentityApplicationManagementException {
+
+        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+        try {
+            // revoke oauth consents
+            OAuthTokenPersistenceFactory.getInstance().getOAuthUserConsentedScopesDAO()
+                    .revokeConsentOfApplication(serviceProvider.getApplicationResourceId(), tenantId);
+            // revoke old oidc consents from IDN_OPENID_USER_RPS
+            OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO().revokeOAuthConsentsByApplication(
+                    serviceProvider.getApplicationName(), tenantDomain);
+        } catch (IdentityOAuth2Exception | IdentityOAuth2ScopeConsentException  e) {
+            throw new IdentityApplicationManagementException("error occurred while revoking consent for application: "
+                    + serviceProvider.getApplicationName(), e);
+        }
+    }
+
+
+    /**
      * Validate Oauth inbound config.
      *
      * @param serviceProvider service provider.
@@ -721,7 +820,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * Validate requested grants in the oauth app.
      *
      * @param requestedGrants list of requested grants
-     * @param validationMsg      validation msg list
+     * @param validationMsg   validation msg list
      */
     private void validateGrants(String[] requestedGrants, List<String> validationMsg) {
 

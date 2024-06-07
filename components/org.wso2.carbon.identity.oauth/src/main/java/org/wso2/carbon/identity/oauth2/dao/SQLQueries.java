@@ -1685,6 +1685,9 @@ public class SQLQueries {
     public static final String REMOVE_OAUTH2_USER_CONSENT_FOR_APP = "DELETE FROM IDN_OAUTH2_USER_CONSENT WHERE " +
             "USER_ID = ? AND APP_ID = ? AND TENANT_ID = ?";
 
+    public static final String REMOVE_OAUTH2_CONSENT_FOR_APP = "DELETE FROM IDN_OAUTH2_USER_CONSENT WHERE " +
+            "APP_ID = ? AND TENANT_ID = ?";
+
     public static final String GET_CONSENT_ID_FOR_CONSENT = "SELECT CONSENT_ID FROM IDN_OAUTH2_USER_CONSENT WHERE " +
             "USER_ID = ? AND APP_ID = ? AND TENANT_ID = ?";
 
