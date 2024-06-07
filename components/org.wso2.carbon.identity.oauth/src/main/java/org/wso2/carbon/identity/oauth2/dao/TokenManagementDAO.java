@@ -72,7 +72,8 @@ public interface TokenManagementDAO {
      *
      * @param consumerKey    OAuth application consumer key.
      * @param accessTokens   Active access tokens.
-     * @throws IdentityOAuth2Exception, IdentityApplicationManagementException
+     * @throws IdentityOAuth2Exception
+     * @throws IdentityApplicationManagementException
      */
     default void revokeTokens(String consumerKey, String[] accessTokens)
             throws IdentityOAuth2Exception, IdentityApplicationManagementException {

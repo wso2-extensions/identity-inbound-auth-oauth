@@ -696,7 +696,8 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
      *
      * @param consumerKey    OAuth application consumer key.
      * @param accessTokens   Active access tokens.
-     * @throws IdentityOAuth2Exception, IdentityApplicationManagementException
+     * @throws IdentityOAuth2Exception
+     * @throws IdentityApplicationManagementException
      */
     @Override
     public void revokeTokens(String consumerKey, String[] accessTokens)
