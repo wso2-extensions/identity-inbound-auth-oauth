@@ -128,7 +128,10 @@ public class ImpersonationConfigMgtServiceImpl implements ImpersonationConfigMgt
     private Resource getResource(String resourceTypeName, String resourceName) throws ConfigurationManagementException {
 
         try {
-            return getConfigurationManager().getResource(resourceTypeName, resourceName);
+            if (getConfigurationManager() != null) {
+                return getConfigurationManager().getResource(resourceTypeName, resourceName);
+            }
+            return null;
         } catch (ConfigurationManagementException e) {
             if (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode().equals(e.getErrorCode())) {
                 return null;

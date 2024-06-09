@@ -53,6 +53,7 @@ public class Util {
      */
     public static ImpersonationConfigMgtException handleServerException(ErrorMessage error, Throwable e,
                                                                         String... data) {
+
         return new ImpersonationConfigMgtServerException(String.format(error.getDescription(), data),
                 error.getCode(), e);
     }
@@ -67,6 +68,7 @@ public class Util {
      */
     public static ImpersonationConfigMgtException handleClientException(ErrorMessage error, Throwable e,
                                                                         String... data) {
+
         return new ImpersonationConfigMgtClientException(String.format(error.getDescription(), data),
                 error.getCode(), e);
     }
@@ -78,6 +80,7 @@ public class Util {
      * @return A ResourceAdd object representing the parsed configuration.
      */
     public static ResourceAdd parseConfig(ImpersonationConfig impersonationConfig) {
+
         ResourceAdd resourceAdd = new ResourceAdd();
         resourceAdd.setName(IMPERSONATION_RESOURCE_NAME);
         List<Attribute> attributes = new ArrayList<>();
@@ -87,6 +90,7 @@ public class Util {
     }
 
     private static void addAttribute(List<Attribute> attributeList, ImpersonationConfig impersonationConfig) {
+
         String value = String.valueOf(impersonationConfig.isEnableEmailNotification());
         if (StringUtils.isNotBlank(value)) {
             Attribute attribute = new Attribute();
@@ -103,6 +107,7 @@ public class Util {
      * @return An ImpersonationConfig object representing the parsed resource.
      */
     public static ImpersonationConfig parseResource(Resource resource) {
+
         ImpersonationConfig impersonationConfig = new ImpersonationConfig();
         if (resource.isHasAttribute()) {
             List<Attribute> attributes = resource.getAttributes();
@@ -114,6 +119,7 @@ public class Util {
     }
 
     private static Map<String, String> getAttributeMap(List<Attribute> attributes) {
+
         if (CollectionUtils.isNotEmpty(attributes)) {
             return attributes.stream().collect(Collectors.toMap(Attribute::getKey, Attribute::getValue));
         }
@@ -126,6 +132,7 @@ public class Util {
      * @return The default ImpersonationConfig object.
      */
     public static ImpersonationConfig getDefaultConfiguration() {
+
         ImpersonationConfig impersonationConfig = new ImpersonationConfig();
         impersonationConfig.setEnableEmailNotification(true);
         return impersonationConfig;
