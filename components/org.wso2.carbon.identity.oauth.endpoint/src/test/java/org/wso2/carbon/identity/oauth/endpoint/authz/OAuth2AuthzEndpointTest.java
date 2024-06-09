@@ -205,6 +205,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.FileAssert.fail;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXP;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.NBF;
 import static org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil.REQUEST_PARAM_VALUE_BUILDER;
@@ -1210,6 +1211,135 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         if (checkErrorCode) {
             assertTrue(location.contains(OAuth2ErrorCodes.INVALID_REQUEST), "Expected error code not found in URL");
         }
+    }
+
+    @DataProvider(name = "provideRequestParams")
+    public Object[][] provideRequestParams() {
+
+        initMocks(this);
+        return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, "sample_scope", HttpServletResponse.SC_FOUND}
+        });
+    }
+
+    @Test(dataProvider = "provideRequestParams", groups = "testWithConnection")
+    public void testTestAuthorize(Object flowStatusObject, String scope, int expectedStatus,
+                                  boolean diagnosticLogsEnabled) throws Exception {
+
+        Map<String, String[]> requestParams = new HashMap<>();
+        Map<String, Object> requestAttributes = new HashMap<>();
+
+        requestParams.put(CLIENT_ID, new String[]{CLIENT_ID_VALUE});
+        requestParams.put(OAuthConstants.OAuth20Params.SCOPE, new String[]{scope});
+        requestParams.put(OAuth.OAUTH_RESPONSE_TYPE, new String[]{SUBJECT_TOKEN});
+        requestParams.put("requested_subject", new String[]{"8122e3de-0f3b-4b0e-a43a-d0c237451b7a"});
+        requestParams.put(REDIRECT_URI, new String[]{APP_REDIRECT_URL});
+
+        mockOAuthServerConfiguration();
+        when(oAuthServerConfiguration.isOAuthResponseJspPageAvailable()).thenReturn(false);
+
+        requestAttributes.put(FrameworkConstants.RequestParams.FLOW_STATUS, (AuthenticatorFlowStatus) flowStatusObject);
+        requestAttributes.put(FrameworkConstants.SESSION_DATA_KEY, SESSION_DATA_KEY_VALUE);
+        requestParams.put(REDIRECT_URI, new String[]{APP_REDIRECT_URL});
+        AuthenticationResult result = setAuthenticationResult(true, null, null, null, null);
+        result.getSubject().setAuthenticatedSubjectIdentifier("Impersonator");
+        requestAttributes.put(FrameworkConstants.RequestAttribute.AUTH_RESULT, result);
+
+        mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+
+        mockStatic(OAuth2Util.OAuthURL.class);
+        when(OAuth2Util.OAuthURL.getOAuth2ErrorPageUrl()).thenReturn(ERROR_PAGE_URL);
+
+        spy(FrameworkUtils.class);
+        doNothing().when(FrameworkUtils.class, "startTenantFlow", anyString());
+        doNothing().when(FrameworkUtils.class, "endTenantFlow");
+        mockStatic(IdentityTenantUtil.class);
+        mockStatic(LoggerUtils.class);
+        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(diagnosticLogsEnabled);
+        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+        mockStatic(CentralLogMgtServiceComponentHolder.class);
+        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
+        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
+
+        when(httpServletRequest.getServletContext()).thenReturn(servletContext);
+        when(servletContext.getContext(anyString())).thenReturn(servletContext);
+        when(servletContext.getRequestDispatcher(anyString())).thenReturn(requestDispatcher);
+        doNothing().when(requestDispatcher).forward(any(ServletRequest.class), any(ServletResponse.class));
+
+        mockStatic(SessionDataCache.class);
+        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+        oAuth2Parameters.setApplicationName(APP_NAME);
+        oAuth2Parameters.setRedirectURI(APP_REDIRECT_URL);
+        oAuth2Parameters.setScopes(Collections.singleton(scope));
+        oAuth2Parameters.setResponseType(SUBJECT_TOKEN);
+        oAuth2Parameters.setClientId(CLIENT_ID_VALUE);
+        oAuth2Parameters.setSessionDataKey(SESSION_DATA_KEY_VALUE);
+        oAuth2Parameters.setRequestedSubjectId("8122e3de-0f3b-4b0e-a43a-d0c237451b7a");
+
+        when(SessionDataCache.getInstance()).thenReturn(sessionDataCache);
+        SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
+        SessionDataCacheKey consentDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_CONSENT_VALUE);
+        when(sessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
+        when(sessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
+        when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Parameters);
+        when(loginCacheEntry.getLoggedInUser()).thenReturn(result.getSubject());
+
+        mockStatic(AuthorizationHandlerManager.class);
+        when(AuthorizationHandlerManager.getInstance()).thenReturn(authorizationHandlerManager);
+
+        OAuth2AuthorizeReqDTO authzReqDTO =  new OAuth2AuthorizeReqDTO();
+        authzReqDTO.setConsumerKey(CLIENT_ID_VALUE);
+        authzReqDTO.setScopes(new String[]{scope});
+        authzReqDTO.setUser(loginCacheEntry.getLoggedInUser());
+        authzReqDTO.setResponseType(SUBJECT_TOKEN);
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
+        authzReqMsgCtx.setApprovedScope(new String[]{scope});
+        when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(authzReqMsgCtx);
+        when(authorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
+                .thenReturn(authzReqMsgCtx);
+        when(loginCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
+        when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
+                anyString(), anyString(), anyInt(), anyList())).thenReturn(true);
+        mockStatic(OAuth2Util.class);
+        when(OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
+        when(oAuthServerConfiguration.getOpenIDConnectSkipeUserConsentConfig()).thenReturn(true);
+
+        OAuth2AuthorizeRespDTO authzRespDTO = new OAuth2AuthorizeRespDTO();
+        authzRespDTO.setCallbackURI(APP_REDIRECT_URL);
+        authzRespDTO.setSubjectToken("sample_subject_token");
+        when(oAuth2Service.authorize(any(OAuthAuthzReqMessageContext.class))).thenReturn(authzRespDTO);
+
+        mockEndpointUtil(false);
+        Response response;
+        try (Connection connection = getConnection()) {
+            mockStatic(IdentityDatabaseUtil.class);
+            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            mockServiceURLBuilder();
+            try {
+                setSupportedResponseModes();
+                response = oAuth2AuthzEndpoint.authorize(httpServletRequest, httpServletResponse);
+            } catch (InvalidRequestParentException ire) {
+                InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+                response = invalidRequestExceptionMapper.toResponse(ire);
+            }
+        }
+
+        assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+        MultivaluedMap<String, Object> responseMetadata = response.getMetadata();
+
+        assertNotNull(responseMetadata, "HTTP response metadata is null");
+        // This is the case where a redirect outside happens.
+        List<Object> redirectPath = responseMetadata.get(HTTPConstants.HEADER_LOCATION);
+        assertTrue(CollectionUtils.isNotEmpty(redirectPath));
+        String location = String.valueOf(redirectPath.get(0));
+        assertNotNull(location);
+        assertTrue(location.contains("subject_token=sample_subject_token"));
+        assertFalse(location.contains("error"), "Expected no errors in the redirect url, but found one.");
     }
 
     @Test(description = "Test redirection with error when request_uri is not sent when " +

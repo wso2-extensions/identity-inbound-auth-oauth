@@ -53,6 +53,17 @@ public class OAuth2Parameters implements Serializable {
     private String sessionDataKey;
     private String loginTenantDomain;
     private boolean isRequestObjectFlow;
+    private String requestedSubjectId;
+
+    public String getRequestedSubjectId() {
+
+        return requestedSubjectId;
+    }
+
+    public void setRequestedSubjectId(String requestedSubjectId) {
+
+        this.requestedSubjectId = requestedSubjectId;
+    }
 
     public String getSessionDataKey() {
         return sessionDataKey;
