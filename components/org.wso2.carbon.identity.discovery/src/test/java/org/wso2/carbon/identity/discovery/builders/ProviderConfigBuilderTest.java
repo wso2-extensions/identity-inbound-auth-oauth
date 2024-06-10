@@ -20,17 +20,17 @@ package org.wso2.carbon.identity.discovery.builders;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.discovery.DiscoveryUtil;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.discovery.OIDProviderRequest;
@@ -43,20 +43,21 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({ OAuth2Util.class, OAuthServerConfiguration.class, OIDCDiscoveryDataHolder.class,
-    ClaimMetadataManagementService.class, DiscoveryUtil.class })
 /**
  * Unit test covering ProviderConfigBuilder class.
  */
-public class ProviderConfigBuilderTest extends PowerMockTestCase {
+@WithCarbonHome
+@Listeners(MockitoTestNGListener.class)
+public class ProviderConfigBuilderTest {
 
     private String idTokenSignatureAlgorithm = "SHA256withRSA";
     private ProviderConfigBuilder providerConfigBuilder;
@@ -67,12 +68,6 @@ public class ProviderConfigBuilderTest extends PowerMockTestCase {
     @Mock
     private OIDProviderRequest mockOidProviderRequest;
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
-
     @BeforeMethod
     public void setUp() throws Exception {
 
@@ -82,177 +77,208 @@ public class ProviderConfigBuilderTest extends PowerMockTestCase {
     @Test
     public void testBuildOIDProviderConfig() throws Exception {
 
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class)) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
 
-        OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
-        mockStatic(OIDCDiscoveryDataHolder.class);
-        mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
-        when(OIDCDiscoveryDataHolder.getInstance()).thenReturn(mockOidcDiscoveryDataHolder);
+                OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+                mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+                oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance)
+                        .thenReturn(mockOidcDiscoveryDataHolder);
 
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
+                List<ExternalClaim> claims = new ArrayList<>();
+                ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
+                claims.add(externalClaim);
 
-        List<ExternalClaim> claims = new ArrayList<>();
-        ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
-        claims.add(externalClaim);
+                when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
 
-        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
+                when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+                when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(
+                        idTokenSignatureAlgorithm);
 
-        when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
-        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
-
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
-        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                        .thenReturn(JWSAlgorithm.RS256);
+                when(mockOidProviderRequest.getTenantDomain()).thenReturn(
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
+            }
+        }
     }
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig1() throws Exception {
 
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
-        when(OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(anyString()))
-            .thenThrow(new URISyntaxException("input", "URISyntaxException"));
-        when(OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
-        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            oAuthURL.when(() -> OAuth2Util.OAuthURL.getOAuth2JWKSPageUrl(anyString()))
+                    .thenThrow(new URISyntaxException("input", "URISyntaxException"));
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+        }
     }
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig2() throws Exception {
 
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
-        mockStatic(OIDCDiscoveryDataHolder.class);
-        mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
-        when(OIDCDiscoveryDataHolder.getInstance()).thenReturn(mockOidcDiscoveryDataHolder);
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance).thenReturn(mockOidcDiscoveryDataHolder);
 
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString())).thenReturn("issuer");
 
-        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString()))
-            .thenThrow(new ClaimMetadataException("ClaimMetadataException"));
-        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString()))
+                    .thenThrow(new ClaimMetadataException("ClaimMetadataException"));
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+        }
     }
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig3() throws Exception {
 
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
-        mockStatic(OIDCDiscoveryDataHolder.class);
-        mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
-        when(OIDCDiscoveryDataHolder.getInstance()).thenReturn(mockOidcDiscoveryDataHolder);
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance).thenReturn(mockOidcDiscoveryDataHolder);
 
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
+            List<ExternalClaim> claims = new ArrayList<>();
+            ExternalClaim mockExternalClaim = new ExternalClaim("aaa", "bbb", "ccc");
+            claims.add(mockExternalClaim);
+            when(mockClaimMetadataManagementService.getExternalClaims(nullable(String.class),
+                    nullable(String.class))).thenReturn(claims);
 
-        List<ExternalClaim> claims = new ArrayList<>();
-        ExternalClaim mockExternalClaim = new ExternalClaim("aaa", "bbb", "ccc");
-        claims.add(mockExternalClaim);
-        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
+            when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
+                    .thenThrow(new IdentityOAuth2Exception("IdentityOAuth2Exception"));
 
-        when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
-            .thenThrow(new IdentityOAuth2Exception("IdentityOAuth2Exception"));
-
-        providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+        }
     }
 
     @Test
     public void testBuildOIDProviderConfig4() throws Exception {
 
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<DiscoveryUtil> discoveryUtil = mockStatic(DiscoveryUtil.class);) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
-        mockStatic(OIDCDiscoveryDataHolder.class);
-        mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
-        when(OIDCDiscoveryDataHolder.getInstance()).thenReturn(mockOidcDiscoveryDataHolder);
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance).thenReturn(mockOidcDiscoveryDataHolder);
 
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString())).thenReturn(JWSAlgorithm.RS256);
-        String dummyIdIssuer = "http://domain:0000/oauth2/token";
-        when(OAuth2Util.getIDTokenIssuer()).thenReturn(dummyIdIssuer);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
+                    .thenReturn(JWSAlgorithm.RS256);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(anyString()))
+                    .thenReturn(JWSAlgorithm.RS256);
+            String dummyIdIssuer = "http://domain:0000/oauth2/token";
+            oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(dummyIdIssuer);
 
-        List<ExternalClaim> claims = new ArrayList<>();
-        ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
-        claims.add(externalClaim);
+            List<ExternalClaim> claims = new ArrayList<>();
+            ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
+            claims.add(externalClaim);
 
-        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
+            when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
 
-        when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
 
-        mockStatic(DiscoveryUtil.class);
-        when(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery()).thenReturn(Boolean.FALSE);
+            discoveryUtil.when(DiscoveryUtil::isUseEntityIdAsIssuerInOidcDiscovery).thenReturn(Boolean.FALSE);
 
-        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
 
-        OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
-        assertNotNull(response);
-        assertEquals(response.getIssuer(), dummyIdIssuer);
+            OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            assertNotNull(response);
+            assertEquals(response.getIssuer(), dummyIdIssuer);
+        }
     }
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig5() throws Exception {
 
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
+                     mockStatic(OIDCDiscoveryDataHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
-        mockStatic(OIDCDiscoveryDataHolder.class);
-        mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
-        when(OIDCDiscoveryDataHolder.getInstance()).thenReturn(mockOidcDiscoveryDataHolder);
+            OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
+            mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
+            oidcDiscoveryDataHolder.when(OIDCDiscoveryDataHolder::getInstance).thenReturn(mockOidcDiscoveryDataHolder);
 
-        mockStatic(OAuth2Util.class);
-        mockStatic(OAuth2Util.OAuthURL.class);
+            List<ExternalClaim> claims = new ArrayList<>();
+            ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
+            claims.add(externalClaim);
 
-        List<ExternalClaim> claims = new ArrayList<>();
-        ExternalClaim externalClaim = new ExternalClaim("aaa", "bbb", "ccc");
-        claims.add(externalClaim);
+            when(mockClaimMetadataManagementService.getExternalClaims(nullable(String.class),
+                    nullable(String.class))).thenReturn(claims);
 
-        when(mockClaimMetadataManagementService.getExternalClaims(anyString(), anyString())).thenReturn(claims);
+            when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
+            String wrongAlgo = "SHA150withRSA";
+            when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(wrongAlgo);
 
-        when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
-        String wrongAlgo = "SHA150withRSA";
-        when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(wrongAlgo);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm))
+                    .thenReturn(JWSAlgorithm.RS256);
+            oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(wrongAlgo))
+                    .thenThrow(new IdentityOAuth2Exception("IdentityOAuth2Exception"));
 
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(idTokenSignatureAlgorithm)).thenReturn(JWSAlgorithm.RS256);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(wrongAlgo))
-            .thenThrow(new IdentityOAuth2Exception("IdentityOAuth2Exception"));
-
-        providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+            providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+        }
     }
 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildOIDProviderConfig6() throws Exception {
-        OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getIdTokenIssuer(anyString()))
-            .thenThrow(new IdentityOAuth2Exception("Configuration not found"));
-        when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString()))
+                    .thenThrow(new IdentityOAuth2Exception("Configuration not found"));
+            when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
+        }
     }
 }

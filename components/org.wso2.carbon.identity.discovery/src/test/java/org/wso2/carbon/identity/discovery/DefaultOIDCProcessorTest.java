@@ -19,52 +19,36 @@
 package org.wso2.carbon.identity.discovery;
 
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.discovery.builders.ProviderConfigBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({DefaultOIDCProcessor.class})
 /**
  * Unit test covering DefaultOIDCProcessor class.
  */
-public class DefaultOIDCProcessorTest extends PowerMockTestCase {
+public class DefaultOIDCProcessorTest {
 
     @Mock
     private HttpServletRequest httpServletRequest;
 
     @Mock
-    private DefaultOIDCProviderRequestBuilder mockOidcProviderRequestBuilder;
-
-    @Mock
     private OIDProviderRequest mockOidProviderRequest;
 
     @Mock
-    private ProviderConfigBuilder mockProviderConfigBuilder;
-
-    @Mock
     private OIDProviderConfigResponse mockOidProviderConfigResponse;
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -81,17 +65,25 @@ public class DefaultOIDCProcessorTest extends PowerMockTestCase {
     @Test
     public void testGetResponse() throws Exception {
 
-        when(mockOidcProviderRequestBuilder.buildRequest(any(HttpServletRequest.class), anyString()))
-                .thenReturn(mockOidProviderRequest);
-        when(mockProviderConfigBuilder.buildOIDProviderConfig(any(OIDProviderRequest.class)))
-                .thenReturn(mockOidProviderConfigResponse);
+        try (MockedConstruction<DefaultOIDCProviderRequestBuilder> mockedConstruction = Mockito.mockConstruction(
+                DefaultOIDCProviderRequestBuilder.class,
+                (mock, context) -> {
+                    when(mock.buildRequest(any(HttpServletRequest.class), anyString()))
+                            .thenReturn(mockOidProviderRequest);
+                })) {
 
-        whenNew(DefaultOIDCProviderRequestBuilder.class).withNoArguments().thenReturn(mockOidcProviderRequestBuilder);
-        whenNew(ProviderConfigBuilder.class).withNoArguments().thenReturn(mockProviderConfigBuilder);
+            try (MockedConstruction<ProviderConfigBuilder> mockedConstruction1 = Mockito.mockConstruction(
+                    ProviderConfigBuilder.class,
+                    (mock, context) -> {
+                        when(mock.buildOIDProviderConfig(any(OIDProviderRequest.class)))
+                                .thenReturn(mockOidProviderConfigResponse);
+                    })) {
 
-        OIDCProcessor oidcProcessor = DefaultOIDCProcessor.getInstance();
-        OIDProviderConfigResponse response = oidcProcessor.getResponse(httpServletRequest, "tenantDomain");
-        assertNotNull(response, "Error while calling getResponse()");
+                OIDCProcessor oidcProcessor = DefaultOIDCProcessor.getInstance();
+                OIDProviderConfigResponse response = oidcProcessor.getResponse(httpServletRequest, "tenantDomain");
+                assertNotNull(response, "Error while calling getResponse()");
+            }
+        }
     }
 
     @DataProvider(name = "errorData")

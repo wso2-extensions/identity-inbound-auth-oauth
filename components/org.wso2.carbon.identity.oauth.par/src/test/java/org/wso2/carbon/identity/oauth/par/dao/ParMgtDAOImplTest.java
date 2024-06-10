@@ -20,8 +20,7 @@ package org.wso2.carbon.identity.oauth.par.dao;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -36,17 +35,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 /**
  * Test class for ParMgtDAOImpl.
  */
-@PrepareForTest({IdentityDatabaseUtil.class})
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
-public class ParMgtDAOImplTest extends PowerMockTestCase {
+public class ParMgtDAOImplTest {
 
     private static final Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
     private final ParMgtDAOImpl parMgtDAO = new ParMgtDAOImpl();
@@ -94,8 +91,9 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
     public void testPersistRequestData(String requestUri, String clientId, Long expiryTime,
                                        Map<String, String> paramMapObj) throws Exception {
 
-        try (Connection connection = getConnection(DB_NAME)) {
-            prepareConnection(connection, true);
+        try (Connection connection = getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(connection, true, identityDatabaseUtil);
             parMgtDAO.persistRequestData(requestUri, clientId, expiryTime, paramMapObj);
         }
     }
@@ -103,8 +101,9 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
     @Test(dependsOnMethods = {"testPersistRequestData"})
     public void testGetRequestDataSuccess() throws Exception {
 
-        try (Connection connection = getConnection(DB_NAME)) {
-            prepareConnection(connection, false);
+        try (Connection connection = getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(connection, false, identityDatabaseUtil);
             Optional<ParRequestDO> parRequestDO = parMgtDAO.getRequestData(REQUEST_URI_1);
             parRequestDO.ifPresent(
                     requestDO -> assertEquals(requestDO.getParams(), this.parRequestDO.getParams()));
@@ -126,8 +125,9 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
     @Test(dataProvider = "testProvideGetRequestData", dependsOnMethods = {"testPersistRequestData"})
     public void testGetRequestData(String requestUri) throws Exception {
 
-        try (Connection connection = getConnection(DB_NAME)) {
-            prepareConnection(connection, false);
+        try (Connection connection = getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(connection, false, identityDatabaseUtil);
             Optional<ParRequestDO> parRequestDO = parMgtDAO.getRequestData(requestUri);
             parRequestDO.ifPresent(
                     requestDO -> assertNotNull(requestDO.getParams()));
@@ -137,8 +137,9 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
     @Test(dependsOnMethods = {"testPersistRequestData"})
     public void testRemoveRequestData() throws Exception {
 
-        try (Connection connection = getConnection(DB_NAME)) {
-            prepareConnection(connection, true);
+        try (Connection connection = getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+            prepareConnection(connection, true, identityDatabaseUtil);
             parMgtDAO.removeRequestData(REQUEST_URI_2);
         }
     }
@@ -151,10 +152,11 @@ public class ParMgtDAOImplTest extends PowerMockTestCase {
         throw new RuntimeException("No datasource initiated for database: " + database);
     }
 
-    private void prepareConnection(Connection connection, boolean shouldApplyTransaction) {
+    private void prepareConnection(Connection connection, boolean shouldApplyTransaction,
+                                   MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil) {
 
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection(shouldApplyTransaction)).thenReturn(connection);
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(shouldApplyTransaction))
+                .thenReturn(connection);
     }
 
     protected void initiateH2Base(String scriptPath) throws Exception {

@@ -27,8 +27,8 @@ import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 /**
