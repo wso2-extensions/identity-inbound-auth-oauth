@@ -17,9 +17,7 @@
  */
 package org.wso2.carbon.identity.webfinger.builders;
 
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.ServerConfigurationException;
@@ -30,17 +28,15 @@ import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 
 import java.net.URISyntaxException;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({OAuth2Util.OAuthURL.class})
 /**
  * Unit test coverage for WebFingerOIDCResponseBuilder class
  */
-public class BackwordWebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
+public class BackwordWebFingerOIDCResponseBuilderTest {
 
     private WebFingerOIDCResponseBuilder webFingerOIDCResponseBuilder;
     private WebFingerRequest webFingerRequest;
@@ -53,8 +49,7 @@ public class BackwordWebFingerOIDCResponseBuilderTest extends PowerMockTestCase 
     private final String scheme = "https";
     private final int port = 9443;
 
-    @Mock
-    OAuth2Util.OAuthURL oAuthURL;
+    private MockedStatic<OAuth2Util.OAuthURL> oAuthURL;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -68,12 +63,12 @@ public class BackwordWebFingerOIDCResponseBuilderTest extends PowerMockTestCase 
         webFingerRequest.setRel(rel);
         webFingerRequest.setTenant(tenant);
 
-        mockStatic(OAuth2Util.OAuthURL.class);
+        oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
     }
 
     @Test
     public void testBuildWebFingerResponse() throws Exception {
-        when(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(any(String.class))).thenReturn(oidcDiscoveryUrl);
+        oAuthURL.when(()->OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(any(String.class))).thenReturn(oidcDiscoveryUrl);
         WebFingerResponse webFingerResponse = webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
         assertEquals(webFingerResponse.getLinks().get(0).getRel(), rel, "rel is properly assigned");
         assertEquals(webFingerResponse.getLinks().get(0).getHref(), oidcDiscoveryUrl, "href is properly assigned");
@@ -83,7 +78,8 @@ public class BackwordWebFingerOIDCResponseBuilderTest extends PowerMockTestCase 
     @Test(expectedExceptions = ServerConfigurationException.class)
     public void testBuildWebFingerException() throws URISyntaxException, WebFingerEndpointException,
             ServerConfigurationException {
-        when(OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(anyString())).thenThrow
+
+        oAuthURL.when(() -> OAuth2Util.OAuthURL.getOidcDiscoveryEPUrl(anyString())).thenThrow
                 (new URISyntaxException("Error", "Exception"));
         try {
             webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);

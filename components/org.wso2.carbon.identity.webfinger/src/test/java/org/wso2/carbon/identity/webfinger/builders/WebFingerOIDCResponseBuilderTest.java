@@ -17,8 +17,8 @@
  */
 package org.wso2.carbon.identity.webfinger.builders;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.ServerConfigurationException;
@@ -29,16 +29,14 @@ import org.wso2.carbon.identity.webfinger.WebFingerEndpointException;
 import org.wso2.carbon.identity.webfinger.WebFingerRequest;
 import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({OAuth2Util.class})
 /**
  * Unit test coverage for WebFingerOIDCResponseBuilder class.
  */
-public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
+public class WebFingerOIDCResponseBuilderTest {
 
     private WebFingerOIDCResponseBuilder webFingerOIDCResponseBuilder;
     private WebFingerRequest webFingerRequest;
@@ -50,6 +48,8 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
     private final String path = "/.well-known/webfinger";
     private final String scheme = "https";
     private final int port = 9443;
+
+    private MockedStatic<OAuth2Util> oAuth2Util;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -63,13 +63,19 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
         webFingerRequest.setRel(rel);
         webFingerRequest.setTenant(tenant);
 
-        mockStatic(OAuth2Util.class);
+        oAuth2Util = mockStatic(OAuth2Util.class);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        oAuth2Util.close();
     }
 
     @Test
     public void testBuildWebFingerResponse() throws Exception {
 
-        when(OAuth2Util.getIssuerLocation(any(String.class))).thenReturn(oidcDiscoveryUrl);
+        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(any(String.class))).thenReturn(oidcDiscoveryUrl);
         WebFingerResponse webFingerResponse = webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
         assertEquals(webFingerResponse.getLinks().get(0).getRel(), rel, "rel is properly assigned");
         assertEquals(webFingerResponse.getLinks().get(0).getHref(), oidcDiscoveryUrl,
@@ -82,7 +88,7 @@ public class WebFingerOIDCResponseBuilderTest extends PowerMockTestCase {
     public void testBuildWebFingerException() throws WebFingerEndpointException, ServerConfigurationException,
             IdentityException {
 
-        when(OAuth2Util.getIssuerLocation(any(String.class))).thenThrow
+        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(any(String.class))).thenThrow
                 (new IdentityOAuth2Exception("Error"));
         webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
     }

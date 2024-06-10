@@ -18,10 +18,12 @@
 package org.wso2.carbon.identity.webfinger.builders;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.webfinger.WebFingerConstants;
@@ -37,19 +39,18 @@ import java.util.Vector;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 /**
  * Unit test coverage for DefaultWebFingerRequestBuilder class.
  */
-@PrepareForTest({HttpServletRequest.class, WebFingerServiceComponentHolder.class, RealmService.class,
-        TenantManager.class})
-public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class DefaultWebFingerRequestBuilderTest {
 
     private DefaultWebFingerRequestBuilder defaultWebFingerRequestBuilder;
     private final String rel = "http://openid.net/specs/connect/1.0/issuer";
@@ -71,14 +72,22 @@ public class DefaultWebFingerRequestBuilderTest extends PowerMockTestCase {
     @Mock
     TenantManager tenantManager;
 
+    private MockedStatic<WebFingerServiceComponentHolder> webFingerServiceComponentHolder;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
         defaultWebFingerRequestBuilder = new DefaultWebFingerRequestBuilder();
 
-        mockStatic(WebFingerServiceComponentHolder.class);
-        when(WebFingerServiceComponentHolder.getRealmService()).thenReturn(realmService);
+        webFingerServiceComponentHolder = mockStatic(WebFingerServiceComponentHolder.class);
+        webFingerServiceComponentHolder.when(WebFingerServiceComponentHolder::getRealmService).thenReturn(realmService);
         when(realmService.getTenantManager()).thenReturn(tenantManager);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        webFingerServiceComponentHolder.close();
     }
 
     @DataProvider(name = "BuildParameters")

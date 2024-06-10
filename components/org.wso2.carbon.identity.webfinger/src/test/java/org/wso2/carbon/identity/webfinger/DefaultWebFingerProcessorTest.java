@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.webfinger;
 
 import org.apache.commons.collections.iterators.IteratorEnumeration;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -35,6 +34,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
@@ -57,7 +57,7 @@ public class DefaultWebFingerProcessorTest {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
                 return parameterMap.get(invocationOnMock.getArguments()[0]);
             }
-        }).when(request).getParameter(Matchers.anyString());
+        }).when(request).getParameter(anyString());
         Mockito.doAnswer(new Answer() {
 
             @Override
