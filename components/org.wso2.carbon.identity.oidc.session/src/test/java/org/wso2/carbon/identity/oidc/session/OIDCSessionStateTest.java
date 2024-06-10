@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oidc.session;
 
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -30,7 +29,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Unit test coverage for OIDCSessionState class.
  */
-public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
+public class OIDCSessionStateTest {
 
     private static final String USERNAME = "user1";
     private static final String CLIENT_ID_VALUE = "3T9l2uUf8AzNOfmGS9lPEIsdrR8a";
@@ -63,8 +62,8 @@ public class OIDCSessionStateTest extends PowerMockIdentityBaseTest {
 
         String clientId = "ES9l2uUf8AzNOfmGS9lPEIsdrR8a";
         oidcSessionState.addSessionParticipant(clientId);
-        Set sessionParticipants = oidcSessionState.getSessionParticipants();
-        assertNotNull(sessionParticipants.contains(clientId), "Client_id is not a session participant");
+        Set<String> sessionParticipants = oidcSessionState.getSessionParticipants();
+        assertTrue(sessionParticipants.contains(clientId), "Client_id is not a session participant");
     }
 
     @Test
