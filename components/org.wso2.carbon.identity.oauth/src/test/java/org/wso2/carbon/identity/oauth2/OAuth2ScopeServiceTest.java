@@ -53,7 +53,7 @@ import static org.testng.Assert.fail;
 
 @WithCarbonHome
 @WithRealmService
-@WithH2Database(files = {"dbScripts/scope.sql", "dbScripts/h2.sql", "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
 public class OAuth2ScopeServiceTest {
 
     private OAuth2ScopeService oAuth2ScopeService;
@@ -89,6 +89,11 @@ public class OAuth2ScopeServiceTest {
 
         try {
             oAuth2ScopeService.revokeUserConsents("dummyUserId", 1);
+        } catch (Exception e) {
+            // Ignore
+        }
+        try {
+            deleteApp();
         } catch (Exception e) {
             // Ignore
         }
@@ -274,12 +279,30 @@ public class OAuth2ScopeServiceTest {
 
     private void insertAppId(String uuid) throws Exception {
 
-        String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
+        String sql =
+                "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID, USER_STORE, USERNAME, AUTH_TYPE) VALUES (?,?,?,?,?,?)";
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, 1);
             ps.setString(2, "dummyAppName");
             ps.setString(3, uuid);
+            ps.setString(4, "PRIMARY");
+            ps.setString(5, "dummyUser");
+            ps.setString(6, "oauth2");
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when inserting codeID", e);
+        }
+    }
+
+    private void deleteApp() throws Exception {
+
+        String sql = "DELETE FROM SP_APP WHERE TENANT_ID = ? AND APP_NAME = ?";
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, 1);
+            ps.setString(2, "dummyAppName");
             ps.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {

@@ -25,6 +25,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
@@ -138,7 +140,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     @BeforeClass
     public void setUp() throws Exception {
         initMocks(this);
-        initiateH2Base(DB_NAME, getFilePath("h2.sql"));
+        initiateH2Base(DB_NAME, getFilePath("identity.sql"));
     }
 
     @AfterClass
@@ -166,6 +168,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
                 addOAuthApplication(appDO, TENANT_ID);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -219,6 +223,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                             DUPLICATE_OAUTH_CLIENT.getErrorCode());
                 }
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -255,6 +261,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                             DUPLICATE_OAUTH_CLIENT.getErrorCode());
                 }
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -277,6 +285,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.addOAuthApplication(appDO);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -301,6 +311,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 // Assert consumer secret is not blank or empty.
                 assertTrue(StringUtils.isNotBlank(consumerKeySecretPair[1]));
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -320,6 +332,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.addOAuthConsumer(USER_NAME, TENANT_ID, TENANT_DOMAIN);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -424,6 +438,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 }
                 assertEquals(scopeValidators.toArray(new String[scopeValidators.size()]), modifiedScopeValidators);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -456,6 +472,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 oAuthAppDO.getAppOwner().setUserName("testUser");
                 appDAO.updateConsumerApplication(oAuthAppDO);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -483,6 +501,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                     assertFalse(resultSet.next());
                 }
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -503,6 +523,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.removeConsumerApplication(CONSUMER_KEY);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -533,6 +555,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                     }
                 }
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -552,6 +576,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.updateOAuthConsumerApp(APP_NAME, CONSUMER_KEY);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -587,6 +613,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(appDAO.getConsumerAppState(CONSUMER_KEY), OAuthConstants.OauthAppStates.APP_STATE_ACTIVE,
                         "Checking APP_STATE failed.");
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -606,6 +634,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.getConsumerAppState(CONSUMER_KEY);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -637,6 +667,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                     }
                 }
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -679,6 +711,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertNotNull(oAuthConsumerAppsOfUser);
                 assertEquals(oAuthConsumerAppsOfUser.length, 2);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -701,6 +735,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.getOAuthConsumerAppsOfUser(USER_NAME, TENANT_ID);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -720,6 +756,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 assertNotNull(appDAO.getAppInformation(CONSUMER_KEY));
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -754,6 +792,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(oAuthAppDO.getBackChannelLogoutUrl(), backChannelLogoutUrl);
                 assertEquals(oAuthAppDO.getRenewRefreshTokenEnabled(), String.valueOf(isRenewRefreshEnabled));
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -815,6 +855,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 assertNotNull(appDAO.getAppInformation(CONSUMER_KEY));
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -842,12 +884,17 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 addOAuthApplication(anotherAppDO, TENANT_ID_2);
 
                 // Reset the carbon context to the original tenant.
+                resetPrivilegedCarbonContext();
                 CommonTestUtils.initPrivilegedCarbonContext(TENANT_DOMAIN, TENANT_ID, USER_NAME);
 
                 OAuthAppDO resultAppDO = new OAuthAppDAO().getAppInformation(CONSUMER_KEY, TENANT_ID_2);
                 assertNotNull(resultAppDO);
                 assertEquals(resultAppDO.getAppOwner().getTenantDomain(), TENANT_DOMAIN_2);
+            } finally {
+                resetPrivilegedCarbonContext();
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -877,6 +924,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             } finally {
                 cleanUpOAuth2TokenTable();
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -904,13 +953,18 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 addOAuthApplication(anotherAppDO, TENANT_ID_2);
 
                 // Reset the carbon context to the original tenant.
+                resetPrivilegedCarbonContext();
                 CommonTestUtils.initPrivilegedCarbonContext(TENANT_DOMAIN, TENANT_ID, USER_NAME);
 
                 OAuthAppDO[] resultAppDOs = new OAuthAppDAO().getAppsForConsumerKey(CONSUMER_KEY);
                 assertEquals(resultAppDOs.length, 2);
                 assertNotNull(resultAppDOs[0]);
                 assertNotNull(resultAppDOs[1]);
+            } finally {
+                resetPrivilegedCarbonContext();
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -935,6 +989,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertEquals(actualAppDO.getOauthConsumerKey(), CONSUMER_KEY);
                 assertEquals(actualAppDO.getOauthConsumerSecret(), CONSUMER_SECRET);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -959,6 +1015,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 appDAO.getAppInformationByAppName(APP_NAME);
             }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 
@@ -1148,5 +1206,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              PreparedStatement preparedStatement = connection.prepareStatement((DELETE_ALL_OAUTH2_ACC_TOKENS))) {
             preparedStatement.executeUpdate();
         }
+    }
+
+    public static void resetPrivilegedCarbonContext() throws Exception {
+        System.clearProperty(CarbonBaseConstants.CARBON_HOME);
+        PrivilegedCarbonContext.endTenantFlow();
     }
 }

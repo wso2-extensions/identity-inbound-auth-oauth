@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -34,7 +35,6 @@ import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -46,7 +46,7 @@ import java.util.List;
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {IdentityCoreServiceDataHolder.class})
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
+        files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
                 "dbScripts/insert_local_idp.sql"})
 public class RequestObjectServiceTest {
 
@@ -62,10 +62,9 @@ public class RequestObjectServiceTest {
     private List<List<RequestedClaim>> requestedEssentialClaims;
 
     @BeforeClass
-    public void setUp() throws UserStoreException {
+    public void setUp() throws Exception {
 
         requestObjectService = new RequestObjectService();
-        requestedEssentialClaims = new ArrayList<>();
         List lstRequestedClams = new ArrayList<>();
         List values = new ArrayList<>();
         requestedEssentialClaims = new ArrayList<>();
@@ -87,6 +86,12 @@ public class RequestObjectServiceTest {
         requestedEssentialClaims.add(lstRequestedClams);
 
         TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+
+        deleteToken(tokenId);
     }
 
     @Test
@@ -137,32 +142,48 @@ public class RequestObjectServiceTest {
         TokenPersistenceProcessor hashingPersistenceProcessor = new HashingPersistenceProcessor();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = SQLQueries.INSERT_OAUTH2_ACCESS_TOKEN;
-            PreparedStatement prepStmt = connection.prepareStatement(sql);
-            prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
-            prepStmt.setString(2, "refreshToken");
-            prepStmt.setString(3, "userid");
-            prepStmt.setInt(4, 1234);
-            prepStmt.setString(5, "PRIMARY");
-            prepStmt.setString(6, null);
-            prepStmt.setString(7, null);
-            prepStmt.setLong(8, 36000);
-            prepStmt.setLong(9, 36000);
-            prepStmt.setString(10, "scope");
-            prepStmt.setString(11, "ACTIVE");
-            prepStmt.setString(12, "TOKEN");
-            prepStmt.setString(13, tokenId);
-            prepStmt.setString(14, null);
-            prepStmt.setString(15, "TOKEN_ID");
-            prepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
-            prepStmt.setString(17, "refreshToken");
-            prepStmt.setString(18, null);
-            prepStmt.setString(19, "NONE");
-            prepStmt.setString(20, consumerKey);
-            prepStmt.setInt(21, TestConstants.TENANT_ID);
-            prepStmt.execute();
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
+                prepStmt.setString(2, "refreshToken");
+                prepStmt.setString(3, "userid");
+                prepStmt.setInt(4, 1234);
+                prepStmt.setString(5, "PRIMARY");
+                prepStmt.setString(6, null);
+                prepStmt.setString(7, null);
+                prepStmt.setLong(8, 36000);
+                prepStmt.setLong(9, 36000);
+                prepStmt.setString(10, "scope");
+                prepStmt.setString(11, "ACTIVE");
+                prepStmt.setString(12, "TOKEN");
+                prepStmt.setString(13, tokenId);
+                prepStmt.setString(14, null);
+                prepStmt.setString(15, "TOKEN_ID");
+                prepStmt.setString(16, hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(token));
+                prepStmt.setString(17, "refreshToken");
+                prepStmt.setString(18, null);
+                prepStmt.setString(19, "NONE");
+                prepStmt.setString(20, consumerKey);
+                prepStmt.setInt(21, TestConstants.TENANT_ID);
+                prepStmt.executeUpdate();
+            }
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (Exception e) {
+            String errorMsg = "Error occurred while inserting tokenID: " + tokenId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+    }
+
+    protected void deleteToken(String tokenId) throws Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String sql = SQLQueries.DELETE_OLD_TOKEN_BY_ID;
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, tokenId);
+                prepStmt.execute();
+            }
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
-            String errorMsg = "Error occurred while inserting tokenID: " + tokenId;
+            String errorMsg = "Error occurred while deleting tokenID: " + tokenId;
             throw new IdentityOAuth2Exception(errorMsg, e);
         }
     }

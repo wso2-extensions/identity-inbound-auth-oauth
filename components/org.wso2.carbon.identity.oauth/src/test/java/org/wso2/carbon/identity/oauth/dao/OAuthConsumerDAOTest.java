@@ -19,12 +19,20 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.Parameters;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -48,6 +56,9 @@ import static org.testng.Assert.assertTrue;
 /*
  * Unit tests for OAuthConsumerDAO
  */
+@WithCarbonHome
+@Listeners(MockitoTestNGListener.class)
+@WithRealmService(injectToSingletons = {IdentityTenantUtil.class})
 public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
 
     private static final String CLIENT_ID = "ca19a540f544777860e44e75f605d927";
@@ -66,7 +77,6 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     private static final String OAUTH_VERIFIER = "fakeOauthVerifier";
     private static final String NEW_SECRET = "a459a540f544777860e44e75f605d875";
     private static final String DB_NAME = "testOAuthConsumerDAO";
-    private static final String BACKCHANNELLOGOUT_URL = "http://localhost:8080/backChannelLogout";
 
     @Mock
     private OAuthServerConfiguration mockedServerConfig;
@@ -80,10 +90,9 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     @BeforeClass
     public void setUp() throws Exception {
 
-        initiateH2Base(DB_NAME, getFilePath("h2.sql"));
+        initiateH2Base(DB_NAME, getFilePath("identity.sql"));
 
-        int consumerId = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE,
-                BACKCHANNELLOGOUT_URL);
+        int consumerId = createBaseOAuthApp(DB_NAME, CLIENT_ID, SECRET, USER_NAME, APP_NAME, CALLBACK, APP_STATE);
         createAccessTokenTable(DB_NAME, consumerId, ACC_TOKEN, ACC_TOKEN_SECRET, SCOPE, AUTHZ_USER);
         createReqTokenTable(DB_NAME, consumerId, REQ_TOKEN, REQ_TOKEN_SECRET, SCOPE, CALLBACK, OAUTH_VERIFIER,
                 AUTHZ_USER);
@@ -92,6 +101,19 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
     @AfterClass
     public void tearDown() throws Exception {
         closeH2Base(DB_NAME);
+    }
+
+    @BeforeMethod
+    public void setUpMethod() {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super", true);
+    }
+
+    @AfterMethod
+    public void tearDownMethod() {
+
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @Test
@@ -265,13 +287,17 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
             when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-//            whenNew(Parameters.class).withNoArguments().thenReturn(mockedParameters);
 
             try (Connection connection3 = getConnection(DB_NAME)) {
                 identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
                 OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
-                assertEquals(consumerDAO.getRequestToken(REQ_TOKEN), mockedParameters);
+                Parameters actual = consumerDAO.getRequestToken(REQ_TOKEN);
+                assertEquals(actual.getOauthCallback(), CALLBACK);
+                assertEquals(actual.getOauthTokenSecret(), REQ_TOKEN_SECRET);
+                assertEquals(actual.getOauthToken(), REQ_TOKEN);
+                assertEquals(actual.getScope(), SCOPE);
+                assertEquals(actual.getOauthTokenVerifier(), OAUTH_VERIFIER);
             }
         }
     }
@@ -411,14 +437,13 @@ public class OAuthConsumerDAOTest extends TestOAuthDAOBase {
             PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
             when(mockedServerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-//            whenNew(Parameters.class).withNoArguments().thenReturn(mockedParameters);
-
             try (Connection connection3 = getConnection(DB_NAME)) {
                 identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection3);
                 identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
 
                 OAuthConsumerDAO consumerDAO = new OAuthConsumerDAO();
-                assertEquals(consumerDAO.authorizeOAuthToken(REQ_TOKEN, USER_NAME, OAUTH_VERIFIER), mockedParameters);
+                Parameters actual = consumerDAO.authorizeOAuthToken(REQ_TOKEN, USER_NAME, OAUTH_VERIFIER);
+                assertEquals(actual.getOauthCallback(), CALLBACK);
             }
         }
     }

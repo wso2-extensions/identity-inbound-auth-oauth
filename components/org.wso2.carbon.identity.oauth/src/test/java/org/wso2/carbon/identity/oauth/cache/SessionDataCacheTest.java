@@ -50,6 +50,8 @@ public class SessionDataCacheTest {
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt()))
                 .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
     }
 
     @AfterMethod

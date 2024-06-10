@@ -96,7 +96,8 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql",
+        "dbScripts/insert_local_idp.sql"})
 public class JWTTokenIssuerTest {
 
     // Signature algorithms.

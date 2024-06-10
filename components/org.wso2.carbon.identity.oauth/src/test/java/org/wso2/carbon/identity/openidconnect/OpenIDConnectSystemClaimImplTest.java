@@ -164,10 +164,14 @@ public class OpenIDConnectSystemClaimImplTest {
         field.set(object, value);
     }
 
-    private Object invokePrivateMethod(Object object, String methodName, Object... args) throws Exception {
+    private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {
 
-        Method method = object.getClass().getDeclaredMethod(methodName);
+        Class<?>[] paramTypes = new Class[params.length];
+        for (int i = 0; i < params.length; i++) {
+            paramTypes[i] = params[i].getClass();
+        }
+        Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
         method.setAccessible(true);
-        return method.invoke(object, args);
+        return method.invoke(object, params);
     }
 }

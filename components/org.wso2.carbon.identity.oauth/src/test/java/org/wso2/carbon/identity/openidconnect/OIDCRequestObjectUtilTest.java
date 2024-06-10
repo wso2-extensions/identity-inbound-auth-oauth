@@ -107,7 +107,8 @@ public class OIDCRequestObjectUtilTest {
     public void testBuildRequestObjectTest(String requestObjectString, Map<String, Object> claims, boolean isSigned,
                                            boolean isEncrypted,
                                            boolean exceptionNotExpected,
-                                           String errorMsg, boolean isFAPITest) throws Exception {
+                                           String errorMsg, boolean isFAPITest, String encryptionAlgo,
+                                           String encryptionMethod) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class)) {

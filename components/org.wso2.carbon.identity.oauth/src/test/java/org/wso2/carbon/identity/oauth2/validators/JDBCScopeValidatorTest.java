@@ -49,7 +49,7 @@ import static org.testng.Assert.assertEquals;
  * Tests JDBCScopeValidator.
  */
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/scope.sql", "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID, injectToSingletons = {
         OAuthComponentServiceHolder.class})
 @Listeners(MockitoTestNGListener.class)

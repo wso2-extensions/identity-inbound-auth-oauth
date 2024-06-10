@@ -113,7 +113,7 @@ public class TokenValidationHandlerTest {
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
     private static final String DB_NAME = "jdbc/WSO2IdentityDB";
-    private static final String H2_SCRIPT_NAME = "token.sql";
+    private static final String H2_SCRIPT_NAME = "identity.sql";
     private Connection conn = null;
     private TokenValidationHandler tokenValidationHandler;
     private OAuth2JWTTokenValidator oAuth2JWTTokenValidator;
@@ -502,6 +502,8 @@ public class TokenValidationHandlerTest {
             try (Connection connection = dataSource.getConnection()) {
                 connection.createStatement()
                         .executeUpdate("RUNSCRIPT FROM '" + TestUtils.getFilePath(H2_SCRIPT_NAME) + "'");
+            } catch (Exception e) {
+                // ignore
             }
             conn = dataSource.getConnection();
         }

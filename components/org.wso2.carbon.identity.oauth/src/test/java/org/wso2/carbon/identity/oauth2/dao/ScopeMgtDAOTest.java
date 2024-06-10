@@ -56,7 +56,7 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
     @BeforeClass
     public void initTest() throws Exception {
-        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("scope.sql"));
+        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("identity.sql"));
     }
 
     @DataProvider(name = "addScopeDataProvider")

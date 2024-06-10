@@ -100,7 +100,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void setUp() throws Exception {
 
         // Initialize in-memory H2 DB.
-        initiateH2Base(DB_NAME, getFilePath("h2.sql"));
+        initiateH2Base(DB_NAME, getFilePath("identity.sql"));
         oAuthApplicationMgtListener = new OAuthApplicationMgtListener();
     }
 

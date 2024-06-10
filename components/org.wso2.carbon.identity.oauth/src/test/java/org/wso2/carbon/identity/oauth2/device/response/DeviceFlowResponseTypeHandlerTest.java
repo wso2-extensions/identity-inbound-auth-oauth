@@ -51,7 +51,8 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql",
+        "dbScripts/insert_local_idp.sql"})
 public class DeviceFlowResponseTypeHandlerTest {
 
     private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();

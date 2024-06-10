@@ -61,8 +61,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
-                "dbScripts/insert_local_idp.sql"})
+        files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+                "dbScripts/insert_consumer_app.sql", "dbScripts/insert_local_idp.sql"})
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
 
 public class AbstractAuthorizationGrantHandlerTest {

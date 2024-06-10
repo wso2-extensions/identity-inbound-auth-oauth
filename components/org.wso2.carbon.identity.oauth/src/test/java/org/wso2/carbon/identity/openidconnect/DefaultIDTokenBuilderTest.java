@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -71,12 +72,12 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.secret.mgt.core.IdPSecretsProcessor;
 import org.wso2.carbon.identity.secret.mgt.core.SecretsProcessor;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
-import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.Key;
@@ -103,8 +104,8 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 
 @WithCarbonHome
 @WithAxisConfiguration
-@WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql",
-        "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+        "dbScripts/insert_consumer_app.sql", "dbScripts/insert_local_idp.sql"})
 @WithRealmService
 @WithKeyStore
 public class DefaultIDTokenBuilderTest {
@@ -150,7 +151,6 @@ public class DefaultIDTokenBuilderTest {
                 invocation -> invocation.getArguments()[0]);
         when(identityProviderSecretsProcessor.decryptAssociatedSecrets(any())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
-        IdentityProviderManager.getInstance().addResidentIdP(idp, SUPER_TENANT_DOMAIN_NAME);
         defaultIDTokenBuilder =  new DefaultIDTokenBuilder();
 
         Map<ClaimMapping, String> userAttributes = new HashMap<>();
@@ -252,6 +252,7 @@ public class DefaultIDTokenBuilderTest {
         List claimProviders = new ArrayList();
         claimProviders.add(claimProvider);
         setPrivateField(OpenIDConnectServiceComponentHolder.getInstance(), "claimProviders", claimProviders);
+        invokePrivateMethod(JDBCPersistenceManager.getInstance(), "initDataSource");
     }
 
     @Test
@@ -263,13 +264,14 @@ public class DefaultIDTokenBuilderTest {
         AuthenticatedUser user = getDefaultAuthenticatedUserFederatedUser();
         OAuthTokenReqMessageContext messageContext = getTokenReqMessageContextForUser(user, clientId);
 
+        OAuthAppDO entry = getOAuthAppDO(CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(clientId, entry);
+
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
         JWTClaimsSet claims = SignedJWT.parse(idToken).getJWTClaimsSet();
-        Assert.assertEquals(claims.getAudience().get(0),
-                clientId);
-        Assert.assertEquals(claims.getIssuer(),
-                "https://localhost:9443/oauth2/token");
+        Assert.assertEquals(claims.getAudience().get(0), clientId);
+        Assert.assertEquals(claims.getIssuer(), "https://localhost:9443/oauth2/token");
         Assert.assertNotNull(claims.getJWTID());
         Assert.assertEquals(claims.getSubject(), "user1");
         Assert.assertEquals(claims.getClaim("isk"), "idp");
@@ -290,6 +292,9 @@ public class DefaultIDTokenBuilderTest {
         AuthenticatedUser user = getDefaultAuthenticatedUserFederatedUser();
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = getOAuthAuthzReqMessageContextForUser(user, clientId);
         oAuth2AuthorizeRespDTO.setAccessToken("2sa9a678f890877856y66e75f605d456");
+
+        OAuthAppDO entry = getOAuthAppDO(CLIENT_ID);
+        AppInfoCache.getInstance().addToCache(clientId, entry);
 
         mockRealmService();
         String idToken = defaultIDTokenBuilder.buildIDToken(oAuthAuthzReqMessageContext, oAuth2AuthorizeRespDTO);
@@ -317,7 +322,7 @@ public class DefaultIDTokenBuilderTest {
     public void testBuildEncryptedIDTokenForSupportedAlgorithm(String algorithm) throws Exception {
 
         mockRealmService();
-        OAuthAppDO entry = getOAuthAppDO(algorithm);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         String idToken = defaultIDTokenBuilder.buildIDToken(messageContext, tokenRespDTO);
@@ -332,7 +337,7 @@ public class DefaultIDTokenBuilderTest {
         Assert.assertEquals(claims.getClaim("nonce"), "nonce");
         Assert.assertNotNull(claims.getClaim("nbf"));
         long expirationTime = ((Date) claims.getClaim("exp")).getTime();
-        Assert.assertTrue(expirationTime < (new Date()).getTime());
+        Assert.assertTrue(expirationTime > (new Date()).getTime());
         long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
@@ -345,7 +350,7 @@ public class DefaultIDTokenBuilderTest {
         OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
         oAuth2AuthorizeRespDTO.setAccessToken(ACCESS_TOKEN);
 
-        OAuthAppDO entry = getOAuthAppDO(algorithm);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         mockRealmService();
@@ -358,7 +363,7 @@ public class DefaultIDTokenBuilderTest {
         Assert.assertEquals(claims.getSubject(),  "user1");
         Assert.assertEquals(claims.getClaim("isk"), "wso2.is.com");
         long expirationTime = ((Date) claims.getClaim("exp")).getTime();
-        Assert.assertTrue(expirationTime < (new Date()).getTime());
+        Assert.assertTrue(expirationTime > (new Date()).getTime());
         long issueTime = ((Date) claims.getClaim("iat")).getTime();
         Assert.assertTrue(issueTime <= (new Date()).getTime());
     }
@@ -375,7 +380,7 @@ public class DefaultIDTokenBuilderTest {
     public void testBuildEncryptedIDTokenForUnSupportedAlgorithm(String algorithm) throws Exception {
 
         mockRealmService();
-        OAuthAppDO entry = getOAuthAppDO(algorithm);
+        OAuthAppDO entry = getOAuthAppDO(algorithm, CLIENT_ID);
         AppInfoCache.getInstance().addToCache(CLIENT_ID, entry);
 
         try {
@@ -419,19 +424,27 @@ public class DefaultIDTokenBuilderTest {
         }
     }
 
-    private OAuthAppDO getOAuthAppDO(String algorithm) throws Exception {
+    private OAuthAppDO getOAuthAppDO(String clientId) throws Exception {
 
         OAuthAppDO entry = new OAuthAppDO();
-        entry.setOauthConsumerKey(CLIENT_ID);
+        entry.setOauthConsumerKey(clientId);
         entry.setOauthConsumerSecret("87n9a540f544777860e75f605d435");
         entry.setApplicationName("myApp");
         entry.setCallbackUrl(TestConstants.CALLBACK);
         entry.setOauthVersion("OAuth-2.0");
         entry.setState("ACTIVE");
-        entry.setUserAccessTokenExpiryTime(3600000);
-        entry.setApplicationAccessTokenExpiryTime(3600000);
-        entry.setRefreshTokenExpiryTime(84600000);
+        entry.setUserAccessTokenExpiryTime(3600);
+        entry.setIdTokenExpiryTime(3600);
+        entry.setApplicationAccessTokenExpiryTime(3600);
+        entry.setRefreshTokenExpiryTime(84600);
         entry.setAppOwner(user);
+        entry.setIdTokenEncryptionEnabled(false);
+        return entry;
+    }
+
+    private OAuthAppDO getOAuthAppDO(String algorithm, String clientId) throws Exception {
+
+        OAuthAppDO entry = getOAuthAppDO(clientId);
         entry.setIdTokenEncryptionEnabled(true);
         entry.setIdTokenEncryptionAlgorithm(algorithm);
         entry.setIdTokenEncryptionMethod("A128GCM");
@@ -538,5 +551,12 @@ public class DefaultIDTokenBuilderTest {
         Field field = clazz.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(null, newValue);
+    }
+
+    private Object invokePrivateMethod(Object object, String methodName) throws Exception {
+
+        Method method = object.getClass().getDeclaredMethod(methodName);
+        method.setAccessible(true);
+        return method.invoke(object);
     }
 }

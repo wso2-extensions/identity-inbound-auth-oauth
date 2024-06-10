@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -51,8 +52,11 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -61,12 +65,14 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
+import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -117,13 +123,13 @@ import static org.wso2.carbon.user.core.UserCoreConstants.DOMAIN_SEPARATOR;
 /**
  * Class which tests SAMLAssertionClaimsCallback.
  */
+@WithCarbonHome
+@WithRealmService
 @Listeners(MockitoTestNGListener.class)
 public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
-
-    private static final String CUSTOM_ATTRIBUTE_NAME = "CustomAttributeName";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
@@ -209,7 +215,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     }};
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT_NAME = "dbScripts/scope_claim.sql";
+    public static final String H2_SCRIPT_NAME = "dbScripts/identity.sql";
+    public static final String H2_SCRIPT2_NAME = "dbScripts/insert_scope_claim.sql";
     Connection connection = null;
 
     private MockedStatic<FrameworkUtils> frameworkUtils;
@@ -225,7 +232,12 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         dataSource1.setPassword("password");
         dataSource1.setUrl("jdbc:h2:mem:test" + DB_NAME);
         connection = dataSource1.getConnection();
-        connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
+        try {
+            connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
+            connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT2_NAME) + "'");
+        } catch (SQLException e) {
+            log.error("Error while running the script: " + H2_SCRIPT2_NAME);
+        }
 
         RequestObjectService requestObjectService = Mockito.mock(RequestObjectService.class);
         List<RequestedClaim> requestedClaims = Collections.emptyList();
@@ -244,7 +256,14 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
 
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
-        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(new ScopeClaimMappingDAOImpl());
+        ScopeClaimMappingDAOImpl scopeClaimMappingDAO = new ScopeClaimMappingDAOImpl();
+        OAuth2ServiceComponentHolder.getInstance().setScopeClaimMappingDAO(scopeClaimMappingDAO);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(anyString()))
+                    .thenAnswer((Answer<Void>) invocation -> null);
+            setPrivateField(OAuthTokenPersistenceFactory.getInstance(), "scopeClaimMappingDAO",
+                    new CacheBackedScopeClaimMappingDAOImpl());
+        }
     }
 
     @BeforeMethod
@@ -620,7 +639,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     @Test
     public void testHandleCustomClaimsWithOAuthTokenReqMsgCtxtWithRoleDomainRemoved() throws Exception {
 
-        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class,
+                Mockito.CALLS_REAL_METHODS);
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
@@ -932,6 +952,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
         OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         requestMsgCtx.setScope(APPROVED_SCOPES);
+        requestMsgCtx.addProperty(MultitenantConstants.TENANT_DOMAIN, TENANT_DOMAIN);
         AuthenticatedUser authenticatedUser = getDefaultAuthenticatedUserFederatedUser();
 
         if (userAttributes != null) {
@@ -1221,11 +1242,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         jdbcPersistenceManager.when(JDBCPersistenceManager::getInstance).thenReturn(mockJdbcPersistenceManager);
         lenient().when(mockJdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
 
-        DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
-                spy(new DefaultOIDCClaimsCallbackHandler());
-        jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                requestMsgCtx);
-
+        DefaultOIDCClaimsCallbackHandler defaultOIDCClaimsCallbackHandler =
+                new DefaultOIDCClaimsCallbackHandler();
+        jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
 
         return jwtClaimsSet;
     }
@@ -1249,14 +1268,20 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             lenient().when(dataSource.getConnection()).thenReturn(connection);
             jdbcPersistenceManager.when(JDBCPersistenceManager::getInstance).thenReturn(mockJdbcPersistenceManager);
             lenient().when(mockJdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
-            DefaultOIDCClaimsCallbackHandler mockDefaultOIDCClaimsCallbackHandler =
-                    spy(new DefaultOIDCClaimsCallbackHandler());
-            jwtClaimsSet = mockDefaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder,
-                    requestMsgCtx);
+            DefaultOIDCClaimsCallbackHandler defaultOIDCClaimsCallbackHandler =
+                    new DefaultOIDCClaimsCallbackHandler();
+            jwtClaimsSet = defaultOIDCClaimsCallbackHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
 
         } catch (SQLException e) {
             log.error("Error while obtaining the datasource. ");
         }
         return jwtClaimsSet;
+    }
+
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
     }
 }

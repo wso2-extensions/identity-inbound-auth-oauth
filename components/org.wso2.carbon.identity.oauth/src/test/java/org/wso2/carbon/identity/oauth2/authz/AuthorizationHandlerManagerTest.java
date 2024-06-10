@@ -42,7 +42,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+        "dbScripts/insert_local_idp.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {OAuthComponentServiceHolder.class,
         IdentityCoreServiceDataHolder.class})

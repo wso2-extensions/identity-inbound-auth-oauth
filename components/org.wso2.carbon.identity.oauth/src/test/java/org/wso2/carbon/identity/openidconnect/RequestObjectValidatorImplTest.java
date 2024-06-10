@@ -20,10 +20,10 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWTClaimsSet;
-import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -52,7 +52,6 @@ import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 
-import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
@@ -83,7 +82,8 @@ import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENA
 @WithKeyStore
 @WithAxisConfiguration
 @WithCarbonHome
-@WithH2Database(jndiName = "jdbc/WSO2CarbonDB", files = {"dbScripts/identity_req_obj.sql"}, dbName = "testdb2")
+@WithH2Database(jndiName = "jdbc/WSO2IdentityDB", files = {"dbScripts/identity.sql",
+        "dbScripts/insert_idp_and_jwt_private_key.sql"}, dbName = "testdb2")
 public class RequestObjectValidatorImplTest {
 
     public static final String SOME_SERVER_URL = "some-server-url";
@@ -93,19 +93,21 @@ public class RequestObjectValidatorImplTest {
     private KeyStore wso2KeyStore;
     public static final String TEST_CLIENT_ID_1 = "wso2test";
 
-    @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
     @BeforeClass
     public void setUp() throws Exception {
 
-        System.setProperty(CarbonBaseConstants.CARBON_HOME,
-                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString());
         clientKeyStore =
                 getKeyStoreFromFile("testkeystore.jks", CLIENT_PUBLIC_CERT_ALIAS,
                         System.getProperty(CarbonBaseConstants.CARBON_HOME));
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon", System.getProperty(CarbonBaseConstants
                 .CARBON_HOME));
+    }
+
+    @BeforeMethod
+    public void setUpMethod() {
+        centralLogMgtServiceComponentHolderMock = mock(CentralLogMgtServiceComponentHolder.class);
     }
 
     @DataProvider(name = "provideJWT")
@@ -152,41 +154,52 @@ public class RequestObjectValidatorImplTest {
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims4);
         String jsonWebEncryption8 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
                 JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims5);
-        String jsonWebToken5 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "RSA265", privateKey, 0,
-                claims1);
+
+        String fapiJsonWebToken1 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1000", audience,
+                JWSAlgorithm.RS256.getName(), privateKey, 0, claims2);
+        String fapiJsonWebToken2 = buildJWT(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "1001", audience, "none", privateKey,
+                0, claims2);
+        String fapiJsonWebEncryption1 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2000", audience,
+                JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims2);
+        String fapiJsonWebEncryption2 = buildJWE(TEST_CLIENT_ID_1, TEST_CLIENT_ID_1, "2001", audience,
+                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims2);
         return new Object[][]{
-                {jsonWebToken1, true, false, true, true, false, "Valid Request Object, signed not encrypted."},
-                {jsonWebToken2, false, false, true, true, false, "Valid Request Object, not xsigned not encrypted."},
-                {jsonWebToken3, false, false, true, false, false, "InValid Request Object, expired, not signed not " +
-                        "encrypted."},
-                {jsonWebToken4, true, false, true, false, false, "InValid Request Object, expired, signed not " +
-                        "encrypted."},
-                {jsonWebEncryption1, false, true, true, true, false, "Valid Request Object, signed and encrypted."},
-                {jsonWebEncryption2, true, true, true, true, false, "Valid Request Object, signed and encrypted."},
+                {jsonWebToken1, true, false, true, true, false, "Valid Request Object, signed not encrypted.", true},
+                {jsonWebToken2, false, false, true, true, false, "Valid Request Object, not signed not encrypted.",
+                        true},
+                {jsonWebToken3, false, false, true, false, false,
+                        "InValid Request Object, expired, not signed not encrypted.", true},
+                {jsonWebToken4, true, false, true, false, false,
+                        "InValid Request Object, expired, signed not encrypted.", true},
+                {jsonWebEncryption1, false, true, true, true, false, "Valid Request Object, signed and encrypted.",
+                        true},
+                {jsonWebEncryption2, true, true, true, true, false, "Valid Request Object, signed and encrypted.",
+                        true},
                 // FAPI tests
-                {jsonWebEncryption3, true, true, true, true, true, "FAPI Request Object with a permitted signing " +
-                        "algorithm PS256, signed and encrypted."},
+                {jsonWebEncryption3, true, true, true, true, true,
+                        "FAPI Request Object with a permitted signing algorithm PS256, signed and encrypted.", true},
                 // For testing, PS256, RS256 and ES256 are assumed as permitted algorithms.
                 {jsonWebEncryption4, true, true, false, true, true, "FAPI Request Object with an unpermitted signing " +
-                        "algorithm RS384, signed and encrypted."},
+                        "algorithm RS384, signed and encrypted.", true},
                 {jsonWebEncryption5, false, true, true, true, true, "FAPI Request Object with an unpermitted signing " +
-                        "algorithm NONE, signed and encrypted."},
+                        "algorithm NONE, signed and encrypted.", true},
                 {jsonWebEncryption6, true, true, true, false, true, "FAPI Request Object without mandatory parameter " +
-                        "Nonce."},
+                        "Nonce.", true},
                 {jsonWebEncryption7, true, true, true, false, true, "Unsigned FAPI Request Object without mandatory " +
-                        "parameter Scopes."},
+                        "parameter Scopes.", true},
                 {jsonWebEncryption8, true, true, true, false, true, "Unsigned FAPI Request Object without mandatory " +
-                        "parameter Redirect URI."},
-                {jsonWebToken1, true, false, true, true, "Valid Request Object, signed not encrypted.", true},
-                {jsonWebToken2, false, false, true, true, "Valid Request Object, not signed not encrypted.", true},
-                {jsonWebToken3, false, false, true, false, "InValid Request Object, expired, not signed not " +
-                        "encrypted.", true},
-                {jsonWebToken4, true, false, true, false, "InValid Request Object, expired, signed not encrypted.",
+                        "parameter Redirect URI.", true},
+                {fapiJsonWebToken1, true, false, true, true, true, "Valid Request Object, signed not encrypted.", true},
+                {fapiJsonWebToken2, false, false, true, true, true, "Valid Request Object, not signed not encrypted.",
                         true},
-                {jsonWebEncryption1, false, true, true, true, "Valid Request Object, signed and encrypted.", true},
-                {jsonWebEncryption2, true, true, true, true, "Valid Request Object, signed and encrypted.", true},
-                {jsonWebToken5, true, false, true, true, "Request Object signature verification failed. " +
-                        "Invalid signature algorithm.", false}
+                {jsonWebToken3, false, false, true, false, true,
+                        "InValid Request Object, expired, not signed not encrypted.", true},
+                {jsonWebToken4, true, false, true, false, true,
+                        "InValid Request Object, expired, signed not encrypted.", true},
+                {fapiJsonWebEncryption1, false, true, true, true, true, "Valid Request Object, signed and encrypted.",
+                        true},
+                {fapiJsonWebEncryption2, true, true, true, true, true, "Valid Request Object, signed and encrypted.",
+                        true},
         };
     }
 
@@ -195,7 +208,7 @@ public class RequestObjectValidatorImplTest {
                                        boolean isSigned,
                                        boolean isEncrypted,
                                        boolean validSignature,
-                                       boolean validRequestObj,
+                                       boolean validRequestObjExpected,
                                        boolean isFAPITest,
                                        String errorMsg,
                                        boolean validAlgorithm) throws Exception {
@@ -206,95 +219,100 @@ public class RequestObjectValidatorImplTest {
                      mockStatic(CentralLogMgtServiceComponentHolder.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
                      mockStatic(OAuthServerConfiguration.class);
-             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
              MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
                      mockStatic(IdentityApplicationManagementUtil.class);
              MockedStatic<IdentityProviderManager> identityProviderManager =
                      mockStatic(IdentityProviderManager.class);) {
-            OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-            oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
-            oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
-            oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
 
-            identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
-                    .thenReturn("some-server-url");
-            identityUtil.when(() -> IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
-                    .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
-                            JWSAlgorithm.RS256.getName()));
-
-            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-
-            IdentityEventService eventServiceMock = mock(IdentityEventService.class);
-
-            centralLogMgtServiceComponentHolder.when(
-                            CentralLogMgtServiceComponentHolder::getInstance)
-                    .thenReturn(centralLogMgtServiceComponentHolderMock);
-            when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
-            doNothing().when(eventServiceMock).handleEvent(any());
-
-            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-            oAuthServerConfiguration.when(
-                    OAuthServerConfiguration::getInstance).thenReturn(oauthServerConfigurationMock);
-
-            rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
-
-            oAuth2Util.when(() -> OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
-            oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
-
-            // Mock OAuth2Util returning public cert of the service provider
-            oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
-                    .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
-            oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
-            oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
-
+            OAuthServerConfiguration mockServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockServerConfiguration);
+            when(mockServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(0L);
             RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
             doReturn(true).when(requestObjectValidator).isValidNbfExp(any());
             RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
-            when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
+            when((mockServerConfiguration.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-            mockIdentityProviderManager(identityProviderManager);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
 
-            FederatedAuthenticatorConfig config = new FederatedAuthenticatorConfig();
-            identityApplicationManagementUtil.when(
-                    () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(any(), any())).thenReturn(config);
-            Property property = new Property();
-            property.setValue(SOME_SERVER_URL);
-            identityApplicationManagementUtil.when(
-                            () -> IdentityApplicationManagementUtil.getProperty(config.getProperties(), "IdPEntityId"))
-                    .thenReturn(property);
-            OAuthAppDO appDO = spy(new OAuthAppDO());
-            appDO.setRequestObjectSignatureAlgorithm("RS256");
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+                OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+                oAuth2Parameters.setTenantDomain(SUPER_TENANT_DOMAIN_NAME);
+                oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
+                oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
 
-            RequestObject requestObject = requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
+                identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
+                        .thenReturn("some-server-url");
+                identityUtil.when(() -> IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
+                        .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
+                                JWSAlgorithm.RS256.getName()));
 
-            Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
-                    "Payload is encrypted:" + isEncrypted);
-            Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
-                    "Request object isSigned: " + isSigned);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-            if (isSigned) {
-                boolean isValidSignature;
-                try {
-                    isValidSignature = requestObjectValidator.validateSignature(requestObject, oAuth2Parameters);
-                } catch (Exception e) {
-                    isValidSignature = false;
+                IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+
+                centralLogMgtServiceComponentHolder.when(
+                                CentralLogMgtServiceComponentHolder::getInstance)
+                        .thenReturn(centralLogMgtServiceComponentHolderMock);
+                when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
+                doNothing().when(eventServiceMock).handleEvent(any());
+
+                rsaPrivateKey = (RSAPrivateKey) wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+
+                oAuth2Util.when(() -> OAuth2Util.getTenantId(SUPER_TENANT_DOMAIN_NAME)).thenReturn(SUPER_TENANT_ID);
+                oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
+
+                // Mock OAuth2Util returning public cert of the service provider
+                oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, SUPER_TENANT_DOMAIN_NAME))
+                        .thenReturn(clientKeyStore.getCertificate(CLIENT_PUBLIC_CERT_ALIAS));
+                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
+
+                mockIdentityProviderManager(identityProviderManager);
+
+                FederatedAuthenticatorConfig config = new FederatedAuthenticatorConfig();
+                identityApplicationManagementUtil.when(
+                                () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(any(), any()))
+                        .thenReturn(config);
+                Property property = new Property();
+                property.setValue(SOME_SERVER_URL);
+                identityApplicationManagementUtil.when(
+                                () -> IdentityApplicationManagementUtil.getProperty(config.getProperties(),
+                                        "IdPEntityId")).thenReturn(property);
+                OAuthAppDO appDO = spy(new OAuthAppDO());
+                appDO.setRequestObjectSignatureAlgorithm("RS256");
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(appDO);
+
+                RequestObject requestObject =
+                        requestParamRequestObjectBuilder.buildRequestObject(jwt, oAuth2Parameters);
+
+                Assert.assertEquals(requestParamRequestObjectBuilder.isEncrypted(jwt), isEncrypted,
+                        "Payload is encrypted:" + isEncrypted);
+                Assert.assertEquals(requestObjectValidator.isSigned(requestObject), isSigned,
+                        "Request object isSigned: " + isSigned);
+
+                if (isSigned) {
+                    boolean isValidSignature;
+                    try {
+                        isValidSignature = requestObjectValidator.validateSignature(requestObject, oAuth2Parameters);
+                    } catch (Exception e) {
+                        isValidSignature = false;
+                    }
+                    Assert.assertEquals(isValidSignature, validSignature,
+                            errorMsg + "Request Object Signature Validation failed.");
                 }
-                Assert.assertEquals(isValidSignature, validSignature,
-                        errorMsg + "Request Object Signature Validation failed.");
-            }
-            if (isSigned && !validAlgorithm) {
-                Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
-                        validSignature, errorMsg);
-            }
+                if (isSigned && !validAlgorithm) {
+                    Assert.assertEquals(requestObjectValidator.validateSignature(requestObject, oAuth2Parameters),
+                            validSignature, errorMsg);
+                }
 
-            boolean validObject;
-            try {
-                validObject = requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
-            } catch (Exception e) {
-                validObject = false;
+                boolean validObjectActual;
+                try {
+                    validObjectActual = requestObjectValidator.validateRequestObject(requestObject, oAuth2Parameters);
+                } catch (Exception e) {
+                    validObjectActual = false;
+                }
+                Assert.assertEquals(validObjectActual, validRequestObjExpected, errorMsg);
             }
-            Assert.assertEquals(validObject, validRequestObj, errorMsg);
         }
     }
 

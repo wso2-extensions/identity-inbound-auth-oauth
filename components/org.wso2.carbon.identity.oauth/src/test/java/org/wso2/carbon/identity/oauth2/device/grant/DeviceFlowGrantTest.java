@@ -39,7 +39,8 @@ import java.util.Date;
 import static org.mockito.Mockito.mockStatic;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql",
+        "dbScripts/insert_local_idp.sql"})
 public class DeviceFlowGrantTest {
 
     private Date date = new Date();
@@ -54,7 +55,7 @@ public class DeviceFlowGrantTest {
 
     @BeforeClass
     public void setupBeforeClass() throws Exception {
-        DAOUtils.initializeBatchDataSource(DB_NAME, H2_SCRIPT1_NAME, H2_SCRIPT2_NAME);
+        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath(H2_SCRIPT2_NAME));
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()

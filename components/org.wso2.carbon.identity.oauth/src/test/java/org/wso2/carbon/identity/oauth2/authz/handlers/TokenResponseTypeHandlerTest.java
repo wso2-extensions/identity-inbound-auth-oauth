@@ -45,7 +45,7 @@ import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
  */
 @WithCarbonHome
 @WithRealmService(injectToSingletons = OAuthComponentServiceHolder.class)
-@WithH2Database(files = { "dbScripts/token.sql" })
+@WithH2Database(files = { "dbScripts/identity.sql" })
 public class TokenResponseTypeHandlerTest {
 
     private static final String TEST_CLIENT_ID_1 = "SDSDSDS23131231";

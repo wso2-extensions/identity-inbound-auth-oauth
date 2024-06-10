@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -44,6 +45,7 @@ import java.security.Key;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
+import java.util.Date;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -92,7 +94,8 @@ public class RequestParamRequestObjectBuilderTest {
     public void buildRequestObjectTest(String requestObjectString, Map<String, Object> claims, boolean isSigned,
                                        boolean isEncrypted,
                                        boolean exceptionNotExpected,
-                                       String errorMsg, boolean isFAPITest) throws Exception {
+                                       String errorMsg, boolean isFAPITest, String encryptionAlgo,
+                                       String encryptionMethod) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class)) {
@@ -132,6 +135,12 @@ public class RequestParamRequestObjectBuilderTest {
                                 MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                         .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
 
+                OAuthAppDO oAuthAppDO = new OAuthAppDO();
+                oAuthAppDO.setRequestObjectEncryptionMethod(encryptionMethod);
+                oAuthAppDO.setRequestObjectEncryptionAlgorithm(encryptionAlgo);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(oAuthAppDO);
+
                 RequestObjectValidator requestObjectValidator = new RequestObjectValidatorImpl();
                 lenient().when((oauthServerConfigurationMock.getRequestObjectValidator()))
                         .thenReturn(requestObjectValidator);
@@ -145,13 +154,19 @@ public class RequestParamRequestObjectBuilderTest {
                             requestParamRequestObjectBuilder.buildRequestObject(requestObjectString, oAuth2Parameters);
                     Assert.assertEquals(requestObject.isSigned(), isSigned, errorMsg);
                     if (claims != null && !claims.isEmpty()) {
-                        for (Map.Entry entry : claims.entrySet()) {
-                            Assert.assertEquals(requestObject.getClaim(entry.getKey().toString()), entry.getValue(),
-                                    "Request object claim:" + entry.getKey() + " is not properly set.");
+                        for (Map.Entry<String, Object> entry : claims.entrySet()) {
+                            if ("nbf".equals(entry.getKey()) || "exp".equals(entry.getKey())) {
+                                Assert.assertEquals(((Date) requestObject.getClaim(entry.getKey())).getTime() / 1000,
+                                        entry.getValue(), "Request object claim:" + entry.getKey() +
+                                                " is not properly set.");
+                            } else {
+                                Assert.assertEquals(requestObject.getClaim(entry.getKey()), entry.getValue(),
+                                        "Request object claim:" + entry.getKey() + " is not properly set.");
+                            }
                         }
                     }
                 } catch (RequestObjectException e) {
-                    Assert.assertFalse(exceptionNotExpected, errorMsg + "Building failed due to " + e.getMessage());
+                    Assert.assertFalse(exceptionNotExpected, errorMsg + " Building failed due to " + e.getMessage());
                 }
             }
         }

@@ -60,7 +60,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.AssertJUnit.assertEquals;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_local_idp2.sql"})
 @WithAxisConfiguration
 @WithRealmService(tenantDomain = TestConstants.TENANT_DOMAIN, initUserStoreManager = true)
 public class SAML1BearerGrantHandlerTest {

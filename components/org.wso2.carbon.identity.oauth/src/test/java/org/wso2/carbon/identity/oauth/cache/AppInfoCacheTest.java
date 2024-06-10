@@ -35,6 +35,7 @@ public class AppInfoCacheTest {
         privilegedCarbonContext.setTenantId(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID);
         privilegedCarbonContext.setTenantDomain(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
     }
+
     @Test
     public void testGetInstance() throws Exception {
         assertNotNull(AppInfoCache.getInstance(), "AppInfoCache is not initialized");
