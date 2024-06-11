@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.ApplicationConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
@@ -89,7 +90,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ALLOW_SESSION_CREATION;
-
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BASIC_AUTHENTICATOR_CLASS;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -334,6 +336,9 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
         boolean isPublishPasswordGrantLoginEnabled = Boolean.parseBoolean(
                 IdentityUtil.getProperty(PUBLISH_PASSWORD_GRANT_LOGIN));
+        boolean isShowAuthFailureReason = Boolean.parseBoolean(
+                getBasicAuthenticatorConfigs().getParameterMap().get(SHOW_AUTHFAILURE_RESON_CONFIG));
+        String genericErrorUserName = tokenReq.getResourceOwnerUsername();
         try {
             // Get the user store preference order supplier.
             UserStorePreferenceOrderSupplier<List<String>> userStorePreferenceOrderSupplier =
@@ -363,6 +368,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 tenantAwareUserName = resolvedUserResult.getUser().getUsername();
                 userId = resolvedUserResult.getUser().getUserID();
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
+            }
+
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
+                    (tokenReq.getResourceOwnerUsername())) || IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                genericErrorUserName = tenantAwareUserName;
             }
 
             AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
@@ -406,6 +416,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             if (StringUtils.isNotBlank(e.getErrorCode())) {
                 message = e.getErrorCode() + " " + e.getMessage();
             }
+            message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
             throw new IdentityOAuth2Exception(message, e);
         } catch (UserStoreException e) {
             if (isPublishPasswordGrantLoginEnabled) {
@@ -429,6 +440,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                     message = identityException.getErrorCode() + " " + e.getMessage();
                 }
             }
+            message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
             throw new IdentityOAuth2Exception(message, e);
         } catch (AuthenticationFailedException e) {
             String message = "Authentication failed for the user: " + tokenReq.getResourceOwnerUsername();
@@ -490,6 +502,16 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                         unmodifiableParamMap);
             }
         }
+    }
+
+    /**
+     * This method will return the basic authenticator configurations.
+     *
+     * @return AuthenticatorConfig - Basic authenticator configurations.
+     */
+    private AuthenticatorConfig getBasicAuthenticatorConfigs() {
+
+        return FileBasedConfigurationBuilder.getInstance().getAuthenticatorBean(BASIC_AUTHENTICATOR_CLASS);
     }
 
     /**
