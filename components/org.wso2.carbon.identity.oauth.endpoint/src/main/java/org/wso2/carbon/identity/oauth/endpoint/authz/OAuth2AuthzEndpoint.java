@@ -1626,11 +1626,33 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    /**
+     * Checks if the given response type contains either "id_token" or "token".
+     *
+     * @param responseType The response type to check.
+     * @return {@code true} if "id_token" or "token" is present in the response type, {@code false} otherwise.
+     */
     private boolean hasIDTokenOrTokenInResponseType(String responseType) {
 
-        return StringUtils.isNotBlank(responseType)
-                && (responseType.toLowerCase().contains(OAuthConstants.ID_TOKEN)
-                || responseType.toLowerCase().contains(OAuthConstants.TOKEN));
+        return hasResponseType(responseType, OAuthConstants.ID_TOKEN)
+                || hasResponseType(responseType, OAuthConstants.TOKEN);
+    }
+
+    /**
+     * Checks if the given response type contains the specified OAuth response type.
+     *
+     * @param responseType      The response type to check.
+     * @param oauthResponseType The OAuth response type to look for.
+     * @return {@code true} if the specified OAuth response type is present in the response type,
+     * {@code false} otherwise.
+     */
+    private boolean hasResponseType(String responseType, String oauthResponseType) {
+
+        if (StringUtils.isNotBlank(responseType)) {
+            String[] responseTypes = responseType.split(SPACE_SEPARATOR);
+            return Arrays.asList(responseTypes).contains(oauthResponseType);
+        }
+        return false;
     }
 
     private String buildOIDCResponseWithURIFragment(OAuthResponse oauthResponse, OAuth2AuthorizeRespDTO authzRespDTO) {
@@ -1809,6 +1831,9 @@ public class OAuth2AuthzEndpoint {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
             setScopes(authzRespDTO, builder, authorizationResponseDTO);
         }
+        if (isSubjectTokenFlow(responseType, authzRespDTO)) {
+            setSubjectToken(authzRespDTO, builder, authorizationResponseDTO);
+        }
         if (isIdTokenExists(authzRespDTO)) {
             setIdToken(authzRespDTO, builder, authorizationResponseDTO);
             oAuthMessage.setProperty(OIDC_SESSION_ID, authzRespDTO.getOidcSessionId());
@@ -1842,6 +1867,12 @@ public class OAuth2AuthzEndpoint {
         }
         sessionState.setAuthenticated(true);
         return oauthResponse;
+    }
+
+    private boolean isSubjectTokenFlow(String responseType, OAuth2AuthorizeRespDTO authzRespDTO) {
+
+        return StringUtils.isNotBlank(authzRespDTO.getSubjectToken()) &&
+                hasResponseType(responseType, OAuthConstants.SUBJECT_TOKEN);
     }
 
     private Optional<TokenBinder> getTokenBinder(String clientId) throws OAuthSystemException {
@@ -1987,6 +2018,14 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.getSuccessResponseDTO().setAccessToken(authzRespDTO.getAccessToken());
         authorizationResponseDTO.getSuccessResponseDTO().setTokenType(BEARER);
         authorizationResponseDTO.getSuccessResponseDTO().setValidityPeriod(authzRespDTO.getValidityPeriod());
+    }
+
+    private void setSubjectToken(OAuth2AuthorizeRespDTO authzRespDTO,
+                                 OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                 AuthorizationResponseDTO authorizationResponseDTO) {
+
+        builder.setParam(OAuthConstants.SUBJECT_TOKEN, authzRespDTO.getSubjectToken());
+        authorizationResponseDTO.getSuccessResponseDTO().setSubjectToken(authzRespDTO.getSubjectToken());
     }
 
     private void setScopes(OAuth2AuthorizeRespDTO authzRespDTO,
@@ -2566,6 +2605,7 @@ public class OAuth2AuthzEndpoint {
             params.setPkceCodeChallenge(pkceChallengeCode);
             params.setPkceCodeChallengeMethod(pkceChallengeMethod);
         }
+        params.setRequestedSubjectId(oAuthMessage.getRequestedSubjectId());
 
         return null;
     }
@@ -3715,6 +3755,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setLoggedInTenantDomain(oauth2Params.getLoginTenantDomain());
         authzReqDTO.setState(oauth2Params.getState());
         authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
+        authzReqDTO.setRequestedSubjectId(oauth2Params.getRequestedSubjectId());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
