@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
@@ -120,6 +121,8 @@ public class OAuth2ServiceComponentHolder {
     private ImpersonationMgtService impersonationMgtService;
 
     private List<ImpersonationValidator> impersonationValidators = new ArrayList<>();
+    private ConfigurationManager configurationManager;
+
 
     private OAuth2ServiceComponentHolder() {
 
@@ -875,5 +878,15 @@ public class OAuth2ServiceComponentHolder {
 
         // Sort based on priority in descending order, ie. the highest priority comes to the first element of the list.
         return Comparator.comparingInt(ImpersonationValidator::getPriority).reversed();
+    }
+
+    public ConfigurationManager getConfigurationManager() {
+
+        return configurationManager;
+    }
+
+    public void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        this.configurationManager = configurationManager;
     }
 }
