@@ -24,6 +24,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
@@ -51,6 +53,9 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyObject;
@@ -61,6 +66,7 @@ import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
 
 @PrepareForTest(
@@ -73,7 +79,8 @@ import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN
                 OAuthServerConfiguration.class,
                 IdentityUtil.class,
                 FrameworkUtils.class,
-                AbstractUserStoreManager.class
+                AbstractUserStoreManager.class,
+                FileBasedConfigurationBuilder.class
         }
 )
 public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
@@ -81,6 +88,8 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
     private OAuthTokenReqMessageContext tokReqMsgCtx;
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private ApplicationManagementService applicationManagementService;
+    private FileBasedConfigurationBuilder fileBasedConfigurationBuilder;
+
     private ServiceProvider serviceProvider;
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
     private RealmService realmService;
@@ -98,6 +107,7 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         applicationManagementService = mock(ApplicationManagementService.class);
+        fileBasedConfigurationBuilder = mock(FileBasedConfigurationBuilder.class);
         serviceProvider = mock(ServiceProvider.class);
         oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
         realmService = mock(RealmService.class);
@@ -106,6 +116,19 @@ public class PasswordGrantHandlerTest extends PowerMockIdentityBaseTest {
         serverConfiguration = mock(OAuthServerConfiguration.class);
         oauthIssuer = mock(OauthTokenIssuer.class);
         localAndOutboundAuthenticationConfig = mock(LocalAndOutboundAuthenticationConfig.class);
+    }
+
+    @BeforeMethod
+    public void setUpBasicAuthenticatorConfig() {
+
+        mockStatic(FileBasedConfigurationBuilder.class);
+        when(FileBasedConfigurationBuilder.getInstance()).thenReturn(fileBasedConfigurationBuilder);
+        AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
+        Map<String, String> parameterMap = new HashMap<>();
+        parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+        basicAuthenticatorConfig.setParameterMap(parameterMap);
+        when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
+                basicAuthenticatorConfig);
     }
 
     @DataProvider(name = "ValidateGrantDataProvider")
