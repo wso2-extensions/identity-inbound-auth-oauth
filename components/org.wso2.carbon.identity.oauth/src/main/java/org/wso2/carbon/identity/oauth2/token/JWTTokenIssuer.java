@@ -107,6 +107,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
 
+    private static final boolean renewWithoutRevokingExistingEnabled = Boolean.parseBoolean(IdentityUtil.
+            getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
+
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
         if (log.isDebugEnabled()) {
@@ -628,8 +631,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             }
         }
+
+        // When renew JWT without revoking existing token is enabled, setting the binding type to request.
+        if (renewWithoutRevokingExistingEnabled) {
+            setRequestBindingType(tokenReqMessageContext);
+        }
+
         // Include token binding.
-        jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
+        jwtClaimsSet = getJwtClaimSetWithBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.getProperty(CNF) != null) {
             jwtClaimsSet = handleCnf(jwtClaimsSetBuilder, tokenReqMessageContext);
@@ -883,8 +892,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return grantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
     }
 
-    private JWTClaimsSet handleTokenBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                            OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private void setRequestBindingType(OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         /**
          * If OAuth.JWT.RenewTokenWithoutRevokingExisting is enabled from configurations, and current token
@@ -906,10 +914,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
          *     enable = true
          *     allowed_grant_types = ["client_credentials","password", ...]
          */
-        boolean renewWithoutRevokingExistingEnabled = Boolean.parseBoolean(IdentityUtil.
-                getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
-
-        if (renewWithoutRevokingExistingEnabled && tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() == null) {
+        if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() == null) {
             if (OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
                     .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
                 String tokenBindingValue = UUID.randomUUID().toString();
@@ -918,6 +923,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                                 tokenBindingValue));
             }
         }
+    }
+
+    private JWTClaimsSet getJwtClaimSetWithBinding(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         if (tokReqMsgCtx != null && tokReqMsgCtx.getTokenBinding() != null) {
             // Include token binding into the jwt token.
