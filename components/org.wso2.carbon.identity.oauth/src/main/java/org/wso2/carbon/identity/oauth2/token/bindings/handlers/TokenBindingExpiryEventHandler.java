@@ -329,7 +329,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
                             && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
-                    } else if (StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
+                    } else if (
+                            StringUtils.equalsIgnoreCase(accessTokenDO.getTokenBinding().getBindingType(),
+                                    OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER) ||
+                                    StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
                 } catch (UserIdNotFoundException e) {
