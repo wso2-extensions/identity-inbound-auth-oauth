@@ -1430,7 +1430,15 @@ public class OAuth2AuthzEndpoint {
             if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
                 oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
                     if (ArrayUtils.isNotEmpty(value)) {
-                        diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
+                        if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
+                            String[] maskedValue = Arrays.copyOf(value, value.length);
+                            Arrays.setAll(maskedValue, i ->
+                                    LoggerUtils.isLogMaskingEnable ?
+                                            LoggerUtils.getMaskedContent(maskedValue[i]) : maskedValue[i]);
+                            diagnosticLogBuilder.inputParam(key, Arrays.asList(maskedValue));
+                        } else {
+                            diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
+                        }
                     }
                 });
             }
