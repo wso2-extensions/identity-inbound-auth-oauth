@@ -59,7 +59,6 @@ public class OAuthComponentServiceHolder {
     private RoleManagementService roleManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
 
-
     /**
      * Get the list of scope validator implementations available.
      *
