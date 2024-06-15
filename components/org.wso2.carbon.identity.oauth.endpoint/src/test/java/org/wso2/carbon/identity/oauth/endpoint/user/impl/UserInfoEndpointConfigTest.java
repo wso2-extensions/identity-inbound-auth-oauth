@@ -20,13 +20,8 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -42,27 +37,18 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
-@PrepareForTest({EndpointUtil.class})
-@PowerMockIgnore({"javax.management.*"})
-public class UserInfoEndpointConfigTest extends PowerMockTestCase {
+public class UserInfoEndpointConfigTest {
 
     @Mock
     private EndpointUtil endpointUtil;
     @Mock
     private OAuthServerConfiguration oAuthServerConfiguration;
     private final String nonExistingClass = "org.wso2.carbon.identity.NonExistingClass";
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
-    }
 
     @Test
     public void testGetInstance() throws Exception {
@@ -87,19 +73,22 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
     public void testGetUserInfoRequestValidator(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
 
-        mockStatic(EndpointUtil.class);
-        when(EndpointUtil.getUserInfoRequestValidator()).thenReturn(validatorClass);
-        UserInfoRequestValidator userInfoRequestValidator = UserInfoEndpointConfig.getInstance()
-                .getUserInfoRequestValidator();
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getUserInfoRequestValidator).thenReturn(validatorClass);
+            UserInfoRequestValidator userInfoRequestValidator = UserInfoEndpointConfig.getInstance()
+                    .getUserInfoRequestValidator();
 
-        if (isClassExisting) {
-            assertNotNull(userInfoRequestValidator, "UserInfoRequest builder should not be null for class " +
-                    validatorClass);
-            assertEquals(validatorClassType, userInfoRequestValidator.getClass(), "Expected type of UserInfoValidator" +
-                    " was not found");
-        } else {
-            assertNull(userInfoRequestValidator, "Non-existing or invalid class passed. Hence validator should be " +
-                    "null");
+            if (isClassExisting) {
+                assertNotNull(userInfoRequestValidator, "UserInfoRequest builder should not be null for class " +
+                        validatorClass);
+                assertEquals(validatorClassType, userInfoRequestValidator.getClass(),
+                        "Expected type of UserInfoValidator" +
+                                " was not found");
+            } else {
+                assertNull(userInfoRequestValidator,
+                        "Non-existing or invalid class passed. Hence validator should be " +
+                                "null");
+            }
         }
     }
 
@@ -120,20 +109,21 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
     public void testGetUserUserInfoAccessTokenValidator(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
 
-        mockStatic(EndpointUtil.class);
-        when(EndpointUtil.getAccessTokenValidator()).thenReturn(validatorClass);
-        UserInfoAccessTokenValidator userInfoAccessTokenValidator = UserInfoEndpointConfig.getInstance()
-                .getUserInfoAccessTokenValidator();
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getAccessTokenValidator).thenReturn(validatorClass);
+            UserInfoAccessTokenValidator userInfoAccessTokenValidator = UserInfoEndpointConfig.getInstance()
+                    .getUserInfoAccessTokenValidator();
 
-        if (isClassExisting) {
-            assertNotNull(userInfoAccessTokenValidator, "AccessTokenValidator should not be null for class " +
-                    validatorClass);
-            assertEquals(validatorClassType, userInfoAccessTokenValidator.getClass(), "Expected type of " +
-                    "AccessTokenValidator was not found");
-        } else {
-            assertNull(userInfoAccessTokenValidator,
-                    "Non-existing or invalid class passed. Hence validator should be " +
-                            "null");
+            if (isClassExisting) {
+                assertNotNull(userInfoAccessTokenValidator, "AccessTokenValidator should not be null for class " +
+                        validatorClass);
+                assertEquals(validatorClassType, userInfoAccessTokenValidator.getClass(), "Expected type of " +
+                        "AccessTokenValidator was not found");
+            } else {
+                assertNull(userInfoAccessTokenValidator,
+                        "Non-existing or invalid class passed. Hence validator should be " +
+                                "null");
+            }
         }
     }
 
@@ -154,19 +144,20 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
     public void testGetUserInfoResponseBuilder(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
 
-        mockStatic(EndpointUtil.class);
-        when(EndpointUtil.getUserInfoResponseBuilder()).thenReturn(validatorClass);
-        UserInfoResponseBuilder userInfoResponseBuilder = UserInfoEndpointConfig.getInstance()
-                .getUserInfoResponseBuilder();
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getUserInfoResponseBuilder).thenReturn(validatorClass);
+            UserInfoResponseBuilder userInfoResponseBuilder = UserInfoEndpointConfig.getInstance()
+                    .getUserInfoResponseBuilder();
 
-        if (isClassExisting) {
-            assertNotNull(userInfoResponseBuilder, "UserInfoResponseBuilder should not be null for class " +
-                    validatorClass);
-            assertEquals(validatorClassType, userInfoResponseBuilder.getClass(), "Expected type of " +
-                    "UserInfoResponseBuilder was not found");
-        } else {
-            assertNull(userInfoResponseBuilder, "Non-existing or invalid class passed. Hence validator should be " +
-                    "null");
+            if (isClassExisting) {
+                assertNotNull(userInfoResponseBuilder, "UserInfoResponseBuilder should not be null for class " +
+                        validatorClass);
+                assertEquals(validatorClassType, userInfoResponseBuilder.getClass(), "Expected type of " +
+                        "UserInfoResponseBuilder was not found");
+            } else {
+                assertNull(userInfoResponseBuilder, "Non-existing or invalid class passed. Hence validator should " +
+                        "be null");
+            }
         }
     }
 
@@ -187,19 +178,20 @@ public class UserInfoEndpointConfigTest extends PowerMockTestCase {
     public void testGetUserInfoClaimRetriever(String validatorClass, Class validatorClassType, boolean
             isClassExisting) throws Exception {
 
-        mockStatic(EndpointUtil.class);
-        when(EndpointUtil.getUserInfoClaimRetriever()).thenReturn(validatorClass);
-        UserInfoClaimRetriever userInfoClaimRetriever = UserInfoEndpointConfig.getInstance()
-                .getUserInfoClaimRetriever();
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getUserInfoClaimRetriever).thenReturn(validatorClass);
+            UserInfoClaimRetriever userInfoClaimRetriever = UserInfoEndpointConfig.getInstance()
+                    .getUserInfoClaimRetriever();
 
-        if (isClassExisting) {
-            assertNotNull(userInfoClaimRetriever, "UserInfoResponseBuilder should not be null for class " +
-                    validatorClass);
-            assertEquals(validatorClassType, userInfoClaimRetriever.getClass(), "Expected type of " +
-                    "UserInfoClaimRetriever was not found");
-        } else {
-            assertNull(userInfoClaimRetriever, "Non-existing or invalid class passed. Hence validator should be " +
-                    "null");
+            if (isClassExisting) {
+                assertNotNull(userInfoClaimRetriever, "UserInfoResponseBuilder should not be null for class " +
+                        validatorClass);
+                assertEquals(validatorClassType, userInfoClaimRetriever.getClass(), "Expected type of " +
+                        "UserInfoClaimRetriever was not found");
+            } else {
+                assertNull(userInfoClaimRetriever, "Non-existing or invalid class passed. Hence validator should be " +
+                        "null");
+            }
         }
     }
 

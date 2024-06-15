@@ -104,8 +104,6 @@ public class DeviceFlowGrantTest {
 
     private Object invokePrivateStaticMethod(Class<?> clazz, String methodName, Object... params) throws Exception {
 
-//        return clazz.getDeclaredMethod(methodName).invoke(null, params);
-
         Class<?>[] paramTypes = new Class[params.length];
         for (int i = 0; i < params.length; i++) {
             paramTypes[i] = params[i].getClass();

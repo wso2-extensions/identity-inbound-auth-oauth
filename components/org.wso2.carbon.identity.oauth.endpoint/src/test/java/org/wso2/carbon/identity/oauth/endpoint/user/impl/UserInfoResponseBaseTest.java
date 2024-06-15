@@ -2,14 +2,8 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockObjectFactory;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.ObjectFactory;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -18,7 +12,6 @@ import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthent
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -54,15 +47,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
@@ -70,10 +63,7 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
 /**
  * Base test case for UserInfoResponse.
  */
-@PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, IdentityTenantUtil.class, RegistryService.class,
-        AuthorizationGrantCache.class, ClaimUtil.class, IdentityUtil.class, UserInfoEndpointConfig.class,
-        FrameworkUtils.class})
-public class UserInfoResponseBaseTest extends PowerMockTestCase {
+public class UserInfoResponseBaseTest {
 
     public static final String AUTHORIZED_USER_FULL_QUALIFIED = "JDBC/peter@tenant.com";
     public static final String AUTHORIZED_USER_NAME = "peter";
@@ -126,13 +116,13 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     @Mock
     protected UserRegistry userRegistry;
     @Mock
-    protected OAuthServerConfiguration oAuthServerConfiguration;
+    protected OAuthServerConfiguration mockOAuthServerConfiguration;
     @Mock
-    protected AuthorizationGrantCache authorizationGrantCache;
+    protected AuthorizationGrantCache mockAuthorizationGrantCache;
     @Mock
     protected AuthorizationGrantCacheEntry authorizationGrantCacheEntry;
     @Mock
-    protected UserInfoEndpointConfig userInfoEndpointConfig;
+    protected UserInfoEndpointConfig mockUserInfoEndpointConfig;
     @Mock
     protected ApplicationManagementService applicationManagementService;
     protected Resource resource;
@@ -143,29 +133,17 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
 
     protected final String accessToken = "dummyAccessToken";
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new PowerMockObjectFactory();
-    }
-
     @BeforeClass
     public void setUp() {
         // Skipping filtering with user consent.
         // TODO: Remove mocking claims filtering based on consent when fixing
         // TODO: https://github.com/wso2/product-is/issues/2676
-        OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = Mockito.spy(new OpenIDConnectClaimFilterImpl());
+        OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = spy(new OpenIDConnectClaimFilterImpl());
         when(openIDConnectClaimFilter
                 .getClaimsFilteredByUserConsent(anyMap(), any(AuthenticatedUser.class), anyString(), anyString()))
                 .thenAnswer(invocation -> invocation.getArguments()[0]);
         OpenIDConnectServiceComponentHolder.getInstance().getOpenIDConnectClaimFilters().add(openIDConnectClaimFilter);
         resource = new ResourceImpl();
-    }
-
-    protected void mockOAuthServerConfiguration() throws Exception {
-
-        PowerMockito.mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
     }
 
     protected void startTenantFlow(String tenantDomain) {
@@ -184,8 +162,8 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
             resource.setProperty(scopeMapEntry.getKey(), scopeMapEntry.getValue());
         }
         OAuth2ServiceComponentHolder.setRegistryService(registryService);
-        when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
-        when(userRegistry.get(anyString())).thenReturn(resource);
+        lenient().when(registryService.getConfigSystemRegistry(anyInt())).thenReturn(userRegistry);
+        lenient().when(userRegistry.get(anyString())).thenReturn(resource);
     }
 
     protected OAuth2TokenValidationResponseDTO getTokenResponseDTO(String authorizedUser) {
@@ -208,54 +186,56 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         return tokenValidationResponseDTO;
     }
 
-    protected void prepareAuthorizationGrantCache(boolean getClaimsFromCache) {
+    protected void prepareAuthorizationGrantCache(boolean getClaimsFromCache,
+                                                  MockedStatic<AuthorizationGrantCache> authorizationGrantCache) {
 
-        mockStatic(AuthorizationGrantCache.class);
-        when(AuthorizationGrantCache.getInstance()).thenReturn(authorizationGrantCache);
-        when(authorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class))).thenReturn
-                (authorizationGrantCacheEntry);
+        authorizationGrantCache.when(AuthorizationGrantCache::getInstance).thenReturn(mockAuthorizationGrantCache);
+        lenient().when(mockAuthorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class)))
+                .thenReturn(authorizationGrantCacheEntry);
         Map userAttributes = new HashMap();
         if (getClaimsFromCache) {
             userAttributes.put("cachedClaim1", "cachedClaim1Value1");
             userAttributes.put("cachedClaim2", "cachedClaim1Value2");
         }
-        when(authorizationGrantCacheEntry.getUserAttributes()).thenReturn(userAttributes);
+        lenient().when(authorizationGrantCacheEntry.getUserAttributes()).thenReturn(userAttributes);
     }
 
-    protected void prepareClaimUtil(Map<String, Object> claims) throws Exception {
+    protected void prepareClaimUtil(Map<String, Object> claims,
+                                    MockedStatic<FrameworkUtils> frameworkUtils,
+                                    MockedStatic<ClaimUtil> claimUtil) throws Exception {
 
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.getMultiAttributeSeparator()).thenReturn(",");
+        frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(",");
 
-        mockStatic(ClaimUtil.class);
-        when(ClaimUtil.getUserClaimsUsingTokenResponse(any(OAuth2TokenValidationResponseDTO.class))).thenReturn(claims);
+        claimUtil.when(() -> ClaimUtil.getUserClaimsUsingTokenResponse(any(OAuth2TokenValidationResponseDTO.class)))
+                .thenReturn(claims);
     }
 
-    protected void prepareOAuth2Util(boolean isPairwiseSub) throws Exception {
+    protected void prepareOAuth2Util(boolean isPairwiseSub, MockedStatic<OAuth2Util> oAuth2Util,
+                                     MockedStatic<IdentityTenantUtil> identityTenantUtil) throws Exception {
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(MOCK_CLIENT_ID);
-        when(OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn(TENANT_DOT_COM);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(TENANT_DOT_COM);
+        oAuth2Util.when(() -> OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(MOCK_CLIENT_ID);
+        oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(any(OAuthAppDO.class))).thenReturn(TENANT_DOT_COM);
+        identityTenantUtil.when(()->IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(TENANT_DOT_COM);
         ArrayList<String> userAttributesFromCache = new ArrayList<>();
         userAttributesFromCache.add("cachedClaim1");
         userAttributesFromCache.add("cachedClaim2");
-        when(OAuth2Util.getEssentialClaims(anyString(), anyString())).thenReturn(userAttributesFromCache);
+        oAuth2Util.when(() -> OAuth2Util.getEssentialClaims(anyString(), anyString()))
+                .thenReturn(userAttributesFromCache);
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
         oAuthAppDO.setCallbackUrl("https://mockhost.com?test=test");
         if (isPairwiseSub) {
             oAuthAppDO.setSubjectType(PAIRWISE);
             oAuthAppDO.setSectorIdentifierURI(SECTOR_IDENTIFIER_URI_VALUE);
         }
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
     }
 
     protected void prepareApplicationManagementService(boolean appendTenantDomain,
                                                        boolean appendUserStoreDomain) throws Exception {
 
         ServiceProvider serviceProvider = new ServiceProvider();
-        when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
+        lenient().when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
         serviceProvider.setLocalAndOutBoundAuthenticationConfig(new LocalAndOutboundAuthenticationConfig());
         serviceProvider.getLocalAndOutBoundAuthenticationConfig()
@@ -265,13 +245,12 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
     }
 
-    protected void prepareUserInfoEndpointConfig() {
+    protected void prepareUserInfoEndpointConfig(MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig) {
 
         UserInfoClaimRetriever claimsRetriever = mock(UserInfoClaimRetriever.class);
-        mockStatic(UserInfoEndpointConfig.class);
-        when(UserInfoEndpointConfig.getInstance()).thenReturn(userInfoEndpointConfig);
-        when(claimsRetriever.getClaimsMap(any(Map.class))).thenReturn(new HashMap());
-        when(userInfoEndpointConfig.getUserInfoClaimRetriever()).thenReturn(claimsRetriever);
+        userInfoEndpointConfig.when(UserInfoEndpointConfig::getInstance).thenReturn(mockUserInfoEndpointConfig);
+        lenient().when(claimsRetriever.getClaimsMap(any(Map.class))).thenReturn(new HashMap<>());
+        lenient().when(mockUserInfoEndpointConfig.getUserInfoClaimRetriever()).thenReturn(claimsRetriever);
     }
 
     protected Map getClaims(String[] inputClaims) {
@@ -379,25 +358,30 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
     protected void prepareForSubjectClaimTest(AuthenticatedUser authorizedUser,
                                               Map<String, Object> inputClaims,
                                               boolean appendTenantDomain,
-                                              boolean appendUserStoreDomain, boolean isPairwiseSub) throws Exception {
+                                              boolean appendUserStoreDomain, boolean isPairwiseSub,
+                                              MockedStatic<AuthorizationGrantCache> authorizationGrantCache,
+                                              MockedStatic<FrameworkUtils> frameworkUtils,
+                                              MockedStatic<ClaimUtil> claimUtil,
+                                              MockedStatic<OAuth2Util> oAuth2Util,
+                                              MockedStatic<IdentityTenantUtil> identityTenantUtil,
+                                              MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig)
+            throws Exception {
 
         startTenantFlow(SUPER_TENANT_DOMAIN_NAME);
-        mockOAuthServerConfiguration();
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
         spy(OAuth2Util.class);
 
-        prepareOAuth2Util(isPairwiseSub);
+        prepareOAuth2Util(isPairwiseSub, oAuth2Util, identityTenantUtil);
         // Create an accessTokenDO
-        mockAccessTokenDOInOAuth2Util(authorizedUser);
+        mockAccessTokenDOInOAuth2Util(authorizedUser, oAuth2Util);
 
-        prepareUserInfoEndpointConfig();
+        prepareUserInfoEndpointConfig(userInfoEndpointConfig);
         prepareApplicationManagementService(appendTenantDomain, appendUserStoreDomain);
 
-        prepareRegistry(Collections.<String, List<String>>emptyMap());
-        prepareAuthorizationGrantCache(false);
-        prepareClaimUtil(inputClaims);
+        prepareRegistry(Collections.emptyMap());
+        prepareAuthorizationGrantCache(false, authorizationGrantCache);
+        prepareClaimUtil(inputClaims, frameworkUtils, claimUtil);
     }
 
     protected void updateAuthenticatedSubjectIdentifier(AuthenticatedUser user, boolean appendTenantDomain,
@@ -418,44 +402,48 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         user.setAuthenticatedSubjectIdentifier(sub);
     }
 
-    protected void mockAccessTokenDOInOAuth2Util(AuthenticatedUser authorizedUser)
+    protected void mockAccessTokenDOInOAuth2Util(AuthenticatedUser authorizedUser, MockedStatic<OAuth2Util> oAuth2Util)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAuthzUser(authorizedUser);
         accessTokenDO.setConsumerKey(MOCK_CLIENT_ID);
         accessTokenDO.setAccessToken(accessToken);
-        when(OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken)).thenReturn(accessTokenDO);
-        when(OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, false)).thenReturn(accessTokenDO);
+        oAuth2Util.when(() -> OAuth2Util.getAccessTokenDOfromTokenIdentifier(accessToken)).thenReturn(accessTokenDO);
+        oAuth2Util.when(() -> OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessToken, false))
+                .thenReturn(accessTokenDO);
 
-        when(OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
+        oAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(any(AccessTokenDO.class))).thenCallRealMethod();
         OauthTokenIssuer oauthTokenIssuer = new OauthTokenIssuerImpl();
-        when(OAuth2Util.getTokenIssuer(accessToken)).thenReturn(oauthTokenIssuer);
+        oAuth2Util.when(() -> OAuth2Util.getTokenIssuer(accessToken)).thenReturn(oauthTokenIssuer);
     }
 
     protected void prepareForResponseClaimTest(Map<String, Object> inputClaims,
                                                Map<String, List<String>> oidcScopeMap,
-                                               boolean getClaimsFromCache) throws Exception {
+                                               boolean getClaimsFromCache,
+                                               MockedStatic<AuthorizationGrantCache> authorizationGrantCache,
+                                               MockedStatic<FrameworkUtils> frameworkUtils,
+                                               MockedStatic<ClaimUtil> claimUtil,
+                                               MockedStatic<OAuth2Util> oAuth2Util,
+                                               MockedStatic<IdentityTenantUtil> identityTenantUtil,
+                                               MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig)
+            throws Exception {
 
         startTenantFlow(SUPER_TENANT_DOMAIN_NAME);
-        mockOAuthServerConfiguration();
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-        spy(OAuth2Util.class);
-
-        prepareOAuth2Util(false);
+        prepareOAuth2Util(false, oAuth2Util, identityTenantUtil);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName(AUTHORIZED_USER_FULL_QUALIFIED);
-        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
 
-        prepareUserInfoEndpointConfig();
+        prepareUserInfoEndpointConfig(userInfoEndpointConfig);
         prepareApplicationManagementService(true, true);
 
         prepareRegistry(oidcScopeMap);
-        prepareAuthorizationGrantCache(getClaimsFromCache);
-        prepareClaimUtil(inputClaims);
+        prepareAuthorizationGrantCache(getClaimsFromCache, authorizationGrantCache);
+        prepareClaimUtil(inputClaims, frameworkUtils, claimUtil);
     }
 
     protected Object[][] getOidcScopeFilterTestData() {
@@ -510,7 +498,14 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         };
     }
 
-    protected void initSingleClaimTest(String claimUri, String claimValue) throws Exception {
+    protected void initSingleClaimTest(String claimUri, String claimValue,
+                                       MockedStatic<AuthorizationGrantCache> authorizationGrantCache,
+                                       MockedStatic<FrameworkUtils> frameworkUtils,
+                                       MockedStatic<ClaimUtil> claimUtil,
+                                       MockedStatic<OAuth2Util> oAuth2Util,
+                                       MockedStatic<IdentityTenantUtil> identityTenantUtil,
+                                       MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig)
+            throws Exception {
 
         final Map<String, Object> inputClaims = new HashMap<>();
         inputClaims.put(claimUri, claimValue);
@@ -518,7 +513,9 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         final Map<String, List<String>> oidcScopeMap = new HashMap<>();
         oidcScopeMap.put(OIDC_SCOPE, Collections.singletonList(claimUri));
 
-        prepareForResponseClaimTest(inputClaims, oidcScopeMap, false);
+        prepareForResponseClaimTest(inputClaims, oidcScopeMap, false,
+                authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util, identityTenantUtil,
+                userInfoEndpointConfig);
     }
 
     protected void assertSubjectClaimPresent(Map<String, Object> claimsInResponse) {
@@ -528,20 +525,20 @@ public class UserInfoResponseBaseTest extends PowerMockTestCase {
         assertNotNull(claimsInResponse.get(sub));
     }
 
-    protected void mockObjectsRelatedToTokenValidation() throws Exception {
+    protected void mockObjectsRelatedToTokenValidation(MockedStatic<OAuth2Util> oAuth2Util) throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(OAuthServerConfiguration.getInstance().getOAuthTokenGenerator()).thenReturn(oAuthIssuer);
-        when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
-        when(OAuth2Util.getAccessTokenIdentifier(any())).thenCallRealMethod();
-        when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
-        when(OAuth2Util.getAccessTokenDO(any())).thenCallRealMethod();
-        when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
-                thenCallRealMethod();
+        when(mockOAuthServerConfiguration.getOAuthTokenGenerator()).thenReturn(oAuthIssuer);
+        when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn("SHA256withRSA");
+        oAuth2Util.when(() -> OAuth2Util.getAccessTokenIdentifier(any())).thenCallRealMethod();
+        oAuth2Util.when(() -> OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenCallRealMethod();
+        oAuth2Util.when(() -> OAuth2Util.getAccessTokenDO(any())).thenCallRealMethod();
+
+//        when(OAuth2Util.class, "getAccessTokenDOFromMatchingTokenIssuer", anyString(), anyMap(), anyBoolean()).
+//                thenCallRealMethod();
+
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(DEFAULT_TOKEN_TYPE, new OauthTokenIssuerImpl());
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, new JWTTokenIssuer());
-        when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
+        when(mockOAuthServerConfiguration.getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
     }
 }

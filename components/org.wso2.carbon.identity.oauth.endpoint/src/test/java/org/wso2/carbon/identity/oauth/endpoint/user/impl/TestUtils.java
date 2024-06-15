@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
 
 import java.nio.file.Paths;
 import java.sql.Connection;
@@ -42,6 +43,8 @@ public class TestUtils {
         dataSource.setUrl("jdbc:h2:mem:test" + DB_NAME);
         try (Connection connection = dataSource.getConnection()) {
             connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
+        } catch (JdbcSQLIntegrityConstraintViolationException e) {
+            //ignore
         }
         dataSourceMap.put(DB_NAME, dataSource);
     }

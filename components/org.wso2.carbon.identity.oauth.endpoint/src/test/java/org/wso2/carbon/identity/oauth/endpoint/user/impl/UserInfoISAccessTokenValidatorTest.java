@@ -18,12 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
-import org.mockito.Matchers;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -36,13 +36,14 @@ import java.util.Scanner;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({UserInforRequestDefaultValidator.class, UserInfoISAccessTokenValidator.class, EndpointUtil.class})
-public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class UserInfoISAccessTokenValidatorTest {
 
     @Mock
     private HttpServletRequest httpServletRequest;
@@ -113,51 +114,34 @@ public class UserInfoISAccessTokenValidatorTest extends PowerMockTestCase {
 
         prepareOAuth2TokenValidationService();
 
-        mockStatic(EndpointUtil.class);
-        when(EndpointUtil.getOAuth2TokenValidationService()).thenReturn(oAuth2TokenValidationService);
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getOAuth2TokenValidationService).thenReturn(oAuth2TokenValidationService);
 
-        OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator
-                .validateToken(accessTokenIdentifier);
-        assertEquals(responseDTO.getAuthorizationContextToken().getTokenString(), accessTokenIdentifier);
+            OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator
+                    .validateToken(accessTokenIdentifier);
+            assertEquals(responseDTO.getAuthorizationContextToken().getTokenString(), accessTokenIdentifier);
+        }
     }
-
-//    @Test(dataProvider = "requestBodyWithNonASCII", expectedExceptions = UserInfoEndpointException.class)
-//    public void testValidateTokenWithRequestBodyNonASCII(String contentType, String requestBody, String expected)
-// throws Exception {
-//        testValidateTokenWithRequestBody(contentType, requestBody, true);
-//    }
 
     @Test(expectedExceptions = UserInfoEndpointException.class)
     public void testValidateTokenWithWrongInputStream() throws Exception {
 
-        testValidateTokenWithRequestBody(contentTypeHeaderValue, "access_token=" + token, false);
-    }
+        prepareHttpServletRequest(null, contentTypeHeaderValue);
 
-    private String testValidateTokenWithRequestBody(String contentType, String requestBody, boolean mockScanner)
-            throws Exception {
+        when(httpServletRequest.getInputStream()).thenThrow(new IOException());
 
-        prepareHttpServletRequest(null, contentType);
-        if (mockScanner) {
-            whenNew(Scanner.class).withAnyArguments().thenReturn(scanner);
-            when(scanner.hasNextLine()).thenReturn(true, false);
-            when(scanner.nextLine()).thenReturn(requestBody);
-        } else {
-            when(httpServletRequest.getInputStream()).thenThrow(new IOException());
-        }
-
-        String token = userInforRequestDefaultValidator.validateRequest(httpServletRequest);
-        return token;
+        userInforRequestDefaultValidator.validateRequest(httpServletRequest);
     }
 
     private void prepareOAuth2TokenValidationService() {
 
-        when(oAuth2TokenValidationService.validate(Matchers.anyObject()))
+        when(oAuth2TokenValidationService.validate(any()))
                 .thenReturn(new OAuth2TokenValidationResponseDTO());
     }
 
     private void prepareHttpServletRequest(String authorization, String contentType) {
 
         when(httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(authorization);
-        when(httpServletRequest.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn(contentType);
+        lenient().when(httpServletRequest.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn(contentType);
     }
 }

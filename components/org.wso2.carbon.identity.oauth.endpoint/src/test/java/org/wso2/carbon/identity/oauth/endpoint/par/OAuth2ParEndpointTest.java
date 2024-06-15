@@ -23,19 +23,22 @@ import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
+import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.AfterTest;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
-import org.wso2.carbon.identity.core.ServiceURL;
-import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -70,13 +73,9 @@ import javax.ws.rs.core.Response;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.doCallRealMethod;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -84,9 +83,7 @@ import static org.testng.Assert.assertTrue;
 /**
  * Test class for OAuth2ParEndpoint.
  */
-@PrepareForTest({OAuthServerConfiguration.class, EndpointUtil.class, ServiceURL.class, ServiceURLBuilder.class,
-        IdentityTenantUtil.class, LoggerUtils.class, IdentityDatabaseUtil.class, IdentityUtil.class,
-        OIDCRequestObjectUtil.class, OAuth2Util.class})
+@Listeners(MockitoTestNGListener.class)
 public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -99,7 +96,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
     HttpServletResponse httpServletResponse;
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     private TokenPersistenceProcessor tokenPersistenceProcessor;
@@ -121,6 +118,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
             "-b7218c7182df";
     private static final Long EXPIRY_TIME = 60L;
     private OAuth2ParEndpoint oAuth2ParEndpoint;
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -131,14 +129,35 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
         oAuth2ParEndpoint = new OAuth2ParEndpoint();
 
         initiateInMemoryH2();
-        createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE");
-        createOAuthApp(INACTIVE_CLIENT_ID_VALUE, "dummySecret", USERNAME, INACTIVE_APP_NAME, "INACTIVE");
+        try {
+            createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE");
+        } catch (JdbcSQLIntegrityConstraintViolationException e) {
+            // ignore
+        }
+        try {
+            createOAuthApp(INACTIVE_CLIENT_ID_VALUE, "dummySecret", USERNAME, INACTIVE_APP_NAME, "INACTIVE");
+        } catch (JdbcSQLIntegrityConstraintViolationException e) {
+            // ignore
+        }
     }
 
-    @AfterTest
+    @AfterClass
     public void cleanData() throws Exception {
 
         super.cleanData();
+    }
+
+    @BeforeMethod
+    public void setUpBeforeMethod() {
+
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+        mockDatabase(identityDatabaseUtil);
+    }
+
+    @AfterMethod
+    public void tearDownAfterMethod() {
+
+        identityDatabaseUtil.close();
     }
 
     @DataProvider(name = "testParDataProvider")
@@ -325,68 +344,77 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         boolean isFAPITest)
             throws Exception {
 
-        MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
-        Map<String, String[]> requestParams = (Map<String, String[]>) requestParamsObj;
-        OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oAuthClientAuthnContextObj;
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                mockStatic(OAuthServerConfiguration.class)) {
 
-        mockOAuthServerConfiguration(paramMap);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getLoginTenantId()).thenReturn(-1234);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(getConnection());
+            MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
+            Map<String, String[]> requestParams = (Map<String, String[]>) requestParamsObj;
+            OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oAuthClientAuthnContextObj;
 
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+            mockOAuthServerConfiguration(paramMap, oAuthServerConfiguration);
+            try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<OIDCRequestObjectUtil> oidcRequestObjectUtil = mockStatic(OIDCRequestObjectUtil.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS)) {
 
-        HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<>());
+                identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
 
-        // Set authenticated client context
-        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+                loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
 
-        spy(EndpointUtil.class);
-        doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
-        doCallRealMethod().when(oAuth2Service).validateInputParameters(request);
-        doCallRealMethod().when(oAuth2Service).validateClientInfo(any(OAuthParRequestWrapper.class));
-        doReturn(parAuthService).when(EndpointUtil.class, "getParAuthService");
-        if (testOAuthSystemException) {
-            doThrow(new OAuthSystemException()).when(EndpointUtil.class, "getOAuthAuthzRequest", any());
-        }
-        when(parAuthService.handleParAuthRequest(any())).thenReturn(parAuthData);
-        when(parAuthData.getrequestURIReference()).thenReturn(REQUEST_URI_REF);
-        when(parAuthData.getExpiryTime()).thenReturn(EXPIRY_TIME);
+                HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<>());
 
-        mockStatic(OIDCRequestObjectUtil.class);
-        if (!isFAPITest && requestParams.containsKey(OAuthConstants.OAuth20Params.REQUEST)) {
-            RequestObject requestObject = new RequestObject();
-            JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-            jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, "code-challenge-string");
-            jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD, "S256");
-            requestObject.setClaimSet(jwtClaimsSetBuilder.build());
-            when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(requestObject);
-        } else {
-            when(OIDCRequestObjectUtil.buildRequestObject(any(), any())).thenReturn(new RequestObject());
-        }
+                // Set authenticated client context
+                request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
 
-        spy(OAuth2Util.class);
-        doReturn(isFAPITest).when(OAuth2Util.class, "isFapiConformantApp", any());
+                endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
 
-        Response response;
-        response = oAuth2ParEndpoint.par(request, httpServletResponse, paramMap);
+                lenient().doCallRealMethod().when(oAuth2Service).validateInputParameters(request);
+                lenient().doCallRealMethod().when(oAuth2Service).validateClientInfo(any(OAuthParRequestWrapper.class));
+                endpointUtil.when(EndpointUtil::getParAuthService).thenReturn(parAuthService);
+                if (testOAuthSystemException) {
+                    endpointUtil.when(() -> EndpointUtil.getOAuthAuthzRequest(any()))
+                            .thenThrow(new OAuthSystemException());
+                }
+                lenient().when(parAuthService.handleParAuthRequest(any())).thenReturn(parAuthData);
+                lenient().when(parAuthData.getrequestURIReference()).thenReturn(REQUEST_URI_REF);
+                lenient().when(parAuthData.getExpiryTime()).thenReturn(EXPIRY_TIME);
 
-        assertNotNull(response, "Par response is null");
-        assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
-        assertNotNull(response.getEntity(), "Response entity is null");
+                if (!isFAPITest && requestParams.containsKey(OAuthConstants.OAuth20Params.REQUEST)) {
+                    RequestObject requestObject = new RequestObject();
+                    JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                    jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE, "code-challenge-string");
+                    jwtClaimsSetBuilder.claim(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD, "S256");
+                    requestObject.setClaimSet(jwtClaimsSetBuilder.build());
+                    oidcRequestObjectUtil.when(() -> OIDCRequestObjectUtil.buildRequestObject(any(), any()))
+                            .thenReturn(requestObject);
+                } else {
+                    oidcRequestObjectUtil.when(() -> OIDCRequestObjectUtil.buildRequestObject(any(), any()))
+                            .thenReturn(new RequestObject());
+                }
 
-        final String responseBody = response.getEntity().toString();
+                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
 
-        if (expectedErrorCode != null) {
-            assertTrue(responseBody.contains(expectedErrorCode), "Expected error code not found");
-        }
-        if (HttpServletResponse.SC_CREATED == expectedStatus) {
-            assertTrue(responseBody.contains(REQUEST_URI),
-                    "Successful response should contain request uri");
-            assertTrue(responseBody.contains(String.valueOf(EXPIRY_TIME)),
-                    "Successful response should contain expiry time");
+                Response response;
+                response = oAuth2ParEndpoint.par(request, httpServletResponse, paramMap);
+
+                assertNotNull(response, "Par response is null");
+                assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+                assertNotNull(response.getEntity(), "Response entity is null");
+
+                final String responseBody = response.getEntity().toString();
+
+                if (expectedErrorCode != null) {
+                    assertTrue(responseBody.contains(expectedErrorCode), "Expected error code not found");
+                }
+                if (HttpServletResponse.SC_CREATED == expectedStatus) {
+                    assertTrue(responseBody.contains(REQUEST_URI),
+                            "Successful response should contain request uri");
+                    assertTrue(responseBody.contains(String.valueOf(EXPIRY_TIME)),
+                            "Successful response should contain expiry time");
+                }
+            }
         }
     }
 
@@ -405,7 +433,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                                                final Map<String, Object> requestAttributes) {
 
         HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
-        doAnswer(invocation -> {
+        lenient().doAnswer(invocation -> {
 
             String key = (String) invocation.getArguments()[0];
             return requestParams.get(key) != null ? requestParams.get(key)[0] : null;
@@ -425,30 +453,33 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         Map<String, String[]> headers = new HashMap<>();
         headers.put("Content-Type", new String[]{"application/x-www-form-urlencoded"});
-        when(httpServletRequest.getHeaderNames()).thenReturn(Collections.enumeration(headers.keySet()));
-        when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
-        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(requestParams.keySet()));
-        when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);
-        when(httpServletRequest.getContentType()).thenReturn(OAuth.ContentType.URL_ENCODED);
+        lenient().when(httpServletRequest.getHeaderNames()).thenReturn(Collections.enumeration(headers.keySet()));
+        lenient().when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
+        lenient().when(httpServletRequest.getParameterNames())
+                .thenReturn(Collections.enumeration(requestParams.keySet()));
+        lenient().when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);
+        lenient().when(httpServletRequest.getContentType()).thenReturn(OAuth.ContentType.URL_ENCODED);
 
         return httpServletRequest;
     }
 
-    private void mockOAuthServerConfiguration(MultivaluedMap<String, String> paramMap) throws Exception {
+    private void mockOAuthServerConfiguration(MultivaluedMap<String, String> paramMap,
+                                              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
+            throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> responseTypeValidators = new Hashtable<>();
         responseTypeValidators.put(OAuthConstants.CODE, CodeValidator.class);
         responseTypeValidators.put(OAuthConstants.CODE_IDTOKEN, CodeTokenResponseValidator.class);
-        when(oAuthServerConfiguration.getSupportedResponseTypeValidators()).thenReturn(responseTypeValidators);
+        lenient().when(mockOAuthServerConfiguration.getSupportedResponseTypeValidators())
+                .thenReturn(responseTypeValidators);
 
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
+        lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
-        when(oAuthServerConfiguration.getOAuthAuthzRequestClassName())
+        lenient().when(mockOAuthServerConfiguration.getOAuthAuthzRequestClassName())
                 .thenReturn("org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest");
-        when(oAuthServerConfiguration.getRequestObjectBuilders()).thenReturn(
+        lenient().when(mockOAuthServerConfiguration.getRequestObjectBuilders()).thenReturn(
                 new HashMap<String, RequestObjectBuilder>() {{
                     put("request_param_value_builder", new RequestParamRequestObjectBuilder());
                 }});

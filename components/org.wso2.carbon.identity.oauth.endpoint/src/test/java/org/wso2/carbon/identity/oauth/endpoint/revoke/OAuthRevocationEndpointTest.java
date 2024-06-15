@@ -21,11 +21,12 @@ import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.iterators.IteratorEnumeration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
-import org.mockito.Matchers;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
@@ -44,7 +45,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationResponseDTO;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -57,24 +57,21 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({EndpointUtil.class, OAuthServerConfiguration.class, LoggerUtils.class, IdentityTenantUtil.class})
-public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
+public class OAuthRevocationEndpointTest {
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
@@ -98,6 +95,9 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
 
     private OAuthRevocationEndpoint revocationEndpoint;
 
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+
+    // TODO move this to Before class
     @BeforeTest
     public void setUp() {
 
@@ -112,8 +112,14 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
     public void setUpBeforeMethod() {
 
         initMocks(this);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        oAuthServerConfiguration.close();
     }
 
     @DataProvider(name = "testRevokeAccessTokenDataProvider")
@@ -212,58 +218,61 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
                                       Object headerObj, Exception e, int expectedStatus, String expectedErrorCode)
             throws Exception {
 
-        MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<String, String>();
-        ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
-        parameterMap.add(TOKEN_PARAM, token);
-        parameterMap.add(TOKEN_TYPE_HINT_PARAM, tokenHint);
-        parameterMap.add(CALLBACK_PARAM, callback);
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
+            MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<>();
+            ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
+            parameterMap.add(TOKEN_PARAM, token);
+            parameterMap.add(TOKEN_TYPE_HINT_PARAM, tokenHint);
+            parameterMap.add(CALLBACK_PARAM, callback);
 
-        Map<String, String[]> requestedParams = new HashMap<>();
-        if (addReqParams) {
-            requestedParams.put(TOKEN_PARAM, new String[]{""});
-            requestedParams.put(TOKEN_TYPE_HINT_PARAM, new String[]{""});
-            requestedParams.put(CALLBACK_PARAM, new String[]{""});
-        }
-
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<String, Object>());
-        when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
-
-        spy(EndpointUtil.class);
-        doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
-
-        final OAuthRevocationRequestDTO[] revokeReqDTO;
-        revokeReqDTO = new OAuthRevocationRequestDTO[1];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                revokeReqDTO[0] = (OAuthRevocationRequestDTO) invocation.getArguments()[0];
-                return oAuthRevocationResponseDTO;
+            Map<String, String[]> requestedParams = new HashMap<>();
+            if (addReqParams) {
+                requestedParams.put(TOKEN_PARAM, new String[]{""});
+                requestedParams.put(TOKEN_TYPE_HINT_PARAM, new String[]{""});
+                requestedParams.put(CALLBACK_PARAM, new String[]{""});
             }
-        }).when(oAuth2Service).revokeTokenByOAuthClient(any(OAuthRevocationRequestDTO.class));
-        when(oAuthRevocationResponseDTO.getErrorCode()).thenReturn(respError);
-        when(oAuthRevocationResponseDTO.getErrorMsg()).thenReturn(respError);
-        when(oAuthRevocationResponseDTO.getResponseHeaders()).thenReturn(responseHeaders);
 
-        Response response;
-        try {
-            response = revocationEndpoint.revokeAccessToken(request, parameterMap);
-        } catch (InvalidRequestParentException ire) {
-            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
-            response = invalidRequestExceptionMapper.toResponse(ire);
-        }
-        assertNotNull(response, "Token response is null");
-        assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<>());
+            when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
 
-        assertNotNull(response.getEntity(), "Response entity is null");
-        if (expectedErrorCode != null) {
-            assertTrue(response.getEntity().toString().contains(expectedErrorCode), "Expected error code not found");
-            if (StringUtils.isNotEmpty(callback)) {
-                assertTrue(response.getEntity().toString().contains(callback), "Callback is not added to the response");
+            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
+
+            final OAuthRevocationRequestDTO[] revokeReqDTO;
+            revokeReqDTO = new OAuthRevocationRequestDTO[1];
+            doAnswer(new Answer<Object>() {
+                @Override
+                public Object answer(InvocationOnMock invocation) throws Throwable {
+
+                    revokeReqDTO[0] = (OAuthRevocationRequestDTO) invocation.getArguments()[0];
+                    return oAuthRevocationResponseDTO;
+                }
+            }).when(oAuth2Service).revokeTokenByOAuthClient(any(OAuthRevocationRequestDTO.class));
+            when(oAuthRevocationResponseDTO.getErrorCode()).thenReturn(respError);
+            when(oAuthRevocationResponseDTO.getErrorMsg()).thenReturn(respError);
+            when(oAuthRevocationResponseDTO.getResponseHeaders()).thenReturn(responseHeaders);
+
+            Response response;
+            try {
+                response = revocationEndpoint.revokeAccessToken(request, parameterMap);
+            } catch (InvalidRequestParentException ire) {
+                InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+                response = invalidRequestExceptionMapper.toResponse(ire);
+            }
+            assertNotNull(response, "Token response is null");
+            assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+
+            assertNotNull(response.getEntity(), "Response entity is null");
+            if (expectedErrorCode != null) {
+                assertTrue(response.getEntity().toString().contains(expectedErrorCode),
+                        "Expected error code not found");
+                if (StringUtils.isNotEmpty(callback)) {
+                    assertTrue(response.getEntity().toString().contains(callback),
+                            "Callback is not added to the response");
+                }
             }
         }
     }
@@ -299,7 +308,7 @@ public class OAuthRevocationEndpointTest extends PowerMockIdentityBaseTest {
                 requestAttributes.put(key, value);
                 return null;
             }
-        }).when(httpServletRequest).setAttribute(anyString(), Matchers.anyObject());
+        }).when(httpServletRequest).setAttribute(anyString(), any());
 
         when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
         when(httpServletRequest.getParameterNames()).thenReturn(

@@ -17,12 +17,13 @@
  */
 package org.wso2.carbon.identity.oauth.endpoint.user;
 
-import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -34,7 +35,6 @@ import org.wso2.carbon.identity.oauth.user.UserInfoRequestValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Method;
 import java.util.Enumeration;
@@ -45,19 +45,20 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 /**
  * This class does unit test coverage for OpenIDConnectUserEndpoint class
  */
-@PrepareForTest({UserInfoEndpointConfig.class, OAuth2Util.class, OAuthServerConfiguration.class, OAuthASResponse.class})
-public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class OpenIDConnectUserEndpointTest {
 
     @Mock
     OAuthServerConfiguration oauthServerConfigurationMock;
@@ -69,7 +70,7 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
     UserInfoRequestValidator requestValidator;
 
     @Mock
-    UserInfoEndpointConfig userInfoEndpointConfig;
+    UserInfoEndpointConfig mockUserInfoEndpointConfig;
 
     @Mock
     UserInfoAccessTokenValidator tokenValidator;
@@ -122,61 +123,68 @@ public class OpenIDConnectUserEndpointTest extends PowerMockIdentityBaseTest {
     public void testGetUserClaims(String authResponse, String errorMessage, String errorCode,
                                   int expectedStatus) throws Exception {
 
-        String clientID = "rgfKVdnMQnJlSSr_pKFTxj3apiwYa";
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class)) {
+            String clientID = "rgfKVdnMQnJlSSr_pKFTxj3apiwYa";
 
-        UserInfoEndpointException ex = new UserInfoEndpointException(errorCode, errorMessage);
-        Class<?> clazz = OpenIDConnectUserEndpoint.class;
-        Object setHandleError = clazz.newInstance();
-        Method handleError = setHandleError.getClass().
-                getDeclaredMethod("handleError", UserInfoEndpointException.class);
-        handleError.setAccessible(true);
-        Response errorResponse = (Response)
-                handleError.invoke(setHandleError, ex);
+            UserInfoEndpointException ex = new UserInfoEndpointException(errorCode, errorMessage);
+            Class<?> clazz = OpenIDConnectUserEndpoint.class;
+            Object setHandleError = clazz.newInstance();
+            Method handleError = setHandleError.getClass().
+                    getDeclaredMethod("handleError", UserInfoEndpointException.class);
+            handleError.setAccessible(true);
+            Response errorResponse = (Response)
+                    handleError.invoke(setHandleError, ex);
 
-        assertEquals(errorResponse.getStatus(), expectedStatus, "Error response values are not same");
+            assertEquals(errorResponse.getStatus(), expectedStatus, "Error response values are not same");
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
-        when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(3600L);
-        when(userInfoResponseBuilder.getResponseString(tokenResponse)).thenReturn(authResponse);
-        when(userInfoEndpointConfig.getUserInfoResponseBuilder()).thenReturn(userInfoResponseBuilder);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            lenient().when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(3600L);
+            when(userInfoResponseBuilder.getResponseString(tokenResponse)).thenReturn(authResponse);
+            when(mockUserInfoEndpointConfig.getUserInfoResponseBuilder()).thenReturn(userInfoResponseBuilder);
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getTenantDomainOfOauthApp(appDO)).thenReturn("test");
-        when(OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
-        when(OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(clientID);
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(appDO)).thenReturn("test");
+            oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getClientIdForAccessToken(anyString())).thenReturn(clientID);
 
-        when(tokenValidator.validateToken(nullable(String.class), anyObject())).thenReturn(tokenResponse);
-        when(userInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
-        when(userInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
-        mockStatic(UserInfoEndpointConfig.class);
-        when(UserInfoEndpointConfig.getInstance()).thenReturn(userInfoEndpointConfig);
+            when(tokenValidator.validateToken(nullable(String.class), any())).thenReturn(tokenResponse);
+            when(mockUserInfoEndpointConfig.getUserInfoAccessTokenValidator()).thenReturn(tokenValidator);
+            when(mockUserInfoEndpointConfig.getUserInfoRequestValidator()).thenReturn(requestValidator);
 
-        Response response = openIDConnectUserEndpoint.getUserClaims(httpServletRequest);
-        assertNotNull(response.getStatus());
-        assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
+            userInfoEndpointConfig.when(UserInfoEndpointConfig::getInstance).thenReturn(mockUserInfoEndpointConfig);
 
-        MultivaluedMap<String, Object> metadata = response.getMetadata();
-        String metadataValue1 = metadata.get(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL).toString();
-        String metadataValue2 = metadata.get(OAuthConstants.HTTP_RESP_HEADER_PRAGMA).toString();
-        assertEquals(metadataValue1, "[no-store]", "Values are not equal");
-        assertEquals(metadataValue2, "[no-cache]", "Values are not equal");
-        assertNotNull(response);
-        assertEquals(response.getEntity().toString(), authResponse, "Response values are not same");
+            Response response = openIDConnectUserEndpoint.getUserClaims(httpServletRequest);
+            assertNotNull(response.getStatus());
+            assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
 
-        when(httpServletRequest.getParameterNames()).thenReturn(new Enumeration<String>() {
-            @Override
-            public boolean hasMoreElements() {
-                return false;
-            }
+            MultivaluedMap<String, Object> metadata = response.getMetadata();
+            String metadataValue1 = metadata.get(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL).toString();
+            String metadataValue2 = metadata.get(OAuthConstants.HTTP_RESP_HEADER_PRAGMA).toString();
+            assertEquals(metadataValue1, "[no-store]", "Values are not equal");
+            assertEquals(metadataValue2, "[no-cache]", "Values are not equal");
+            assertNotNull(response);
+            assertEquals(response.getEntity().toString(), authResponse, "Response values are not same");
 
-            @Override
-            public String nextElement() {
-                return null;
-            }
-        });
-        openIDConnectUserEndpoint.getUserClaimsPost(httpServletRequest, paramMap);
+            when(httpServletRequest.getParameterNames()).thenReturn(new Enumeration<String>() {
+                @Override
+                public boolean hasMoreElements() {
+
+                    return false;
+                }
+
+                @Override
+                public String nextElement() {
+
+                    return null;
+                }
+            });
+            openIDConnectUserEndpoint.getUserClaimsPost(httpServletRequest, paramMap);
+        }
     }
 
 }
