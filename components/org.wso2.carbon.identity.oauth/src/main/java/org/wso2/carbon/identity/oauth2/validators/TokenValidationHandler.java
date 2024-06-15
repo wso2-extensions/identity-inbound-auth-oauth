@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2019-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -28,10 +28,12 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -599,6 +601,18 @@ public class TokenValidationHandler {
             // Add authenticated user object since username attribute may not have the domain appended if the
             // subject identifier is built based in the SP config.
             introResp.setAuthorizedUser(accessTokenDO.getAuthzUser());
+            if (!OAuth2Util.isJWT(validationRequest.getAccessToken().getIdentifier())) {
+                OAuthAppDO oAuthAppDO;
+                try {
+                    String tenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                    oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain);
+                } catch (InvalidOAuthClientException e) {
+                    throw new IdentityOAuth2Exception("Error while retrieving OAuth app information for clientId: " +
+                            accessTokenDO.getConsumerKey());
+                }
+                List<String> audience = OAuth2Util.getOIDCAudience(accessTokenDO.getConsumerKey(), oAuthAppDO);
+                introResp.setAud(String.join(",", audience));
+            }
         }
 
         if (messageContext.getProperty(OAuth2Util.JWT_ACCESS_TOKEN) != null
