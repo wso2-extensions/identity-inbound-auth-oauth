@@ -18,8 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.dcr.processor;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -39,11 +38,11 @@ import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
 import org.wso2.carbon.identity.oauth.dcr.util.HandlerManager;
 
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -52,8 +51,7 @@ import static org.testng.Assert.fail;
 /**
  * Unit test covering DCRProcessor
  */
-@PrepareForTest({HandlerManager.class, DCRProcessor.class, IdentityUtil.class})
-public class DCRProcessorTest extends PowerMockTestCase {
+public class DCRProcessorTest {
 
     private DCRProcessor dcrProcessor;
     private IdentityMessageContext mockIdentityMessageContext;
@@ -89,29 +87,30 @@ public class DCRProcessorTest extends PowerMockTestCase {
 
         mockHandlerManager = mock(HandlerManager.class);
 
-        mockStatic(HandlerManager.class);
-        when(HandlerManager.getInstance()).thenReturn(mockHandlerManager);
+        try (MockedStatic<HandlerManager> handlerManager = mockStatic(HandlerManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);) {
+            handlerManager.when(HandlerManager::getInstance).thenReturn(mockHandlerManager);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION)).thenReturn(true);
+            identityUtil.when(() -> IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION))
+                    .thenReturn(true);
 
-        DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
-        whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);
+            if (request.equals("RegistrationRequest")) {
+                RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
+                when(mockHandlerManager.getRegistrationHandler(any(DCRMessageContext.class))).thenReturn(
+                        registrationHandler);
 
-        if (request.equals("RegistrationRequest")) {
-            RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
-            when(mockHandlerManager.getRegistrationHandler(dcrMessageContext)).thenReturn(registrationHandler);
+                when(registrationHandler.handle(any(DCRMessageContext.class))).thenReturn(new IdentityResponse.
+                        IdentityResponseBuilder());
+                assertNotNull(dcrProcessor.process((RegistrationRequest) identityRequest));
+            } else if (request.equals("UnregistrationRequest")) {
+                UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
+                when(mockHandlerManager.getUnRegistrationHandler(any(DCRMessageContext.class))).thenReturn(
+                        unRegistrationHandler);
 
-            when(registrationHandler.handle(dcrMessageContext)).thenReturn(new IdentityResponse.
-                    IdentityResponseBuilder());
-            assertNotNull(dcrProcessor.process((RegistrationRequest) identityRequest));
-        } else if (request.equals("UnregistrationRequest")) {
-            UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
-            when(mockHandlerManager.getUnRegistrationHandler(dcrMessageContext)).thenReturn(unRegistrationHandler);
-
-            when(unRegistrationHandler.handle(dcrMessageContext)).thenReturn(new IdentityResponse.
-                    IdentityResponseBuilder());
-            assertNotNull(dcrProcessor.process((UnregistrationRequest) identityRequest));
+                when(unRegistrationHandler.handle(any(DCRMessageContext.class))).thenReturn(new IdentityResponse.
+                        IdentityResponseBuilder());
+                assertNotNull(dcrProcessor.process((UnregistrationRequest) identityRequest));
+            }
         }
     }
 
@@ -120,34 +119,34 @@ public class DCRProcessorTest extends PowerMockTestCase {
 
         mockHandlerManager = mock(HandlerManager.class);
 
-        mockStatic(HandlerManager.class);
-        when(HandlerManager.getInstance()).thenReturn(mockHandlerManager);
+        try (MockedStatic<HandlerManager> handlerManager = mockStatic(HandlerManager.class);) {
+            handlerManager.when(HandlerManager::getInstance).thenReturn(mockHandlerManager);
 
-        DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
-        whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);
+            String errorMessage = "/identity/register API was deprecated.";
 
-        String errorMessage = "/identity/register API was deprecated.";
+            if (request.equals("RegistrationRequest")) {
+                try {
+                    RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
+                    when(mockHandlerManager.getRegistrationHandler(any(DCRMessageContext.class))).thenReturn(
+                            registrationHandler);
 
-        if (request.equals("RegistrationRequest")) {
-            try {
-                RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
-                when(mockHandlerManager.getRegistrationHandler(dcrMessageContext)).thenReturn(registrationHandler);
+                    when(registrationHandler.handle(any(DCRMessageContext.class))).thenReturn(new IdentityResponse.
+                            IdentityResponseBuilder());
+                } catch (Exception ex) {
+                    assertEquals(ex.getMessage(), errorMessage);
+                }
+            } else if (request.equals("UnregistrationRequest")) {
+                try {
+                    UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
+                    when(mockHandlerManager.getUnRegistrationHandler(any(DCRMessageContext.class))).thenReturn(
+                            unRegistrationHandler);
 
-                when(registrationHandler.handle(dcrMessageContext)).thenReturn(new IdentityResponse.
-                        IdentityResponseBuilder());
-            } catch (Exception ex) {
-                assertEquals(ex.getMessage(), errorMessage);
-            }
-        } else if (request.equals("UnregistrationRequest")) {
-            try {
-                UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
-                when(mockHandlerManager.getUnRegistrationHandler(dcrMessageContext)).thenReturn(unRegistrationHandler);
-
-                when(unRegistrationHandler.handle(dcrMessageContext)).thenReturn(new IdentityResponse.
-                        IdentityResponseBuilder());
-                assertNotNull(dcrProcessor.process((UnregistrationRequest) identityRequest));
-            } catch (Exception ex) {
-                assertEquals(ex.getMessage(), errorMessage);
+                    when(unRegistrationHandler.handle(any(DCRMessageContext.class))).thenReturn(new IdentityResponse.
+                            IdentityResponseBuilder());
+                    assertNotNull(dcrProcessor.process((UnregistrationRequest) identityRequest));
+                } catch (Exception ex) {
+                    assertEquals(ex.getMessage(), errorMessage);
+                }
             }
         }
     }
@@ -170,51 +169,53 @@ public class DCRProcessorTest extends PowerMockTestCase {
                                                                     String errorCode) throws Exception {
 
         mockHandlerManager = mock(HandlerManager.class);
+        try (MockedStatic<HandlerManager> handlerManager = mockStatic(HandlerManager.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);) {
 
-        mockStatic(HandlerManager.class);
-        when(HandlerManager.getInstance()).thenReturn(mockHandlerManager);
+            handlerManager.when(HandlerManager::getInstance).thenReturn(mockHandlerManager);
+            identityUtil.when(() -> IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION))
+                    .thenReturn(true);
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.isLegacyFeatureEnabled(DCRConstants.DCR_ID, DCRConstants.DCR_VERSION)).thenReturn(true);
+            if (request.equals("RegistrationRequest")) {
+                RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
+                when(mockHandlerManager.getRegistrationHandler(any(DCRMessageContext.class))).thenReturn(
+                        registrationHandler);
 
-        DCRMessageContext dcrMessageContext = mock(DCRMessageContext.class);
-        whenNew(DCRMessageContext.class).withArguments(identityRequest).thenReturn(dcrMessageContext);
-
-        if (request.equals("RegistrationRequest")) {
-            RegistrationHandler registrationHandler = mock(RegistrationHandler.class);
-            when(mockHandlerManager.getRegistrationHandler(dcrMessageContext)).thenReturn(registrationHandler);
-
-            if (errorCode.isEmpty()) {
-                doThrow(new DCRException("")).when(registrationHandler).handle(dcrMessageContext);
-            } else {
-                doThrow(new DCRException(errorCode, "")).when(registrationHandler).handle(dcrMessageContext);
-            }
-            try {
-                dcrProcessor.process((RegistrationRequest) identityRequest);
-                fail("Expected exception IdentityException not thrown by process method");
-            } catch (IdentityException ex) {
                 if (errorCode.isEmpty()) {
-                    assertEquals(ex.getErrorCode(), ErrorCodes.BAD_REQUEST.toString());
+                    doThrow(new DCRException("")).when(registrationHandler).handle(any(DCRMessageContext.class));
                 } else {
-                    assertEquals(ex.getErrorCode(), errorCode);
+                    doThrow(new DCRException(errorCode, "")).when(registrationHandler)
+                            .handle(any(DCRMessageContext.class));
                 }
-            }
-        } else if (request.equals("UnregistrationRequest")) {
-            UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
-            when(mockHandlerManager.getUnRegistrationHandler(dcrMessageContext)).thenReturn(unRegistrationHandler);
-            if (errorCode.isEmpty()) {
-                doThrow(new DCRException("")).when(unRegistrationHandler).handle(dcrMessageContext);
-            } else {
-                doThrow(new DCRException(errorCode, "")).when(unRegistrationHandler).handle(dcrMessageContext);
-            }
-            try {
-                dcrProcessor.process((UnregistrationRequest) identityRequest);
-                fail("Expected exception IdentityException not thrown by registerOAuthApplication");
-            } catch (IdentityException ex) {
+                try {
+                    dcrProcessor.process((RegistrationRequest) identityRequest);
+                    fail("Expected exception IdentityException not thrown by process method");
+                } catch (IdentityException ex) {
+                    if (errorCode.isEmpty()) {
+                        assertEquals(ex.getErrorCode(), ErrorCodes.BAD_REQUEST.toString());
+                    } else {
+                        assertEquals(ex.getErrorCode(), errorCode);
+                    }
+                }
+            } else if (request.equals("UnregistrationRequest")) {
+                UnRegistrationHandler unRegistrationHandler = mock(UnRegistrationHandler.class);
+                when(mockHandlerManager.getUnRegistrationHandler(any(DCRMessageContext.class))).thenReturn(
+                        unRegistrationHandler);
                 if (errorCode.isEmpty()) {
-                    assertEquals(ex.getMessage(), ErrorCodes.BAD_REQUEST.toString());
+                    doThrow(new DCRException("")).when(unRegistrationHandler).handle(any(DCRMessageContext.class));
                 } else {
-                    assertEquals(ex.getMessage(), errorCode);
+                    doThrow(new DCRException(errorCode, "")).when(unRegistrationHandler)
+                            .handle(any(DCRMessageContext.class));
+                }
+                try {
+                    dcrProcessor.process((UnregistrationRequest) identityRequest);
+                    fail("Expected exception IdentityException not thrown by registerOAuthApplication");
+                } catch (IdentityException ex) {
+                    if (errorCode.isEmpty()) {
+                        assertEquals(ex.getMessage(), ErrorCodes.BAD_REQUEST.toString());
+                    } else {
+                        assertEquals(ex.getMessage(), errorCode);
+                    }
                 }
             }
         }

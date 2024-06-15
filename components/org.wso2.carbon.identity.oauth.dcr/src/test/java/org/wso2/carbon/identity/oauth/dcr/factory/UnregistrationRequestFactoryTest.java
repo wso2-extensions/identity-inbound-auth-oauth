@@ -19,37 +19,35 @@
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
+import org.mockito.MockedConstruction;
 import org.mockito.stubbing.Answer;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.model.UnregistrationRequest;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.support.membermodification.MemberMatcher.methodsDeclaredIn;
-import static org.powermock.api.support.membermodification.MemberModifier.suppress;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
 /**
  * Unit test covering UnregistrationRequestFactory
  */
-@PrepareForTest(UnregistrationRequestFactory.class)
-public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
-
-    @Mock
-    private UnregistrationRequest.DCRUnregisterRequestBuilder unregisterRequestBuilder;
+@Listeners(MockitoTestNGListener.class)
+public class UnregistrationRequestFactoryTest {
 
     @Mock
     private HttpServletRequest mockHttpRequest;
@@ -81,81 +79,81 @@ public class UnregistrationRequestFactoryTest extends PowerMockTestCase {
     public void testCanHandle(String requestURI, String httpMethod, boolean expected) throws Exception {
 
         when(mockHttpRequest.getRequestURI()).thenReturn(requestURI);
-        when(mockHttpRequest.getMethod()).thenReturn(httpMethod);
+        lenient().when(mockHttpRequest.getMethod()).thenReturn(httpMethod);
         assertEquals(registrationRequestFactory.canHandle(mockHttpRequest, mockHttpResponse), expected,
                 "Redirect Uri doesn't match");
     }
 
-    @DataProvider(name = "instanceDataProvider")
-    public Object[][] getInstanceData() {
-
-        unregisterRequestBuilder = mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
-        return new Object[][]{
-                {null},
-                {unregisterRequestBuilder}
-        };
-    }
-
-    @Test(dataProvider = "instanceDataProvider")
-    public void testCreate(Object builder) throws Exception {
+    @Test
+    public void testCreate() throws Exception {
 
         mockHttpResponse = mock(HttpServletResponse.class);
         mockHttpRequest = mock(HttpServletRequest.class);
-        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
         String dummyConsumerKey = "dummyConsumerKey";
         when(mockHttpRequest.getRequestURI()).thenReturn("dummyVal/identity/register/" + dummyConsumerKey);
         when(mockHttpRequest.getMethod()).thenReturn(HttpMethod.DELETE);
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
         String dummyApplicationName = "dummyApplicationName";
         when(mockHttpRequest.getParameter("applicationName")).thenReturn(dummyApplicationName);
         String dummyUserId = "dummyUserId";
         when(mockHttpRequest.getParameter("userId")).thenReturn(dummyUserId);
 
-        if (builder == null) {
-            unregisterRequestBuilder = mock(UnregistrationRequest.DCRUnregisterRequestBuilder.class);
-        } else {
-            unregisterRequestBuilder = (UnregistrationRequest.DCRUnregisterRequestBuilder) builder;
-        }
-        whenNew(UnregistrationRequest.DCRUnregisterRequestBuilder.class).withNoArguments()
-                .thenReturn(unregisterRequestBuilder);
-
         final String[] header = new String[3];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
 
-                header[0] = (String) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(unregisterRequestBuilder).setApplicationName(anyString());
+        try (MockedConstruction<UnregistrationRequest.DCRUnregisterRequestBuilder> mockedConstruction =
+                     mockConstruction(UnregistrationRequest.DCRUnregisterRequestBuilder.class,
+                (mock, context) -> {
+                    doAnswer((Answer<Object>) invocation -> {
 
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+                        header[0] = (String) invocation.getArguments()[0];
+                        return null;
+                    }).when(mock).setApplicationName(anyString());
 
-                header[1] = (String) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(unregisterRequestBuilder).setUserId(anyString());
+                    doAnswer((Answer<Object>) invocation -> {
 
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+                        header[1] = (String) invocation.getArguments()[0];
+                        return null;
+                    }).when(mock).setUserId(anyString());
 
-                header[2] = (String) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(unregisterRequestBuilder).setConsumerKey(anyString());
+                    doAnswer((Answer<Object>) invocation -> {
 
-        if (builder == null) {
+                        header[2] = (String) invocation.getArguments()[0];
+                        return null;
+                    }).when(mock).setConsumerKey(anyString());
+                })) {
             registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
-        } else {
-            registrationRequestFactory.create(unregisterRequestBuilder,
-                    mockHttpRequest, mockHttpResponse);
+
+            assertEquals(header[0], dummyApplicationName, "Application name doesn't match with the given " +
+                    "application name");
+            assertEquals(header[1], dummyUserId, "User id doesn't match with the given User id");
+            assertEquals(header[2], dummyConsumerKey, "ConsumerKey doesn't match with the given ConsumerKey");
         }
-        assertEquals(header[0], dummyApplicationName, "Application name doesn't match with the given " +
-                "application name");
-        assertEquals(header[1], dummyUserId, "User id doesn't match with the given User id");
-        assertEquals(header[2], dummyConsumerKey, "ConsumerKey doesn't match with the given ConsumerKey");
     }
 
+    @Test
+    public void testCreateWithBuilder() throws Exception {
+
+        mockHttpResponse = mock(HttpServletResponse.class);
+        mockHttpRequest = mock(HttpServletRequest.class);
+        String dummyConsumerKey = "dummyConsumerKey";
+        when(mockHttpRequest.getRequestURI()).thenReturn("dummyVal/identity/register/" + dummyConsumerKey);
+        when(mockHttpRequest.getMethod()).thenReturn(HttpMethod.DELETE);
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        String dummyApplicationName = "dummyApplicationName";
+        when(mockHttpRequest.getParameter("applicationName")).thenReturn(dummyApplicationName);
+        String dummyUserId = "dummyUserId";
+        when(mockHttpRequest.getParameter("userId")).thenReturn(dummyUserId);
+
+        UnregistrationRequest.DCRUnregisterRequestBuilder identityRequestBuilder =
+                (UnregistrationRequest.DCRUnregisterRequestBuilder) registrationRequestFactory.create(mockHttpRequest,
+                        mockHttpResponse);
+        UnregistrationRequest build = identityRequestBuilder.build();
+        assertEquals(build.getApplicationName(), dummyApplicationName,
+                "Application name doesn't match with the given " +
+                        "application name");
+        assertEquals(build.getUserId(), dummyUserId, "User id doesn't match with the given User id");
+        assertEquals(build.getConsumerKey(), dummyConsumerKey, "ConsumerKey doesn't match with the given ConsumerKey");
+    }
 }
