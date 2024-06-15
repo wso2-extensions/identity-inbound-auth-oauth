@@ -809,10 +809,12 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         if (isNotEmpty(userClaims) && userClaims.containsKey(roleGroupClaimURI)) {
             String roleClaim = userClaims.get(roleGroupClaimURI);
-            List<String> rolesList = Arrays.asList(roleClaim.split(Pattern.quote(claimSeparator)));
-            String spMappedRoleClaim =
-                    OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider, rolesList, claimSeparator);
-            userClaims.put(roleGroupClaimURI, spMappedRoleClaim);
+            if (StringUtils.isNotBlank(roleClaim)) {
+                List<String> rolesList = Arrays.asList(roleClaim.split(Pattern.quote(claimSeparator)));
+                String spMappedRoleClaim =
+                        OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider, rolesList, claimSeparator);
+                userClaims.put(roleGroupClaimURI, spMappedRoleClaim);
+            }
         }
     }
 
