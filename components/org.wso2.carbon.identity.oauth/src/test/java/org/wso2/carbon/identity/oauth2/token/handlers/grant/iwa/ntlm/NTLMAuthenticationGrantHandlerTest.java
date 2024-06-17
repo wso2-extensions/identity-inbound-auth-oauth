@@ -4,7 +4,6 @@ import com.sun.jna.platform.win32.Sspi;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -26,9 +25,15 @@ import waffle.windows.auth.impl.WindowsSecurityContextImpl;
 import java.security.Principal;
 
 import javax.security.auth.Subject;
+import javax.servlet.http.HttpSession;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
@@ -44,22 +49,16 @@ public class NTLMAuthenticationGrantHandlerTest {
 
     private static final String SECURITY_HEADER = "javax.security.auth.subject";
 
-
     @Mock
     private OAuthServerConfiguration serverConfiguration;
     @Mock
-    private WindowsAuthProviderImpl windowsAuthProvider;
-    @Mock
     private WindowsCredentialsHandleImpl mockWindowsCredentialsHandle;
-    @Mock
-    private WindowsSecurityContextImpl windowsSecurityContext;
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
 
     @DataProvider
     public Object[][] getValidateGrantTypeHandlerData() {
-        return new Object[][] {
-                { null }, { TOKEN }
-        };
+
+        return new Object[][]{{null}, {TOKEN}};
     }
 
     @BeforeMethod
@@ -73,11 +72,13 @@ public class NTLMAuthenticationGrantHandlerTest {
 
     @AfterMethod
     public void tearDown() {
+
         oAuthServerConfiguration.close();
     }
 
     @Test
     public void testIssueRefreshToken() throws Exception {
+
         NTLMAuthenticationGrantHandler ntlmAuthenticationGrantHandler = new NTLMAuthenticationGrantHandler();
         boolean ret = ntlmAuthenticationGrantHandler.issueRefreshToken();
         Assert.assertEquals(ret, false);
@@ -86,61 +87,66 @@ public class NTLMAuthenticationGrantHandlerTest {
     @Test(dataProvider = "getValidateGrantTypeHandlerData")
     public void testValidateGrant(String token) throws Exception {
 
-        try (MockedStatic<WindowsCredentialsHandleImpl> windowsCredentialsHandle =
-                     mockStatic(WindowsCredentialsHandleImpl.class);
+        try (MockedStatic<WindowsCredentialsHandleImpl> windowsCredentialsHandle = mockStatic(
+                WindowsCredentialsHandleImpl.class);
              MockedStatic<WindowsAccountImpl> windowsAccount = mockStatic(WindowsAccountImpl.class)) {
 
-//            whenNew(WindowsAuthProviderImpl.class).withAnyArguments().thenReturn(this.windowsAuthProvider);
-            windowsCredentialsHandle.when(() -> WindowsCredentialsHandleImpl.getCurrent(SECURITY_PACKAGE))
-                    .thenReturn(this.mockWindowsCredentialsHandle);
-            windowsAccount.when(WindowsAccountImpl::getCurrentUsername).thenReturn(CURRENT_USERNAME);
-
-            Sspi.CtxtHandle ctxtHandle = new Sspi.CtxtHandle();
-            byte[] continueTokenBytes = Base64.decode(TOKEN_STRING);
-            Sspi.SecBufferDesc secBufferDesc = new Sspi.SecBufferDesc(Sspi.SECBUFFER_TOKEN, continueTokenBytes);
-            try (MockedConstruction<WindowsSecurityContextImpl> mockedConstruction = Mockito.mockConstruction(
-                    WindowsSecurityContextImpl.class,
-                    (mock, context) -> {
-                        doNothing().when(mock).initialize(null, null, CURRENT_USERNAME);
-                        when(mock.getHandle()).thenReturn(ctxtHandle);
-                        doNothing().when(mock).initialize(ctxtHandle, secBufferDesc, "localhost");
-                        if (token != null) {
-                            when(mock.getToken()).thenReturn(token.getBytes());
-                        }
+            try (MockedConstruction<WindowsAuthProviderImpl> authProviderMockedConstruction = mockConstruction(
+                    WindowsAuthProviderImpl.class, (mock, context) -> {
+                        when(mock.acceptSecurityToken(anyString(), any(), anyString())).thenAnswer(invocation -> null);
                     })) {
-//            whenNew(Sspi.SecBufferDesc.class).withArguments(Sspi.SECBUFFER_TOKEN, continueTokenBytes).thenReturn
-//                    (secBufferDesc);
 
-                NTLMAuthenticationGrantHandler ntlmAuthenticationGrantHandler = new NTLMAuthenticationGrantHandler();
-                OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
-                oAuth2AccessTokenReqDTO.setWindowsToken(token);
-                OAuthTokenReqMessageContext oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(
-                        oAuth2AccessTokenReqDTO);
+                windowsCredentialsHandle.when(() -> WindowsCredentialsHandleImpl.getCurrent(SECURITY_PACKAGE))
+                        .thenReturn(this.mockWindowsCredentialsHandle);
+                windowsAccount.when(WindowsAccountImpl::getCurrentUsername).thenReturn(CURRENT_USERNAME);
 
-//                SimpleHttpRequest simpleHttpRequest = new SimpleHttpRequest(new Connector());
-//                whenNew(SimpleHttpRequest.class).withAnyArguments().thenReturn(simpleHttpRequest);
-                Subject subject = new Subject();
-                subject.getPrincipals().add(new Principal() {
-                    @Override
-                    public String getName() {
-
-                        return PRINCIPAL_NAME;
-                    }
-                });
-//                simpleHttpRequest.getSession().setAttribute(SECURITY_HEADER, subject);
-                try (MockedConstruction<SimpleHttpRequest> mockedConstruction1 = Mockito.mockConstruction(
-                        SimpleHttpRequest.class,
-                        (mock, context) -> {
-                            when(mock.getSession().getAttribute(SECURITY_HEADER)).thenReturn(subject);
+                Sspi.CtxtHandle ctxtHandle = new Sspi.CtxtHandle();
+                byte[] continueTokenBytes = Base64.decode(TOKEN_STRING);
+                try (MockedConstruction<WindowsSecurityContextImpl> mockedConstruction = mockConstruction(
+                        WindowsSecurityContextImpl.class, (mock, context) -> {
+                            doNothing().when(mock).initialize(null, null, CURRENT_USERNAME);
+                            when(mock.getHandle()).thenReturn(ctxtHandle);
+                            doNothing().when(mock).initialize(any(), any(), anyString());
+                            if (token != null) {
+                                when(mock.getToken()).thenReturn(token.getBytes());
+                            }
                         })) {
-                    try {
-                        ntlmAuthenticationGrantHandler.validateGrant(oAuthTokenReqMessageContext);
-                        AuthenticatedUser authorizedUser =
-                                oAuthTokenReqMessageContext.getAuthorizedUser();
-                        Assert.assertNotNull(authorizedUser);
-                        Assert.assertNotNull(authorizedUser.getUserName(), CURRENT_USERNAME);
-                    } catch (IdentityOAuth2Exception e) {
-                        Assert.assertEquals(e.getMessage(), "NTLM token is null");
+                    try (MockedConstruction<Sspi.SecBufferDesc> secBufferDescMockedConstruction = mockConstruction(
+                            Sspi.SecBufferDesc.class, (mock, context) -> {
+                                when(mock.getBytes()).thenReturn(new Sspi.SecBuffer.ByReference(Sspi.SECBUFFER_TOKEN,
+                                        Base64.decode(TOKEN_STRING)).getBytes());
+                            })) {
+
+                        NTLMAuthenticationGrantHandler ntlmAuthenticationGrantHandler =
+                                new NTLMAuthenticationGrantHandler();
+                        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+                        oAuth2AccessTokenReqDTO.setWindowsToken(token);
+                        OAuthTokenReqMessageContext oAuthTokenReqMessageContext =
+                                new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+
+                        Subject subject = new Subject();
+                        subject.getPrincipals().add(new Principal() {
+                            @Override
+                            public String getName() {
+
+                                return PRINCIPAL_NAME;
+                            }
+                        });
+                        try (MockedConstruction<SimpleHttpRequest> mockedConstruction1 = mockConstruction(
+                                SimpleHttpRequest.class, (mock, context) -> {
+                                    HttpSession httpSession = mock(HttpSession.class);
+                                    when(mock.getSession()).thenReturn(httpSession);
+                                    when(httpSession.getAttribute(SECURITY_HEADER)).thenReturn(subject);
+                                })) {
+                            try {
+                                ntlmAuthenticationGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                                AuthenticatedUser authorizedUser = oAuthTokenReqMessageContext.getAuthorizedUser();
+                                Assert.assertNotNull(authorizedUser);
+                                Assert.assertNotNull(authorizedUser.getUserName(), CURRENT_USERNAME);
+                            } catch (IdentityOAuth2Exception e) {
+                                Assert.assertEquals(e.getMessage(), "NTLM token is null");
+                            }
+                        }
                     }
                 }
             }
@@ -150,47 +156,53 @@ public class NTLMAuthenticationGrantHandlerTest {
     @Test
     public void testValidateGrantForUnAuthenticatedState() throws Exception {
 
-        try (MockedStatic<WindowsCredentialsHandleImpl> windowsCredentialsHandle =
-                     mockStatic(WindowsCredentialsHandleImpl.class);
+        try (MockedStatic<WindowsCredentialsHandleImpl> windowsCredentialsHandle = mockStatic(
+                WindowsCredentialsHandleImpl.class);
              MockedStatic<WindowsAccountImpl> windowsAccount = mockStatic(WindowsAccountImpl.class)) {
 
-//            whenNew(WindowsAuthProviderImpl.class).withAnyArguments().thenReturn(windowsAuthProvider);
-            windowsCredentialsHandle.when(() -> WindowsCredentialsHandleImpl.getCurrent(SECURITY_PACKAGE))
-                    .thenReturn(mockWindowsCredentialsHandle);
-            windowsAccount.when(WindowsAccountImpl::getCurrentUsername).thenReturn(CURRENT_USERNAME);
-
-//            whenNew(WindowsSecurityContextImpl.class).withAnyArguments().thenReturn(windowsSecurityContext);
-//            doNothing().when(windowsSecurityContext).initialize(null, null, CURRENT_USERNAME);
-
-            Sspi.CtxtHandle ctxtHandle = new Sspi.CtxtHandle();
-//            when(windowsSecurityContext.getHandle()).thenReturn(ctxtHandle);
-            byte[] continueTokenBytes = Base64.decode(TOKEN_STRING);
-            Sspi.SecBufferDesc secBufferDesc = new Sspi.SecBufferDesc(Sspi.SECBUFFER_TOKEN, continueTokenBytes);
-//            whenNew(Sspi.SecBufferDesc.class).withArguments(Sspi.SECBUFFER_TOKEN, continueTokenBytes).thenReturn
-//                    (secBufferDesc);
-//            doThrow(new RuntimeException()).when(windowsSecurityContext)
-//                    .initialize(ctxtHandle, secBufferDesc, "localhost");
-//            when(windowsSecurityContext.getToken()).thenReturn(TOKEN.getBytes());
-            try (MockedConstruction<WindowsSecurityContextImpl> mockedConstruction = Mockito.mockConstruction(
-                    WindowsSecurityContextImpl.class,
-                    (mock, context) -> {
-                        doNothing().when(mock).initialize(null, null, CURRENT_USERNAME);
-                        when(mock.getHandle()).thenReturn(ctxtHandle);
-                        doThrow(new RuntimeException()).when(mock)
-                                .initialize(ctxtHandle, secBufferDesc, "localhost");
-                        when(mock.getToken()).thenReturn(TOKEN.getBytes());
+            try (MockedConstruction<WindowsAuthProviderImpl> authProviderMockedConstruction = mockConstruction(
+                    WindowsAuthProviderImpl.class, (mock, context) -> {
+                        when(mock.acceptSecurityToken(anyString(), any(), anyString())).thenAnswer(invocation -> null);
                     })) {
-                NTLMAuthenticationGrantHandler ntlmAuthenticationGrantHandler = new NTLMAuthenticationGrantHandler();
-                OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
-                oAuth2AccessTokenReqDTO.setWindowsToken(TOKEN);
-                OAuthTokenReqMessageContext oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(
-                        oAuth2AccessTokenReqDTO);
-                try {
-                    ntlmAuthenticationGrantHandler.validateGrant(oAuthTokenReqMessageContext);
-                    Assert.fail(
-                            "Expectation is to have a IdentityOAuth2Exception here and it seems it is not throwing.");
-                } catch (IdentityOAuth2Exception e) {
-                    Assert.assertEquals(e.getMessage(), "Error while validating the NTLM authentication grant");
+
+                windowsCredentialsHandle.when(() -> WindowsCredentialsHandleImpl.getCurrent(SECURITY_PACKAGE))
+                        .thenReturn(this.mockWindowsCredentialsHandle);
+                windowsAccount.when(WindowsAccountImpl::getCurrentUsername).thenReturn(CURRENT_USERNAME);
+
+                Sspi.CtxtHandle ctxtHandle = new Sspi.CtxtHandle();
+                byte[] continueTokenBytes = Base64.decode(TOKEN_STRING);
+                try (MockedConstruction<WindowsSecurityContextImpl> mockedConstruction = mockConstruction(
+                        WindowsSecurityContextImpl.class, (mock, context) -> {
+                            doNothing().when(mock).initialize(null, null, CURRENT_USERNAME);
+                            when(mock.getHandle()).thenReturn(ctxtHandle);
+                            doThrow(new RuntimeException()).when(mock)
+                                    .initialize(notNull(Sspi.CtxtHandle.class), notNull(Sspi.SecBufferDesc.class),
+                                            anyString());
+                            when(mock.getToken()).thenReturn(TOKEN.getBytes());
+                        })) {
+                    try (MockedConstruction<Sspi.SecBufferDesc> secBufferDescMockedConstruction = mockConstruction(
+                            Sspi.SecBufferDesc.class, (mock, context) -> {
+                                when(mock.getBytes()).thenReturn(new Sspi.SecBuffer.ByReference(Sspi.SECBUFFER_TOKEN,
+                                        Base64.decode(TOKEN_STRING)).getBytes());
+                            })) {
+
+                        NTLMAuthenticationGrantHandler ntlmAuthenticationGrantHandler =
+                                new NTLMAuthenticationGrantHandler();
+                        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+                        oAuth2AccessTokenReqDTO.setWindowsToken(TOKEN);
+                        OAuthTokenReqMessageContext oAuthTokenReqMessageContext =
+                                new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+
+                        try {
+                            ntlmAuthenticationGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                            Assert.fail(
+                                    "Expectation is to have a IdentityOAuth2Exception here and it seems it is " +
+                                            "not throwing.");
+                        } catch (IdentityOAuth2Exception e) {
+                            Assert.assertEquals(e.getMessage(), "Error while validating the NTLM authentication " +
+                                    "grant");
+                        }
+                    }
                 }
             }
         }
