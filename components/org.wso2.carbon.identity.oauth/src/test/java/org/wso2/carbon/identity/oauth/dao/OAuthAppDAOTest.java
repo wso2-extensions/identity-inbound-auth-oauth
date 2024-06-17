@@ -809,30 +809,40 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     public void testGetAppInformationWithOIDCPropertiesForImpersonationTest
             (boolean subjectTokenEnabled, int subjectTokenExpiryTime) throws Exception {
 
-        setupMocksForTest();
-        mockUserstore();
-        try (Connection connection = getConnection(DB_NAME)) {
-            mockIdentityUtilDataBaseConnection(connection);
-            OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
 
-            // Add Impersonation OIDC properties.
-            defaultOAuthAppDO.setSubjectTokenEnabled(subjectTokenEnabled);
-            defaultOAuthAppDO.setSubjectTokenExpiryTime(subjectTokenExpiryTime);
-            addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+                // Add Impersonation OIDC properties.
+                defaultOAuthAppDO.setSubjectTokenEnabled(subjectTokenEnabled);
+                defaultOAuthAppDO.setSubjectTokenExpiryTime(subjectTokenExpiryTime);
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
 
-            OAuthAppDAO appDAO = new OAuthAppDAO();
-            OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
-            assertNotNull(oAuthAppDO);
-            assertEquals(oAuthAppDO.isSubjectTokenEnabled(), subjectTokenEnabled);
-            assertEquals(oAuthAppDO.getSubjectTokenExpiryTime(), subjectTokenExpiryTime);
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(oAuthAppDO);
+                assertEquals(oAuthAppDO.isSubjectTokenEnabled(), subjectTokenEnabled);
+                assertEquals(oAuthAppDO.getSubjectTokenExpiryTime(), subjectTokenExpiryTime);
 
-            // Update Impersonation OIDC properties.
-            oAuthAppDO.setSubjectTokenEnabled(!subjectTokenEnabled);
+                // Update Impersonation OIDC properties.
+                oAuthAppDO.setSubjectTokenEnabled(!subjectTokenEnabled);
 
-            appDAO.updateConsumerApplication(oAuthAppDO);
-            OAuthAppDO retrievedOAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
-            assertNotNull(retrievedOAuthAppDO);
-            assertEquals(retrievedOAuthAppDO.isSubjectTokenEnabled(), !subjectTokenEnabled);
+                appDAO.updateConsumerApplication(oAuthAppDO);
+                OAuthAppDO retrievedOAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(retrievedOAuthAppDO);
+                assertEquals(retrievedOAuthAppDO.isSubjectTokenEnabled(), !subjectTokenEnabled);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
         }
     }
 

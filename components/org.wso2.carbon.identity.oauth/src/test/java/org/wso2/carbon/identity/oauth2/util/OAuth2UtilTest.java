@@ -1218,8 +1218,8 @@ public class OAuth2UtilTest {
 
         OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
         when(organizationManagerMock.isOrganizationExistById(organizationId)).thenReturn(isExistingOrganization);
-        when(organizationManagerMock.getOrganization(organizationId, false, false)).thenReturn(organization);
-        when(organization.getStatus()).thenReturn(status);
+        lenient().when(organizationManagerMock.getOrganization(organizationId, false, false)).thenReturn(organization);
+        lenient().when(organization.getStatus()).thenReturn(status);
         assertEquals(OAuth2Util.isOrganizationValidAndActive(organizationId), isValid);
     }
 

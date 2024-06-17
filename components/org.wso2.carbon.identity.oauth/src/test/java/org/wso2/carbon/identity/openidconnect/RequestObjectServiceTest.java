@@ -86,12 +86,17 @@ public class RequestObjectServiceTest {
         requestedEssentialClaims.add(lstRequestedClams);
 
         TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
+        try {
+            addConsumerApp();
+        } catch (Exception e) {
+            // ignore
+        }
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
 
-        deleteToken(tokenId);
+        deleteTokenById(tokenId);
     }
 
     @Test
@@ -173,7 +178,35 @@ public class RequestObjectServiceTest {
         }
     }
 
-    protected void deleteToken(String tokenId) throws Exception {
+    protected void addConsumerApp() throws Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String sql = "INSERT INTO IDN_OAUTH_CONSUMER_APPS (CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, " +
+                    "USER_DOMAIN, APP_NAME, OAUTH_VERSION, CALLBACK_URL, GRANT_TYPES, APP_STATE) VALUES" +
+                    "(?, ?, ?, ?, ?, ?, ?, ?,?, ?);";
+
+            try (PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+                prepStmt.setString(1, consumerKey);
+                prepStmt.setString(2, "87n9a540f544777860e44e75f605d435");
+                prepStmt.setString(3, "user1");
+                prepStmt.setInt(4, 1234);
+                prepStmt.setString(5, "PRIMARY");
+                prepStmt.setString(6, "myApp");
+                prepStmt.setString(7, "OAuth-2.0");
+                prepStmt.setString(8, "http://localhost:8080/redirect");
+                prepStmt.setString(9, "refresh_token implicit password iwa:ntlm client_credentials authorization_code");
+                prepStmt.setString(10, "ACTIVE");
+                prepStmt.executeUpdate();
+            }
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (Exception e) {
+            String errorMsg = "Error occurred while inserting tokenID: " + consumerKey;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
+
+    }
+
+    protected void deleteTokenById(String tokenId) throws Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String sql = SQLQueries.DELETE_OLD_TOKEN_BY_ID;

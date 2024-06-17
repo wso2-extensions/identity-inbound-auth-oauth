@@ -19,8 +19,11 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -33,13 +36,13 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtSe
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.SubjectTokenDO;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
@@ -47,12 +50,10 @@ import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT
 /**
  * Unit test cases for {@link SubjectTokenIssuer}
  */
-@PrepareForTest({
-        OAuthServerConfiguration.class,
-})
-public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class SubjectTokenIssuerTest {
     @Mock
-    private OAuthServerConfiguration oAuthServerConfiguration;
+    private OAuthServerConfiguration mockOAuthServerConfiguration;
     @Mock
     private AuthenticatedUser impersonator;
     @Mock
@@ -64,14 +65,16 @@ public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
     private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
     private ImpersonationMgtServiceImpl impersonationMgtService = new ImpersonationMgtServiceImpl();
 
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(impersonationMgtService);
 
-        when(impersonator.getLoggableMaskedUserId()).thenReturn("123456789");
+        lenient().when(impersonator.getLoggableMaskedUserId()).thenReturn("123456789");
 
         when(oAuth2AuthorizeReqDTO.getRequestedSubjectId()).thenReturn("dummySubjectId");
         when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(impersonator);
@@ -79,10 +82,18 @@ public class SubjectTokenIssuerTest extends PowerMockIdentityBaseTest {
         when(oAuth2AuthorizeReqDTO.getScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
         when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn("carbon.super");
 
-        when(jwtTokenIssuer.issueSubjectToken(oAuthAuthzReqMessageContext)).thenReturn("dummySubjectToken");
+        lenient().when(jwtTokenIssuer.issueSubjectToken(oAuthAuthzReqMessageContext)).thenReturn("dummySubjectToken");
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, jwtTokenIssuer);
-        when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
+        lenient().when(mockOAuthServerConfiguration.getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+        // Validator is removed based on the class name.
+        OAuth2ServiceComponentHolder.getInstance()
+                .removeImpersonationValidator(new DummyErrornusImpersonationValidator());
+        oAuthServerConfiguration.close();
     }
 
     @Test
