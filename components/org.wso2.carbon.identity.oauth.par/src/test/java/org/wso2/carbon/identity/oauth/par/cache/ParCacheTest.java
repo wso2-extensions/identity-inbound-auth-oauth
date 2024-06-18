@@ -17,8 +17,6 @@
  */
 package org.wso2.carbon.identity.oauth.par.cache;
 
-import org.testng.IObjectFactory;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNotNull;
@@ -27,12 +25,6 @@ import static org.testng.Assert.assertNotNull;
  * Test class for ParCache.
  */
 public class ParCacheTest {
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @Test
     public void testGetInstance() {

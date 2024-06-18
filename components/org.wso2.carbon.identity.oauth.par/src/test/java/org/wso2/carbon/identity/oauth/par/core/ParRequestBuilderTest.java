@@ -19,10 +19,11 @@ package org.wso2.carbon.identity.oauth.par.core;
 
 import org.apache.oltu.oauth2.common.OAuth;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -37,22 +38,23 @@ import javax.ws.rs.HttpMethod;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 
 /**
  * Test class for ParRequestBuilder.
  */
-@PrepareForTest({LoggerUtils.class, ParAuthServiceComponentDataHolder.class})
-public class ParRequestBuilderTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class ParRequestBuilderTest {
 
     @Mock
     private ParAuthServiceImpl parAuthService;
     @Mock
-    private ParAuthServiceComponentDataHolder parAuthServiceComponentDataHolder;
+    private ParAuthServiceComponentDataHolder mockParAuthServiceComponentDataHolder;
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String APP_REDIRECT_URL = "http://localhost:8080/redirect";
     private static final String RESPONSE_TYPE = "code";
@@ -95,37 +97,41 @@ public class ParRequestBuilderTest extends PowerMockTestCase {
     @Test(dataProvider = "testCanHandleData")
     public void testCanHandle(Object requestParamsObj, boolean expectedStatus) {
 
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        Map<String, String> requestParams = (Map<String, String>) requestParamsObj;
-        request = mockHttpRequest(requestParams);
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class)) {
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            Map<String, String> requestParams = (Map<String, String>) requestParamsObj;
+            request = mockHttpRequest(requestParams);
 
-        assertEquals(parRequestBuilder.canHandle(request), expectedStatus);
-        // Test for null request.
-        assertFalse(parRequestBuilder.canHandle(null));
+            assertEquals(parRequestBuilder.canHandle(request), expectedStatus);
+            // Test for null request.
+            assertFalse(parRequestBuilder.canHandle(null));
+        }
     }
 
     @Test
     public void testBuildRequest() throws Exception {
 
-        Map<String, String> requestParams = new HashMap<>();
-        requestParams.put(OAuthConstants.OAuth20Params.REQUEST_URI, VALID_REQUEST_URI);
-        requestParams.put(OAuthConstants.OAuth20Params.CLIENT_ID, CLIENT_ID_VALUE);
-        request = mockHttpRequest(requestParams);
-        params.put(OAuthConstants.OAuth20Params.CLIENT_ID, CLIENT_ID_VALUE);
-        params.put(OAuthConstants.OAuth20Params.REDIRECT_URI, APP_REDIRECT_URL);
-        params.put(OAuthConstants.OAuth20Params.RESPONSE_TYPE, RESPONSE_TYPE);
+        try (MockedStatic<ParAuthServiceComponentDataHolder> parAuthServiceComponentDataHolder =
+                     mockStatic(ParAuthServiceComponentDataHolder.class)) {
+            Map<String, String> requestParams = new HashMap<>();
+            requestParams.put(OAuthConstants.OAuth20Params.REQUEST_URI, VALID_REQUEST_URI);
+            requestParams.put(OAuthConstants.OAuth20Params.CLIENT_ID, CLIENT_ID_VALUE);
+            request = mockHttpRequest(requestParams);
+            params.put(OAuthConstants.OAuth20Params.CLIENT_ID, CLIENT_ID_VALUE);
+            params.put(OAuthConstants.OAuth20Params.REDIRECT_URI, APP_REDIRECT_URL);
+            params.put(OAuthConstants.OAuth20Params.RESPONSE_TYPE, RESPONSE_TYPE);
 
-        mockStatic(ParAuthServiceComponentDataHolder.class);
-        when(ParAuthServiceComponentDataHolder.getInstance()).thenReturn(parAuthServiceComponentDataHolder);
-        when(parAuthServiceComponentDataHolder.getParAuthService()).thenReturn(parAuthService);
-        when(parAuthService.retrieveParams(anyString(), anyString())).thenReturn(params);
+            parAuthServiceComponentDataHolder.when(
+                    ParAuthServiceComponentDataHolder::getInstance).thenReturn(mockParAuthServiceComponentDataHolder);
+            when(mockParAuthServiceComponentDataHolder.getParAuthService()).thenReturn(parAuthService);
+            when(parAuthService.retrieveParams(anyString(), anyString())).thenReturn(params);
 
-        HttpServletRequest builtRequest = parRequestBuilder.buildRequest(request);
+            HttpServletRequest builtRequest = parRequestBuilder.buildRequest(request);
 
-        assertEquals(builtRequest.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID), CLIENT_ID_VALUE);
-        assertEquals(builtRequest.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI), APP_REDIRECT_URL);
-        assertEquals(builtRequest.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE), RESPONSE_TYPE);
+            assertEquals(builtRequest.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID), CLIENT_ID_VALUE);
+            assertEquals(builtRequest.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI), APP_REDIRECT_URL);
+            assertEquals(builtRequest.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE), RESPONSE_TYPE);
+        }
     }
 
     private HttpServletRequest mockHttpRequest(final Map<String, String> requestParams) {
@@ -136,10 +142,11 @@ public class ParRequestBuilderTest extends PowerMockTestCase {
             return requestParams.get(key);
         }).when(httpServletRequest).getParameter(anyString());
 
-        when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
-        when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(requestParams.keySet()));
-        when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);
-        when(httpServletRequest.getContentType()).thenReturn(OAuth.ContentType.URL_ENCODED);
+        lenient().when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
+        lenient().when(httpServletRequest.getParameterNames())
+                .thenReturn(Collections.enumeration(requestParams.keySet()));
+        lenient().when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);
+        lenient().when(httpServletRequest.getContentType()).thenReturn(OAuth.ContentType.URL_ENCODED);
 
         return httpServletRequest;
     }

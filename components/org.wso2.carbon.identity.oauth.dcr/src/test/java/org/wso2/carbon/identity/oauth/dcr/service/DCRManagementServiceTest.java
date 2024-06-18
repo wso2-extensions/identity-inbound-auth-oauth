@@ -18,10 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.dcr.service;
 
-import org.mockito.Matchers;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -47,11 +45,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
@@ -60,9 +59,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AParam
 /**
  * Unit test covering DCRManagementService
  */
-@PrepareForTest({DCRManagementService.class, MultitenantUtils.class})
-@PowerMockIgnore({"jdk.xml.*", "java.xml.*", "javax.xml.*", "org.w3c.dom.*", "org.xml.sax.*"})
-public class DCRManagementServiceTest extends PowerMockTestCase {
+public class DCRManagementServiceTest {
 
     private final String tenantDomain = "dummyTenantDomain";
     private final String userName = "dummyUserName";
@@ -283,18 +280,18 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
             oAuthConsumerApp.setGrantTypes(dummyGrantType.get(0));
         }
 
-        whenNew(OAuthAdminService.class).withNoArguments().thenReturn(mockOAuthAdminService);
+        try (MockedConstruction<OAuthAdminService> mockedConstruction = mockConstruction(OAuthAdminService.class,
+                (mock, context) -> {
+                    when(mock.getOAuthApplicationDataByAppName(applicationName)).thenReturn(oAuthConsumerApp);
+                    when(mock.registerAndRetrieveOAuthApplicationData(
+                            any(OAuthConsumerAppDTO.class))).thenReturn(oAuthConsumerApp);
+                })) {
 
-        when(mockOAuthAdminService
-                .getOAuthApplicationDataByAppName(applicationName)).thenReturn(oAuthConsumerApp);
-
-        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(
-                Matchers.any(OAuthConsumerAppDTO.class))).thenReturn(oAuthConsumerApp);
-
-        RegistrationResponseProfile registrationRqstProfile = dcrManagementService.registerOAuthApplication
-                (registrationRequestProfile);
-        assertEquals(registrationRqstProfile.getGrantTypes(), dummyGrantType);
-        assertEquals(registrationRqstProfile.getClientName(), applicationName);
+            RegistrationResponseProfile registrationRqstProfile = dcrManagementService.registerOAuthApplication
+                    (registrationRequestProfile);
+            assertEquals(registrationRqstProfile.getGrantTypes(), dummyGrantType);
+            assertEquals(registrationRqstProfile.getClientName(), applicationName);
+        }
     }
 
     @Test
@@ -310,87 +307,112 @@ public class DCRManagementServiceTest extends PowerMockTestCase {
 
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(null,
                 new ServiceProvider());
-        OAuthAdminService mockOAuthAdminService = mock(OAuthAdminService.class);
-        whenNew(OAuthAdminService.class).withNoArguments().thenReturn(mockOAuthAdminService);
-        when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(
-                Matchers.any(OAuthConsumerAppDTO.class))).thenThrow(IdentityOAuthAdminException.class);
+        try (MockedConstruction<OAuthAdminService> mockedConstruction = mockConstruction(OAuthAdminService.class,
+                (mock, context) -> {
+                    when(mock.registerAndRetrieveOAuthApplicationData(
+                            any(OAuthConsumerAppDTO.class))).thenThrow(IdentityOAuthAdminException.class);
+                })) {
 
-        try {
-            dcrManagementService.registerOAuthApplication(registrationRequestProfile);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getErrorCode(), ErrorCodes.META_DATA_VALIDATION_FAILED.toString());
-            return;
+            try {
+                dcrManagementService.registerOAuthApplication(registrationRequestProfile);
+            } catch (IdentityException ex) {
+                assertEquals(ex.getErrorCode(), ErrorCodes.META_DATA_VALIDATION_FAILED.toString());
+                return;
+            }
+            fail("Expected IdentityException was not thrown by registerOAuthApplication method");
         }
-        fail("Expected IdentityException was not thrown by registerOAuthApplication method");
 
     }
 
     @Test
     public void unregisterOAuthApplicationIAMExceptionTest() throws Exception {
 
-        unRegister();
-        doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
-                .deleteApplication(applicationName, tenantDomain, userName);
+        try (MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class)) {
+            applicationName = "dummyApplicationName";
+            unRegister(multitenantUtils, applicationName);
+            try (MockedConstruction<OAuthAdminService> mockedConstruction = mockConstruction(OAuthAdminService.class,
+                    (mock, context) -> {
+                        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+                        dto.setApplicationName(applicationName);
+                        when(mock.getOAuthApplicationData(consumerkey)).thenReturn(dto);
+                    })) {
+                doThrow(new IdentityApplicationManagementException("")).when(mockApplicationManagementService)
+                        .deleteApplication(applicationName, tenantDomain, userName);
 
-        try {
-            dcrManagementService.unregisterOAuthApplication(userID, applicationName, consumerkey);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Error occurred while removing ServiceProvider for application '"
-                    + applicationName + "'");
-            return;
+                try {
+                    dcrManagementService.unregisterOAuthApplication(userID, applicationName, consumerkey);
+                } catch (IdentityException ex) {
+                    assertEquals(ex.getMessage(), "Error occurred while removing ServiceProvider for application '"
+                            + applicationName + "'");
+                    return;
+                }
+                fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
+            }
         }
-        fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
     }
 
     @Test
     public void unregisterOAuthApplicationEmptyApplicationNameTest() throws Exception {
 
-        unRegister();
-        applicationName = "";
-        try {
-            dcrManagementService.unregisterOAuthApplication(userID, applicationName, consumerkey);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Username, Application Name and Consumer Key cannot be null or empty");
-            return;
+        try (MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);) {
+            applicationName = "dummyApplicationName";
+            unRegister(multitenantUtils, applicationName);
+            try (MockedConstruction<OAuthAdminService> mockedConstruction = mockConstruction(OAuthAdminService.class,
+                    (mock, context) -> {
+                        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+                        dto.setApplicationName(applicationName);
+                        when(mock.getOAuthApplicationData(consumerkey)).thenReturn(dto);
+                    })) {
+                applicationName = "";
+                try {
+                    dcrManagementService.unregisterOAuthApplication(userID, applicationName, consumerkey);
+                } catch (IdentityException ex) {
+                    assertEquals(ex.getMessage(),
+                            "Username, Application Name and Consumer Key cannot be null or empty");
+                    return;
+                }
+                fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
+            }
         }
-        fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
     }
 
     @Test
     public void unregisterOAuthApplicationWithNullSPTest() throws Exception {
 
-        unRegister();
-        when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(
-                null);
-        try {
-            dcrManagementService.unregisterOAuthApplication(userID, applicationName, consumerkey);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Couldn't retrieve Service Provider Application " + applicationName);
-            return;
+        try (MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);) {
+            applicationName = "dummyApplicationName";
+            unRegister(multitenantUtils, applicationName);
+            try (MockedConstruction<OAuthAdminService> mockedConstruction = mockConstruction(OAuthAdminService.class,
+                    (mock, context) -> {
+                        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
+                        dto.setApplicationName(applicationName);
+                        when(mock.getOAuthApplicationData(consumerkey)).thenReturn(dto);
+                    })) {
+                when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(
+                        null);
+                try {
+                    dcrManagementService.unregisterOAuthApplication(userID, applicationName, consumerkey);
+                } catch (IdentityException ex) {
+                    assertEquals(ex.getMessage(), "Couldn't retrieve Service Provider Application " + applicationName);
+                    return;
+                }
+                fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
+            }
         }
-        fail("Expected IdentityException was not thrown by unregisterOAuthApplication method");
     }
 
-    private void unRegister() throws Exception {
+    private void unRegister(MockedStatic<MultitenantUtils> multitenantUtils, String applicationName) throws Exception {
 
         startTenantFlow();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         ServiceProvider serviceProvider = new ServiceProvider();
         dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
-        OAuthAdminService mockOAuthAdminService = mock(OAuthAdminService.class);
-        applicationName = "dummyApplicationName";
-        whenNew(OAuthAdminService.class).withNoArguments().thenReturn(mockOAuthAdminService);
 
         when(mockApplicationManagementService.getServiceProvider(applicationName, tenantDomain)).thenReturn(
                 serviceProvider);
-        mockStatic(MultitenantUtils.class);
-        when(MultitenantUtils.getTenantDomain(userID)).thenReturn(tenantDomain);
-        when(MultitenantUtils.getTenantAwareUsername(userID)).thenReturn(userName);
-
-        OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
-        dto.setApplicationName(applicationName);
-        when(mockOAuthAdminService.getOAuthApplicationData(consumerkey)).thenReturn(dto);
+        multitenantUtils.when(() -> MultitenantUtils.getTenantDomain(userID)).thenReturn(tenantDomain);
+        multitenantUtils.when(() -> MultitenantUtils.getTenantAwareUsername(userID)).thenReturn(userName);
     }
 
     private void registerOAuthApplication() {

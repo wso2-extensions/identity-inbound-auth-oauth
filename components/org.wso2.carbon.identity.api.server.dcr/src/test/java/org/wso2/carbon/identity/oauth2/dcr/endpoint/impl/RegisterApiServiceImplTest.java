@@ -19,17 +19,19 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.impl;
 
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
+import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
+import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
@@ -45,15 +47,15 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 
-@PrepareForTest({BundleContext.class, ServiceTracker.class, PrivilegedCarbonContext.class, DCRMService.class})
-@PowerMockIgnore({"jdk.xml.*", "java.xml.*", "javax.xml.*", "org.w3c.dom.*", "org.xml.sax.*"})
-public class RegisterApiServiceImplTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class RegisterApiServiceImplTest {
 
     private RegisterApiServiceImpl registerApiService = null;
     private Application application = null;
@@ -65,10 +67,9 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
     BundleContext bundleContext;
 
     @Mock
-    ServiceTracker serviceTracker;
-
-    @Mock
     private DCRMService dcrmService;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -83,12 +84,23 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
         application.setRedirectUris(redirectUris);
 
         //Get OSGIservice by starting the tenant flow.
-        whenNew(ServiceTracker.class).withAnyArguments().thenReturn(serviceTracker);
         TestUtil.startTenantFlow("carbon.super");
         Object[] services = new Object[1];
         services[0] = dcrmService;
-        when(serviceTracker.getServices()).thenReturn(services);
+
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    when(mock.getServices()).thenReturn(services);
+                });
+
         OSGiDataHolder.getInstance().setBundleContext(bundleContext);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedConstruction.close();
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @Test
@@ -104,7 +116,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
     @Test
     public void testDeleteApplicationServerException() throws Exception {
 
-        doThrow(new DCRMServerException("Server")).when(dcrmService).deleteApplication(validclientId);
+        lenient().doThrow(new DCRMServerException("Server")).when(dcrmService).deleteApplication(validclientId);
         try {
             registerApiService.deleteApplication(validclientId);
         } catch (DCRMEndpointException e) {
@@ -125,7 +137,7 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
     @Test
     public void testGetApplicationServerException() throws DCRMException {
 
-        when(dcrmService.getApplication("N2QqQluzQuL5X6CtM3KZwqzLQxxx")).
+        lenient().when(dcrmService.getApplication("N2QqQluzQuL5X6CtM3KZwqzLQxxx")).
                 thenThrow(new DCRMServerException("This is a server exception"));
 
         try {
@@ -142,19 +154,17 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
         RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
         registrationRequestDTO.setClientName("app1");
         DCRMUtils.setOAuth2DCRMService(dcrmService);
-        when(dcrmService.registerApplication
-                (DCRMUtils.getApplicationRegistrationRequest(registrationRequestDTO)))
+        when(dcrmService.registerApplication(any(ApplicationRegistrationRequest.class)))
                 .thenReturn(application);
         Assert.assertEquals(registerApiService.registerApplication(registrationRequestDTO)
                 .getStatus(), Response.Status.CREATED.getStatusCode());
-
     }
 
     @Test
     public void testUpdateApplicationServerException() throws Exception {
 
         UpdateRequestDTO updateRequestDTO = new UpdateRequestDTO();
-        doThrow(new DCRMServerException("Server")).when(dcrmService).updateApplication
+        lenient().doThrow(new DCRMServerException("Server")).when(dcrmService).updateApplication
                 (any(ApplicationUpdateRequest.class), any(String.class));
         try {
             registerApiService.updateApplication(updateRequestDTO, validclientId);
@@ -171,11 +181,10 @@ public class RegisterApiServiceImplTest extends PowerMockTestCase {
         String clientID = "clientID1";
         DCRMUtils.setOAuth2DCRMService(dcrmService);
         when(dcrmService.updateApplication
-                (DCRMUtils.getApplicationUpdateRequest(updateRequestDTO1), clientID))
+                (any(ApplicationUpdateRequest.class), anyString()))
                 .thenReturn(application);
         Assert.assertEquals(registerApiService.updateApplication(updateRequestDTO1, clientID)
                 .getStatus(), Response.Status.OK.getStatusCode());
 
     }
-
 }

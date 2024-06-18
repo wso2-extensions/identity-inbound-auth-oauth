@@ -19,17 +19,22 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTParser;
 import org.mockito.Mock;
-import org.powermock.reflect.Whitebox;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
@@ -42,13 +47,13 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2TokenValidator;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
+import java.lang.reflect.Field;
 import java.security.Key;
 import java.security.cert.Certificate;
 import java.sql.Timestamp;
@@ -58,7 +63,8 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
 
 @WithCarbonHome
@@ -66,11 +72,13 @@ import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFina
         tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
         initUserStoreManager = true)
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+        files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+                "dbScripts/insert_consumer_app.sql",
+                "dbScripts/insert_local_idp.sql"})
 @WithKeyStore
-public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class JWTTokenGeneratorTest {
 
-    private DefaultOAuth2TokenValidator defaultOAuth2TokenValidator;
     private OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO;
     private OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO;
     private OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext;
@@ -93,7 +101,6 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         user.setTenantDomain("carbon.super");
         user.setFederatedUser(false);
 
-        defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
         OAuth2TokenValidationRequestDTO.TokenValidationContextParam tokenValidationContextParam =
                 mock(OAuth2TokenValidationRequestDTO.TokenValidationContextParam.class);
@@ -131,37 +138,54 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     @Test
     public void testInit() throws Exception {
         jwtTokenGenerator.init();
-        ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
+        ClaimsRetriever claimsRetriever = (ClaimsRetriever) getPrivateField(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNotNull(claimsRetriever);
         OAuth2ServiceComponentHolder.setKeyIDProvider(new DefaultKeyIDProviderImpl());
     }
 
     @Test(dependsOnMethods = "testInit")
     public void testGenerateToken() throws Exception {
-        addSampleOauth2Application();
-        ClaimCache claimsLocalCache = ClaimCache.getInstance();
-        Whitebox.setInternalState(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
-        Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
-        publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                                                      .getCertificate("wso2carbon"));
-        OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
-        when(realmService.getTenantManager()).thenReturn(tenantManager);
-        setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
-        Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
-        privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                                                      .getKey("wso2carbon", "wso2carbon".toCharArray()));
-        setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
 
-        accessToken.setTokenType("Bearer");
-        oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
-        jwtTokenGenerator.generateToken(oAuth2TokenValidationMessageContext);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId)
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            identityUtil.when(IdentityUtil::getPrimaryDomainName)
+                    .thenReturn(UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME);
+            addSampleOauth2Application();
+            ClaimCache claimsLocalCache = ClaimCache.getInstance();
+            setPrivateField(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
+            Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
+            publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
+                    .getCertificate("wso2carbon"));
+            OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+            when(realmService.getTenantManager()).thenReturn(tenantManager);
+            setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
+            Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
+            privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
+                    .getKey("wso2carbon", "wso2carbon".toCharArray()));
+            setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
 
-        Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
-                                                                .getTokenString(), "JWT Token not set");
-        Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
-                                                               .getTokenType(), "JWT");
+            accessToken.setTokenType("Bearer");
+            oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
+
+            jwtTokenGenerator.generateToken(oAuth2TokenValidationMessageContext);
+
+            Assert.assertNotNull(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                    .getTokenString(), "JWT Token not set");
+            Assert.assertEquals(oAuth2TokenValidationMessageContext.getResponseDTO().getAuthorizationContextToken()
+                    .getTokenType(), "JWT");
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
 
     }
 
@@ -177,10 +201,9 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     @Test(dependsOnMethods = "testGenerateToken")
     public void testInitEmptyClaimsRetriever() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
-        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", (Object) null);
+        setPrivateField(OAuthServerConfiguration.getInstance(), "claimsRetrieverImplClass", (Object) null);
         jwtTokenGenerator.init();
-        ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
+        ClaimsRetriever claimsRetriever = (ClaimsRetriever) getPrivateField(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNull(claimsRetriever);
     }
 
@@ -188,8 +211,7 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     public void testInitIncludeClaimsFalse() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(false, enableSigning);
         jwtTokenGenerator.init();
-        ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
+        ClaimsRetriever claimsRetriever = (ClaimsRetriever) getPrivateField(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNull(claimsRetriever);
     }
 
@@ -197,18 +219,16 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
     public void testInitEnableSigningFalse() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, false);
         jwtTokenGenerator.init();
-        ClaimsRetriever claimsRetriever =
-                (ClaimsRetriever) Whitebox.getInternalState(jwtTokenGenerator, "claimsRetriever");
+        ClaimsRetriever claimsRetriever = (ClaimsRetriever) getPrivateField(jwtTokenGenerator, "claimsRetriever");
         Assert.assertNull(claimsRetriever);
     }
 
     @Test(dependsOnMethods = "testGenerateToken")
     public void testInitEmptySignatureAlg() throws Exception {
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
-        Whitebox.setInternalState(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", ( Object) null);
+        setPrivateField(OAuthServerConfiguration.getInstance(), "signatureAlgorithm", ( Object) null);
         jwtTokenGenerator.init();
-        JWSAlgorithm signatureAlgorithm =
-                (JWSAlgorithm) Whitebox.getInternalState(jwtTokenGenerator, "signatureAlgorithm");
+        JWSAlgorithm signatureAlgorithm = (JWSAlgorithm) getPrivateField(jwtTokenGenerator, "signatureAlgorithm");
         Assert.assertNotNull(signatureAlgorithm);
         Assert.assertNotNull(signatureAlgorithm.getName());
         Assert.assertEquals(signatureAlgorithm.getName(), "none");
@@ -232,6 +252,20 @@ public class JWTTokenGeneratorTest extends PowerMockIdentityBaseTest {
         authAppDAO.addOAuthConsumer("testUser", -1234, "PRIMARY");
         authAppDAO.addOAuthApplication(oAuthAppDO);
         authAppDAO.getConsumerAppState("sampleConsumerKey");
+    }
+
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+
+    private Object getPrivateField(Object object, String fieldName) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(object);
     }
 
 }

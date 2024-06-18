@@ -19,8 +19,6 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JWSAlgorithm;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -38,12 +36,14 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Map;
 
 @WithCarbonHome
 @WithRegistry
 @WithRealmService
-public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
+public class OpenIDConnectSystemClaimImplTest {
 
     private static final String AUTHORIZATION_CODE = "testAuthorizationCode";
     private static final String EMPTY_VALUE = null;
@@ -152,8 +152,26 @@ public class OpenIDConnectSystemClaimImplTest extends PowerMockTestCase {
 
         String signatureAlgorithm = "SHA256withRSA";
         JWSAlgorithm algorithm = OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(signatureAlgorithm);
-        WhiteboxImpl.setInternalState(openIDConnectSystemClaim, "signatureAlgorithm", algorithm);
-        String hashValue = WhiteboxImpl.invokeMethod(openIDConnectSystemClaim, "getHashValue", value);
+        setPrivateField(openIDConnectSystemClaim, "signatureAlgorithm", algorithm);
+        String hashValue = (String) invokePrivateMethod(openIDConnectSystemClaim, "getHashValue", value);
         return hashValue;
+    }
+
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+
+    private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {
+
+        Class<?>[] paramTypes = new Class[params.length];
+        for (int i = 0; i < params.length; i++) {
+            paramTypes[i] = params[i].getClass();
+        }
+        Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
+        method.setAccessible(true);
+        return method.invoke(object, params);
     }
 }

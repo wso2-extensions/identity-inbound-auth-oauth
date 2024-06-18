@@ -19,8 +19,9 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -46,19 +47,17 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 
 import java.sql.Connection;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 /**
  * Test class for OAuthApplicationMgtListener test cases.
  */
-@PrepareForTest({OAuth2ServiceComponentHolder.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
-        OAuthApplicationMgtListener.class, AuthorizationGrantCache.class, OAuthCache.class, IdentityTenantUtil.class})
 public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
 
     private static final String DB_NAME = "testDB";
@@ -91,11 +90,17 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     @Mock
     private CacheEntry mockCacheEntry;
 
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+    private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+    private MockedStatic<AuthorizationGrantCache> authorizationGrantCache;
+    private MockedStatic<OAuthCache> oAuthCache;
+
     @BeforeClass
     public void setUp() throws Exception {
 
         // Initialize in-memory H2 DB.
-        initiateH2Base(DB_NAME, getFilePath("h2.sql"));
+        initiateH2Base(DB_NAME, getFilePath("identity.sql"));
         oAuthApplicationMgtListener = new OAuthApplicationMgtListener();
     }
 
@@ -108,20 +113,32 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void setUpBeforeMethod() throws Exception {
 
         initMocks(this);
-        mockStatic(IdentityDatabaseUtil.class);
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(mockAppMgtService);
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOauthServicerConfig);
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+        oAuth2ServiceComponentHolder = mockStatic(OAuth2ServiceComponentHolder.class);
+        oAuth2ServiceComponentHolder.when(
+                OAuth2ServiceComponentHolder::getApplicationMgtService).thenReturn(mockAppMgtService);
+
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOauthServicerConfig);
         PlainTextPersistenceProcessor processor = new PlainTextPersistenceProcessor();
         when(mockOauthServicerConfig.getPersistenceProcessor()).thenReturn(processor);
 
-        mockStatic(AuthorizationGrantCache.class);
-        when(AuthorizationGrantCache.getInstance()).thenReturn(mockAuthorizationGrantCache);
+        authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
+        authorizationGrantCache.when(AuthorizationGrantCache::getInstance).thenReturn(mockAuthorizationGrantCache);
 
-        mockStatic(OAuthCache.class);
-        when(OAuthCache.getInstance()).thenReturn(mockOauthCache);
+        oAuthCache = mockStatic(OAuthCache.class);
+        oAuthCache.when(OAuthCache::getInstance).thenReturn(mockOauthCache);
+    }
+
+    @AfterMethod
+    public void tearDownAfterMethod() {
+
+        identityDatabaseUtil.close();
+        oAuth2ServiceComponentHolder.close();
+        oAuthServerConfiguration.close();
+        authorizationGrantCache.close();
+        oAuthCache.close();
     }
 
     @Test
@@ -165,8 +182,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
                                              String propName) throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider =
                     createServiceProvider(1, hasAuthConfig, hasRequestConfig, authType, propName);
             boolean result =
@@ -179,8 +196,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void testDoPostGetServiceProviderWhenSPisNull() throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             boolean result = oAuthApplicationMgtListener.doPostGetServiceProvider(null, spName, tenantDomain);
             assertTrue(result, "Post-get service provider failed.");
         }
@@ -190,8 +207,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void testDoPostGetServiceProviderByClientId() throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
             boolean result = oAuthApplicationMgtListener.doPostGetServiceProviderByClientId(serviceProvider,
                     "clientId", "clientType", tenantDomain);
@@ -203,8 +220,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void testDoPostCreateApplication() throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
             boolean result =
                     oAuthApplicationMgtListener.doPostCreateApplication(serviceProvider, tenantDomain, userName);
@@ -237,9 +254,10 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
                                             String propName, boolean cacheEnabled, boolean saasEnabledBefore)
             throws Exception {
 
-        try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+        try (Connection connection = getConnection(DB_NAME);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
 
             if (cacheEnabled) {
                 when(mockAuthorizationGrantCache.getValueFromCacheByToken(any(AuthorizationGrantCacheKey.class)))
@@ -247,8 +265,7 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
                 when(mockOauthCache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(mockCacheEntry);
             }
 
-            mockStatic(IdentityTenantUtil.class);
-            when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
 
             if (saasEnabledBefore) {
                 IdentityUtil.threadLocalProperties.get().put(SAAS_PROPERTY, true);
@@ -267,8 +284,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void testDoPostGetApplicationExcludingFileBasedSPs() throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, true, true, OAUTH2, OAUTH_CONSUMER_SECRET);
             boolean result = oAuthApplicationMgtListener
                     .doPostGetApplicationExcludingFileBasedSPs(serviceProvider, spName, tenantDomain);
@@ -280,8 +297,8 @@ public class OAuthApplicationMgtListenerTest extends TestOAuthDAOBase {
     public void doPreDeleteApplication() throws Exception {
 
         try (Connection connection = getConnection(DB_NAME)) {
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             ServiceProvider serviceProvider = createServiceProvider(1, false, false, "otherAuthType",
                     OAUTH_CONSUMER_SECRET);
             when(mockAppMgtService.getApplicationExcludingFileBasedSPs(anyString(), anyString()))

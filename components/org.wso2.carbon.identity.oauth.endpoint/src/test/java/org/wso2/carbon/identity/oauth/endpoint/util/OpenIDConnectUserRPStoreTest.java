@@ -18,11 +18,16 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.AfterTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -36,13 +41,13 @@ import java.nio.file.Paths;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({IdentityTenantUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class})
+@Listeners(MockitoTestNGListener.class)
 public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
 
     private static final String RETRIEVE_PERSISTED_USER_SQL = "SELECT USER_NAME FROM IDN_OPENID_USER_RPS";
@@ -56,10 +61,12 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
     private String tenantDomain;
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
+
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -81,13 +88,31 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
         store = OpenIDConnectUserRPStore.getInstance();
 
         initiateInMemoryH2();
-        createOAuthApp(clientId, secret, username, appName, "ACTIVE");
+        try {
+            createOAuthApp(clientId, secret, username, appName, "ACTIVE");
+        } catch (JdbcSQLIntegrityConstraintViolationException e) {
+            // ignore
+        }
     }
 
-    @AfterTest
+    @AfterClass
     public void cleanData() throws Exception {
 
         super.cleanData();
+
+    }
+
+    @BeforeMethod
+    public void setUpBeforeMethod() {
+
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+        mockDatabase(identityDatabaseUtil);
+    }
+
+    @AfterMethod
+    public void tearDownAfterMethod() {
+
+        identityDatabaseUtil.close();
     }
 
     @DataProvider(name = "provideStoreDataToPut")
@@ -103,43 +128,46 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
     @Test(dataProvider = "provideStoreDataToPut")
     public void testPutUserRPToStore(String usernameValue, String consumerKey) throws Exception {
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        when(IdentityDatabaseUtil.getDBConnection(false)).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
-                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                mockStatic(OAuthServerConfiguration.class);) {
 
-        user.setUserName(usernameValue);
-        try {
-            store.putUserRPToStore(user, appName, true, consumerKey);
-        } catch (OAuthSystemException e) {
-            // Exception thrown because the app does not exist
-            assertTrue(!clientId.equals(consumerKey), "Unexpected exception thrown: " + e.getMessage());
-        }
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(this.mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor())
+                    .thenReturn(tokenPersistenceProcessor);
+            lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                    .thenAnswer(invocation -> invocation.getArguments()[0]);
 
-        PreparedStatement statement = null;
-        ResultSet rs = null;
-        String name = null;
-        try {
-            statement = connection.prepareStatement(RETRIEVE_PERSISTED_USER_SQL);
-            rs = statement.executeQuery();
-            if (rs.next()) {
-                name = rs.getString(1);
+            user.setUserName(usernameValue);
+            try {
+                store.putUserRPToStore(user, appName, true, consumerKey);
+            } catch (OAuthSystemException e) {
+                // Exception thrown because the app does not exist
+                assertTrue(!clientId.equals(consumerKey), "Unexpected exception thrown: " + e.getMessage());
             }
-        } finally {
-            if (statement != null) {
-                statement.close();
+
+            PreparedStatement statement = null;
+            ResultSet rs = null;
+            String name = null;
+            try {
+                statement = getConnection().prepareStatement(RETRIEVE_PERSISTED_USER_SQL);
+                rs = statement.executeQuery();
+                if (rs.next()) {
+                    name = rs.getString(1);
+                }
+            } finally {
+                if (statement != null) {
+                    statement.close();
+                }
+                if (rs != null) {
+                    rs.close();
+                }
             }
-            if (rs != null) {
-                rs.close();
-            }
+            assertEquals(name, username, "Data not added to the store");
         }
-        assertEquals(name, username, "Data not added to the store");
     }
 
     @DataProvider(name = "provideDataToCheckApproved")
@@ -156,25 +184,27 @@ public class OpenIDConnectUserRPStoreTest extends TestOAuthEndpointBase {
     public void testHasUserApproved(String usernameValue, String consumerKey, String app, boolean expected)
             throws Exception {
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        when(IdentityDatabaseUtil.getDBConnection(false)).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
-                .thenAnswer(invocation -> invocation.getArguments()[0]);
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                mockStatic(OAuthServerConfiguration.class);) {
 
-        user.setUserName(usernameValue);
-        boolean result;
-        try {
-            result = store.hasUserApproved(user, app, consumerKey);
-            assertEquals(result, expected);
-        } catch (OAuthSystemException e) {
-            // Exception thrown because the app does not exist
-            assertTrue(!clientId.equals(consumerKey), "Unexpected exception thrown: " + e.getMessage());
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor())
+                    .thenReturn(tokenPersistenceProcessor);
+            lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString()))
+                    .thenAnswer(invocation -> invocation.getArguments()[0]);
+
+            user.setUserName(usernameValue);
+            boolean result;
+            try {
+                result = store.hasUserApproved(user, app, consumerKey);
+                assertEquals(result, expected);
+            } catch (OAuthSystemException e) {
+                // Exception thrown because the app does not exist
+                assertTrue(!clientId.equals(consumerKey), "Unexpected exception thrown: " + e.getMessage());
+            }
         }
     }
 }

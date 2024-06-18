@@ -19,78 +19,89 @@
 package org.wso2.carbon.identity.oauth.callback;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
  * Unit tests for OAuthCallbackManager.
  */
-@PrepareForTest({OAuthCallbackHandlerRegistry.class})
-public class OAuthCallbackManagerTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class OAuthCallbackManagerTest {
 
     @Mock
-    private OAuthCallbackHandlerRegistry oAuthCallbackHandlerRegistry;
+    private OAuthCallbackHandlerRegistry mockOAuthCallbackHandlerRegistry;
 
     @Test
     public void testHandleCallbackNoCallBackHandlerCanbeFound() throws Exception {
 
-        mockStatic(OAuthCallbackHandlerRegistry.class);
-        when(OAuthCallbackHandlerRegistry.getInstance()).thenReturn(oAuthCallbackHandlerRegistry);
+        try (MockedStatic<OAuthCallbackHandlerRegistry> oAuthCallbackHandlerRegistry =
+                mockStatic(OAuthCallbackHandlerRegistry.class)) {
+            oAuthCallbackHandlerRegistry.when(OAuthCallbackHandlerRegistry::getInstance)
+                    .thenReturn(this.mockOAuthCallbackHandlerRegistry);
 
-        OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
-                .ACCESS_DELEGATION_AUTHZ);
-        oAuthCallback.setAuthorized(false);
+            OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
+                    .ACCESS_DELEGATION_AUTHZ);
+            oAuthCallback.setAuthorized(false);
 
-        oAuthCallbackManager.handleCallback(oAuthCallback);
-        assertFalse(oAuthCallback.isAuthorized(), "oAuthCallback should not be a authorized callback if it has not " +
-                "been handled.");
+            oAuthCallbackManager.handleCallback(oAuthCallback);
+            assertFalse(oAuthCallback.isAuthorized(),
+                    "oAuthCallback should not be a authorized callback if it has not " +
+                            "been handled.");
+        }
     }
 
     @Test
     public void testHandleCallbackCallBackHandlerCanbeFound() throws Exception {
 
-        DefaultCallbackHandler defaultCallbackHandler = new DefaultCallbackHandler();
-        when(oAuthCallbackHandlerRegistry.getOAuthAuthzHandler(any(OAuthCallback.class)))
-                .thenReturn(defaultCallbackHandler);
-        mockStatic(OAuthCallbackHandlerRegistry.class);
-        when(OAuthCallbackHandlerRegistry.getInstance()).thenReturn(oAuthCallbackHandlerRegistry);
+        try (MockedStatic<OAuthCallbackHandlerRegistry> oAuthCallbackHandlerRegistry =
+                     mockStatic(OAuthCallbackHandlerRegistry.class)) {
+            DefaultCallbackHandler defaultCallbackHandler = new DefaultCallbackHandler();
+            when(mockOAuthCallbackHandlerRegistry.getOAuthAuthzHandler(any(OAuthCallback.class)))
+                    .thenReturn(defaultCallbackHandler);
+            oAuthCallbackHandlerRegistry.when(
+                    OAuthCallbackHandlerRegistry::getInstance).thenReturn(mockOAuthCallbackHandlerRegistry);
 
-        OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
-                .ACCESS_DELEGATION_AUTHZ);
-        oAuthCallback.setAuthorized(false);
+            OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
+                    .ACCESS_DELEGATION_AUTHZ);
+            oAuthCallback.setAuthorized(false);
 
-        oAuthCallbackManager.handleCallback(oAuthCallback);
-        assertTrue(oAuthCallback.isAuthorized(), "oAuthCallback should be a authorized callback once it has been " +
-                "handled.");
+            oAuthCallbackManager.handleCallback(oAuthCallback);
+            assertTrue(oAuthCallback.isAuthorized(), "oAuthCallback should be a authorized callback once it has been " +
+                    "handled.");
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testHandleCallbackErrorWhileObtainingCallbackHandler() throws Exception {
 
-        when(oAuthCallbackHandlerRegistry.getOAuthAuthzHandler(any(OAuthCallback.class)))
-                .thenThrow(new IdentityOAuth2Exception(""));
-        mockStatic(OAuthCallbackHandlerRegistry.class);
-        when(OAuthCallbackHandlerRegistry.getInstance()).thenReturn(oAuthCallbackHandlerRegistry);
+        try (MockedStatic<OAuthCallbackHandlerRegistry> oAuthCallbackHandlerRegistry =
+                     mockStatic(OAuthCallbackHandlerRegistry.class)) {
+            when(mockOAuthCallbackHandlerRegistry.getOAuthAuthzHandler(any(OAuthCallback.class)))
+                    .thenThrow(new IdentityOAuth2Exception(""));
+            oAuthCallbackHandlerRegistry.when(
+                    OAuthCallbackHandlerRegistry::getInstance).thenReturn(mockOAuthCallbackHandlerRegistry);
 
-        OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
-                .ACCESS_DELEGATION_AUTHZ);
-        oAuthCallback.setAuthorized(false);
+            OAuthCallbackManager oAuthCallbackManager = new OAuthCallbackManager();
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            OAuthCallback oAuthCallback = new OAuthCallback(authenticatedUser, "client", OAuthCallback.OAuthCallbackType
+                    .ACCESS_DELEGATION_AUTHZ);
+            oAuthCallback.setAuthorized(false);
 
-        oAuthCallbackManager.handleCallback(oAuthCallback);
+            oAuthCallbackManager.handleCallback(oAuthCallback);
+        }
     }
 }

@@ -18,16 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.dcr;
 
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
 import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
@@ -37,9 +35,8 @@ import org.wso2.carbon.identity.oauth.dcr.model.DCRConfiguration;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.reflect.Whitebox.invokeMethod;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.DCR_CONFIG_RESOURCE_TYPE_NAME;
 import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.ENABLE_FAPI_ENFORCEMENT;
@@ -49,9 +46,7 @@ import static org.wso2.carbon.identity.oauth.dcr.DCRMConstants.ENABLE_FAPI_ENFOR
  * The getDCRConfiguration and setDCRConfiguration methods are called by the api layer in server configuration api.
  * Hence, the unit tests are written to cover the getDCRConfiguration and setDCRConfiguration methods.
  */
-@PrepareForTest({DCRDataHolder.class, IdentityTenantUtil.class, IdentityUtil.class,
-        DCRConfigurationMgtServiceImpl.class})
-public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
+public class DCRConfigurationMgtServiceImplTest {
 
     private DCRConfigurationMgtService dcrConfigurationMgtService;
     private DCRConfiguration dcrConfiguration;
@@ -70,31 +65,29 @@ public class DCRConfigurationMgtServiceImplTest extends PowerMockTestCase {
     @Test(priority = 1, description = "Test getDCRConfiguration method gets correct dcr configs")
     public void testGetDCRConfiguration() {
 
-        mockStatic(IdentityUtil.class);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);) {
+            try {
+                identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT))
+                        .thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED))
+                        .thenReturn("true");
+                identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.DCR_SSA_VALIDATION_JWKS))
+                        .thenReturn(dummySSAJwks);
 
-        try {
-            Assert.assertTrue(invokeMethod(dcrConfigurationMgtService, "getDCRConfiguration")
-                    instanceof DCRConfiguration);
+                dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
 
-            when(IdentityUtil.getProperty(OAuthConstants.ENABLE_DCR_FAPI_ENFORCEMENT)).thenReturn("true");
-            when(IdentityUtil.getProperty(OAuthConstants.DCR_CLIENT_AUTHENTICATION_REQUIRED)).thenReturn("true");
-            when(IdentityUtil.getProperty(OAuthConstants.DCR_SSA_VALIDATION_JWKS)).thenReturn(dummySSAJwks);
+                assertEquals(true, dcrConfiguration.getEnableFapiEnforcement());
+                assertEquals(true, dcrConfiguration.getAuthenticationRequired());
+                assertEquals(dummySSAJwks, dcrConfiguration.getSsaJwks());
 
-            dcrConfiguration = dcrConfigurationMgtService.getDCRConfiguration();
-
-            assertEquals(true, dcrConfiguration.getEnableFapiEnforcement());
-            assertEquals(true, dcrConfiguration.getAuthenticationRequired());
-            assertEquals(dummySSAJwks, dcrConfiguration.getSsaJwks());
-
-        } catch (Exception e) {
-            Assert.assertTrue(e instanceof DCRMException);
+            } catch (Exception e) {
+                Assert.assertTrue(e instanceof DCRMException);
+            }
         }
     }
 
     @Test(priority =  2, description = "Test setDCRConfiguration method properly sets DCRConfiguration")
     public void testSetDCRConfiguration() {
-
-        mockStatic(IdentityUtil.class);
 
         try {
             dcrConfigurationMgtService.setDCRConfiguration(dcrConfiguration);

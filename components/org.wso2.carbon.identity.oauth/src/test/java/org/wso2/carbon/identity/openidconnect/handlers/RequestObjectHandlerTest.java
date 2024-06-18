@@ -39,7 +39,8 @@ import java.util.List;
  */
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+        files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+                "dbScripts/insert_consumer_app.sql", "dbScripts/insert_local_idp.sql"})
 
 public class RequestObjectHandlerTest {
 

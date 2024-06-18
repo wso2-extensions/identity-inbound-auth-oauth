@@ -19,39 +19,47 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.oltu.oauth2.common.message.types.GrantType;
-import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
-@PrepareForTest(CarbonUtils.class)
+@WithRealmService(injectToSingletons = {OAuthComponentServiceHolder.class})
+@WithH2Database(files = {"dbScripts/identity.sql"})
 public class OIDCScopeHandlerTest {
 
     private OIDCScopeHandler oidcScopeHandler;
-    @Mock
-    ServerConfiguration serverConfiguration;
 
+    @BeforeClass
+    public void setup() throws Exception {
+
+        setFinalField(OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO(), "scopeClaimMappingDAOImpl",
+                new ScopeClaimMappingDAOImpl());
+    }
 
     @BeforeMethod
     public void setUp() throws Exception {
 
         oidcScopeHandler = new OIDCScopeHandler();
-
     }
 
     @DataProvider(name = "ValidateScopeData")
@@ -81,7 +89,8 @@ public class OIDCScopeHandlerTest {
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
         );
-        assertTrue(oidcScopeHandler.validateScope(tokReqMsgCtx));
+        assertTrue(oidcScopeHandler.validateScope(tokReqMsgCtx), "Scope validation failed for grant type: "
+                + grantType);
     }
 
     @DataProvider(name = "CanHandleData")
@@ -104,6 +113,15 @@ public class OIDCScopeHandlerTest {
         tokReqMsgCtx.setScope(scopes);
 
         assertEquals(oidcScopeHandler.canHandle(tokReqMsgCtx), expectedResult);
+    }
+
+    private void setFinalField(Object object, String fieldName, Object value) throws Exception {
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(object, value);
     }
 
 }

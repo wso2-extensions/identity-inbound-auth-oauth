@@ -18,10 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.device.response;
 
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -30,7 +28,6 @@ import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -40,27 +37,23 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
-import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.utils.CarbonUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest({OAuth2Util.class, DeviceFlowPersistenceFactory.class, IdentityDatabaseUtil.class, IdentityUtil.class,
-        ServiceURLBuilder.class, ServiceURL.class, CarbonUtils.class, IdentityConfigParser.class})
-@PowerMockIgnore({"javax.crypto.*"})
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
-public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql",
+        "dbScripts/insert_local_idp.sql"})
+public class DeviceFlowResponseTypeHandlerTest {
 
     private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();
     private OAuthAppDO oAuthAppDO = new OAuthAppDO();
@@ -84,20 +77,22 @@ public class DeviceFlowResponseTypeHandlerTest extends PowerMockTestCase {
     public void testSuccessIssue() throws IdentityOAuth2Exception, InvalidOAuthClientException, SQLException,
             URLBuilderException {
 
-        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
-            mockStatic(OAuth2Util.class);
-            when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-            when(OAuth2Util.getDeviceFlowCompletionPageURI(anyString(), anyString())).thenCallRealMethod();
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
-            mockStatic(IdentityUtil.class);
-            when(IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean())).thenReturn(TEST_URL);
-            mockStatic(ServiceURLBuilder.class);
-            mockStatic(ServiceURL.class);
+        try (Connection connection = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            oAuth2Util.when(() -> OAuth2Util.getDeviceFlowCompletionPageURI(anyString(), anyString()))
+                    .thenCallRealMethod();
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true)).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
+                    .thenReturn(TEST_URL);
             ServiceURLBuilder mockServiceURLBuilder = Mockito.mock(ServiceURLBuilder.class);
             ServiceURL mockServiceURL = Mockito.mock(ServiceURL.class);
-            when(ServiceURLBuilder.create()).thenReturn(mockServiceURLBuilder);
+            serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
             when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
             when(mockServiceURLBuilder.addParameter(anyString(), anyString())).thenReturn(mockServiceURLBuilder);
             when(mockServiceURLBuilder.build()).thenReturn(mockServiceURL);

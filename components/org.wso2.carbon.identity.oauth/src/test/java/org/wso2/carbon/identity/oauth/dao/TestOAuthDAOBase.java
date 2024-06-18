@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.DBUtils;
 
 import java.nio.file.Paths;
@@ -30,13 +29,13 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
+public class TestOAuthDAOBase {
 
     private static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
-            " CALLBACK_URL, GRANT_TYPES, APP_STATE, BACKCHANNELLOGOUT_URL) VALUES (?,?,?,?,?,?,?,?,?,?,?) ";
+            " CALLBACK_URL, GRANT_TYPES, APP_STATE) VALUES (?,?,?,?,?,?,?,?,?,?) ";
 
     private static final String ADD_OAUTH_REQ_TOKEN = "INSERT INTO IDN_OAUTH1A_REQUEST_TOKEN " +
             "(REQUEST_TOKEN, REQUEST_TOKEN_SECRET, CONSUMER_KEY_ID, CALLBACK_URL, SCOPE, AUTHORIZED, " +
@@ -95,8 +94,7 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
                                      String username,
                                      String appName,
                                      String callback,
-                                     String appState,
-                                     String backchannelLogout) throws Exception {
+                                     String appState) throws Exception {
 
         PreparedStatement statement = null;
         try (Connection connection = getConnection(databaseName)) {
@@ -114,7 +112,6 @@ public class TestOAuthDAOBase extends PowerMockIdentityBaseTest {
             statement.setString(8, callback);
             statement.setString(9, "password");
             statement.setString(10, appState);
-            statement.setString(11, backchannelLogout);
             statement.execute();
 
             ResultSet resultSet = statement.getGeneratedKeys();

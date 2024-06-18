@@ -18,26 +18,21 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.ciba;
 
-import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
-import org.wso2.carbon.identity.oauth.ciba.exceptions.ErrorCodes;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.file.Paths;
 
-@PrepareForTest({CibaConstants.class, CibaCoreException.class, ErrorCodes.class, CibaClientException.class, JWT.class})
 public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
 
     private static final String request = "eyJhbGciOiJIUzUxMiJ9" +
@@ -82,7 +77,7 @@ public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
 
         SignedJWT signedJWT = SignedJWT.parse(request);
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-        WhiteboxImpl.invokeMethod(cibaAuthRequestValidator, "validateAudience", claimsSet, authCodeRequest);
+        invokePrivateMethod(cibaAuthRequestValidator, "validateAudience", claimsSet, authCodeRequest);
     }
 
     @Test(dataProvider = "provideRequestParams", expectedExceptions = {CibaClientException.class,
@@ -91,6 +86,22 @@ public class CibaAuthReqValidatorTest extends TestOAuthEndpointBase {
 
         SignedJWT signedJWT = SignedJWT.parse(request);
         JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-        WhiteboxImpl.invokeMethod(cibaAuthRequestValidator, "validateUserHint", claimsSet, authCodeRequest);
+        invokePrivateMethod(cibaAuthRequestValidator, "validateUserHint", claimsSet, authCodeRequest);
+    }
+
+    private Object invokePrivateMethod(Object object, String methodName, Object... params) throws Exception {
+
+        Class<?>[] paramTypes = new Class[params.length];
+        for (int i = 0; i < params.length; i++) {
+            paramTypes[i] = params[i].getClass();
+        }
+        Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
+        method.setAccessible(true);
+
+        try {
+            return method.invoke(object, params);
+        } catch (InvocationTargetException e) {
+            throw (Exception) e.getTargetException();
+        }
     }
 }

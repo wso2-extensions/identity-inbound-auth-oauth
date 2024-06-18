@@ -19,7 +19,8 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -27,33 +28,38 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
  * Test class for ClientCredentialsGrantHandler test cases.
  */
-@PrepareForTest({OAuthServerConfiguration.class, AbstractAuthorizationGrantHandler.class})
 @WithCarbonHome
-public class ClientCredentialsGrantHandlerTest extends PowerMockIdentityBaseTest {
+public class ClientCredentialsGrantHandlerTest {
 
     @Mock
     private OAuthServerConfiguration mockOAuthServerConfiguration;
 
     private ClientCredentialsGrantHandler clientCredentialsGrantHandler;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
 
     @BeforeMethod
     public void setUp() throws Exception {
 
         initMocks(this);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        oAuthServerConfiguration.close();
     }
 
     @Test

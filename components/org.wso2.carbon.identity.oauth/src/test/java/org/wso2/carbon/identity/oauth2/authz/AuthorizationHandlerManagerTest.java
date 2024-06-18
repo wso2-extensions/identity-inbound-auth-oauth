@@ -37,12 +37,13 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.user.api.UserStoreException;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/h2_with_application_and_token.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+        "dbScripts/insert_local_idp.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {OAuthComponentServiceHolder.class,
         IdentityCoreServiceDataHolder.class})

@@ -22,7 +22,6 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
-import org.powermock.reflect.internal.WhiteboxImpl;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -40,13 +39,13 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.saml.common.util.SAMLInitializer;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.Field;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
@@ -61,10 +60,10 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.AssertJUnit.assertEquals;
 
 @WithCarbonHome
-@WithH2Database(files = {"dbScripts/idp.sql"})
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_local_idp2.sql"})
 @WithAxisConfiguration
 @WithRealmService(tenantDomain = TestConstants.TENANT_DOMAIN, initUserStoreManager = true)
-public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
+public class SAML1BearerGrantHandlerTest {
 
     private SAML1BearerGrantHandler saml1BearerGrantHandler;
     private static final String ISSUER1 = "idp1";
@@ -183,7 +182,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
                 Base64.encodeBase64String(assertion.getBytes()))};
         SAMLInitializer.doBootstrap();
         oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().setRequestParameters(requestParameters);
-        WhiteboxImpl.setInternalState(saml1BearerGrantHandler, "audienceRestrictionValidationEnabled",
+        setPrivateField(saml1BearerGrantHandler, "audienceRestrictionValidationEnabled",
                 enableAudienceRestriction);
         RealmService realmService = mock(RealmService.class);
         RegistryService registryService = mock(RegistryService.class);
@@ -198,7 +197,7 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
         ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
         mtKeyStoreManagers.put("-1234", keyStoreManager);
-        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
+        setPrivateStaticField(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
         X509Certificate cert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(
                 new ByteArrayInputStream(Base64.decodeBase64(CERTIFICATE)));
         when(keyStoreManager.getDefaultPrimaryCertificate()).thenReturn(cert);
@@ -207,11 +206,11 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         configuration.put("SSOService.SAMLECPEndpoint", "https://localhost:9443/samlecp");
         configuration.put("SSOService.ArtifactResolutionEndpoint", "https://localhost:9443/samlartresolve");
         configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
-        WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", configuration);
+        setPrivateStaticField(IdentityUtil.class, "configuration", configuration);
         saml1BearerGrantHandler.profileValidator = new SAMLSignatureProfileValidator();
         assertEquals(saml1BearerGrantHandler.validateGrant(oAuthTokenReqMessageContext), expectedResult);
-        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", new ConcurrentHashMap());
-        WhiteboxImpl.setInternalState(IdentityUtil.class, "configuration", new HashMap<>());
+        setPrivateStaticField(KeyStoreManager.class, "mtKeyStoreManagers", new ConcurrentHashMap());
+        setPrivateStaticField(IdentityUtil.class, "configuration", new HashMap<>());
     }
 
     @Test
@@ -234,6 +233,21 @@ public class SAML1BearerGrantHandlerTest extends PowerMockIdentityBaseTest {
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = new OAuthTokenReqMessageContext(
                 oAuth2AccessTokenReqDTO);
         return oAuthTokenReqMessageContext;
+    }
+
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
+    }
+
+    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(null, newValue);
     }
 }
 

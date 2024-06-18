@@ -20,9 +20,11 @@
 package org.wso2.carbon.identity.oauth2.impersonation;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
@@ -33,14 +35,14 @@ import org.wso2.carbon.identity.oauth2.impersonation.exceptions.ImpersonationCon
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationConfig;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.AssertJUnit.assertEquals;
 import static org.testng.FileAssert.fail;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.ErrorMessages.ERROR_CODE_RESOURCE_DOES_NOT_EXISTS;
@@ -52,12 +54,10 @@ import static org.wso2.carbon.identity.oauth2.impersonation.utils.ErrorMessage.E
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.ErrorMessage.ERROR_CODE_IMP_CONFIG_UPDATE;
 
 /**
- * Unit test cases for ImpersonationConfigMgtService clas..
+ * Unit test cases for ImpersonationConfigMgtService clas.
  */
-@PrepareForTest({
-        IdentityTenantUtil.class
-        })
-public class ImpersonationConfigMgtTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class ImpersonationConfigMgtTest {
     @Mock
     private ConfigurationManager configurationManager;
 
@@ -70,8 +70,6 @@ public class ImpersonationConfigMgtTest extends PowerMockIdentityBaseTest {
     public void setUp() throws Exception {
 
         OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(configurationManager);
-        mockStatic(IdentityTenantUtil.class);
-
     }
 
     @DataProvider(name = "GetImpersonationConfigData")
@@ -119,7 +117,6 @@ public class ImpersonationConfigMgtTest extends PowerMockIdentityBaseTest {
         } catch (ImpersonationConfigMgtException e) {
             fail("Unexpected Exception");
         }
-//        assertTrue(true);
     }
 
     @Test
@@ -142,33 +139,38 @@ public class ImpersonationConfigMgtTest extends PowerMockIdentityBaseTest {
     @Test
     public void testSetImpersonationConfig() throws ConfigurationManagementException {
 
-        when(IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
-        when(configurationManager.replaceResource(eq(IMPERSONATION_RESOURCE_TYPE_NAME), any(Resource.class)))
-                .thenReturn(new Resource());
-        ImpersonationConfig impersonationConfig = new ImpersonationConfig();
-        impersonationConfig.setEnableEmailNotification(true);
-        try {
-            impersonationConfigMgtService.setImpersonationConfig(impersonationConfig, tenantDomain);
-        } catch (ImpersonationConfigMgtException e) {
-            fail("Unexpected Exception");
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
+            lenient().when(configurationManager.replaceResource(eq(IMPERSONATION_RESOURCE_TYPE_NAME),
+                            any(Resource.class))).thenReturn(new Resource());
+            ImpersonationConfig impersonationConfig = new ImpersonationConfig();
+            impersonationConfig.setEnableEmailNotification(true);
+            try {
+                impersonationConfigMgtService.setImpersonationConfig(impersonationConfig, tenantDomain);
+            } catch (ImpersonationConfigMgtException e) {
+                fail("Unexpected Exception");
+            }
         }
     }
 
     @Test
     public void testSetImpersonationConfigException() throws ConfigurationManagementException {
 
-        when(IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
-        ConfigurationManagementException configurationManagementException = new ConfigurationManagementException
-                (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
-        when(configurationManager.replaceResource(eq(IMPERSONATION_RESOURCE_TYPE_NAME), any(Resource.class)))
-                .thenThrow(configurationManagementException);
-        ImpersonationConfig impersonationConfig = new ImpersonationConfig();
-        impersonationConfig.setEnableEmailNotification(true);
-        try {
-            impersonationConfigMgtService.setImpersonationConfig(impersonationConfig, tenantDomain);
-        } catch (ImpersonationConfigMgtException e) {
-            assertEquals(e.getErrorCode(), ERROR_CODE_IMP_CONFIG_UPDATE.getCode());
-            assertEquals(e.getMessage(), String.format(ERROR_CODE_IMP_CONFIG_UPDATE.getDescription(), tenantDomain));
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);) {
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(tenantDomain)).thenReturn(-1234);
+            ConfigurationManagementException configurationManagementException = new ConfigurationManagementException
+                    (ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getMessage(), ERROR_CODE_RESOURCE_DOES_NOT_EXISTS.getCode());
+            lenient().when(configurationManager.replaceResource(eq(IMPERSONATION_RESOURCE_TYPE_NAME),
+                            any(Resource.class))).thenThrow(configurationManagementException);
+            ImpersonationConfig impersonationConfig = new ImpersonationConfig();
+            impersonationConfig.setEnableEmailNotification(true);
+            try {
+                impersonationConfigMgtService.setImpersonationConfig(impersonationConfig, tenantDomain);
+            } catch (ImpersonationConfigMgtException e) {
+                assertEquals(e.getErrorCode(), ERROR_CODE_IMP_CONFIG_UPDATE.getCode());
+                assertEquals(e.getMessage(),
+                        String.format(ERROR_CODE_IMP_CONFIG_UPDATE.getDescription(), tenantDomain));
+            }
         }
     }
 }

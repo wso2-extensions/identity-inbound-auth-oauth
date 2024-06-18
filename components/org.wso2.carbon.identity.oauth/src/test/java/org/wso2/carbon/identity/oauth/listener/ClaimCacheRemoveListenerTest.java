@@ -18,10 +18,10 @@
 package org.wso2.carbon.identity.oauth.listener;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
@@ -31,11 +31,10 @@ import org.wso2.carbon.identity.oauth.util.UserClaims;
 import javax.cache.Cache;
 import javax.cache.event.CacheEntryEvent;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
-@PrepareForTest({ClaimMetaDataCache.class})
+@Listeners(MockitoTestNGListener.class)
 public class ClaimCacheRemoveListenerTest {
 
     @Mock
@@ -99,14 +98,12 @@ public class ClaimCacheRemoveListenerTest {
 
     @Test(dataProvider = "provideParams")
     public void testEntryRemoved(Object object) throws Exception {
-        mockStatic(ClaimMetaDataCache.class);
-        when(ClaimMetaDataCache.getInstance()).thenReturn(mockedClaimMetaDataCache);
-        ClaimCacheRemoveListener claimCacheRemoveListener = new ClaimCacheRemoveListener();
-        claimCacheRemoveListener.entryRemoved((CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims>) object);
-    }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
+        try (MockedStatic<ClaimMetaDataCache> claimMetaDataCache = mockStatic(ClaimMetaDataCache.class)) {
+            claimMetaDataCache.when(ClaimMetaDataCache::getInstance).thenReturn(mockedClaimMetaDataCache);
+            ClaimCacheRemoveListener claimCacheRemoveListener = new ClaimCacheRemoveListener();
+            claimCacheRemoveListener.entryRemoved(
+                    (CacheEntryEvent<? extends ClaimCacheKey, ? extends UserClaims>) object);
+        }
     }
 }

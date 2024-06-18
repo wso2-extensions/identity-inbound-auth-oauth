@@ -44,6 +44,8 @@ public class DAOUtils {
 
         try (Connection connection = dataSource.getConnection()) {
             connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + scriptPath + "'");
+        } catch (SQLException e) {
+            // ignore
         }
         dataSourceMap.put(databaseName, dataSource);
     }

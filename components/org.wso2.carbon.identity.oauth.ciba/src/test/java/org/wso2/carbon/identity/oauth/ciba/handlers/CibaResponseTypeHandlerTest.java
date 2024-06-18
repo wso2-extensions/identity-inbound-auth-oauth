@@ -18,35 +18,32 @@
 package org.wso2.carbon.identity.oauth.ciba.handlers;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
-import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
-@PrepareForTest({OAuth2Util.class, CibaDAOFactory.class, IdentityDatabaseUtil.class,
-        OAuthServerConfiguration.class, CibaDAOFactory.class})
-@PowerMockIgnore({"javax.crypto.*"})
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
-public class CibaResponseTypeHandlerTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class CibaResponseTypeHandlerTest {
 
     private static final String NONCE = "2201e5aa-1c5f-4a17-90c9-1956a3540b19";
     private static final String CONSUMER_KEY = "ZzxmDqqK8YYfjtlOh9vw85qnNVoa";
@@ -57,25 +54,25 @@ public class CibaResponseTypeHandlerTest extends PowerMockTestCase {
     AuthenticatedUser authenticatedUser;
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     CibaMgtDAOImpl cibaAuthMgtDAO;
 
     @Mock
-    CibaDAOFactory cibaDAOFactory;
+    CibaDAOFactory mockCibaDAOFactory;
 
-    @Mock
-    OAuthErrorDTO oAuthErrorDTO;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+    private MockedStatic<CibaDAOFactory> cibaDAOFactory;
 
     @BeforeMethod
     public void setUp() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        mockStatic(CibaDAOFactory.class);
-        when(CibaDAOFactory.getInstance()).thenReturn(cibaDAOFactory);
+        cibaDAOFactory = mockStatic(CibaDAOFactory.class);
+        cibaDAOFactory.when(CibaDAOFactory::getInstance).thenReturn(mockCibaDAOFactory);
 
         authenticatedUser = new AuthenticatedUser();
         authorizationReqDTO = new OAuth2AuthorizeReqDTO();
@@ -93,23 +90,30 @@ public class CibaResponseTypeHandlerTest extends PowerMockTestCase {
                 .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
     }
 
+    @AfterMethod
+    public void tearDown() {
+        oAuthServerConfiguration.close();
+        cibaDAOFactory.close();
+    }
+
     @Test
     public void testIssue() throws Exception {
 
-        CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
 
-        when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
+            when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getTenantId(anyString())).thenReturn(1234);
+            oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(1234);
 
-        AuthenticatedUser user = new AuthenticatedUser();
-        user.setUserStoreDomain("PRIMARY");
-        user.setUserName("testUser");
-        user.setFederatedIdPName("LOCAL");
+            AuthenticatedUser user = new AuthenticatedUser();
+            user.setUserStoreDomain("PRIMARY");
+            user.setUserName("testUser");
+            user.setFederatedIdPName("LOCAL");
 
-        Assert.assertEquals(cibaResponseTypeHandler.issue(authAuthzReqMessageContext).getCallbackURI(),
-                TEST_CALLBACK_URL + "?authenticationStatus=AUTHENTICATED");
+            Assert.assertEquals(cibaResponseTypeHandler.issue(authAuthzReqMessageContext).getCallbackURI(),
+                    TEST_CALLBACK_URL + "?authenticationStatus=AUTHENTICATED");
+        }
     }
 
     @DataProvider(name = "provideFailedAuthenticationErrorInfo")

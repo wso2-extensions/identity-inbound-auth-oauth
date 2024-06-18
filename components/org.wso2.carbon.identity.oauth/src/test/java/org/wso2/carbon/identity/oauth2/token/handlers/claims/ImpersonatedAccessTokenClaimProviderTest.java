@@ -23,25 +23,23 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
-public class ImpersonatedAccessTokenClaimProviderTest extends PowerMockIdentityBaseTest {
+public class ImpersonatedAccessTokenClaimProviderTest {
 
     private OAuthTokenReqMessageContext tokReqMsgCtx;
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
     private static final String ACT = "act";
     private static final String SUB = "sub";
-
 
     @BeforeMethod
     public void init() {

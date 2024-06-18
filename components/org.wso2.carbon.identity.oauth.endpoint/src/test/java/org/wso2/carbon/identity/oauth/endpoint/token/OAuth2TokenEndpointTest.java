@@ -26,14 +26,19 @@ import org.apache.oltu.oauth2.as.validator.RefreshTokenValidator;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
-import org.mockito.Matchers;
+import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.annotations.AfterTest;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -75,39 +80,31 @@ import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest({EndpointUtil.class, IdentityDatabaseUtil.class, OAuthServerConfiguration.class,
-        CarbonOAuthTokenRequest.class, LoggerUtils.class, IdentityTenantUtil.class, })
+@Listeners(MockitoTestNGListener.class)
 public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     OAuth2Service oAuth2Service;
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
     @Mock
-    HttpServletResponse httpServletResponse;
-
-    @Mock
     OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO;
-
-    @Mock
-    CarbonOAuthTokenRequest carbonOAuthTokenRequest;
 
     private static final String SQL_ERROR = "sql_error";
     private static final String TOKEN_ERROR = "token_error";
@@ -127,6 +124,8 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     private OAuth2TokenEndpoint oAuth2TokenEndpoint;
 
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+
     @BeforeClass
     public void setUp() throws Exception {
 
@@ -138,14 +137,36 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         oAuth2TokenEndpoint = new OAuth2TokenEndpoint();
 
         initiateInMemoryH2();
-        createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE");
-        createOAuthApp(INACTIVE_CLIENT_ID_VALUE, "dummySecret", USERNAME, INACTIVE_APP_NAME, "INACTIVE");
+
+        try {
+            createOAuthApp(CLIENT_ID_VALUE, SECRET, USERNAME, APP_NAME, "ACTIVE");
+        } catch (JdbcSQLIntegrityConstraintViolationException e) {
+            // Ignore
+        }
+        try {
+            createOAuthApp(INACTIVE_CLIENT_ID_VALUE, "dummySecret", USERNAME, INACTIVE_APP_NAME, "INACTIVE");
+        } catch (JdbcSQLIntegrityConstraintViolationException e) {
+            // Ignore
+        }
     }
 
-    @AfterTest
+    @AfterClass
     public void clear() throws Exception {
 
         super.cleanData();
+    }
+
+    @BeforeMethod
+    public void setUpBeforeMethod() {
+
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+        mockDatabase(identityDatabaseUtil);
+    }
+
+    @AfterMethod
+    public void tearDownAfterMethod() {
+
+        identityDatabaseUtil.close();
     }
 
     @DataProvider(name = "testIssueAccessTokenDataProvider")
@@ -238,88 +259,93 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                                      String idToken, Object headerObj, Object customResponseParamObj, Exception e,
                                      int expectedStatus, String expectedErrorCode) throws Exception {
 
-        MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
-        ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
-        Map<String, String> customResponseParameters = (Map<String, String>) customResponseParamObj;
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);) {
+            MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
+            ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
+            Map<String, String> customResponseParameters = (Map<String, String>) customResponseParamObj;
 
-        Map<String, String[]> requestParams = new HashMap<>();
+            Map<String, String[]> requestParams = new HashMap<>();
 
-        if (clientId != null) {
-            requestParams.put(OAuth.OAUTH_CLIENT_ID, clientId.split(","));
-        }
-        requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{grantType});
-        requestParams.put(OAuth.OAUTH_SCOPE, new String[]{"scope1"});
-        requestParams.put(OAuth.OAUTH_REDIRECT_URI, new String[]{APP_REDIRECT_URL});
-        requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
-        requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
+            if (clientId != null) {
+                requestParams.put(OAuth.OAUTH_CLIENT_ID, clientId.split(","));
+            }
+            requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{grantType});
+            requestParams.put(OAuth.OAUTH_SCOPE, new String[]{"scope1"});
+            requestParams.put(OAuth.OAUTH_REDIRECT_URI, new String[]{APP_REDIRECT_URL});
+            requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
+            requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
 
-        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-        oAuthClientAuthnContext.setAuthenticated(true);
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(true);
 
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<>());
 
-        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+            request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
 
-        when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
-        when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>() {{
-                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
-                }}));
+            lenient().when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
+            lenient().when(request.getHeaderNames()).thenReturn(
+                    Collections.enumeration(new ArrayList<String>() {{
+                        add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                    }}));
 
-        spy(EndpointUtil.class);
-        doReturn(REALM).when(EndpointUtil.class, "getRealmInfo");
-        doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
+            endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
+            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
 
-        when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(oAuth2AccessTokenRespDTO);
-        when(oAuth2AccessTokenRespDTO.getAccessToken()).thenReturn(ACCESS_TOKEN);
-        when(oAuth2AccessTokenRespDTO.getRefreshToken()).thenReturn(REFRESH_TOKEN);
-        when(oAuth2AccessTokenRespDTO.getExpiresIn()).thenReturn(3600L);
-        when(oAuth2AccessTokenRespDTO.getAuthorizedScopes()).thenReturn("scope1");
-        when(oAuth2AccessTokenRespDTO.getIDToken()).thenReturn(idToken);
-        when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
-        when(oAuth2AccessTokenRespDTO.getParameters()).thenReturn(customResponseParameters);
+            lenient().when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(
+                    oAuth2AccessTokenRespDTO);
+            lenient().when(oAuth2AccessTokenRespDTO.getAccessToken()).thenReturn(ACCESS_TOKEN);
+            lenient().when(oAuth2AccessTokenRespDTO.getRefreshToken()).thenReturn(REFRESH_TOKEN);
+            lenient().when(oAuth2AccessTokenRespDTO.getExpiresIn()).thenReturn(3600L);
+            lenient().when(oAuth2AccessTokenRespDTO.getAuthorizedScopes()).thenReturn("scope1");
+            lenient().when(oAuth2AccessTokenRespDTO.getIDToken()).thenReturn(idToken);
+            lenient().when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
+            lenient().when(oAuth2AccessTokenRespDTO.getParameters()).thenReturn(customResponseParameters);
 
-        mockOAuthServerConfiguration();
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
-        grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
+            Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
+            grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
 
-        when(oAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
-        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+            lenient().when(mockOAuthServerConfiguration.getSupportedGrantTypeValidators())
+                    .thenReturn(grantTypeValidators);
+            lenient().when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response;
-        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
-        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
-        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
-        try {
-            response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse, paramMap);
-        } catch (InvalidRequestParentException ire) {
-            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
-            response = invalidRequestExceptionMapper.toResponse(ire);
-        }
+            Response response;
+            HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+            HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+            endpointUtil.when(() -> EndpointUtil.getHttpServletResponseWrapper(any()))
+                    .thenReturn(httpServletResponseWrapper);
+            try {
+                response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse, paramMap);
+            } catch (InvalidRequestParentException ire) {
+                InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+                response = invalidRequestExceptionMapper.toResponse(ire);
+            }
 
-        assertNotNull(response, "Token response is null");
-        assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+            assertNotNull(response, "Token response is null");
+            assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
 
-        assertNotNull(response.getEntity(), "Response entity is null");
+            assertNotNull(response.getEntity(), "Response entity is null");
 
-        final String responseBody = response.getEntity().toString();
-        if (customResponseParameters != null) {
-            customResponseParameters.forEach((key, value) -> assertTrue(responseBody.contains(key) && responseBody
-                    .contains(value), "Expected custom response parameter: " + key + " not found in token response."));
-        }
+            final String responseBody = response.getEntity().toString();
+            if (customResponseParameters != null) {
+                customResponseParameters.forEach((key, value) -> assertTrue(responseBody.contains(key) && responseBody
+                                .contains(value),
+                        "Expected custom response parameter: " + key + " not found in token response."));
+            }
 
-        if (expectedErrorCode != null) {
-            assertTrue(responseBody.contains(expectedErrorCode), "Expected error code not found");
-        } else if (HttpServletResponse.SC_OK == expectedStatus) {
-            assertTrue(responseBody.contains(ACCESS_TOKEN),
-                    "Successful response should contain access token");
+            if (expectedErrorCode != null) {
+                assertTrue(responseBody.contains(expectedErrorCode), "Expected error code not found");
+            } else if (HttpServletResponse.SC_OK == expectedStatus) {
+                assertTrue(responseBody.contains(ACCESS_TOKEN),
+                        "Successful response should contain access token");
+            }
         }
     }
 
@@ -352,123 +378,124 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
     public void testTokenErrorResponse(String errorCode, Object headerObj, int expectedStatus,
                                        String expectedErrorCode) throws Exception {
 
-        ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);) {
+            ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
 
-        Map<String, String[]> requestParams = new HashMap<>();
-        requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{GrantType.PASSWORD.toString()});
-        requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
-        requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
+            Map<String, String[]> requestParams = new HashMap<>();
+            requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{GrantType.PASSWORD.toString()});
+            requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
+            requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
 
-        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-        oAuthClientAuthnContext.setAuthenticated(true);
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(true);
 
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
-        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
-        when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
-        when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>() {{
-                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
-                }}));
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<>());
+            request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+            when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
+            when(request.getHeaderNames()).thenReturn(
+                    Collections.enumeration(new ArrayList<String>() {{
+                        add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                    }}));
 
-        spy(EndpointUtil.class);
-        doReturn(REALM).when(EndpointUtil.class, "getRealmInfo");
-        doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
+            endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
+            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
 
-        when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(oAuth2AccessTokenRespDTO);
-        when(oAuth2AccessTokenRespDTO.getErrorMsg()).thenReturn("Token Response error");
-        when(oAuth2AccessTokenRespDTO.getErrorCode()).thenReturn(errorCode);
-        when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
+            when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(
+                    oAuth2AccessTokenRespDTO);
+            when(oAuth2AccessTokenRespDTO.getErrorMsg()).thenReturn("Token Response error");
+            when(oAuth2AccessTokenRespDTO.getErrorCode()).thenReturn(errorCode);
+            lenient().when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
 
-        mockOAuthServerConfiguration();
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
-        grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
+            Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
+            grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
 
-        when(oAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
-        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+            when(mockOAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
+            lenient().when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
 
-        Response response;
-        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
-        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
-        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
-        try {
-            response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse,
-                    new MultivaluedHashMap<String, String>());
-        } catch (InvalidRequestParentException ire) {
-            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
-            response = invalidRequestExceptionMapper.toResponse(ire);
+            Response response;
+            HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+            HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+            endpointUtil.when(() -> EndpointUtil.getHttpServletResponseWrapper(any()))
+                    .thenReturn(httpServletResponseWrapper);
+            try {
+                response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse,
+                        new MultivaluedHashMap<>());
+            } catch (InvalidRequestParentException ire) {
+                InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+                response = invalidRequestExceptionMapper.toResponse(ire);
+            }
+
+            assertNotNull(response, "Token response is null");
+            assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
+            assertNotNull(response.getEntity(), "Response entity is null");
+            assertTrue(response.getEntity().toString().contains(expectedErrorCode), "Expected error code not found");
         }
-
-        assertNotNull(response, "Token response is null");
-        assertEquals(response.getStatus(), expectedStatus, "Unexpected HTTP response status");
-        assertNotNull(response.getEntity(), "Response entity is null");
-        assertTrue(response.getEntity().toString().contains(expectedErrorCode), "Expected error code not found");
     }
 
     @Test()
     public void testIssueAccessTokenWithInvalidClientSecret() throws Exception {
 
-        ResponseHeader[] responseHeaders = new ResponseHeader[]{null};
-        Map<String, String[]> requestParams = new HashMap<>();
-        requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{GrantType.CLIENT_CREDENTIALS.toString()});
-        requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
-        requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
-        OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-        oAuthClientAuthnContext.setAuthenticated(false);
-        oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
-        HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
-        request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);) {
+            ResponseHeader[] responseHeaders = new ResponseHeader[]{null};
+            Map<String, String[]> requestParams = new HashMap<>();
+            requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{GrantType.CLIENT_CREDENTIALS.toString()});
+            requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
+            requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
+            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+            oAuthClientAuthnContext.setAuthenticated(false);
+            oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);
+            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
+            request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
 
-        when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn("Basic "
-                + Base64Utils.encode((CLIENT_ID_VALUE + ":" + SECRET.substring(0, SECRET.length() - 5)).getBytes()));
-        when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>() {{
-                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
-                }}));
-        spy(EndpointUtil.class);
-        doReturn(REALM).when(EndpointUtil.class, "getRealmInfo");
-        doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
-        when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(oAuth2AccessTokenRespDTO);
-        when(oAuth2AccessTokenRespDTO.getErrorMsg()).thenReturn("Client credentials are invalid.");
-        when(oAuth2AccessTokenRespDTO.getErrorCode()).thenReturn(OAuth2ErrorCodes.INVALID_CLIENT);
-        when(oAuth2AccessTokenRespDTO.getResponseHeaders()).thenReturn(responseHeaders);
-        mockOAuthServerConfiguration();
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
-        grantTypeValidators.put(GrantType.CLIENT_CREDENTIALS.toString(), PasswordValidator.class);
-        when(oAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
-        when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
+            when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn("Basic " +
+                    Base64Utils.encode((CLIENT_ID_VALUE + ":" + SECRET.substring(0, SECRET.length() - 5)).getBytes()));
+            when(request.getHeaderNames()).thenReturn(
+                    Collections.enumeration(new ArrayList<String>() {{
+                        add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                    }}));
 
-        Response response;
-        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
-        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
-        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
-        try {
-            response = oAuth2TokenEndpoint.issueAccessToken(request,  httpServletResponse,
-                    new MultivaluedHashMap<String, String>());
-        } catch (InvalidRequestParentException ire) {
-            InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
-            response = invalidRequestExceptionMapper.toResponse(ire);
+            endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
+            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
+            grantTypeValidators.put(GrantType.CLIENT_CREDENTIALS.toString(), PasswordValidator.class);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
+
+            Response response;
+            HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+            HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+            endpointUtil.when(() -> EndpointUtil.getHttpServletResponseWrapper(any()))
+                    .thenReturn(httpServletResponseWrapper);
+            try {
+                response = oAuth2TokenEndpoint.issueAccessToken(request, httpServletResponse,
+                        new MultivaluedHashMap<>());
+            } catch (InvalidRequestParentException ire) {
+                InvalidRequestExceptionMapper invalidRequestExceptionMapper = new InvalidRequestExceptionMapper();
+                response = invalidRequestExceptionMapper.toResponse(ire);
+            }
+
+            assertNotNull(response, "Token response is null");
+            assertEquals(response.getStatus(), 401, "Unexpected HTTP response status");
+            assertNotNull(response.getEntity(), "Response entity is null");
+            assertTrue(response.getEntity().toString().contains(OAuth2ErrorCodes.INVALID_CLIENT),
+                    "Expected error code not found");
+            assertTrue(response.getMetadata().containsKey(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE),
+                    "Missing WWW-Authenticate header");
         }
-
-        assertNotNull(response, "Token response is null");
-        assertEquals(response.getStatus(), 401, "Unexpected HTTP response status");
-        assertNotNull(response.getEntity(), "Response entity is null");
-        assertTrue(response.getEntity().toString().contains(OAuth2ErrorCodes.INVALID_CLIENT),
-                "Expected error code not found");
-        assertTrue(response.getMetadata().containsKey(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE),
-                "Missing WWW-Authenticate header");
     }
 
     @DataProvider(name = "testGetAccessTokenDataProvider")
@@ -487,89 +514,93 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
     @Test(dataProvider = "testGetAccessTokenDataProvider")
     public void testGetAccessToken(String grantType, String additionalParameters) throws Exception {
 
-        Map<String, String[]> requestParams = new HashMap<>();
-        requestParams.put(OAuth.OAUTH_CLIENT_ID, new String[]{CLIENT_ID_VALUE});
-        requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{grantType});
-        requestParams.put(OAuth.OAUTH_SCOPE, new String[]{"scope1"});
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);) {
+            Map<String, String[]> requestParams = new HashMap<>();
+            requestParams.put(OAuth.OAUTH_CLIENT_ID, new String[]{CLIENT_ID_VALUE});
+            requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{grantType});
+            requestParams.put(OAuth.OAUTH_SCOPE, new String[]{"scope1"});
 
-        // Required params for authorization_code grant type
-        requestParams.put(OAuth.OAUTH_REDIRECT_URI, new String[]{APP_REDIRECT_URL});
-        requestParams.put(OAuth.OAUTH_CODE, new String[]{"auth_code"});
+            // Required params for authorization_code grant type
+            requestParams.put(OAuth.OAUTH_REDIRECT_URI, new String[]{APP_REDIRECT_URL});
+            requestParams.put(OAuth.OAUTH_CODE, new String[]{"auth_code"});
 
-        // Required params for password grant type
-        requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
-        requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
+            // Required params for password grant type
+            requestParams.put(OAuth.OAUTH_USERNAME, new String[]{USERNAME});
+            requestParams.put(OAuth.OAUTH_PASSWORD, new String[]{PASSWORD});
 
-        // Required params for refresh token grant type
-        requestParams.put(OAuth.OAUTH_REFRESH_TOKEN, new String[]{REFRESH_TOKEN});
+            // Required params for refresh token grant type
+            requestParams.put(OAuth.OAUTH_REFRESH_TOKEN, new String[]{REFRESH_TOKEN});
 
-        // Required params for saml2 bearer grant type
-        requestParams.put(OAuth.OAUTH_ASSERTION, new String[]{"dummyAssertion"});
+            // Required params for saml2 bearer grant type
+            requestParams.put(OAuth.OAUTH_ASSERTION, new String[]{"dummyAssertion"});
 
-        // Required params for IWA_NLTM grant type
-        requestParams.put(OAuthConstants.WINDOWS_TOKEN, new String[]{"dummyWindowsToken"});
+            // Required params for IWA_NLTM grant type
+            requestParams.put(OAuthConstants.WINDOWS_TOKEN, new String[]{"dummyWindowsToken"});
 
-        HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
-        when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
-        when(request.getHeaderNames()).thenReturn(
-                Collections.enumeration(new ArrayList<String>() {{
-                    add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
-                }}));
+            HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<String, Object>());
+            when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(AUTHORIZATION_HEADER);
+            when(request.getHeaderNames()).thenReturn(
+                    Collections.enumeration(new ArrayList<String>() {{
+                        add(OAuthConstants.HTTP_REQ_HEADER_AUTHZ);
+                    }}));
 
-        Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
-        grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
-        grantTypeValidators.put(GrantType.CLIENT_CREDENTIALS.toString(), ClientCredentialValidator.class);
-        grantTypeValidators.put(GrantType.AUTHORIZATION_CODE.toString(), AuthorizationCodeValidator.class);
-        grantTypeValidators.put(GrantType.REFRESH_TOKEN.toString(), RefreshTokenValidator.class);
-        grantTypeValidators.put(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString(),
-                NTLMAuthenticationValidator.class);
-        grantTypeValidators.put(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString(),
-                SAML2GrantValidator.class);
+            Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
+            grantTypeValidators.put(GrantType.PASSWORD.toString(), PasswordValidator.class);
+            grantTypeValidators.put(GrantType.CLIENT_CREDENTIALS.toString(), ClientCredentialValidator.class);
+            grantTypeValidators.put(GrantType.AUTHORIZATION_CODE.toString(), AuthorizationCodeValidator.class);
+            grantTypeValidators.put(GrantType.REFRESH_TOKEN.toString(), RefreshTokenValidator.class);
+            grantTypeValidators.put(org.wso2.carbon.identity.oauth.common.GrantType.IWA_NTLM.toString(),
+                    NTLMAuthenticationValidator.class);
+            grantTypeValidators.put(org.wso2.carbon.identity.oauth.common.GrantType.SAML20_BEARER.toString(),
+                    SAML2GrantValidator.class);
 
-        mockOAuthServerConfiguration();
-        when(oAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
 
-        spy(EndpointUtil.class);
-        doReturn(oAuth2Service).when(EndpointUtil.class, "getOAuth2Service");
-        final Map<String, String> parametersSetToRequest = new HashMap<>();
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
+            final Map<String, String> parametersSetToRequest = new HashMap<>();
+            doAnswer(new Answer<Object>() {
+                @Override
+                public Object answer(InvocationOnMock invocation) throws Throwable {
 
-                OAuth2AccessTokenReqDTO request = (OAuth2AccessTokenReqDTO) invocation.getArguments()[0];
-                parametersSetToRequest.put(OAuth.OAUTH_CODE, request.getAuthorizationCode());
-                parametersSetToRequest.put(OAuth.OAUTH_USERNAME, request.getResourceOwnerUsername());
-                parametersSetToRequest.put(OAuth.OAUTH_PASSWORD, request.getResourceOwnerPassword());
-                parametersSetToRequest.put(OAuth.OAUTH_REFRESH_TOKEN, request.getRefreshToken());
-                parametersSetToRequest.put(OAuth.OAUTH_ASSERTION, request.getAssertion());
-                parametersSetToRequest.put(OAuthConstants.WINDOWS_TOKEN, request.getWindowsToken());
-                parametersSetToRequest.put(OAuth.OAUTH_GRANT_TYPE, request.getGrantType());
-                OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
-                return tokenRespDTO;
+                    OAuth2AccessTokenReqDTO request = (OAuth2AccessTokenReqDTO) invocation.getArguments()[0];
+                    parametersSetToRequest.put(OAuth.OAUTH_CODE, request.getAuthorizationCode());
+                    parametersSetToRequest.put(OAuth.OAUTH_USERNAME, request.getResourceOwnerUsername());
+                    parametersSetToRequest.put(OAuth.OAUTH_PASSWORD, request.getResourceOwnerPassword());
+                    parametersSetToRequest.put(OAuth.OAUTH_REFRESH_TOKEN, request.getRefreshToken());
+                    parametersSetToRequest.put(OAuth.OAUTH_ASSERTION, request.getAssertion());
+                    parametersSetToRequest.put(OAuthConstants.WINDOWS_TOKEN, request.getWindowsToken());
+                    parametersSetToRequest.put(OAuth.OAUTH_GRANT_TYPE, request.getGrantType());
+                    OAuth2AccessTokenRespDTO tokenRespDTO = new OAuth2AccessTokenRespDTO();
+                    return tokenRespDTO;
+                }
+            }).when(oAuth2Service).issueAccessToken(any(OAuth2AccessTokenReqDTO.class));
+
+            CarbonOAuthTokenRequest oauthRequest = new CarbonOAuthTokenRequest(request);
+            HttpServletRequestWrapper httpServletRequestWrapper = new HttpServletRequestWrapper(request);
+
+            Class<?> clazz = OAuth2TokenEndpoint.class;
+            Object tokenEndpointObj = clazz.newInstance();
+            Method getAccessToken = tokenEndpointObj.getClass().
+                    getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class,
+                            HttpServletRequestWrapper.class, HttpServletResponseWrapper.class);
+            getAccessToken.setAccessible(true);
+            HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
+            HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
+            endpointUtil.when(() -> EndpointUtil.getHttpServletResponseWrapper(any()))
+                    .thenReturn(httpServletResponseWrapper);
+            OAuth2AccessTokenRespDTO tokenRespDTO = (OAuth2AccessTokenRespDTO)
+                    getAccessToken.invoke(tokenEndpointObj, oauthRequest, httpServletRequestWrapper,
+                            new HttpServletResponseWrapper(httpServletResponse));
+
+            assertNotNull(tokenRespDTO, "ResponseDTO is null");
+            String[] paramsToCheck = additionalParameters.split(",");
+            for (String param : paramsToCheck) {
+                assertNotNull(parametersSetToRequest.get(param), "Required parameter " + param + " is not set for " +
+                        grantType + "grant type");
             }
-        }).when(oAuth2Service).issueAccessToken(any(OAuth2AccessTokenReqDTO.class));
-
-        CarbonOAuthTokenRequest oauthRequest = new CarbonOAuthTokenRequest(request);
-        HttpServletRequestWrapper httpServletRequestWrapper = new HttpServletRequestWrapper(request);
-
-        Class<?> clazz = OAuth2TokenEndpoint.class;
-        Object tokenEndpointObj = clazz.newInstance();
-        Method getAccessToken = tokenEndpointObj.getClass().
-                getDeclaredMethod("issueAccessToken", CarbonOAuthTokenRequest.class,
-                        HttpServletRequestWrapper.class, HttpServletResponseWrapper.class);
-        getAccessToken.setAccessible(true);
-        HttpServletResponse httpServletResponse = mock(HttpServletResponse.class);
-        HttpServletResponseWrapper httpServletResponseWrapper = mock(HttpServletResponseWrapper.class);
-        when(EndpointUtil.getHttpServletResponseWrapper(any())).thenReturn(httpServletResponseWrapper);
-        OAuth2AccessTokenRespDTO tokenRespDTO = (OAuth2AccessTokenRespDTO)
-                getAccessToken.invoke(tokenEndpointObj, oauthRequest, httpServletRequestWrapper,
-                        new HttpServletResponseWrapper(httpServletResponse));
-
-        assertNotNull(tokenRespDTO, "ResponseDTO is null");
-        String[] paramsToCheck = additionalParameters.split(",");
-        for (String param : paramsToCheck) {
-            assertNotNull(parametersSetToRequest.get(param), "Required parameter " + param + " is not set for " +
-                    grantType + "grant type");
         }
     }
 
@@ -577,55 +608,41 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                                                final Map<String, Object> requestAttributes) {
 
         HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+        lenient().doAnswer((Answer<Object>) invocation -> {
 
-                String key = (String) invocation.getArguments()[0];
-                return requestParams.get(key) != null ? requestParams.get(key)[0] : null;
-            }
+            String key = (String) invocation.getArguments()[0];
+            return requestParams.get(key) != null ? requestParams.get(key)[0] : null;
         }).when(httpServletRequest).getParameter(anyString());
 
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+        doAnswer((Answer<Object>) invocation -> {
 
-                String key = (String) invocation.getArguments()[0];
-                return requestAttributes.get(key);
-            }
+            String key = (String) invocation.getArguments()[0];
+            return requestAttributes.get(key);
         }).when(httpServletRequest).getAttribute(anyString());
 
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+        lenient().doAnswer((Answer<Object>) invocation -> {
 
-                String key = (String) invocation.getArguments()[0];
-                Object value = invocation.getArguments()[1];
-                requestAttributes.put(key, value);
-                return null;
-            }
-        }).when(httpServletRequest).setAttribute(anyString(), Matchers.anyObject());
+            String key = (String) invocation.getArguments()[0];
+            Object value = invocation.getArguments()[1];
+            requestAttributes.put(key, value);
+            return null;
+        }).when(httpServletRequest).setAttribute(anyString(), any());
 
-        when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
-        when(httpServletRequest.getParameterNames()).thenReturn(
+        lenient().when(httpServletRequest.getParameterMap()).thenReturn(requestParams);
+        lenient().when(httpServletRequest.getParameterNames()).thenReturn(
                 new IteratorEnumeration(requestParams.keySet().iterator()));
-        when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);
-        when(httpServletRequest.getContentType()).thenReturn(OAuth.ContentType.URL_ENCODED);
+        lenient().when(httpServletRequest.getMethod()).thenReturn(HttpMethod.POST);
+        lenient().when(httpServletRequest.getContentType()).thenReturn(OAuth.ContentType.URL_ENCODED);
 
         return httpServletRequest;
     }
 
-    private void mockOAuthServerConfiguration() throws Exception {
+    private void mockOAuthServerConfiguration(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
+            throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                return (String) invocation.getArguments()[0];
-            }
-        });
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+        lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
+                invocation -> invocation.getArguments()[0]);
     }
 }

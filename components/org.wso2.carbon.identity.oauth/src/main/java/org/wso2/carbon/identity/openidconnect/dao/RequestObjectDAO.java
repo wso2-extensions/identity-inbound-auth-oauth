@@ -35,12 +35,12 @@ public interface RequestObjectDAO {
     /**
      * Store request object related data into related db tables.
      *
-     * @param consumerKeyId  consumer key
+     * @param consumerKey  consumer key
      * @param sessionDataKey session data key
      * @param claims         request object claims
      * @throws IdentityOAuth2Exception
      */
-    void insertRequestObjectData(String consumerKeyId, String sessionDataKey,
+    void insertRequestObjectData(String consumerKey, String sessionDataKey,
                                  List<List<RequestedClaim>> claims)
             throws IdentityOAuth2Exception;
 
