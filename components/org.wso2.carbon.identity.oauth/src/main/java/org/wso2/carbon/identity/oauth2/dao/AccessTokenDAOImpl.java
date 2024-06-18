@@ -585,6 +585,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setTokenState(tokenState);
                     accessTokenDO.setTokenId(tokenId);
                     accessTokenDO.setGrantType(grantType);
+                    accessTokenDO.setAppResidentTenantId(appTenantId);
 
                     if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
                         accessTokenDO.getAuthzUser().setAccessingOrganization(authzUser.getAccessingOrganization());
@@ -1165,6 +1166,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
+                    dataDO.setAppResidentTenantId(appResideTenantId);
 
                     /* For organization bound access tokens, the authenticated user should be populated considering
                     below factors. */

@@ -217,6 +217,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         mockRequiredObjects();
         when(realmService.getTenantManager()).thenReturn(tenantManager);
         doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
+        doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(tenantManager).getDomain(Mockito.anyInt());
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
         IdentityTenantUtil.setRealmService(realmService);
         when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
