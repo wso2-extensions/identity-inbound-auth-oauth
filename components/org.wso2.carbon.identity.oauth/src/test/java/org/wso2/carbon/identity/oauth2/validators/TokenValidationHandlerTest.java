@@ -267,10 +267,11 @@ public class TokenValidationHandlerTest {
 
                 when(realmService.getTenantManager()).thenReturn(tenantManager);
                 doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
-                doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(tenantManager).getDomain(Mockito.anyInt());
+                lenient().doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(tenantManager)
+                        .getDomain(Mockito.anyInt());
                 OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
                 IdentityTenantUtil.setRealmService(realmService);
-                when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
+                lenient().when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
                 identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
 
                 OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();

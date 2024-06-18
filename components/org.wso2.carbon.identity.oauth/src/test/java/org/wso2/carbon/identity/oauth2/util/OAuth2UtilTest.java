@@ -516,7 +516,8 @@ public class OAuth2UtilTest {
 
             // Mock the cache result.
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(eq(clientId), anyInt())).thenReturn(null);
 
             appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
 
@@ -1248,8 +1249,10 @@ public class OAuth2UtilTest {
             identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled)
                     .thenReturn(enableTenantURLSupport);
             identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
-            lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
-                    .thenReturn("carbon.super");
+            PrivilegedCarbonContext mockPrivilegedCarbonContext = mock(PrivilegedCarbonContext.class);
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPrivilegedCarbonContext);
+            lenient().when(mockPrivilegedCarbonContext.getTenantDomain()).thenReturn("carbon.super");
 
             FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
             lenient().when(mockIdentityProvider.getFederatedAuthenticatorConfigs())
@@ -2262,7 +2265,8 @@ public class OAuth2UtilTest {
             appDO.setOauthConsumerSecret(clientSecret);
 
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(eq(clientId), anyInt())).thenReturn(null);
             appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
@@ -2437,7 +2441,8 @@ public class OAuth2UtilTest {
             appDO.setOauthConsumerSecret(clientSecret);
 
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(null);
+            lenient().when(mockAppInfoCache.getValueFromCache(eq(clientId), anyInt())).thenReturn(null);
             appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(
