@@ -107,6 +107,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -429,6 +430,13 @@ public class OAuthAdminServiceImpl {
                             }
                             app.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
                         }
+                        Boolean tokenEndpointReusePvtKeyJWT = application.isTokenEndpointAllowReusePvtKeyJwt();
+                        if (tokenEndpointAuthMethod != null && !tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT)
+                                && tokenEndpointReusePvtKeyJWT != null) {
+                            throw handleClientError(INVALID_REQUEST,
+                                    "Invalid token endpoint authentication method requested.");
+                        }
+                        application.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointReusePvtKeyJWT);
                         String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
                             if (isFAPIConformanceEnabled) {
@@ -854,6 +862,14 @@ public class OAuthAdminServiceImpl {
                 }
             }
             oAuthAppDO.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
+
+            // Todo: Do we really need to throw an error. Though the auth mechanism is not pvt ket jwt there's no harm
+            //  in storing this either.
+            boolean tokenEndpointReusePvtKeyJWT = consumerAppDTO.isTokenEndpointAllowReusePvtKeyJwt();
+            if (!tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT) && tokenEndpointReusePvtKeyJWT) {
+                throw handleClientError(INVALID_REQUEST, "Invalid token endpoint authentication method requested.");
+            }
+            oAuthAppDO.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointReusePvtKeyJWT);
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
