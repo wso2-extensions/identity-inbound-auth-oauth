@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -2592,8 +2593,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (latestActiveToken != null) {
                 OAuthTokenReqMessageContext tokReqMsgCtx = OAuth2Util.getTokenRequestContext();
+                OAuthAuthzReqMessageContext authzReqMsgCtx = OAuth2Util.getAuthzRequestContext();
                 // For JWT tokens, always issue a new token expiring the existing token.
-                if (oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx)) {
+                if ((tokReqMsgCtx != null && oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx))
+                        || (authzReqMsgCtx != null && oauthTokenIssuer.renewAccessTokenPerRequest(authzReqMsgCtx))) {
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
                                     .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());
