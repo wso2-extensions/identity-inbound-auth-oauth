@@ -98,6 +98,7 @@ public class AccessTokenIssuer {
     private static final Log log = LogFactory.getLog(AccessTokenIssuer.class);
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
+    private static final String SERVICE_PROVIDERS_SUB_CLAIM = "ServiceProviders.UseUsernameAsSubClaim";
 
     /**
      * Private constructor which will not allow to create objects of this class from outside
@@ -668,6 +669,11 @@ public class AccessTokenIssuer {
                 }
             }
         }
+        boolean useUsernameAsSubClaim = useUsernameAsSubClaim();
+        if (useUsernameAsSubClaim) {
+            return authenticatedUser.getUserName();
+        }
+
         if (useUserIdForDefaultSubject) {
             subject = authenticatedUser.getUserId();
         } else {
@@ -1017,5 +1023,19 @@ public class AccessTokenIssuer {
     private static boolean isNotActiveState(String appState) {
 
         return !APP_STATE_ACTIVE.equalsIgnoreCase(appState);
+    }
+
+    /**
+     * To get the config value to determine the subject claim value.
+     *
+     * @return Whether username should be used as the subject claim. If false, userId will be used as the subject claim.
+     */
+    public static boolean useUsernameAsSubClaim() {
+
+        String useUsernameAsSubClaim = IdentityUtil.getProperty(SERVICE_PROVIDERS_SUB_CLAIM);
+        if (!StringUtils.isEmpty(useUsernameAsSubClaim)) {
+            return Boolean.parseBoolean(useUsernameAsSubClaim);
+        }
+        return false;
     }
 }
