@@ -621,6 +621,7 @@ public final class OAuthConstants {
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
         public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT =  "tokenEndpointAllowReusePvtKeyJwt";
         public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
         public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
         public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
@@ -635,7 +636,14 @@ public final class OAuthConstants {
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
-
+        public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
+        public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
+        // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.
+        public static final String JWT_CONFIGURATION_RESOURCE_TYPE_NAME = "PK_JWT_CONFIGURATION";
+        // Name of the {@code JWTClientAuthenticatorConfig} resource (per tenant) in the Configuration Management API.
+        public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
+        public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
+        public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
         private OIDCConfigProperties() {
 
         }
