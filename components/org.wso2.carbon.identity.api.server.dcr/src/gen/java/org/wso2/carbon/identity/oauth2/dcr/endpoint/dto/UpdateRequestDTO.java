@@ -33,6 +33,7 @@ public class UpdateRequestDTO {
     private boolean extPublicClient;
     private String extTokenType = null;
     private String tokenEndpointAuthMethod = null;
+    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String tokenEndpointAuthSigningAlg = null;
     private String sectorIdentifierUri = null;
     private String idTokenSignedResponseAlg = null;
@@ -235,6 +236,18 @@ public class UpdateRequestDTO {
 
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("token_endpoint_allow_reuse_pvt_key_jwt")
+    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
+
+        return tokenEndpointAllowReusePvtKeyJwt;
+    }
+
+    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
+
+        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     @ApiModelProperty(value = "")

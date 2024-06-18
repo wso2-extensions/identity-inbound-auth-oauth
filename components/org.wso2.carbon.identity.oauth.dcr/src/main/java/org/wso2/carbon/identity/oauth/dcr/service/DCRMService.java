@@ -302,6 +302,7 @@ public class DCRMService {
             if (updateRequest.getTokenEndpointAuthMethod() != null) {
                 appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
             }
+            appDTO.setTokenEndpointAllowReusePvtKeyJwt(updateRequest.isTokenEndpointAllowReusePvtKeyJwt());
             if (updateRequest.getTokenEndpointAuthSignatureAlgorithm() != null) {
                 appDTO.setTokenEndpointAuthSignatureAlgorithm
                         (updateRequest.getTokenEndpointAuthSignatureAlgorithm());
@@ -584,6 +585,7 @@ public class DCRMService {
         application.setExtTokenType(createdApp.getTokenType());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
+        application.setTokenEndpointAllowReusePvtKeyJwt(createdApp.isTokenEndpointAllowReusePvtKeyJwt());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
         application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
         application.setIdTokenSignatureAlgorithm(createdApp.getIdTokenSignatureAlgorithm());
@@ -678,6 +680,7 @@ public class DCRMService {
         if (registrationRequest.getTokenEndpointAuthMethod() != null) {
             oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
         }
+        oAuthConsumerApp.setTokenEndpointAllowReusePvtKeyJwt(registrationRequest.isTokenEndpointAllowReusePvtKeyJwt());
         if (registrationRequest.getTokenEndpointAuthSignatureAlgorithm() != null) {
             oAuthConsumerApp.setTokenEndpointAuthSignatureAlgorithm
                     (registrationRequest.getTokenEndpointAuthSignatureAlgorithm());
