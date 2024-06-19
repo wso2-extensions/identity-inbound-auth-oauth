@@ -340,6 +340,7 @@ public class EndpointUtilTest {
                 }
 
                 EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
+                lenient().when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
                 lenient().when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
                         .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
 
