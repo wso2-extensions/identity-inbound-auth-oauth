@@ -4133,7 +4133,25 @@ public class OAuth2Util {
             } else {
                 authenticatedUser.setFederatedIdPName(OAuth2Util.getFederatedIdPFromDomain(userStoreDomain));
             }
-            authenticatedUser.setUserId(getUserIdOfFederatedUser(username, tenantDomain, idpName));
+
+            try {
+                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                if (OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .isPrimaryOrganization(organizationId)) {
+                    authenticatedUser.setUserId(getUserIdOfFederatedUser(username, tenantDomain, idpName));
+                } else {
+                    String primaryOrgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .getPrimaryOrganizationId(organizationId);
+                    String primaryTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(primaryOrgId);
+                    authenticatedUser.setUserId(getUserIdOfFederatedUser(username, primaryTenantDomain, idpName));
+                    authenticatedUser.setTenantDomain(primaryTenantDomain);
+                }
+            } catch (OrganizationManagementException e) {
+                log.error("Error occurred while resolving the organization id for the tenant domain: "
+                        + tenantDomain, e);
+            }
             if (log.isDebugEnabled()) {
                 log.debug("Federated prefix found in domain: " + userStoreDomain + " for user: " + username +
                         " in tenant domain: " + tenantDomain + ". Flag user as a federated user. " +

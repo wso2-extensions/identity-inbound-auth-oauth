@@ -88,13 +88,14 @@ public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListene
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDO);
+                OAuthUtil.clearOAuthCache(accessTokenDO.getAccessToken());
                 TokenBinding tokenBinding = accessTokenDO.getTokenBinding();
                 String tokenBindingReference = (tokenBinding != null &&
                         StringUtils.isNotBlank(tokenBinding.getBindingReference())) ?
                         tokenBinding.getBindingReference() : NONE;
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
                         OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
-                        accessTokenDO.getAuthorizedOrganizationId());
+                        organizationId);
             }
             ArrayList<String> tokensToRevoke = new ArrayList<>();
             for (Map.Entry entry : latestAccessTokens.entrySet()) {
