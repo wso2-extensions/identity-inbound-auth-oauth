@@ -2058,10 +2058,6 @@ public class OAuth2Util {
         boolean cacheHit = false;
         AccessTokenDO accessTokenDO = null;
 
-        // As the server implementation knows about the PersistenceProcessor Processed Access Token,
-        // we are converting before adding to the cache.
-        String processedToken = getPersistenceProcessor().getProcessedAccessTokenIdentifier(accessTokenIdentifier);
-
         // check the cache, if caching is enabled.
         OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenIdentifier);
         CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
