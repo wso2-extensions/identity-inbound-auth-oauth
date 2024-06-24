@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.AbstractIdentityTenantMgtListener;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -92,9 +93,10 @@ public class OAuthTenantMgtListenerImpl extends AbstractIdentityTenantMgtListene
                 String tokenBindingReference = (tokenBinding != null &&
                         StringUtils.isNotBlank(tokenBinding.getBindingReference())) ?
                         tokenBinding.getBindingReference() : NONE;
+                String authorizedOrgId = StringUtils.isNotEmpty(accessTokenDO.getAuthorizedOrganizationId()) ?
+                        accessTokenDO.getAuthorizedOrganizationId() : OAuthConstants.AuthorizedOrganization.NONE;
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
-                        accessTokenDO.getAuthorizedOrganizationId());
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference, authorizedOrgId);
             }
             ArrayList<String> tokensToRevoke = new ArrayList<>();
             for (Map.Entry entry : latestAccessTokens.entrySet()) {

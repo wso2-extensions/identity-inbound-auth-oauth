@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -145,9 +146,10 @@ public class TenantCreationEventListener implements TenantMgtListener {
                 String tokenBindingReference = (tokenBinding != null &&
                         StringUtils.isNotBlank(tokenBinding.getBindingReference())) ?
                         tokenBinding.getBindingReference() : NONE;
+                String authorizedOrgId = StringUtils.isNotEmpty(accessTokenDO.getAuthorizedOrganizationId()) ?
+                        accessTokenDO.getAuthorizedOrganizationId() : OAuthConstants.AuthorizedOrganization.NONE;
                 OAuthUtil.clearOAuthCache(accessTokenDO.getConsumerKey(), accessTokenDO.getAuthzUser(),
-                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference,
-                        accessTokenDO.getAuthorizedOrganizationId());
+                        OAuth2Util.buildScopeString(accessTokenDO.getScope()), tokenBindingReference, authorizedOrgId);
             }
 
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().revokeAccessTokens(
