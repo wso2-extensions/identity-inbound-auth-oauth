@@ -266,7 +266,7 @@ public class OpenIDConnectServiceComponent {
     @Reference(
             name = "approles.resolver.service",
             service = ApplicationRolesResolver.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
+            cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetAppRolesResolverService"
     )

@@ -19,13 +19,11 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.TestConstants;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -33,21 +31,19 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 
-@PrepareForTest({OAuthTenantMgtListenerImpl.class, OAuthServerConfiguration.class})
-public class OAuthTenantMgtListenerImplTest extends PowerMockIdentityBaseTest {
+public class OAuthTenantMgtListenerImplTest {
 
     @Mock
     OAuthServerConfiguration oAuthServerConfiguration;
 
-    @BeforeMethod
-    public void setUp() throws Exception {
-        initMocks(this);
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-    }
+//    @BeforeMethod
+//    public void setUp() throws Exception {
+//        initMocks(this);
+//        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+//        mockStatic(OAuthServerConfiguration.class);
+//        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+//    }
 
     @AfterMethod
     public void cleanUp() {

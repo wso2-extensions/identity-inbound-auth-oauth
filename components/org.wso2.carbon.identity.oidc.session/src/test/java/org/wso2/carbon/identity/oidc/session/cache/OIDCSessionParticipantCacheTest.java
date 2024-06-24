@@ -17,15 +17,14 @@
  */
 package org.wso2.carbon.identity.oidc.session.cache;
 
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
@@ -34,7 +33,7 @@ import static org.testng.Assert.assertNull;
  */
 @WithCarbonHome
 @WithRealmService
-public class OIDCSessionParticipantCacheTest extends PowerMockTestCase {
+public class OIDCSessionParticipantCacheTest {
 
     private static final String SESSION_ID = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
 

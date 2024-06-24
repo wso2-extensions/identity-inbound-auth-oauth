@@ -141,7 +141,9 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -1424,6 +1426,25 @@ public class OAuth2Util {
         return issuer;
     }
 
+    public static boolean isOrganizationValidAndActive(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            boolean organizationExistById = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .isOrganizationExistById(organizationId);
+            if (!organizationExistById) {
+                return false;
+            }
+            Organization organization = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .getOrganization(organizationId, false, false);
+            if (organization == null) {
+                return false;
+            }
+            return OrganizationManagementConstants.OrganizationStatus.ACTIVE.name().equals(organization.getStatus());
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(e.getMessage(), e);
+        }
+    }
+
     /**
      * OAuth URL related utility functions.
      */
@@ -1943,6 +1964,7 @@ public class OAuth2Util {
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                     OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                     OAuthConstants.LogConstants.ActionIDs.VALIDATE_PKCE)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthApp.getOauthConsumerKey())
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("PKCE validation is successful for the token request."));
@@ -2384,7 +2406,7 @@ public class OAuth2Util {
     public static OAuthAppDO getAppInformationByClientId(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId);
+        OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(clientId, tenantDomain);
         if (oAuthAppDO == null) {
             oAuthAppDO = new OAuthAppDAO().getAppInformation(clientId, IdentityTenantUtil.getTenantId(tenantDomain));
             if (oAuthAppDO != null) {
@@ -2393,7 +2415,7 @@ public class OAuth2Util {
                     AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO,
                             oAuthAppDO.getAppOwner().getTenantDomain());
                 } else {
-                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO);
+                    AppInfoCache.getInstance().addToCache(clientId, oAuthAppDO, tenantDomain);
                 }
             }
         }

@@ -18,26 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
-import org.wso2.carbon.utils.CarbonUtils;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({CarbonUtils.class})
 public class OAuthCacheTest {
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @Test
     public void testGetInstance() throws Exception {
-        mockStatic(CarbonUtils.class);
-        CarbonUtils carbonUtils = new CarbonUtils();
-        assertNotEquals(OAuthCache.getInstance(), carbonUtils, "Message not equal");
+        assertNotNull(OAuthCache.getInstance(), "OAuthCache is not initialized");
     }
 }

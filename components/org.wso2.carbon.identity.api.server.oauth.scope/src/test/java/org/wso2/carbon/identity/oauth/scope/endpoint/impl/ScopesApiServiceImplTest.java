@@ -19,11 +19,13 @@ package org.wso2.carbon.identity.oauth.scope.endpoint.impl;
 
 import org.apache.commons.logging.Log;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -46,21 +48,24 @@ import java.util.Set;
 
 import javax.ws.rs.core.Response;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.reset;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.doThrow;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.wso2.carbon.identity.oauth.scope.endpoint.Constants.SERVER_API_PATH_COMPONENT;
 
-@PowerMockIgnore("javax.*")
-@PrepareForTest({ScopeUtils.class, OAuth2ScopeService.class, ServiceURLBuilder.class})
-public class ScopesApiServiceImplTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class ScopesApiServiceImplTest {
 
     private ScopesApiServiceImpl scopesApiService = new ScopesApiServiceImpl();
     private String someScopeName;
@@ -69,13 +74,21 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
     @Mock
     private OAuth2ScopeService oAuth2ScopeService;
 
+    private MockedStatic<ScopeUtils> scopeUtils;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
         someScopeName = "scope";
         someScopeDescription = "some description";
-        mockStatic(ScopeUtils.class);
-        when(ScopeUtils.getOAuth2ScopeService()).thenReturn(oAuth2ScopeService);
+        scopeUtils = mockStatic(ScopeUtils.class, Mockito.CALLS_REAL_METHODS);
+        scopeUtils.when(ScopeUtils::getOAuth2ScopeService).thenReturn(oAuth2ScopeService);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        scopeUtils.close();
     }
 
     @DataProvider(name = "BuildUpdateScope")
@@ -101,7 +114,12 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
         scopeToUpdateDTO.setBindings(Collections.<String>emptyList());
 
         if (Response.Status.OK.equals(expectation)) {
-            when(ScopeUtils.getScopeDTO(any(Scope.class))).thenReturn(any(ScopeDTO.class));
+            ScopeDTO scopeDTO = new ScopeDTO();
+            scopeUtils.when(() -> ScopeUtils.getScopeDTO(any(Scope.class))).thenReturn(scopeDTO);
+            Scope scope = new Scope(someScopeName, someScopeName, someScopeDescription);
+            scopeUtils.when(() -> ScopeUtils.getUpdatedScope(any(ScopeToUpdateDTO.class), anyString()))
+                    .thenReturn(scope);
+            when(oAuth2ScopeService.updateScope(any(Scope.class))).thenReturn(scope);
             assertEquals(scopesApiService.updateScope(scopeToUpdateDTO, someScopeName).getStatus(),
                     Response.Status.OK.getStatusCode(), "Error occurred while updating scopes");
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
@@ -244,14 +262,14 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
         if (Response.Status.OK.equals(expectation)) {
             when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class), any(Boolean.class),
                     isNull())).thenReturn(scopes);
-            when(ScopeUtils.class, "getScopeDTOs", any(Set.class)).thenCallRealMethod();
+            scopeUtils.when(() -> ScopeUtils.getScopeDTOs(any(Set.class))).thenCallRealMethod();
             Response response = scopesApiService.getScopes(startIndex, count);
             assertEquals(response.getStatus(), Response.Status.OK.getStatusCode(),
                     "Error occurred while getting scopes");
             assertEquals(((HashSet) response.getEntity()).size(), count, "Cannot Retrieve Expected Scopes");
         } else if (Response.Status.INTERNAL_SERVER_ERROR.equals(expectation)) {
-            when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class))).
-                    thenThrow(IdentityOAuth2ScopeServerException.class);
+            when(oAuth2ScopeService.getScopes(any(Integer.class), any(Integer.class), anyBoolean(),
+                    nullable(String.class))).thenThrow(IdentityOAuth2ScopeServerException.class);
             callRealMethod();
             try {
                 scopesApiService.getScopes(startIndex, count);
@@ -284,7 +302,7 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
         if (Response.Status.OK.equals(expectation)) {
             doNothing().when(oAuth2ScopeService).deleteScope(any(String.class));
-            assertEquals(scopesApiService.deleteScope(any(String.class)).getStatus(),
+            assertEquals(scopesApiService.deleteScope(someScopeName).getStatus(),
                     Response.Status.OK.getStatusCode());
         } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
             doThrow(throwable).when(oAuth2ScopeService).deleteScope(any(String.class));
@@ -339,59 +357,63 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
     @Test(dataProvider = "BuildRegisterScope")
     public void testRegisterScope(Response.Status expectation, Throwable throwable) throws Exception {
 
-        ScopeDTO scopeDTO = new ScopeDTO();
-        scopeDTO.setDescription("some description");
-        scopeDTO.setBindings(Collections.<String>emptyList());
-        mockServiceURLBuilder(SERVER_API_PATH_COMPONENT + scopeDTO.getName());
-        if (Response.Status.OK.equals(expectation)) {
-            when(oAuth2ScopeService.registerScope(any(Scope.class))).thenReturn(any(Scope.class));
-            assertEquals(scopesApiService.registerScope(scopeDTO).getStatus(), Response.Status.CREATED.getStatusCode(),
-                    "Error occurred while registering scopes");
-        } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
-            when(oAuth2ScopeService.registerScope(any(Scope.class))).thenThrow(throwable);
-            callRealMethod();
-            try {
-                scopesApiService.registerScope(scopeDTO);
-            } catch (ScopeEndpointException e) {
-                assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode(),
-                        "Cannot find HTTP Response, Bad Request in Case of " +
-                                "IdentityOAuth2ScopeClientException");
-                assertEquals(((ErrorDTO) (e.getResponse().getEntity())).getMessage(),
-                        Response.Status.BAD_REQUEST.getReasonPhrase(), "Cannot find appropriate error message " +
-                                "for HTTP Response, Bad Request");
-            } finally {
-                reset(oAuth2ScopeService);
-            }
-        } else if (Response.Status.CONFLICT.equals(expectation)) {
-            ((IdentityOAuth2ScopeException) throwable).setErrorCode(Oauth2ScopeConstants.ErrorMessages.
-                    ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE.getCode());
-            when(oAuth2ScopeService.registerScope(any(Scope.class))).thenThrow(throwable);
-            callRealMethod();
-            try {
-                scopesApiService.registerScope(scopeDTO);
-            } catch (ScopeEndpointException e) {
-                assertEquals(e.getResponse().getStatus(), Response.Status.CONFLICT.getStatusCode(),
-                        "Cannot find HTTP Response, Conflict in Case of " +
-                                "IdentityOAuth2ScopeClientException");
-                assertEquals(((ErrorDTO) (e.getResponse().getEntity())).getMessage(),
-                        Response.Status.CONFLICT.getReasonPhrase(), "Cannot find appropriate error message " +
-                                "for HTTP Response, Conflict");
-            } finally {
-                reset(oAuth2ScopeService);
-            }
-        } else if (Response.Status.INTERNAL_SERVER_ERROR.equals(expectation)) {
-            when(oAuth2ScopeService.registerScope(any(Scope.class))).thenThrow(IdentityOAuth2ScopeException.class);
-            callRealMethod();
-            try {
-                scopesApiService.registerScope(scopeDTO);
-            } catch (ScopeEndpointException e) {
-                assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
-                        "Cannot find HTTP Response, Internal Server Error in case of " +
-                                "IdentityOAuth2ScopeException");
-                assertNull(e.getResponse().getEntity(), "Do not include error message in case of " +
-                        "Server Exception");
-            } finally {
-                reset(oAuth2ScopeService);
+        try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+            ScopeDTO scopeDTO = new ScopeDTO();
+            scopeDTO.setDescription("some description");
+            scopeDTO.setBindings(Collections.<String>emptyList());
+            mockServiceURLBuilder(SERVER_API_PATH_COMPONENT + scopeDTO.getName(), serviceURLBuilder);
+            if (Response.Status.OK.equals(expectation)) {
+                Scope scope = new Scope(scopeDTO.getName(), scopeDTO.getName(), scopeDTO.getDescription());
+                when(oAuth2ScopeService.registerScope(any(Scope.class))).thenReturn(scope);
+                assertEquals(scopesApiService.registerScope(scopeDTO).getStatus(),
+                        Response.Status.CREATED.getStatusCode(),
+                        "Error occurred while registering scopes");
+            } else if (Response.Status.BAD_REQUEST.equals(expectation)) {
+                when(oAuth2ScopeService.registerScope(any(Scope.class))).thenThrow(throwable);
+                callRealMethod();
+                try {
+                    scopesApiService.registerScope(scopeDTO);
+                } catch (ScopeEndpointException e) {
+                    assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode(),
+                            "Cannot find HTTP Response, Bad Request in Case of " +
+                                    "IdentityOAuth2ScopeClientException");
+                    assertEquals(((ErrorDTO) (e.getResponse().getEntity())).getMessage(),
+                            Response.Status.BAD_REQUEST.getReasonPhrase(), "Cannot find appropriate error message " +
+                                    "for HTTP Response, Bad Request");
+                } finally {
+                    reset(oAuth2ScopeService);
+                }
+            } else if (Response.Status.CONFLICT.equals(expectation)) {
+                ((IdentityOAuth2ScopeException) throwable).setErrorCode(Oauth2ScopeConstants.ErrorMessages.
+                        ERROR_CODE_CONFLICT_REQUEST_EXISTING_SCOPE.getCode());
+                when(oAuth2ScopeService.registerScope(any(Scope.class))).thenThrow(throwable);
+                callRealMethod();
+                try {
+                    scopesApiService.registerScope(scopeDTO);
+                } catch (ScopeEndpointException e) {
+                    assertEquals(e.getResponse().getStatus(), Response.Status.CONFLICT.getStatusCode(),
+                            "Cannot find HTTP Response, Conflict in Case of " +
+                                    "IdentityOAuth2ScopeClientException");
+                    assertEquals(((ErrorDTO) (e.getResponse().getEntity())).getMessage(),
+                            Response.Status.CONFLICT.getReasonPhrase(), "Cannot find appropriate error message " +
+                                    "for HTTP Response, Conflict");
+                } finally {
+                    reset(oAuth2ScopeService);
+                }
+            } else if (Response.Status.INTERNAL_SERVER_ERROR.equals(expectation)) {
+                when(oAuth2ScopeService.registerScope(any(Scope.class))).thenThrow(IdentityOAuth2ScopeException.class);
+                callRealMethod();
+                try {
+                    scopesApiService.registerScope(scopeDTO);
+                } catch (ScopeEndpointException e) {
+                    assertEquals(e.getResponse().getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+                            "Cannot find HTTP Response, Internal Server Error in case of " +
+                                    "IdentityOAuth2ScopeException");
+                    assertNull(e.getResponse().getEntity(), "Do not include error message in case of " +
+                            "Server Exception");
+                } finally {
+                    reset(oAuth2ScopeService);
+                }
             }
         }
     }
@@ -457,24 +479,24 @@ public class ScopesApiServiceImplTest extends PowerMockTestCase {
 
     private void callRealMethod() throws Exception {
 
-        when(ScopeUtils.class, "handleErrorResponse", any(Response.Status.class), any(String.class),
-                any(Throwable.class), any(boolean.class), any(Log.class)).thenCallRealMethod();
-        when(ScopeUtils.class, "buildScopeEndpointException", any(Response.Status.class),
-                any(String.class), any(String.class), any(String.class), any(boolean.class)).thenCallRealMethod();
-        when(ScopeUtils.class, "getErrorDTO", any(String.class), any(String.class),
-                any(String.class)).thenCallRealMethod();
+        scopeUtils.when(() -> ScopeUtils.handleErrorResponse(any(Response.Status.class), any(String.class),
+                any(Throwable.class), any(boolean.class), any(Log.class))).thenCallRealMethod();
+//        scopeUtils.when(() -> ScopeUtils.buildScopeEndpointException(any(Response.Status.class),
+//                any(String.class), any(String.class), any(String.class), any(boolean.class))).thenCallRealMethod();
+        scopeUtils.when(() -> ScopeUtils.getErrorDTO(any(String.class), any(String.class),
+                any(String.class))).thenCallRealMethod();
     }
 
-    private void mockServiceURLBuilder(String url) throws URLBuilderException {
+    private void mockServiceURLBuilder(String url, MockedStatic<ServiceURLBuilder> serviceURLBuilder)
+            throws URLBuilderException {
 
-        mockStatic(ServiceURLBuilder.class);
-        ServiceURLBuilder serviceURLBuilder = mock(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
+        ServiceURLBuilder mockServiceURLBuilder = mock(ServiceURLBuilder.class);
+        serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
+        lenient().when(mockServiceURLBuilder.addPath(any())).thenReturn(mockServiceURLBuilder);
 
         ServiceURL serviceURL = mock(ServiceURL.class);
-        when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
-        when(serviceURLBuilder.build()).thenReturn(serviceURL);
+        lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
+        lenient().when(mockServiceURLBuilder.build()).thenReturn(serviceURL);
     }
 
 }

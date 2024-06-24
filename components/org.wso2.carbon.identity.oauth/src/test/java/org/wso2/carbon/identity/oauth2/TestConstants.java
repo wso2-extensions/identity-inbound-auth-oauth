@@ -78,7 +78,7 @@ public class TestConstants {
     public static final String SCOPE_UNAUTHORIZED_SCOPE = "unauthorized_scope";
     public static final String SCOPE_UNAUTHORIZED_ACCESS = "unauthorized_access_delegation";
 
-    public static final String DB_TYPE_H2_SQL = "h2.sql";
+    public static final String DB_TYPE_H2_SQL = "identity.sql";
     public static final String DB_SCRIPTS_FOLDER_NAME = "dbScripts";
     public static final String JAVA_NAMING_FACTORY_INITIAL = "java.naming.factory.initial";
     public static final String UNAUTHORIZED_CLIENT_ERROR_CODE = "unauthorized_client";

@@ -250,6 +250,11 @@ public class OAuthMessage {
         return request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE);
     }
 
+    public String getRequestedSubjectId() {
+
+        return request.getParameter(OAuthConstants.OAuth20Params.REQUESTED_SUBJECT);
+    }
+
     public String getOauthPKCECodeChallengeMethod() {
 
         return request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);

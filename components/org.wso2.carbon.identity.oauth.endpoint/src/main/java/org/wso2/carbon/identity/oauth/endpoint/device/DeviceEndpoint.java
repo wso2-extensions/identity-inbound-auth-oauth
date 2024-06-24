@@ -217,17 +217,6 @@ public class DeviceEndpoint {
     }
 
     /**
-     * This method converts time in milliseconds to seconds.
-     *
-     * @param value Time in milliseconds.
-     * @return String value of time in seconds.
-     */
-    private String stringValueInSeconds(long value) {
-
-        return String.valueOf(value / 1000);
-    }
-
-    /**
      * This use to build the response.
      *
      * @param deviceCode             Code that is used to identify the device.

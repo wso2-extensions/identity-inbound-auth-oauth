@@ -18,11 +18,9 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -39,8 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -50,7 +47,6 @@ import static org.testng.Assert.assertTrue;
  * Unit tests for ScopeMgtDAO.
  */
 
-@PrepareForTest(IdentityDatabaseUtil.class)
 public class ScopeMgtDAOTest extends IdentityBaseTest {
 
     private static final int SAMPLE_TENANT_ID = 1;
@@ -60,7 +56,7 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
     @BeforeClass
     public void initTest() throws Exception {
-        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("scope.sql"));
+        DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath("identity.sql"));
     }
 
     @DataProvider(name = "addScopeDataProvider")
@@ -90,22 +86,21 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     public void addScope(Object scope, int tenantId) throws IdentityOAuth2ScopeException, SQLException {
         try (Connection connection1 = DAOUtils.getConnection(DB_NAME);
              Connection connection2 = DAOUtils.getConnection(DB_NAME);
-             Connection connection3 = DAOUtils.getConnection(DB_NAME)) {
+             Connection connection3 = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
-
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
             oAuthScopeDAO.addScope((Scope) scope, tenantId);
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection2);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             assertNotNull(oAuthScopeDAO.getScopeByName(((Scope) scope).getName(), tenantId),
                     "Failed to persist scope.");
 
             // Clean after test
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection3);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection3);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection3);
             oAuthScopeDAO.deleteScopeByName(((Scope) scope).getName(), tenantId);
         }
     }
@@ -136,17 +131,17 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getAllScopesDataProvider")
     public void getAllScopes(List<Object> scopes, int tenantId) throws SQLException,
             IdentityOAuth2ScopeException {
-        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+        try (Connection connection = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             assertTrue(scopes != null && !scopes.isEmpty(), "Failed to retrieve scopes.");
 
-            addScopes(scopes, tenantId);
+            addScopes(scopes, tenantId, identityDatabaseUtil);
 
             // Clean after test
-            deleteScopes(scopes, tenantId);
+            deleteScopes(scopes, tenantId, identityDatabaseUtil);
         }
     }
 
@@ -180,18 +175,18 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getScopesWithPaginationDataProvider")
     public void getScopesWithPagination(List<Object> scopes, int tenantId) throws
             SQLException, IdentityOAuth2ScopeException {
-        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+        try (Connection connection = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
-            addScopes(scopes, tenantId);
+            addScopes(scopes, tenantId, identityDatabaseUtil);
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             Set<Scope> scopesList = oAuthScopeDAO.getScopesWithPagination(1, 2, tenantId);
             assertTrue(scopesList != null && scopesList.size() == 2, "Failed to retrieve scopes with pagination.");
 
             // Clean after test
-            deleteScopes(scopes, tenantId);
+            deleteScopes(scopes, tenantId, identityDatabaseUtil);
         }
     }
 
@@ -212,18 +207,18 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
 
     @Test(dataProvider = "getScopeByNameDataProvider")
     public void getScopeByName(Object scope, int tenantId) throws IdentityOAuth2ScopeException, SQLException {
-        try (Connection connection = DAOUtils.getConnection(DB_NAME)) {
+        try (Connection connection = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
-            addScopes(Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection);
             assertNotNull(oAuthScopeDAO.getScopeByName(((Scope) scope)
                     .getName(), tenantId), "Failed to retrieve by scope name.");
 
             // Clean after test
-            deleteScopes(Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
         }
     }
 
@@ -245,22 +240,22 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "isScopeExistsDataProvider")
     public void isScopeExists(Object scope, int tenantId) throws IdentityOAuth2ScopeException, SQLException {
         try (Connection connection1 = DAOUtils.getConnection(DB_NAME);
-             Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
+             Connection connection2 = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
-            addScopes(Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
             assertTrue(oAuthScopeDAO.isScopeExists(((Scope) scope).getName(), tenantId), "Failed to check existence " +
                     "by scope name.");
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection2);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             assertFalse(oAuthScopeDAO.isScopeExists("invalidScopeName", tenantId), "Failed to check existence " +
                     "by scope name.");
 
             // Clean after test
-            deleteScopes(Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
         }
     }
 
@@ -282,22 +277,21 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "getScopeIDByNameDataProvider")
     public void getScopeIDByName(Object scope, int tenantId) throws IdentityOAuth2ScopeException, SQLException {
         try (Connection connection1 = DAOUtils.getConnection(DB_NAME);
-             Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
+             Connection connection2 = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
+            addScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
 
-            addScopes(Collections.singletonList(scope), tenantId);
-
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
             assertTrue(oAuthScopeDAO.getScopeIDByName(((Scope) scope).getName(), tenantId) != Oauth2ScopeConstants
                     .INVALID_SCOPE_ID, "Failed to retrieve the scope id.");
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection2);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             assertTrue(oAuthScopeDAO.getScopeIDByName("invalidScopeName", tenantId) == Oauth2ScopeConstants
                     .INVALID_SCOPE_ID, "Failed to retrieve the scope id.");
             // Clean after test
-            deleteScopes(Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
         }
     }
 
@@ -319,18 +313,17 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "deleteScopeByNameDataProvider")
     public void deleteScopeByName(Object scope, int tenantId) throws IdentityOAuth2ScopeException, SQLException {
         try (Connection connection1 = DAOUtils.getConnection(DB_NAME);
-             Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
+             Connection connection2 = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
+            addScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
 
-            addScopes(Collections.singletonList(scope), tenantId);
-
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
             oAuthScopeDAO.deleteScopeByName(((Scope) scope).getName(), tenantId);
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection2);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             assertNull(oAuthScopeDAO.getScopeByName(((Scope) scope).getName(), tenantId), "Failed to delete the scope" +
                     " by name.");
         }
@@ -354,51 +347,47 @@ public class ScopeMgtDAOTest extends IdentityBaseTest {
     @Test(dataProvider = "updateScopeByNameDataProvider")
     public void updateScopeByName(Object scope, int tenantId) throws IdentityOAuth2ScopeException, SQLException {
         try (Connection connection1 = DAOUtils.getConnection(DB_NAME);
-             Connection connection2 = DAOUtils.getConnection(DB_NAME)) {
+             Connection connection2 = DAOUtils.getConnection(DB_NAME);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
 
-            mockStatic(IdentityDatabaseUtil.class);
-
-            addScopes(Collections.singletonList(scope), tenantId);
+            addScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
 
             Scope updatedScope = (Scope) scope;
             updatedScope.setDisplayName("updateScopeName");
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
             oAuthScopeDAO.updateScopeByName(updatedScope, tenantId);
 
-            when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection2);
-            when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
+            identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection2);
+            identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection2);
             assertNotNull(oAuthScopeDAO.getScopeByName(updatedScope.getName(), tenantId), "Failed to update scope.");
             // Clean after test
-            deleteScopes(Collections.singletonList(scope), tenantId);
+            deleteScopes(Collections.singletonList(scope), tenantId, identityDatabaseUtil);
         }
     }
 
-    private void addScopes(List<Object> scopes, int tenantId) throws SQLException,
-            IdentityOAuth2ScopeException {
+    private void addScopes(List<Object> scopes, int tenantId, MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil)
+            throws SQLException, IdentityOAuth2ScopeException {
+
         for (Object scope : scopes) {
             try (Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
-                when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-                when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+                identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+                identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
                 oAuthScopeDAO.addScope((Scope) scope, tenantId);
             }
         }
     }
 
-    private void deleteScopes(List<Object> scopes, int tenantId) throws SQLException,
-            IdentityOAuth2ScopeException {
+    private void deleteScopes(List<Object> scopes, int tenantId,
+                              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil)
+            throws SQLException, IdentityOAuth2ScopeException {
         for (Object scope : scopes) {
             try (Connection connection1 = DAOUtils.getConnection(DB_NAME)) {
-                when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection1);
-                when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
+                identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(connection1);
+                identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(connection1);
                 oAuthScopeDAO.deleteScopeByName(((Scope) scope).getName(), tenantId);
             }
         }
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 }

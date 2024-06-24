@@ -15,7 +15,6 @@
  */
 package org.wso2.carbon.identity.oauth2.bean;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
@@ -27,7 +26,6 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-@PrepareForTest(StringBuilder.class)
 public class ScopeTest {
     private Scope scope1;
     private Scope scope2;

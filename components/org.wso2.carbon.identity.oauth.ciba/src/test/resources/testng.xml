@@ -20,9 +20,9 @@
 
     <test name="oauth-ciba-test">
         <classes>
-            <class name="org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeHandlerTest"></class>
-            <class name="org.wso2.carbon.identity.oauth.ciba.grant.CibaGrantHandlerTest"></class>
-            <class name="org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImplTest"></class>
+            <class name="org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeHandlerTest" />
+            <class name="org.wso2.carbon.identity.oauth.ciba.grant.CibaGrantHandlerTest" />
+            <class name="org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImplTest" />
         </classes>
     </test>
 

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -84,12 +84,15 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_SUBJECT_TOKEN_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_SIGNED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SECTOR_IDENTIFIER_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TLS_SUBJECT_DN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_AUTH_METHOD;
@@ -161,7 +164,8 @@ public class OAuthAppDAO {
                             persistenceProcessor.getProcessedClientSecret(consumerAppDO.getOauthConsumerSecret());
 
                     String templatedCallbackUrl = consumerAppDO.getCallbackUrl();
-                    if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName())) {
+                    if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName()) &&
+                            isRootOrganization(spTenantId)) {
                         templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(
                                 templatedCallbackUrl);
                     }
@@ -1016,6 +1020,17 @@ public class OAuthAppDAO {
                 SUBJECT_TYPE, oauthAppDO.getSubjectType(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                IS_SUBJECT_TOKEN_ENABLED, String.valueOf(oauthAppDO.isSubjectTokenEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        if (oauthAppDO.getSubjectTokenExpiryTime() <= 0) {
+            oauthAppDO.setSubjectTokenExpiryTime(SUBJECT_TOKEN_EXPIRY_TIME_VALUE);
+        }
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
         preparedStatementForPropertyUpdate.executeBatch();
@@ -1644,6 +1659,15 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     IS_FAPI_CONFORMANT_APP, String.valueOf(consumerAppDO.isFapiConformanceEnabled()));
 
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_SUBJECT_TOKEN_ENABLED, String.valueOf(consumerAppDO.isSubjectTokenEnabled()));
+
+            if (consumerAppDO.getSubjectTokenExpiryTime() <= 0) {
+                consumerAppDO.setSubjectTokenExpiryTime(SUBJECT_TOKEN_EXPIRY_TIME_VALUE);
+            }
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
+
             prepStmtAddOIDCProperty.executeBatch();
         }
     }
@@ -1799,6 +1823,15 @@ public class OAuthAppDAO {
         String isFAPI = getFirstPropertyValue(spOIDCProperties, IS_FAPI_CONFORMANT_APP);
         if (isFAPI != null) {
             oauthApp.setFapiConformanceEnabled(Boolean.parseBoolean(isFAPI));
+        }
+
+        String isSubjectTokenEnabled = getFirstPropertyValue(spOIDCProperties, IS_SUBJECT_TOKEN_ENABLED);
+        if (isSubjectTokenEnabled != null) {
+            oauthApp.setSubjectTokenEnabled(Boolean.parseBoolean(isSubjectTokenEnabled));
+        }
+        String subjectTokenExpiryTime = getFirstPropertyValue(spOIDCProperties, SUBJECT_TOKEN_EXPIRY_TIME);
+        if (subjectTokenExpiryTime != null) {
+            oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
         }
     }
 

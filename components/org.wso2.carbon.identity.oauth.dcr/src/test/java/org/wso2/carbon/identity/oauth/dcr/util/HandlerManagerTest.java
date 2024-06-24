@@ -18,11 +18,11 @@
 package org.wso2.carbon.identity.oauth.dcr.util;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
-import org.testng.IObjectFactory;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.base.IdentityRuntimeException;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
@@ -35,10 +35,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
-@PrepareForTest(DCRDataHolder.class)
+@Listeners(MockitoTestNGListener.class)
 public class HandlerManagerTest {
 
     @Mock
@@ -47,7 +47,7 @@ public class HandlerManagerTest {
     @DataProvider(name = "BuildRegistrationHandlers")
     public Object[][] buildRegistrationHandlers() {
 
-        Map<String, String> param = new HashMap<String, String>();
+        Map<String, String> param = new HashMap<>();
         param.put("client_id", "N2QqQluzQuL5X6CtM3KZwqzLQhUa");
         param.put("client_secret", "4AXWrN88aEfMvq2h_G0dN05KRsUa");
         DCRMessageContext dcrMessageContext = new DCRMessageContext(param);
@@ -70,21 +70,22 @@ public class HandlerManagerTest {
     @Test(dataProvider = "BuildRegistrationHandlers")
     public void testGetRegistrationHandler(Object dcrMessageContext, Object handlers) {
 
-        mockStatic(DCRDataHolder.class);
-        when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        when(dataHolder.getRegistrationHandlerList()).thenReturn((List<RegistrationHandler>) handlers);
-        try {
-            Assert.assertNotNull(HandlerManager.getInstance()
-                    .getRegistrationHandler((DCRMessageContext) dcrMessageContext));
-        } catch (IdentityRuntimeException e) {
-            Assert.assertEquals(e.getMessage(), "Cannot find AuthenticationHandler to handle this request");
+        try (MockedStatic<DCRDataHolder> dcrDataHolder = mockStatic(DCRDataHolder.class);) {
+            dcrDataHolder.when(() -> DCRDataHolder.getInstance()).thenReturn(dataHolder);
+            when(dataHolder.getRegistrationHandlerList()).thenReturn((List<RegistrationHandler>) handlers);
+            try {
+                Assert.assertNotNull(HandlerManager.getInstance()
+                        .getRegistrationHandler((DCRMessageContext) dcrMessageContext));
+            } catch (IdentityRuntimeException e) {
+                Assert.assertEquals(e.getMessage(), "Cannot find AuthenticationHandler to handle this request");
+            }
         }
     }
 
     @DataProvider(name = "BuildUnRegistrationHandlers")
     public Object[][] buildUnRegistrationHandlers() {
 
-        Map<String, String> param = new HashMap<String, String>();
+        Map<String, String> param = new HashMap<>();
         param.put("client_id", "N2QqQluzQuL5X6CtM3KZwqzLQhUa");
         param.put("client_secret", "4AXWrN88aEfMvq2h_G0dN05KRsUa");
         DCRMessageContext dcrMessageContext = new DCRMessageContext(param);
@@ -107,20 +108,15 @@ public class HandlerManagerTest {
     @Test(dataProvider = "BuildUnRegistrationHandlers")
     public void testGetUnRegistrationHandlerException(Object dcrMessageContext, Object handlers) {
 
-        mockStatic(DCRDataHolder.class);
-        when(DCRDataHolder.getInstance()).thenReturn(dataHolder);
-        when(dataHolder.getUnRegistrationHandlerList()).thenReturn((List<UnRegistrationHandler>) handlers);
-        try {
-            Assert.assertNotNull(HandlerManager.getInstance()
-                    .getUnRegistrationHandler((DCRMessageContext) dcrMessageContext));
-        } catch (IdentityRuntimeException e) {
-            Assert.assertEquals(e.getMessage(), "Cannot find AuthenticationHandler to handle this request");
+        try (MockedStatic<DCRDataHolder> dcrDataHolder = mockStatic(DCRDataHolder.class);) {
+            dcrDataHolder.when(DCRDataHolder::getInstance).thenReturn(dataHolder);
+            when(dataHolder.getUnRegistrationHandlerList()).thenReturn((List<UnRegistrationHandler>) handlers);
+            try {
+                Assert.assertNotNull(HandlerManager.getInstance()
+                        .getUnRegistrationHandler((DCRMessageContext) dcrMessageContext));
+            } catch (IdentityRuntimeException e) {
+                Assert.assertEquals(e.getMessage(), "Cannot find AuthenticationHandler to handle this request");
+            }
         }
-    }
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
     }
 }

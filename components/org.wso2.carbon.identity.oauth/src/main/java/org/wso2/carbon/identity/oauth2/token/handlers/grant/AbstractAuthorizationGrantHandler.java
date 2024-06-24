@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -140,6 +142,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
         String authorizedOrganization = getAuthorizedOrganization(tokReqMsgCtx);
+
+        // If the authorizedOrganization is deactivated or not available, return an error.
+        if (!(OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization) ||
+                StringUtils.isBlank(authorizedOrganization)) &&
+                !OAuth2Util.isOrganizationValidAndActive(authorizedOrganization)) {
+            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Organization : " + authorizedOrganization + " is invalid or inactive.");
+        }
 
         OauthTokenIssuer oauthTokenIssuer;
         try {
@@ -335,6 +345,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 OAuthConstants.UserType.APPLICATION_USER : OAuthConstants.UserType.APPLICATION;
     }
 
+    protected String getTokenType(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
+
+        return isOfTypeApplicationUser(tokReqMsgCtx) ?
+                OAuthConstants.UserType.APPLICATION_USER : OAuthConstants.UserType.APPLICATION;
+    }
+
     protected void storeAccessToken(OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO, String userStoreDomain,
                                     AccessTokenDO newTokenBean, String newAccessToken, AccessTokenDO
                                             existingTokenBean) throws IdentityOAuth2Exception {
@@ -471,6 +487,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setTenantID(OAuth2Util.getTenantId(tenantDomain));
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setGrantType(tokenReq.getGrantType());
+        newTokenBean.setAppResidentTenantId(IdentityTenantUtil.getLoginTenantId());
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
@@ -483,7 +500,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
             tokReqMsgCtx.setConsentedToken(newTokenBean.isConsentedToken());
         }
-        newTokenBean.setTokenType(getTokenType());
+        newTokenBean.setTokenType(getTokenType(tokReqMsgCtx));
         newTokenBean.setIssuedTime(timestamp);
         newTokenBean.setAccessToken(getNewAccessToken(tokReqMsgCtx, oauthTokenIssuer));
         newTokenBean.setValidityPeriodInMillis(validityPeriodInMillis);
@@ -721,7 +738,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     e);
         }
 
-        if (issueRefreshToken() && OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
+        if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
+                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
                 GrantType.REFRESH_TOKEN.toString())) {
             String grantTypes = oAuthAppDO.getGrantTypes();
             List<String> supportedGrantTypes = new ArrayList<>();
@@ -783,7 +801,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      */
     private long getAccessTokenExpiryTimeMillis(AccessTokenDO existingAccessTokenDO) throws IdentityOAuth2Exception {
         long expireTimeMillis;
-        if (issueRefreshToken()) {
+        if (issueRefreshToken(existingAccessTokenDO.getTokenType())) {
             // Consider both access and refresh expiry time
             expireTimeMillis = OAuth2Util.getTokenExpireTimeMillis(existingAccessTokenDO, false);
         } else {
@@ -827,7 +845,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                                                        OAuthAppDO oAuthAppBean) throws IdentityOAuth2Exception {
         long validityPeriodInMillis;
 
-        if (isOfTypeApplicationUser()) {
+        if (isOfTypeApplicationUser(tokReqMsgCtx)) {
             validityPeriodInMillis = getValidityPeriodForApplicationUser(consumerKey, oAuthAppBean);
         } else {
             validityPeriodInMillis = getValidityPeriodForApplication(consumerKey, oAuthAppBean);

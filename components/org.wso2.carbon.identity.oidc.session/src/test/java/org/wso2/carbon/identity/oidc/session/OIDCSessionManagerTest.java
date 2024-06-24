@@ -18,18 +18,22 @@
 package org.wso2.carbon.identity.oidc.session;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCache;
-import org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheEntry;
 import org.wso2.carbon.identity.oidc.session.servlet.TestOIDCSessionBase;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -37,7 +41,7 @@ import static org.testng.Assert.assertNull;
 /**
  * Unit test coverage for OIDCSessionManager
  */
-@PrepareForTest({OIDCSessionParticipantCache.class, OIDCSessionParticipantCacheEntry.class, IdentityTenantUtil.class})
+@Listeners(MockitoTestNGListener.class)
 public class OIDCSessionManagerTest extends TestOIDCSessionBase {
 
     @Mock
@@ -47,16 +51,39 @@ public class OIDCSessionManagerTest extends TestOIDCSessionBase {
     private static final String SESSION_ID = "090907ce-eab0-40d2-a46d-acd4bb33f0d0";
     private static final String NEW_SESSION_ID = "080907ce-eab0-40d2-a46d-acd4bb33f0d0";
 
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+
+    @BeforeClass
+    public void init() throws Exception {
+
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+        initiateInMemoryH2SessionDB(identityDatabaseUtil);
+    }
+
+    @AfterClass
+    public void tearDownClass() {
+
+        identityDatabaseUtil.close();
+    }
+
     @BeforeMethod
     public void setUp() throws Exception {
 
         oidcSessionManager = new OIDCSessionManager();
         TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).
                 thenReturn(MultitenantConstants.SUPER_TENANT_ID);
-        when(IdentityTenantUtil.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID)).
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(MultitenantConstants.SUPER_TENANT_ID)).
                 thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        identityTenantUtil.close();
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @Test

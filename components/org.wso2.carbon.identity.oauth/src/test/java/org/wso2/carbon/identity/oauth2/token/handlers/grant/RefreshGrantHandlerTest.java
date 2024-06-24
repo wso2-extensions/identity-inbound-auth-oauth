@@ -64,7 +64,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VA
 @WithCarbonHome
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class,
         ApplicationManagementServiceComponentHolder.class })
-@WithH2Database(files = { "dbScripts/identity.sql" })
+@WithH2Database(files = { "dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql" })
 public class RefreshGrantHandlerTest {
 
     private static final String TEST_USER_ID = "testUser";

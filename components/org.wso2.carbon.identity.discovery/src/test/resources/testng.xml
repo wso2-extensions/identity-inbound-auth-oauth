@@ -28,7 +28,7 @@
             <class name="org.wso2.carbon.identity.discovery.MessageContextTest"/>
             <class name="org.wso2.carbon.identity.discovery.OIDProviderRequestTest"/>
             <class name="org.wso2.carbon.identity.discovery.OIDProviderConfigResponseTest"/>
-            <class name="org.wso2.carbon.identity.discovery.DiscoveryUtilTest"></class>
+            <class name="org.wso2.carbon.identity.discovery.DiscoveryUtilTest" />
         </classes>
     </test>
 </suite>

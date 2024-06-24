@@ -20,11 +20,12 @@ package org.wso2.carbon.identity.oidc.session.cache;
 
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.oidc.session.servlet.TestUtil;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
@@ -44,21 +45,29 @@ public class OIDCSessionDataCacheTest {
     @Test
     public void testAddToCache() {
 
-        TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        OIDCSessionDataCacheKey key = mock(OIDCSessionDataCacheKey.class);
-        OIDCSessionDataCacheEntry entry = mock(OIDCSessionDataCacheEntry.class);
-        OIDCSessionDataCache.getInstance().addToCache(key, entry);
-        assertNotNull(OIDCSessionDataCache.getInstance().getValueFromCache(key),
-                "OIDCSessionDataCache is null.");
+        try {
+            TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            OIDCSessionDataCacheKey key = mock(OIDCSessionDataCacheKey.class);
+            OIDCSessionDataCacheEntry entry = mock(OIDCSessionDataCacheEntry.class);
+            OIDCSessionDataCache.getInstance().addToCache(key, entry);
+            assertNotNull(OIDCSessionDataCache.getInstance().getValueFromCache(key),
+                    "OIDCSessionDataCache is null.");
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
     }
 
     @Test
     public void testClearCacheEntry() {
 
-        TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        OIDCSessionDataCacheKey key = mock(OIDCSessionDataCacheKey.class);
-        OIDCSessionDataCache.getInstance().clearCacheEntry(key);
-        assertNull(OIDCSessionDataCache.getInstance().getValueFromCache(key),
-                "OIDCSessionDataCache is not null.");
+        try {
+            TestUtil.startTenantFlow(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            OIDCSessionDataCacheKey key = mock(OIDCSessionDataCacheKey.class);
+            OIDCSessionDataCache.getInstance().clearCacheEntry(key);
+            assertNull(OIDCSessionDataCache.getInstance().getValueFromCache(key),
+                    "OIDCSessionDataCache is not null.");
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
+        }
     }
 }

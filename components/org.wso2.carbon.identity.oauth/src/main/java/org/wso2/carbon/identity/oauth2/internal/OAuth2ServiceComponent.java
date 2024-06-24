@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -72,6 +73,11 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtService;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -85,6 +91,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.ClientRequestTokenBin
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.FederatedTokenResponseHandler;
@@ -261,6 +268,8 @@ public class OAuth2ServiceComponent {
             PublicClientAuthenticator publicClientAuthenticator = new PublicClientAuthenticator();
             bundleContext.registerService(OAuthClientAuthenticator.class.getName(), publicClientAuthenticator,
                     null);
+            bundleContext.registerService(JWTAccessTokenClaimProvider.class.getName(),
+                    new ImpersonatedAccessTokenClaimProvider(), null);
 
             // Register cookie based access token binder.
             CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
@@ -385,6 +394,11 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ScopeValidationHandler.class, new NoPolicyScopeValidationHandler(), null);
             bundleContext.registerService(ScopeValidationHandler.class, new M2MScopeValidationHandler(), null);
             bundleContext.registerService(AccessTokenResponseHandler.class, new FederatedTokenResponseHandler(),
+                    null);
+
+            OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(new ImpersonationMgtServiceImpl());
+            bundleContext.registerService(ImpersonationValidator.class, new SubjectScopeValidator(), null);
+            bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
 
             // Note : DO NOT add any activation related code below this point,
@@ -1544,5 +1558,56 @@ public class OAuth2ServiceComponent {
             log.debug("Removing Role Management  Service V2: " + roleManagementService.getClass().getName());
         }
         OAuth2ServiceComponentHolder.getInstance().setRoleManagementServiceV2(null);
+    }
+
+    @Reference(
+            name = "impersonation.validator.handler",
+            service = ImpersonationValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetImpersonationValidator"
+    )
+    protected void setImpersonationValidator(ImpersonationValidator impersonationValidator) {
+
+        OAuth2ServiceComponentHolder.getInstance().addImpersonationValidator(impersonationValidator);
+    }
+
+    protected void unsetImpersonationValidator(ImpersonationValidator impersonationValidator) {
+
+        OAuth2ServiceComponentHolder.getInstance().removeImpersonationValidator(impersonationValidator);
+    }
+
+    /**
+     * Set the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    @Reference(
+            name = "resource.configuration.manager",
+            service = ConfigurationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterConfigurationManager"
+    )
+    protected void registerConfigurationManager(ConfigurationManager configurationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the ConfigurationManager in JWT Client Authenticator ManagementService.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(configurationManager);
+    }
+
+
+    /**
+     * Unset the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    protected void unregisterConfigurationManager(ConfigurationManager configurationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(null);
     }
 }

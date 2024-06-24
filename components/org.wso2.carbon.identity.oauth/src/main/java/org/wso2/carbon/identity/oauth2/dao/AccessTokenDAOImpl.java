@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -585,6 +586,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setTokenState(tokenState);
                     accessTokenDO.setTokenId(tokenId);
                     accessTokenDO.setGrantType(grantType);
+                    accessTokenDO.setAppResidentTenantId(appTenantId);
 
                     if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
                         accessTokenDO.getAuthzUser().setAccessingOrganization(authzUser.getAccessingOrganization());
@@ -1165,6 +1167,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setGrantType(grantType);
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
+                    dataDO.setAppResidentTenantId(appResideTenantId);
 
                     /* For organization bound access tokens, the authenticated user should be populated considering
                     below factors. */
@@ -2153,6 +2156,24 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return accessTokenDOs;
     }
 
+    public Set<AccessTokenDO> getAccessTokensByAuthorizedOrg(String organizationId) throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving all access tokens issued for organization id: " + organizationId);
+        }
+
+        Set<AccessTokenDO> accessTokenDOs =
+                getAccessTokensByAuthorizedOrg(organizationId, IdentityUtil.getPrimaryDomainName());
+
+        if (OAuth2Util.checkAccessTokenPartitioningEnabled() && OAuth2Util.checkUserNameAssertionEnabled()) {
+            Map<String, String> availableDomainMappings = OAuth2Util.getAvailableUserStoreDomainMappings();
+            for (Map.Entry<String, String> availableDomainMapping : availableDomainMappings.entrySet()) {
+                accessTokenDOs.addAll(getAccessTokensByAuthorizedOrg(organizationId, availableDomainMapping.getKey()));
+            }
+        }
+        return accessTokenDOs;
+    }
+
     /**
      * Retrieves AccessTokenDOs of specified user store of the given tenant.
      *
@@ -2226,6 +2247,72 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
         }
 
+        return new HashSet<>(accessTokenDOMap.values());
+    }
+
+    private Set<AccessTokenDO> getAccessTokensByAuthorizedOrg(String organizationId, String userStoreDomain)
+            throws IdentityOAuth2Exception {
+
+        String sql;
+        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+            sql = SQLQueries.LIST_ALL_TOKENS_ISSUED_FOR_ORGANIZATION_IDP_NAME;
+        } else {
+            sql = SQLQueries.LIST_ALL_TOKENS_ISSUED_FOR_ORGANIZATION;
+        }
+        sql = OAuth2Util.getTokenPartitionedSqlByUserStore(sql, userStoreDomain);
+
+        Map<String, AccessTokenDO> accessTokenDOMap = new HashMap<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(sql)) {
+            prepStmt.setString(1, organizationId);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    String accessToken = getPersistenceProcessor().
+                            getPreprocessedAccessTokenIdentifier(resultSet.getString(1));
+                    if (accessTokenDOMap.get(accessToken) == null) {
+                        String refreshToken =
+                                getPersistenceProcessor().getPreprocessedRefreshToken(resultSet.getString(2));
+                        Timestamp issuedTime =
+                                resultSet.getTimestamp(3, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
+                        Timestamp refreshTokenIssuedTime = resultSet.getTimestamp(4, Calendar.getInstance(TimeZone
+                                .getTimeZone(UTC)));
+                        long validityPeriodInMillis = resultSet.getLong(5);
+                        long refreshTokenValidityPeriodMillis = resultSet.getLong(6);
+                        String tokenType = resultSet.getString(7);
+                        String[] scope = OAuth2Util.buildScopeArray(resultSet.getString(8));
+                        String tokenId = resultSet.getString(9);
+                        String authzUser = resultSet.getString(10);
+                        int tenantId = resultSet.getInt(11);
+                        userStoreDomain = resultSet.getString(12);
+                        String consumerKey = resultSet.getString(13);
+                        String authenticatedIDP = null;
+                        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                            authenticatedIDP = resultSet.getString(14);
+                        }
+
+                        AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain,
+                                OAuth2Util.getTenantDomain(tenantId), authenticatedIDP);
+                        AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
+                                refreshTokenIssuedTime, validityPeriodInMillis,
+                                refreshTokenValidityPeriodMillis, tokenType);
+                        dataDO.setAccessToken(accessToken);
+                        dataDO.setRefreshToken(refreshToken);
+                        dataDO.setTokenId(tokenId);
+                        dataDO.setTenantID(tenantId);
+                        dataDO.setAuthorizedOrganizationId(organizationId);
+                        accessTokenDOMap.put(accessToken, dataDO);
+                    } else {
+                        String scope = resultSet.getString(8).trim();
+                        AccessTokenDO accessTokenDO = accessTokenDOMap.get(accessToken);
+                        accessTokenDO.setScope((String[]) ArrayUtils.add(accessTokenDO.getScope(), scope));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving 'ACTIVE or EXPIRED' access tokens issued for" +
+                    "organization: " + organizationId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        }
         return new HashSet<>(accessTokenDOMap.values());
     }
 
@@ -2506,8 +2593,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
 
             if (latestActiveToken != null) {
                 OAuthTokenReqMessageContext tokReqMsgCtx = OAuth2Util.getTokenRequestContext();
+                OAuthAuthzReqMessageContext authzReqMsgCtx = OAuth2Util.getAuthzRequestContext();
                 // For JWT tokens, always issue a new token expiring the existing token.
-                if (oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx)) {
+                if ((tokReqMsgCtx != null && oauthTokenIssuer.renewAccessTokenPerRequest(tokReqMsgCtx))
+                        || (authzReqMsgCtx != null && oauthTokenIssuer.renewAccessTokenPerRequest(authzReqMsgCtx))) {
                     updateAccessTokenState(connection, latestActiveToken.getTokenId(), OAuthConstants.TokenStates
                                     .TOKEN_STATE_EXPIRED, UUID.randomUUID().toString(), userStoreDomain,
                             latestActiveToken.getGrantType());

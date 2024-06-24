@@ -20,14 +20,13 @@ package org.wso2.carbon.identity.oauth.scope.endpoint.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.junit.Assert;
 import org.mockito.Mock;
+import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.testng.Assert;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ErrorDTO;
 import org.wso2.carbon.identity.oauth.scope.endpoint.dto.ScopeDTO;
@@ -48,7 +47,8 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
-public class ScopeUtilsTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class ScopeUtilsTest {
 
     private static final Log log = LogFactory.getLog(ScopeUtilsTest.class);
     private static final String CLIENT_NAME = "clientname";
@@ -65,12 +65,6 @@ public class ScopeUtilsTest extends PowerMockTestCase {
     OAuth2ScopeService service;
     @Mock
     private IdentityOAuth2ScopeException identityOAuth2ScopeException;
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @Test(description = "Testing getErrorDTO")
     public void testGetErrorDTO() throws Exception {

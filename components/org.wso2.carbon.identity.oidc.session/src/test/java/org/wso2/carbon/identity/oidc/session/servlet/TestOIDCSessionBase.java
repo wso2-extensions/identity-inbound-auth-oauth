@@ -18,16 +18,15 @@
 package org.wso2.carbon.identity.oidc.session.servlet;
 
 import org.apache.commons.dbcp.BasicDataSource;
+import org.mockito.MockedStatic;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 
-public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
+public class TestOIDCSessionBase {
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
@@ -35,8 +34,9 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
     protected Connection connection;
     protected BasicDataSource dataSource;
+    protected BasicDataSource sessionDataSource;
 
-    protected void initiateInMemoryH2() throws Exception {
+    protected void initiateInMemoryH2(MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil) throws Exception {
 
         dataSource = new BasicDataSource();
         dataSource.setDriverClassName("org.h2.Driver");
@@ -46,8 +46,24 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
         connection = dataSource.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbScripts/h2.sql'");
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
+        identityDatabaseUtil.when(
+                IdentityDatabaseUtil::getDBConnection).thenAnswer(invocationOnMock -> dataSource.getConnection());
+    }
+
+    protected void initiateInMemoryH2SessionDB(MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil)
+            throws Exception {
+
+        sessionDataSource = new BasicDataSource();
+        sessionDataSource.setDriverClassName("org.h2.Driver");
+        sessionDataSource.setUsername("username");
+        sessionDataSource.setPassword("password");
+        sessionDataSource.setUrl("jdbc:h2:mem:test");
+
+        try (Connection connection = sessionDataSource.getConnection()) {
+            connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbScripts/session.sql'");
+        }
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getSessionDBConnection(anyBoolean()))
+                .thenAnswer(invocationOnMock -> sessionDataSource.getConnection());
     }
 
     protected void createOAuthApp(String clientId, String secret, String username, String appName, String appState,
@@ -77,6 +93,10 @@ public class TestOIDCSessionBase extends PowerMockIdentityBaseTest {
 
     public void cleanData() throws Exception {
 
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement statement = connection.prepareStatement("DELETE FROM IDN_OAUTH_CONSUMER_APPS");
+            statement.execute();
+        }
         dataSource.close();
     }
 }

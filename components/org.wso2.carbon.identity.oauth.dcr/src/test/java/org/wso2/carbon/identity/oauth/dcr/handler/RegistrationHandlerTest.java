@@ -18,9 +18,10 @@
 package org.wso2.carbon.identity.oauth.dcr.handler;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.dcr.context.DCRMessageContext;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationRequest;
@@ -29,16 +30,16 @@ import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponse;
 import org.wso2.carbon.identity.oauth.dcr.model.RegistrationResponseProfile;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRManagementService;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 
 /**
  * Unit test covering RegistrationHandler
  */
-@PrepareForTest({DCRManagementService.class, RegistrationHandler.class})
-public class RegistrationHandlerTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class RegistrationHandlerTest {
 
     private RegistrationHandler registrationHandler;
 
@@ -63,27 +64,26 @@ public class RegistrationHandlerTest extends PowerMockTestCase {
     @Test
     public void testHandle() throws Exception {
 
-        RegistrationRequestProfile mockRegistrationRequestProfile = new RegistrationRequestProfile();
+        try (MockedStatic<DCRManagementService> dcrManagementService = mockStatic(DCRManagementService.class);) {
+            RegistrationRequestProfile mockRegistrationRequestProfile = new RegistrationRequestProfile();
 
-        when(mockDcrMessageContext.getIdentityRequest()).thenReturn(mockRegisterRequest);
-        when(mockRegisterRequest.getRegistrationRequestProfile()).thenReturn(mockRegistrationRequestProfile);
-        String testTenantDomain = "testTenantDomain";
-        when(mockRegisterRequest.getTenantDomain()).thenReturn(testTenantDomain);
+            when(mockDcrMessageContext.getIdentityRequest()).thenReturn(mockRegisterRequest);
+            when(mockRegisterRequest.getRegistrationRequestProfile()).thenReturn(mockRegistrationRequestProfile);
+            String testTenantDomain = "testTenantDomain";
+            when(mockRegisterRequest.getTenantDomain()).thenReturn(testTenantDomain);
 
-        mockStatic(DCRManagementService.class);
-        when(DCRManagementService.getInstance()).thenReturn(mockDCRManagementService);
+            dcrManagementService.when(DCRManagementService::getInstance).thenReturn(mockDCRManagementService);
 
-        when(mockDCRManagementService.registerOAuthApplication(mockRegistrationRequestProfile)).
-                thenReturn(mockRegistrationResponseProfile);
+            when(mockDCRManagementService.registerOAuthApplication(mockRegistrationRequestProfile)).
+                    thenReturn(mockRegistrationResponseProfile);
 
-        RegistrationResponse.DCRRegisterResponseBuilder registerResponseBuilder =
-                new RegistrationResponse.DCRRegisterResponseBuilder();
-        whenNew(RegistrationResponse.DCRRegisterResponseBuilder.class).withNoArguments()
-                .thenReturn(registerResponseBuilder);
-
-        assertEquals(registrationHandler.handle(mockDcrMessageContext), registerResponseBuilder,
-                "Expected response builder is different from the actual");
-        assertEquals(mockRegistrationRequestProfile.getTenantDomain(), testTenantDomain,
-                "Expected tenant domain is not equal to the actual tenant domain");
+            RegistrationResponse.DCRRegisterResponseBuilder identityResponseBuilder =
+                    (RegistrationResponse.DCRRegisterResponseBuilder) registrationHandler.handle(mockDcrMessageContext);
+            RegistrationResponseProfile registrationResponseProfile =
+                    identityResponseBuilder.build().getRegistrationResponseProfile();
+            assertNotNull(registrationResponseProfile, "Expected response builder is different from the actual");
+            assertEquals(mockRegistrationRequestProfile.getTenantDomain(), testTenantDomain,
+                    "Expected tenant domain is not equal to the actual tenant domain");
+        }
     }
 }

@@ -54,6 +54,8 @@ public class OAuthTokenReqMessageContext {
 
     private boolean isConsentedToken;
 
+    private boolean isImpersonationRequest;
+
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
         this.oauth2AccessTokenReqDTO = oauth2AccessTokenReqDTO;
@@ -170,5 +172,15 @@ public class OAuthTokenReqMessageContext {
     public void setConsentedToken(boolean consentedToken) {
 
         isConsentedToken = consentedToken;
+    }
+
+    public boolean isImpersonationRequest() {
+
+        return isImpersonationRequest;
+    }
+
+    public void setImpersonationRequest(boolean impersonationRequest) {
+
+        isImpersonationRequest = impersonationRequest;
     }
 }

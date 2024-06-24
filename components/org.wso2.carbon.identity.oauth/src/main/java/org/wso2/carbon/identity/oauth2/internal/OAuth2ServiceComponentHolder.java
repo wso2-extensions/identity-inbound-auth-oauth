@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
@@ -40,6 +41,8 @@ import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -58,6 +61,7 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,6 +117,12 @@ public class OAuth2ServiceComponentHolder {
     private RoleManagementService roleManagementServiceV2;
     private Map<String, Set<String>> legacyScopesToNewScopesMap = new HashMap<>();
     private Map<String, Set<String>> legacyMultipleScopesToNewScopesMap = new HashMap<>();
+
+    private ImpersonationMgtService impersonationMgtService;
+
+    private List<ImpersonationValidator> impersonationValidators = new ArrayList<>();
+    private ConfigurationManager configurationManager;
+
 
     private OAuth2ServiceComponentHolder() {
 
@@ -834,5 +844,49 @@ public class OAuth2ServiceComponentHolder {
     public void setLegacyMultipleScopesToNewScopesMap(Map<String, Set<String>> legacyMultipleScopesToNewScopesMap) {
 
         this.legacyMultipleScopesToNewScopesMap = legacyMultipleScopesToNewScopesMap;
+    }
+
+
+    public ImpersonationMgtService getImpersonationMgtService() {
+
+        return impersonationMgtService;
+    }
+
+    public void setImpersonationMgtService(ImpersonationMgtService impersonationMgtService) {
+
+        this.impersonationMgtService = impersonationMgtService;
+    }
+
+    public void addImpersonationValidator(ImpersonationValidator impersonationValidator) {
+
+        impersonationValidators.add(impersonationValidator);
+        impersonationValidators.sort(getImpersonationValidatorComparator());
+    }
+
+    public void removeImpersonationValidator(ImpersonationValidator impersonationValidator) {
+
+        impersonationValidators.removeIf(impersonationValidator1 -> impersonationValidator1.getClass().getName()
+                .equals(impersonationValidator.getClass().getName()));
+    }
+
+    public List<ImpersonationValidator> getImpersonationValidators() {
+
+        return impersonationValidators;
+    }
+
+    private Comparator<ImpersonationValidator> getImpersonationValidatorComparator() {
+
+        // Sort based on priority in descending order, ie. the highest priority comes to the first element of the list.
+        return Comparator.comparingInt(ImpersonationValidator::getPriority).reversed();
+    }
+
+    public ConfigurationManager getConfigurationManager() {
+
+        return configurationManager;
+    }
+
+    public void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        this.configurationManager = configurationManager;
     }
 }

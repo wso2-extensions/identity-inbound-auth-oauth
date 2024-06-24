@@ -80,6 +80,12 @@ public class CacheBackedOAuthUserConsentedScopesDAOImpl implements OAuthUserCons
     }
 
     @Override
+   public void revokeConsentOfApplication(String appId, int tenantId) throws IdentityOAuth2ScopeConsentException {
+
+        dao.revokeConsentOfApplication(appId, tenantId);
+    }
+
+    @Override
     public void deleteUserConsents(String userId, int tenantId) throws IdentityOAuth2ScopeConsentException {
 
         cache.clearCacheEntry(userId, tenantId);

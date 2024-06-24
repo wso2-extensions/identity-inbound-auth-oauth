@@ -424,6 +424,8 @@
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="scopeValidators" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="sectorIdentifierURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="state" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="subjectTokenEnabled" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="subjectTokenExpiryTime" type="xs:int"/>
                     <xs:element minOccurs="0" name="subjectType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tlsClientAuthSubjectDN" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>

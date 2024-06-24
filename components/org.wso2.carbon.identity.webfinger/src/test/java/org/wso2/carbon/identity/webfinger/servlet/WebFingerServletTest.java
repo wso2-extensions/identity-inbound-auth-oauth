@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.webfinger.servlet;
 
 import org.apache.commons.collections.iterators.IteratorEnumeration;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -33,6 +32,9 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 
 /**
  * Tests web-finger servlet.
@@ -50,7 +52,7 @@ public class WebFingerServletTest {
 
         HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
         Mockito.when(request.getParameterNames()).thenReturn(new IteratorEnumeration(parameters.keySet().iterator()));
-        Mockito.when(request.getParameter(Matchers.anyString())).thenAnswer(new Answer<String>() {
+        Mockito.when(request.getParameter(anyString())).thenAnswer(new Answer<String>() {
 
             @Override
             public String answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -66,7 +68,7 @@ public class WebFingerServletTest {
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
                 return null;
             }
-        }).when(response).setStatus(Matchers.anyInt());
+        }).when(response).setStatus(anyInt());
 
         WebFingerServlet webFingerServlet = new WebFingerServlet();
         webFingerServlet.doGet(request, response);

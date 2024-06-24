@@ -60,6 +60,17 @@ public class OAuth2AuthorizeReqDTO {
     private String loggedInTenantDomain;
     private boolean isRequestObjectFlow;
     private String state;
+    private String requestedSubjectId;
+
+    public String getRequestedSubjectId() {
+
+        return requestedSubjectId;
+    }
+
+    public void setRequestedSubjectId(String requestedSubjectId) {
+
+        this.requestedSubjectId = requestedSubjectId;
+    }
 
     public String getSessionDataKey() {
         return sessionDataKey;

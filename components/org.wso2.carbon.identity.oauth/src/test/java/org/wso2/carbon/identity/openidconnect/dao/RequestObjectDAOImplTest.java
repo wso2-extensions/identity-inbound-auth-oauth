@@ -23,7 +23,7 @@ package org.wso2.carbon.identity.openidconnect.dao;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -35,24 +35,30 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
+import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
+import java.util.UUID;
 
 /**
  * This class contains unit tests for RequestObjectDAOImplTest..
  */
 @WithCarbonHome
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
-        files = {"dbScripts/h2_with_application_and_token.sql", "dbScripts/identity.sql"})
+        files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
+                "dbScripts/insert_consumer_app.sql", "dbScripts/insert_local_idp.sql"})
 @WithRealmService(tenantId = TestConstants.TENANT_ID, tenantDomain = TestConstants.TENANT_DOMAIN,
         initUserStoreManager = true, injectToSingletons = {IdentityCoreServiceDataHolder.class})
-public class RequestObjectDAOImplTest extends PowerMockTestCase {
+public class RequestObjectDAOImplTest {
 
     private static final Log log = LogFactory.getLog(AuthorizationCodeDAOImpl.class);
     private final String consumerKey = "ca19a540f544777860e44e75f605d927";
@@ -60,7 +66,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
     private final String tokenId = "2sa9a678f890877856y66e75f605d456";
     private final String newToken = "a8f78c8420cb48ad91cbac72691d4597";
     private final String codeId = "a5eb9b95ca8ea324a63bdc911d6a6a2";
-    private final String consumerId = "1";
+    private int consumerId;
 
     private RequestObjectDAO requestObjectDAO;
     private List<List<RequestedClaim>> requestedEssentialClaims;
@@ -85,6 +91,12 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         requestedEssentialClaims.add(lstRequestedClaims);
 
         TestUtil.mockRealmInIdentityTenantUtil(TestConstants.TENANT_ID, TestConstants.TENANT_DOMAIN);
+        consumerId = getConsumerId();
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+        deleteCodeId(codeId);
     }
 
     @Test
@@ -139,7 +151,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
 
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
-        insertCodeId(codeId, 1);
+        insertCodeId(codeId);
         requestObjectDAO.updateRequestObjectReferencebyCodeId(sessionDataKey, codeId);
         Assert.assertEquals(codeId, getData(sessionDataKey).codeId);
     }
@@ -147,26 +159,31 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
     @Test (dependsOnMethods = {"testUpdateRequestObjectReferenceByCodeId"})
     public void testDeleteRequestObjectReferenceByCode() throws Exception {
 
-        requestObjectDAO.deleteRequestObjectReferenceByCode(codeId);
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            String query = "SELECT * FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE CODE_ID=?";
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1, codeId);
-            ResultSet resultSet = statement.executeQuery();
-            int resultSize = 0;
-            if (resultSet.next()) {
-                resultSize = resultSet.getRow();
+        try {
+            requestObjectDAO.deleteRequestObjectReferenceByCode(codeId);
+            try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+                String query = "SELECT * FROM IDN_OIDC_REQ_OBJECT_REFERENCE WHERE CODE_ID=?";
+                PreparedStatement statement = connection.prepareStatement(query);
+                statement.setString(1, codeId);
+                ResultSet resultSet = statement.executeQuery();
+                int resultSize = 0;
+                if (resultSet.next()) {
+                    resultSize = resultSet.getFetchSize();
+                }
+                IdentityDatabaseUtil.commitTransaction(connection);
+                Assert.assertEquals(0, resultSize);
             }
-            Assert.assertEquals(0, resultSize);
+        } finally {
+            deleteCodeId(codeId);
         }
     }
 
-    @Test
+    @Test (dependsOnMethods = {"testDeleteRequestObjectReferenceByCode"})
     public void testUpdateRequestObjectReferenceCodeToToken() throws Exception {
 
         requestObjectDAO.insertRequestObjectData(consumerKey, sessionDataKey,
                 requestedEssentialClaims);
-        insertCodeId(codeId, 1);
+        insertCodeId(codeId);
         requestObjectDAO.updateRequestObjectReferencebyCodeId(sessionDataKey, codeId);
         requestObjectDAO.updateRequestObjectReferenceCodeToToken(codeId, tokenId);
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
@@ -183,17 +200,65 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
         }
     }
 
-    private void insertCodeId(String codeId, int consumerKeyId) throws Exception {
+    private int getConsumerId() throws Exception {
+
+        PreparedStatement statement = null;
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+
+            String sql = "SELECT ID FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
+            statement = connection.prepareStatement(sql);
+            statement.setString(1, consumerKey);
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getInt("ID");
+            }
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+        }
+        return -1;
+    }
+
+    private void insertCodeId(String codeId) throws Exception {
 
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
-            String sql = "INSERT INTO IDN_OAUTH2_AUTHORIZATION_CODE (CODE_ID, CONSUMER_KEY_ID) VALUES (?,?)";
+            String sql = SQLQueries.STORE_AUTHORIZATION_CODE;
             PreparedStatement ps = connection.prepareStatement(sql);
             ps.setString(1, codeId);
-            ps.setInt(2, consumerKeyId);
+            ps.setString(2, UUID.randomUUID().toString());
+            ps.setString(3, "http://localhost:8080/redirect");
+            ps.setString(4, "openid");
+            ps.setString(5, "admin");
+            ps.setString(6, "PRIMARY");
+            ps.setInt(7, TestConstants.TENANT_ID);
+            ps.setTimestamp(8, new Timestamp(System.currentTimeMillis()),
+                    Calendar.getInstance(TimeZone.getTimeZone("UTC")));
+            ps.setLong(9, 3600);
+            ps.setString(10, "admin");
+            ps.setString(11, UUID.randomUUID().toString());
+            ps.setString(12, consumerKey);
+            ps.setInt(13, TestConstants.TENANT_ID);
+
             ps.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             log.error("Error when inserting codeID object.", e);
+            throw new IdentityOAuth2Exception("Error when inserting codeID", e);
+        }
+    }
+
+    private void deleteCodeId(String codeId) throws Exception {
+
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
+            String sql = "DELETE FROM IDN_OAUTH2_AUTHORIZATION_CODE WHERE CODE_ID=?";
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, codeId);
+            ps.executeUpdate();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            log.error("Error when deleting codeID object.", e);
             throw new IdentityOAuth2Exception("Error when inserting codeID", e);
         }
     }
@@ -210,7 +275,7 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
             ResultSet resultSet = prepStmt.executeQuery();
 
             while (resultSet.next()) {
-                result = new Result(resultSet.getString(1), resultSet.getString(2), resultSet.getString(3));
+                result = new Result(resultSet.getInt(1), resultSet.getString(2), resultSet.getString(3));
             }
             return result;
         } catch (SQLException e) {
@@ -223,11 +288,11 @@ public class RequestObjectDAOImplTest extends PowerMockTestCase {
      * Store the output from database.
      */
    private class Result {
-        private String consumerId;
+        private int consumerId;
         private String codeId;
         private String tokenId;
 
-        Result(String consumerId, String codeId, String tokenId) {
+        Result(int consumerId, String codeId, String tokenId) {
             this.consumerId = consumerId;
             this.codeId = codeId;
             this.tokenId = tokenId;

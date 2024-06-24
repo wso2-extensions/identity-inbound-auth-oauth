@@ -21,24 +21,28 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
-import org.testng.annotations.ObjectFactory;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
@@ -57,10 +61,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -69,13 +74,13 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
 /**
  * Test class to test UserInfoJWTResponse.
  */
-@PrepareForTest({AuthorizationGrantCache.class, JDBCPersistenceManager.class,
-        OAuthServerConfiguration.class, FrameworkUtils.class})
-@PowerMockIgnore({"javax.management.*"})
+@WithCarbonHome
+@Listeners(MockitoTestNGListener.class)
 public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
 
     private UserInfoJWTResponse userInfoJWTResponse;
     Connection con = null;
+    MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -96,6 +101,19 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         OpenIDConnectServiceComponentHolder.setRequestObjectService(requestObjectService);
     }
 
+    @BeforeMethod
+    public void setUpMethod() {
+
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        oAuthServerConfiguration.close();
+    }
+
     @DataProvider(name = "subjectClaimDataProvider")
     public Object[][] provideSubjectData() {
 
@@ -109,28 +127,36 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
                                  boolean appendUserStoreDomain, boolean isPairwiseSubject,
                                  String expectedSubjectValue, String expectedPPID) throws Exception {
 
-        try {
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authenticatedUser, inputClaims, appendTenantDomain, appendUserStoreDomain,
-                    isPairwiseSubject);
+                    isPairwiseSubject, authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util,
+                    identityTenantUtil, userInfoEndpointConfig);
             updateAuthenticatedSubjectIdentifier(authenticatedUser, appendTenantDomain, appendUserStoreDomain,
                     inputClaims);
 
-            mockObjectsRelatedToTokenValidation();
+            mockObjectsRelatedToTokenValidation(oAuth2Util);
 
-            mockStatic(FrameworkUtils.class);
-            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
                     .thenReturn(authenticatedUser.getUserId());
-            when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
             userInfoJWTResponse = spy(new UserInfoJWTResponse());
             when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
-            mockStatic(JDBCPersistenceManager.class);
             DataSource dataSource = mock(DataSource.class);
-            JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
-            Mockito.when(dataSource.getConnection()).thenReturn(con);
-            Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
-            Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+            JDBCPersistenceManager mockJdbcPersistenceManager = mock(JDBCPersistenceManager.class);
+            lenient().when(dataSource.getConnection()).thenReturn(con);
+            jdbcPersistenceManager.when(JDBCPersistenceManager::getInstance).thenReturn(mockJdbcPersistenceManager);
+            lenient().when(mockJdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
             String responseString =
                     userInfoJWTResponse
                             .getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
@@ -153,28 +179,36 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
                                                               String expectedSubjectValue, String expectedPPID)
             throws Exception {
 
-        try {
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
             AuthenticatedUser authenticatedUser = (AuthenticatedUser) authorizedUser;
             prepareForSubjectClaimTest(authenticatedUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain,
-                    isPairwiseSubject);
+                    isPairwiseSubject, authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util,
+                    identityTenantUtil, userInfoEndpointConfig);
             authenticatedUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
                     applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
                             IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
-            mockObjectsRelatedToTokenValidation();
+            mockObjectsRelatedToTokenValidation(oAuth2Util);
 
-            mockStatic(FrameworkUtils.class);
-            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
                     .thenReturn(authenticatedUser.getUserId());
-            when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
             userInfoJWTResponse = spy(new UserInfoJWTResponse());
             when(userInfoJWTResponse.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
                     .thenReturn(inputClaims);
-            mockStatic(JDBCPersistenceManager.class);
             DataSource dataSource = mock(DataSource.class);
-            JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
-            Mockito.when(dataSource.getConnection()).thenReturn(con);
-            Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
-            Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+            JDBCPersistenceManager mockJdbcPersistenceManager = mock(JDBCPersistenceManager.class);
+            lenient().when(dataSource.getConnection()).thenReturn(con);
+            jdbcPersistenceManager.when(JDBCPersistenceManager::getInstance).thenReturn(mockJdbcPersistenceManager);
+            lenient().when(mockJdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
             String responseString =
                     userInfoJWTResponse
                             .getResponseString(getTokenResponseDTO(authenticatedUser.toFullQualifiedUsername()));
@@ -192,39 +226,77 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
     @Test
     public void testUpdateAtClaim() throws Exception {
 
-        userInfoJWTResponse = new UserInfoJWTResponse();
-        mockStatic(JDBCPersistenceManager.class);
-        DataSource dataSource = mock(DataSource.class);
-        JDBCPersistenceManager jdbcPersistenceManager = mock(JDBCPersistenceManager.class);
-        Mockito.when(dataSource.getConnection()).thenReturn(con);
-        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
-        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
-        String updateAtValue = "1509556412";
-        testLongClaimInUserInfoResponse(UPDATED_AT, updateAtValue);
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            userInfoJWTResponse = new UserInfoJWTResponse();
+            String updateAtValue = "1509556412";
+            testLongClaimInUserInfoResponse(UPDATED_AT, updateAtValue, jdbcPersistenceManager, frameworkUtils,
+                    oAuth2Util, authorizationGrantCache, claimUtil, identityTenantUtil, userInfoEndpointConfig);
+        }
     }
 
     @Test
     public void testEmailVerified() throws Exception {
 
-        String emailVerifiedClaimValue = "true";
-        mockStatic(JDBCPersistenceManager.class);
-        testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue);
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            String emailVerifiedClaimValue = "true";
+            testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue, jdbcPersistenceManager,
+                    frameworkUtils, authorizationGrantCache, claimUtil, oAuth2Util, identityTenantUtil,
+                    userInfoEndpointConfig);
+        }
     }
 
     @Test
     public void testPhoneNumberVerified() throws Exception {
 
-        String phoneNumberVerifiedClaimValue = "true";
-        testBooleanClaimInUserInfoResponse(PHONE_NUMBER_VERIFIED, phoneNumberVerifiedClaimValue);
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            String phoneNumberVerifiedClaimValue = "true";
+            testBooleanClaimInUserInfoResponse(PHONE_NUMBER_VERIFIED, phoneNumberVerifiedClaimValue,
+                    jdbcPersistenceManager, frameworkUtils, authorizationGrantCache, claimUtil, oAuth2Util,
+                    identityTenantUtil, userInfoEndpointConfig);
+        }
     }
 
-    private void testBooleanClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
+    private void testBooleanClaimInUserInfoResponse(String claimUri, String claimValue,
+                                                    MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager,
+                                                    MockedStatic<FrameworkUtils> frameworkUtils,
+                                                    MockedStatic<AuthorizationGrantCache> authorizationGrantCache,
+                                                    MockedStatic<ClaimUtil> claimUtil,
+                                                    MockedStatic<OAuth2Util> oAuth2Util,
+                                                    MockedStatic<IdentityTenantUtil> identityTenantUtil,
+                                                    MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig)
+            throws Exception {
 
-        initSingleClaimTest(claimUri, claimValue);
-        mockDataSource();
-        mockObjectsRelatedToTokenValidation();
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+        initSingleClaimTest(claimUri, claimValue, authorizationGrantCache, frameworkUtils,
+                claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
+        mockDataSource(jdbcPersistenceManager);
+        mockObjectsRelatedToTokenValidation(oAuth2Util);
+        frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
                 .thenReturn(AUTHORIZED_USER_ID);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -233,7 +305,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
         authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
-        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
 
@@ -247,14 +319,22 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         assertEquals(claimsInResponse.get(claimUri), Boolean.parseBoolean(claimValue));
     }
 
-    private void testLongClaimInUserInfoResponse(String claimUri, String claimValue) throws Exception {
+    private void testLongClaimInUserInfoResponse(String claimUri, String claimValue,
+                                                 MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager,
+                                                 MockedStatic<FrameworkUtils> frameworkUtils,
+                                                 MockedStatic<OAuth2Util> oAuth2Util,
+                                                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache,
+                                                 MockedStatic<ClaimUtil> claimUtil,
+                                                 MockedStatic<IdentityTenantUtil> identityTenantUtil,
+                                                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig)
+            throws Exception {
 
         userInfoJWTResponse = new UserInfoJWTResponse();
-        initSingleClaimTest(claimUri, claimValue);
-        mockDataSource();
-        mockObjectsRelatedToTokenValidation();
-        mockStatic(FrameworkUtils.class);
-        when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+        initSingleClaimTest(claimUri, claimValue, authorizationGrantCache, frameworkUtils,
+                claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
+        mockDataSource(jdbcPersistenceManager);
+        mockObjectsRelatedToTokenValidation(oAuth2Util);
+        frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
                 .thenReturn(AUTHORIZED_USER_ID);
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -263,7 +343,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
         authenticatedUser.setUserId(AUTHORIZED_USER_ID);
         authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
-        mockAccessTokenDOInOAuth2Util(authenticatedUser);
+        mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
 
         String responseString =
                 userInfoJWTResponse.getResponseString(getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED));
@@ -291,12 +371,22 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
                                       String[] requestedScopes,
                                       Map<String, Object> expectedClaims) throws Exception {
 
-        try {
-            prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache);
-            mockDataSource();
-            mockObjectsRelatedToTokenValidation();
-            mockStatic(FrameworkUtils.class);
-            when(FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+        try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache, authorizationGrantCache,
+                    frameworkUtils, claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
+            mockDataSource(jdbcPersistenceManager);
+            mockObjectsRelatedToTokenValidation(oAuth2Util);
+
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
                     .thenReturn(AUTHORIZED_USER_ID);
 
             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
@@ -305,7 +395,7 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
             authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
             authenticatedUser.setUserId(AUTHORIZED_USER_ID);
             authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
-            mockAccessTokenDOInOAuth2Util(authenticatedUser);
+            mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
             String responseString =
                     userInfoJWTResponse.getResponseString(
                             getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
@@ -328,19 +418,12 @@ public class UserInfoJWTResponseTest extends UserInfoResponseBaseTest {
         }
     }
 
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
+    private void mockDataSource(MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager) throws SQLException {
 
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
-
-    private void mockDataSource() throws SQLException {
-
-        mockStatic(JDBCPersistenceManager.class);
         DataSource dataSource = Mockito.mock(DataSource.class);
-        JDBCPersistenceManager jdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
-        Mockito.when(dataSource.getConnection()).thenReturn(con);
-        Mockito.when(jdbcPersistenceManager.getInstance()).thenReturn(jdbcPersistenceManager);
-        Mockito.when(jdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
+        JDBCPersistenceManager mockJdbcPersistenceManager = Mockito.mock(JDBCPersistenceManager.class);
+        lenient().when(dataSource.getConnection()).thenReturn(con);
+        jdbcPersistenceManager.when(JDBCPersistenceManager::getInstance).thenReturn(mockJdbcPersistenceManager);
+        lenient().when(mockJdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
     }
 }

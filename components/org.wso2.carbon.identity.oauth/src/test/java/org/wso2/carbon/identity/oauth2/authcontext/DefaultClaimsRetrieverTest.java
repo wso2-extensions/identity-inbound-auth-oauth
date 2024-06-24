@@ -16,14 +16,14 @@
 package org.wso2.carbon.identity.oauth2.authcontext;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.api.ClaimManager;
 import org.wso2.carbon.user.api.ClaimMapping;
@@ -31,21 +31,18 @@ import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
 
-@PrepareForTest({OAuthServerConfiguration.class, OAuth2Util.class, MultitenantUtils.class,
-        OAuthComponentServiceHolder.class, UserRealm.class})
-public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class DefaultClaimsRetrieverTest {
 
     private DefaultClaimsRetriever defaultClaimsRetriever;
 
@@ -66,6 +63,9 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
 
     @Mock
     private ClaimManager mockedClaimManager;
+
+    @Mock
+    private TenantManager mockedTenantManager;
 
     @BeforeTest
     public void setUp() {
@@ -116,111 +116,133 @@ public class DefaultClaimsRetrieverTest extends PowerMockTestCase {
     @Test
     public void testInit() throws Exception {
 
-        // Subject is not null.
-        String consumerDialectURI = "http://wso2.org/claims";
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getConsumerDialectURI()).thenReturn(consumerDialectURI);
-        defaultClaimsRetriever.init();
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            // Subject is not null.
+            String consumerDialectURI = "http://wso2.org/claims";
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockedOAuthServerConfiguration);
+            when(mockedOAuthServerConfiguration.getConsumerDialectURI()).thenReturn(consumerDialectURI);
+            defaultClaimsRetriever.init();
 
-        // Subject is null.
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getConsumerDialectURI()).thenReturn(null);
-        defaultClaimsRetriever.init();
+            // Subject is null.
+            when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
+            when(mockedOAuthServerConfiguration.getConsumerDialectURI()).thenReturn(null);
+            defaultClaimsRetriever.init();
+        }
     }
 
     @Test
     public void testGetClaims() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
-        mockStatic(OAuth2Util.class);
-        mockStatic(MultitenantUtils.class);
-        mockStatic(OAuthComponentServiceHolder.class);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockedOAuthServerConfiguration);
+            lenient().when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
 
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
-        when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
-        mockedUserRealm = mock(UserRealm.class);
-        when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
-        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-        Map<String, String> expectedMappingTrue = new HashMap<>();
-        when(mockedUserStoreManager.getUserClaimValue("user", "[\"https://www.wso2.org/address\", " +
-                "\"https://www.wso2.org/email\"]", "read")).thenReturn(expectedMappingTrue.toString());
+            oAuthComponentServiceHolder.when(
+                    OAuthComponentServiceHolder::getInstance).thenReturn(mockedOAuthComponentServiceHolder);
+            when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
+            mockedUserRealm = mock(UserRealm.class);
+            when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
+            when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
+            when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
+            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
 
-        String[] claims = {"https://www.wso2.org/address", "https://www.wso2.org/email"};
+            String[] claims = {"https://www.wso2.org/address", "https://www.wso2.org/email"};
 
-        assertNotNull(defaultClaimsRetriever.getClaims("admin", claims));
+            assertNotNull(defaultClaimsRetriever.getClaims("admin", claims));
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetClaimsWhenException() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
-        mockStatic(OAuth2Util.class);
-        mockStatic(MultitenantUtils.class);
-        mockStatic(OAuthComponentServiceHolder.class);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockedOAuthServerConfiguration);
+            when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 3);
 
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
-        when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
-        mockedUserRealm = mock(UserRealm.class);
-        when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
-        when(mockedUserRealm.getUserStoreManager()).thenThrow(new UserStoreException("UserStoreException"));
-        when(mockedUserStoreManager.getUserClaimValue(anyString(), anyString(), anyString())).
-                thenThrow(new UserStoreException("UserStoreException"));
+            oAuthComponentServiceHolder.when(
+                    OAuthComponentServiceHolder::getInstance).thenReturn(mockedOAuthComponentServiceHolder);
+            when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
 
-        String[] claims = {"https://www.wso2.org/address", "https://www.wso2.org/email"};
+            when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
+            when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
 
-        assertNotNull(defaultClaimsRetriever.getClaims("admin", claims));
+            mockedUserRealm = mock(UserRealm.class);
+            when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
+            when(mockedUserRealm.getUserStoreManager()).thenThrow(new UserStoreException("UserStoreException"));
+            when(mockedUserStoreManager.getUserClaimValue(anyString(), anyString(), anyString())).
+                    thenThrow(new UserStoreException("UserStoreException"));
+
+            String[] claims = {"https://www.wso2.org/address", "https://www.wso2.org/email"};
+
+            assertNotNull(defaultClaimsRetriever.getClaims("admin", claims));
+        }
     }
 
     @Test
     public void testGetDefaultClaims() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 7);
-        mockStatic(OAuth2Util.class);
-        mockStatic(MultitenantUtils.class);
-        mockStatic(OAuthComponentServiceHolder.class);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockedOAuthServerConfiguration);
 
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
-        mockedRealmService = mock(RealmService.class);
-        when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
-        mockedUserRealm = mock(UserRealm.class);
-        when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
-        mockedClaimManager = mock(ClaimManager.class);
-        when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-        when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(this.getSampleClaimMapping());
-        defaultClaimsRetriever.init();
-        assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
+            oAuthComponentServiceHolder.when(
+                    OAuthComponentServiceHolder::getInstance).thenReturn(mockedOAuthComponentServiceHolder);
+            mockedRealmService = mock(RealmService.class);
+            when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
+            when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
+            when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
+
+            mockedUserRealm = mock(UserRealm.class);
+            when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
+            mockedClaimManager = mock(ClaimManager.class);
+            when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
+            when(mockedClaimManager.getAllClaimMappings(anyString())).thenReturn(this.getSampleClaimMapping());
+            defaultClaimsRetriever.init();
+            assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
+        }
 
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetDefaultClaimsWhenException() throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedOAuthServerConfiguration);
-        when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 7);
-        mockStatic(OAuth2Util.class);
-        mockStatic(MultitenantUtils.class);
-        mockStatic(OAuthComponentServiceHolder.class);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
 
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockedOAuthComponentServiceHolder);
-        mockedRealmService = mock(RealmService.class);
-        when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
-        mockedUserRealm = mock(UserRealm.class);
-        when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
-        mockedClaimManager = mock(ClaimManager.class);
-        when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
-        defaultClaimsRetriever.init();
-        when(mockedClaimManager.getAllClaimMappings(anyString())).
-                thenThrow(new UserStoreException("UserStoreException"));
-        assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockedOAuthServerConfiguration);
+            when(mockedOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn((long) 7);
+
+            oAuthComponentServiceHolder.when(
+                    OAuthComponentServiceHolder::getInstance).thenReturn(mockedOAuthComponentServiceHolder);
+            mockedRealmService = mock(RealmService.class);
+            when(mockedOAuthComponentServiceHolder.getRealmService()).thenReturn(mockedRealmService);
+            when(mockedRealmService.getTenantManager()).thenReturn(mockedTenantManager);
+            when(mockedTenantManager.getTenantId(anyString())).thenReturn(-1234);
+            mockedUserRealm = mock(UserRealm.class);
+            when(mockedRealmService.getTenantUserRealm(anyInt())).thenReturn(mockedUserRealm);
+            mockedClaimManager = mock(ClaimManager.class);
+            when(mockedUserRealm.getClaimManager()).thenReturn(mockedClaimManager);
+            defaultClaimsRetriever.init();
+            when(mockedClaimManager.getAllClaimMappings(anyString())).
+                    thenThrow(new UserStoreException("UserStoreException"));
+            assertNotNull(defaultClaimsRetriever.getDefaultClaims("admin"));
+        }
     }
 
 }

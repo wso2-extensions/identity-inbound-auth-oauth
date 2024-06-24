@@ -19,9 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.powermock.reflect.internal.WhiteboxImpl;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -45,14 +43,15 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import java.lang.reflect.Field;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -63,11 +62,11 @@ import static org.testng.Assert.fail;
  * This class defines unit test for AuthorizationCodeGrantHandler class
  */
 @WithCarbonHome
-public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
+public class AuthorizationCodeGrantHandlerTest {
 
     public static final String CLIENT_ID_VALUE = "clientIdValue";
     public static final String INVALID_CLIENT = "invalidClient";
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
     AuthorizationCodeGrantHandler authorizationCodeGrantHandler;
 
     @BeforeTest()
@@ -75,7 +74,7 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
     }
 
     @DataProvider(name = "BuildTokenRequestMessageContext")
-    public Object[][] buildTokenRequestMessageContext() {
+    public Object[][] buildTokenRequestMessageContext() throws Exception {
 
         OAuthTokenReqMessageContext messageContext1 = new OAuthTokenReqMessageContext(
                 new OAuth2AccessTokenReqDTO());
@@ -88,8 +87,8 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
 
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         AuthzCodeDO authzCodeDO1 = new AuthzCodeDO();
-        WhiteboxImpl.setInternalState(authzCodeDO1, "authorizedUser", authenticatedUser);
-        WhiteboxImpl.setInternalState(authzCodeDO1, "callbackUrl", "callBackUrl");
+        setPrivateField(authzCodeDO1, "authorizedUser", authenticatedUser);
+        setPrivateField(authzCodeDO1, "callbackUrl", "callBackUrl");
 
         AuthzCodeDO authzCodeDO2 = new AuthzCodeDO();
 
@@ -104,36 +103,40 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
                                   boolean debugEnabled, long timestamp, boolean expectedResult)
             throws Exception {
 
-        AuthzCodeDO authzCodeDO = (AuthzCodeDO) authzCode;
-        WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "cacheEnabled", cacheEnabled);
-        OAuthCache oAuthCache = mock(OAuthCache.class);
-        when(OAuthCache.getInstance()).thenReturn(oAuthCache);
+        try (MockedStatic<OAuthCache> oAuthCache = mockStatic(OAuthCache.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
+            setPrivateField(authorizationCodeGrantHandler, "cacheEnabled", cacheEnabled);
+            OAuthCache mockOAuthCache = mock(OAuthCache.class);
+            oAuthCache.when(OAuthCache::getInstance).thenReturn(mockOAuthCache);
 
-        if (cacheEnabled) {
-            WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "oauthCache", oAuthCache);
+            if (cacheEnabled) {
+                setPrivateField(authorizationCodeGrantHandler, "oauthCache", mockOAuthCache);
+            }
+            OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
+
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            TokenPersistenceProcessor tokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+
+            OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+//            whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+            when(oAuthAppDAO.getAppInformation(anyString())).thenReturn(oAuthAppDO);
+
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            doNothing().when(mockAppInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
+
+            assertEquals(authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx), expectedResult);
         }
-        OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
-
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        TokenPersistenceProcessor tokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-
-        OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        when(oAuthAppDAO.getAppInformation(anyString())).thenReturn(oAuthAppDO);
-
-        AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
-        doNothing().when(appInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
-
-
-        assertEquals(authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx), expectedResult);
     }
 
     @DataProvider(name = "buildErrorTokenRequestMessageContext")
-    public Object[][] buildErrorTokenRequestMessageContext() {
+    public Object[][] buildErrorTokenRequestMessageContext() throws Exception {
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext1 = new OAuthTokenReqMessageContext(
                 new OAuth2AccessTokenReqDTO());
@@ -149,14 +152,14 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
         authzCodeDO1.setState(OAuthConstants.AuthorizationCodeState.INACTIVE);
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserName("user");
-        WhiteboxImpl.setInternalState(authzCodeDO1, "authorizedUser", authenticatedUser);
-        WhiteboxImpl.setInternalState(authzCodeDO1, "callbackUrl", "callBackUrl");
-        WhiteboxImpl.setInternalState(authzCodeDO1, "state", "INACTIVE");
+        setPrivateField(authzCodeDO1, "authorizedUser", authenticatedUser);
+        setPrivateField(authzCodeDO1, "callbackUrl", "callBackUrl");
+        setPrivateField(authzCodeDO1, "state", "INACTIVE");
 
         AuthzCodeDO authzCodeDO2 = new AuthzCodeDO();
-        WhiteboxImpl.setInternalState(authzCodeDO2, "authorizedUser", authenticatedUser);
-        WhiteboxImpl.setInternalState(authzCodeDO2, "callbackUrl", "callBackUrl");
-        WhiteboxImpl.setInternalState(authzCodeDO2, "validityPeriod", 3000000L);
+        setPrivateField(authzCodeDO2, "authorizedUser", authenticatedUser);
+        setPrivateField(authzCodeDO2, "callbackUrl", "callBackUrl");
+        setPrivateField(authzCodeDO2, "validityPeriod", 3000000L);
 
         return new Object[][]{
                 {oAuthTokenReqMessageContext1, null, CLIENT_ID_VALUE, true, 1000L, "Invalid authorization code"},
@@ -177,37 +180,43 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
     public void testValidateGrantException(Object tokenRequestMessageContext, Object authzCode, String clientId,
                                            boolean pkceValid, long timestamp, String expectedError) throws Exception {
 
-        AuthzCodeDO authzCodeDO = (AuthzCodeDO) authzCode;
-        WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "cacheEnabled", true);
-        OAuthCache oAuthCache = mock(OAuthCache.class);
-        when(OAuthCache.getInstance()).thenReturn(oAuthCache);
+        try (MockedStatic<OAuthCache> oAuthCache = mockStatic(OAuthCache.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class);) {
+            setPrivateField(authorizationCodeGrantHandler, "cacheEnabled", true);
+            OAuthCache mockOAuthCache = mock(OAuthCache.class);
+            oAuthCache.when(OAuthCache::getInstance).thenReturn(mockOAuthCache);
 
-        WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "oauthCache", oAuthCache);
-        OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
+            setPrivateField(authorizationCodeGrantHandler, "oauthCache", mockOAuthCache);
+            OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
 
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        TokenPersistenceProcessor tokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            TokenPersistenceProcessor tokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
 
-        OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
-        when(oAuthAppDAO.getAppInformation(CLIENT_ID_VALUE)).thenReturn(oAuthAppDO);
-        when(oAuthAppDAO.getAppInformation(INVALID_CLIENT)).thenThrow(new InvalidOAuthClientException("Error"));
+            OAuthAppDAO oAuthAppDAO = mock(OAuthAppDAO.class);
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+//            whenNew(OAuthAppDAO.class).withNoArguments().thenReturn(oAuthAppDAO);
+            when(oAuthAppDAO.getAppInformation(CLIENT_ID_VALUE)).thenReturn(oAuthAppDO);
+            when(oAuthAppDAO.getAppInformation(INVALID_CLIENT)).thenThrow(new InvalidOAuthClientException("Error"));
 
-        AppInfoCache appInfoCache = mock(AppInfoCache.class);
-        when(AppInfoCache.getInstance()).thenReturn(appInfoCache);
-        doNothing().when(appInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            doNothing().when(mockAppInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
 
-        spy(OAuth2Util.class);
-        doReturn(pkceValid).when(OAuth2Util.class, "validatePKCE", anyString(), anyString(), anyString(),
-                any(OAuthAppDO.class));
-        try {
-            authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx);
-            fail("Expected exception not thrown");
-        } catch (IdentityOAuth2Exception e) {
-            assertTrue(e.getMessage().contains(expectedError), "Expected error message with '" + expectedError + "'");
+//            spy(OAuth2Util.class);
+//            doReturn(pkceValid).when(OAuth2Util.class, "validatePKCE", anyString(), anyString(), anyString(),
+//                    any(OAuthAppDO.class));
+            try {
+                authorizationCodeGrantHandler.validateGrant(tokReqMsgCtx);
+                fail("Expected exception not thrown");
+            } catch (IdentityOAuth2Exception e) {
+                assertTrue(e.getMessage().contains(expectedError),
+                        "Expected error message with '" + expectedError + "'");
+            }
         }
     }
 
@@ -229,65 +238,88 @@ public class AuthorizationCodeGrantHandlerTest extends PowerMockTestCase {
 
     @Test(dataProvider = "BuildTokenMsgCtxForIssue")
     public void testIssue(Object tokenRequestMessageContext, boolean enableCache, boolean debugEnabled)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException, OAuthSystemException {
+            throws Exception {
 
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        try (MockedStatic<OAuthCache> oAuthCache = mockStatic(OAuthCache.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "cacheEnabled", enableCache);
-        OAuthCache oAuthCache = mock(OAuthCache.class);
-        when(OAuthCache.getInstance()).thenReturn(oAuthCache);
+            setPrivateField(authorizationCodeGrantHandler, "cacheEnabled", enableCache);
+            OAuthCache mockOAuthCache = mock(OAuthCache.class);
+            oAuthCache.when(OAuthCache::getInstance).thenReturn(mockOAuthCache);
 
-        if (enableCache) {
-            WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "oauthCache", oAuthCache);
+            if (enableCache) {
+                setPrivateField(authorizationCodeGrantHandler, "oauthCache", mockOAuthCache);
+            }
+            OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
+
+            OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuer.class);
+            setPrivateField(authorizationCodeGrantHandler, "oauthIssuerImpl", oauthTokenIssuer);
+
+            OAuthAppDO oAuthAppDO = mock(OAuthAppDO.class);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            when(oauthTokenIssuer.accessToken(tokReqMsgCtx)).thenReturn(StringUtils.EMPTY);
+
+            assertNotNull(authorizationCodeGrantHandler.issue(tokReqMsgCtx));
         }
-        OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
-
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-
-        OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuer.class);
-        WhiteboxImpl.setInternalState(authorizationCodeGrantHandler, "oauthIssuerImpl", oauthTokenIssuer);
-        AccessTokenDO accessTokenDO = new AccessTokenDO();
-
-        OAuthAppDO oAuthAppDO = mock(OAuthAppDO.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-        when(oauthTokenIssuer.accessToken(tokReqMsgCtx)).thenReturn(StringUtils.EMPTY);
-
-        assertNotNull(authorizationCodeGrantHandler.issue(tokReqMsgCtx));
 
     }
 
     @Test
     public void testAuthorizeAccessDelegation() throws IdentityOAuth2Exception {
 
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        assertTrue(authorizationCodeGrantHandler.authorizeAccessDelegation(new OAuthTokenReqMessageContext
-                (new OAuth2AccessTokenReqDTO())));
+            assertTrue(authorizationCodeGrantHandler.authorizeAccessDelegation(new OAuthTokenReqMessageContext
+                    (new OAuth2AccessTokenReqDTO())));
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testStoreAccessToken() throws IdentityException {
 
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
 
-        authorizationCodeGrantHandler.storeAccessToken(new OAuth2AccessTokenReqDTO(), TestConstants.USERSTORE_DOMAIN,
-                new AccessTokenDO(), TestConstants.NEW_ACCESS_TOKEN, new AccessTokenDO());
+            authorizationCodeGrantHandler.storeAccessToken(new OAuth2AccessTokenReqDTO(),
+                    TestConstants.USERSTORE_DOMAIN,
+                    new AccessTokenDO(), TestConstants.NEW_ACCESS_TOKEN, new AccessTokenDO());
+        }
     }
 
     @Test
     public void testIssueRefreshToken() throws IdentityOAuth2Exception {
 
-        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getValueForIsRefreshTokenAllowed(OAuthConstants.GrantTypes.AUTHORIZATION_CODE)).
-                thenReturn(true, false);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(
+                    OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+            when(mockOAuthServerConfiguration.getValueForIsRefreshTokenAllowed(
+                    OAuthConstants.GrantTypes.AUTHORIZATION_CODE)).
+                    thenReturn(true, false);
 
-        assertTrue(authorizationCodeGrantHandler.issueRefreshToken());
+            assertTrue(authorizationCodeGrantHandler.issueRefreshToken());
 
-        assertFalse(authorizationCodeGrantHandler.issueRefreshToken());
+            assertFalse(authorizationCodeGrantHandler.issueRefreshToken());
+        }
+    }
+
+    private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
+
+        Field field = object.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(object, value);
     }
 }

@@ -23,17 +23,16 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.mockito.Mock;
-import org.mockito.invocation.InvocationOnMock;
+import org.mockito.MockedConstruction;
 import org.mockito.stubbing.Answer;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
-import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityRequestFactory;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.HttpIdentityResponse;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -46,6 +45,8 @@ import org.wso2.carbon.user.core.UserStoreManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
@@ -54,22 +55,21 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
-import static org.powermock.api.support.membermodification.MemberMatcher.methodsDeclaredIn;
-import static org.powermock.api.support.membermodification.MemberModifier.suppress;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
 /**
  * Unit test covering RegistrationRequestFactory
  */
-@PrepareForTest(RegistrationRequestFactory.class)
-public class RegistrationRequestFactoryTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class RegistrationRequestFactoryTest {
 
     private RegistrationRequestFactory registrationRequestFactory;
     private final String dummyDescription = "dummyDescription";
@@ -81,11 +81,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     @Mock
     private HttpServletResponse mockHttpResponse;
 
-    @Mock
     private RegistrationRequest.RegistrationRequestBuilder mockRegistrationRequestBuilder;
-
-    @Mock
-    private HttpIdentityResponse.HttpIdentityResponseBuilder mockHttpIdentityResponseBuilder;
 
     @Mock
     private BufferedReader mockReader;
@@ -103,6 +99,8 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     private void setUp() {
 
         registrationRequestFactory = new RegistrationRequestFactory();
+        mockRegistrationRequestBuilder =
+                new RegistrationRequest.RegistrationRequestBuilder(mockHttpRequest, mockHttpResponse);
     }
 
     /**
@@ -121,7 +119,7 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
     public void testCanHandle(String requestURI, String httpMethod, boolean expected) throws Exception {
 
         when(mockHttpRequest.getRequestURI()).thenReturn(requestURI);
-        when(mockHttpRequest.getMethod()).thenReturn(httpMethod);
+        lenient().when(mockHttpRequest.getMethod()).thenReturn(httpMethod);
         assertEquals(registrationRequestFactory.canHandle(mockHttpRequest, mockHttpResponse), expected,
                 "Redirect Uri doesn't match");
     }
@@ -169,9 +167,10 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         contactsWithInt.add(0);
         scopesWithInt.add(0);
 
-        mockRegistrationRequestBuilder = mock(RegistrationRequest.RegistrationRequestBuilder.class);
         mockHttpResponse = mock(HttpServletResponse.class);
         mockHttpRequest = mock(HttpServletRequest.class);
+        mockRegistrationRequestBuilder =
+                new RegistrationRequest.RegistrationRequestBuilder(mockHttpRequest, mockHttpResponse);
 
         return new Object[][]{
                 // Check with String values.
@@ -197,11 +196,6 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
         mockHttpRequest = (HttpServletRequest) request;
         mockHttpResponse = (HttpServletResponse) response;
-        if (builder == null) {
-            mockRegistrationRequestBuilder = mock(RegistrationRequest.RegistrationRequestBuilder.class);
-        } else {
-            mockRegistrationRequestBuilder = (RegistrationRequest.RegistrationRequestBuilder) builder;
-        }
 
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES, grantType);
@@ -211,61 +205,67 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.SCOPE, scope);
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.CONTACTS, contact);
 
-        RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
-
-        whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
-
-        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
-
         when(mockHttpRequest.getReader()).thenReturn(mockReader);
-        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
 
-        when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
+        lenient().when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
+        try (MockedConstruction<JSONParser> mockedConstruction = mockConstruction(JSONParser.class,
+                (mock, context) -> {
+                    when(mock.parse(mockReader)).thenReturn(jsonObject);
+                })) {
 
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+            try {
+                startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
 
-            if (builder == null) {
-                registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
-            } else {
-                registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-            }
-
-            if (clientName != null) {
-                assertEquals(registrationRequestProfile.getClientName(), clientName,
-                        "expected client name is not found in registrationRequestProfile");
-            }
-
-            if (!expected.equals("empty")) {
-                if (expected instanceof String) {
-                    assertEquals(registrationRequestProfile.getGrantTypes().get(0), grantType,
-                            "expected grant type is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getRedirectUris().get(0), redirectUrl,
-                            "expected redirectUrl is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getContacts().get(0), contact,
-                            "expected contact is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getScopes().get(0), scope,
-                            "expected scope is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getResponseTypes().get(0), responseType,
-                            "expected response type is not found in registrationRequestProfile");
+                RegistrationRequestProfile registrationRequestProfile;
+                if (builder == null) {
+                    RegistrationRequest.RegistrationRequestBuilder registrationRequestBuilder =
+                            registrationRequestFactory.create(mockHttpRequest, mockHttpResponse);
+                    registrationRequestProfile = registrationRequestBuilder.getRegistrationRequestProfile();
                 } else {
-                    assertEquals(registrationRequestProfile.getGrantTypes(), grantType,
-                            "expected grant type is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getRedirectUris(), redirectUrl,
-                            "expected redirect url is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getContacts(), contact,
-                            "expected contact is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getScopes(), scope,
-                            "expected scope is not found in registrationRequestProfile");
-                    assertEquals(registrationRequestProfile.getResponseTypes(), responseType,
-                            "expected response type is not found in registrationRequestProfile");
+                    registrationRequestFactory.create((RegistrationRequest.RegistrationRequestBuilder) builder,
+                            mockHttpRequest, mockHttpResponse);
+                    registrationRequestProfile =
+                            ((RegistrationRequest.RegistrationRequestBuilder) builder).getRegistrationRequestProfile();
                 }
+
+                if (clientName != null) {
+                    assertEquals(registrationRequestProfile.getClientName(), clientName,
+                            "expected client name is not found in registrationRequestProfile");
+                }
+
+                if (!expected.equals("empty")) {
+                    if (expected instanceof String) {
+                        assertEquals(registrationRequestProfile.getGrantTypes().get(0), grantType,
+                                "expected grant type is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getRedirectUris().get(0), redirectUrl,
+                                "expected redirectUrl is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getContacts().get(0), contact,
+                                "expected contact is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getScopes().get(0), scope,
+                                "expected scope is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getResponseTypes().get(0), responseType,
+                                "expected response type is not found in registrationRequestProfile");
+                    } else {
+                        assertEquals(registrationRequestProfile.getGrantTypes(), grantType,
+                                "expected grant type is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getRedirectUris(), redirectUrl,
+                                "expected redirect url is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getContacts(), contact,
+                                "expected contact is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getScopes(), scope,
+                                "expected scope is not found in registrationRequestProfile");
+                        assertEquals(registrationRequestProfile.getResponseTypes(), responseType,
+                                "expected response type is not found in registrationRequestProfile");
+                    }
+                }
+                assertEquals(registrationRequestProfile.getOwner(), ownerName,
+                        "expected owner name is not found in registrationRequestProfile");
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
             }
-            assertEquals(registrationRequestProfile.getOwner(), ownerName,
-                    "expected owner name is not found in registrationRequestProfile");
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
@@ -280,22 +280,20 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES, grantType);
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS, redirectUrl);
 
-        RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
-
-        whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
-
-        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
-
         when(mockHttpRequest.getReader()).thenReturn(mockReader);
-        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
-
-        when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
-            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        try (MockedConstruction<JSONParser> mockedConstruction = mockConstruction(JSONParser.class,
+                (mock, context) -> {
+                    when(mock.parse(mockReader)).thenReturn(jsonObject);
+                })) {
+            try {
+                startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+                registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
@@ -318,29 +316,34 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
             jsonObject.put(RegistrationRequest.RegisterRequestConstant.EXT_PARAM_OWNER, "dummyParam");
         }
         when(mockHttpRequest.getReader()).thenReturn(mockReader);
-        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
-        when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
 
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
+        try (MockedConstruction<JSONParser> mockedConstruction = mockConstruction(JSONParser.class,
+                (mock, context) -> {
+                    when(mock.parse(mockReader)).thenReturn(jsonObject);
+                })) {
+            try {
+                startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
 
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
-            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-            if (isThrowException) {
-                when(mockedUserStoreManager.isExistingUser(anyString())).
-                        thenAnswer (i -> {
-                            throw new UserStoreException("null");
-                        });
-            } else {
-                when(mockedUserStoreManager.isExistingUser("dummyParam")).thenReturn(false);
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+                lenient().when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+                if (isThrowException) {
+                    when(mockedUserStoreManager.isExistingUser(anyString())).
+                            thenAnswer (i -> {
+                                throw new UserStoreException("null");
+                            });
+                } else {
+                    lenient().when(mockedUserStoreManager.isExistingUser("dummyParam")).thenReturn(false);
+                }
+                registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+            } catch (IdentityException ex) {
+                assertEquals(ex.getMessage(), expected);
+                return;
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
             }
-            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), expected);
-            return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
@@ -354,9 +357,6 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.GRANT_TYPES, grantType);
         jsonObject.put(RegistrationRequest.RegisterRequestConstant.REDIRECT_URIS, redirectUrls);
 
-        RegistrationRequestProfile registrationRequestProfile = new RegistrationRequestProfile();
-        whenNew(RegistrationRequestProfile.class).withNoArguments().thenReturn(registrationRequestProfile);
-        suppress(methodsDeclaredIn(HttpIdentityRequestFactory.class));
         return jsonObject;
     }
 
@@ -365,17 +365,22 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
         JSONObject jsonObject = getTestCreateData();
         when(mockHttpRequest.getReader()).thenThrow(IOException.class);
-        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
-        when(jsonParser.parse(mockReader)).thenReturn(jsonObject);
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
-            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Error occurred while reading servlet request body, ");
-            return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        try (MockedConstruction<JSONParser> mockedConstruction = mockConstruction(JSONParser.class,
+                (mock, context) -> {
+                    when(mock.parse(mockReader)).thenReturn(jsonObject);
+                })) {
+            try {
+                startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+                registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+            } catch (IdentityException ex) {
+                assertEquals(ex.getMessage(), "Error occurred while reading servlet request body, ");
+                return;
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
@@ -384,77 +389,73 @@ public class RegistrationRequestFactoryTest extends PowerMockTestCase {
 
         getTestCreateData();
         when(mockHttpRequest.getReader()).thenReturn(mockReader);
-        whenNew(JSONParser.class).withNoArguments().thenReturn(jsonParser);
-        when(jsonParser.parse(mockReader)).thenThrow(ParseException.class);
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
-            registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
-        } catch (IdentityException ex) {
-            assertEquals(ex.getMessage(), "Error occurred while parsing the json object, ");
-            return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
+        when(mockHttpRequest.getHeaderNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        when(mockHttpRequest.getAttributeNames()).thenReturn(Collections.enumeration(new ArrayList<>()));
+        try (MockedConstruction<JSONParser> mockedConstruction = mockConstruction(JSONParser.class,
+                (mock, context) -> {
+                    when(mock.parse(mockReader)).thenThrow(ParseException.class);
+                })) {
+            try {
+                startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(ownerName);
+                registrationRequestFactory.create(mockRegistrationRequestBuilder, mockHttpRequest, mockHttpResponse);
+            } catch (IdentityException ex) {
+                assertEquals(ex.getMessage(), "Error occurred while parsing the json object, ");
+                return;
+            } finally {
+                PrivilegedCarbonContext.endTenantFlow();
+            }
         }
     }
 
     @Test
     public void testHandleException() throws Exception {
 
-        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
-                (mockHttpIdentityResponseBuilder);
-
         final Integer[] statusCode = new Integer[1];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                statusCode[0] = (Integer) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
-
         final String[] header = new String[3];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
 
-                header[0] = (String) invocation.getArguments()[1];
-                return null;
-            }
-        }).when(mockHttpIdentityResponseBuilder).addHeader(eq(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL),
-                anyString());
+        try (MockedConstruction<HttpIdentityResponse.HttpIdentityResponseBuilder> mockedConstruction = mockConstruction(
+                HttpIdentityResponse.HttpIdentityResponseBuilder.class,
+                (mock, context) -> {
+                    doAnswer((Answer<Object>) invocation -> {
 
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+                        statusCode[0] = (Integer) invocation.getArguments()[0];
+                        return null;
+                    }).when(mock).setStatusCode(anyInt());
 
-                header[1] = (String) invocation.getArguments()[1];
-                return null;
-            }
-        }).when(mockHttpIdentityResponseBuilder).addHeader(eq(OAuthConstants.HTTP_RESP_HEADER_PRAGMA), anyString());
+                    doAnswer((Answer<Object>) invocation -> {
 
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+                        header[0] = (String) invocation.getArguments()[1];
+                        return null;
+                    }).when(mock).addHeader(eq(OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL), anyString());
 
-                header[2] = (String) invocation.getArguments()[1];
-                return null;
-            }
-        }).when(mockHttpIdentityResponseBuilder).addHeader(eq(HttpHeaders.CONTENT_TYPE), anyString());
+                    doAnswer((Answer<Object>) invocation -> {
 
-        FrameworkClientException exception = mock(FrameworkClientException.class);
-        when(exception.getMessage()).thenReturn(dummyDescription);
-        registrationRequestFactory.handleException(exception, mockHttpRequest, mockHttpResponse);
+                        header[1] = (String) invocation.getArguments()[1];
+                        return null;
+                    }).when(mock).addHeader(eq(OAuthConstants.HTTP_RESP_HEADER_PRAGMA), anyString());
 
-        assertEquals(header[0], OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE, "Wrong header value " +
-                "for " + OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL);
-        assertEquals(header[1], OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE, "Wrong header value for " +
-                OAuthConstants.HTTP_RESP_HEADER_PRAGMA);
-        assertEquals(header[2], MediaType.APPLICATION_JSON, "Wrong header value for " + HttpHeaders.CONTENT_TYPE);
+                    doAnswer((Answer<Object>) invocation -> {
 
-        assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST, "Status code doesn't match with "
-                + HttpServletResponse.SC_BAD_REQUEST);
+                        header[2] = (String) invocation.getArguments()[1];
+                        return null;
+                    }).when(mock).addHeader(eq(HttpHeaders.CONTENT_TYPE), anyString());
+                })) {
+
+            FrameworkClientException exception = mock(FrameworkClientException.class);
+            when(exception.getMessage()).thenReturn(dummyDescription);
+            registrationRequestFactory.handleException(exception, mockHttpRequest, mockHttpResponse);
+
+            assertEquals(header[0], OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE, "Wrong header value " +
+                    "for " + OAuthConstants.HTTP_RESP_HEADER_CACHE_CONTROL);
+            assertEquals(header[1], OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE, "Wrong header value for " +
+                    OAuthConstants.HTTP_RESP_HEADER_PRAGMA);
+            assertEquals(header[2], MediaType.APPLICATION_JSON, "Wrong header value for " + HttpHeaders.CONTENT_TYPE);
+
+            assertEquals((int) statusCode[0], HttpServletResponse.SC_BAD_REQUEST, "Status code doesn't match with "
+                    + HttpServletResponse.SC_BAD_REQUEST);
+        }
+
     }
 
     @Test

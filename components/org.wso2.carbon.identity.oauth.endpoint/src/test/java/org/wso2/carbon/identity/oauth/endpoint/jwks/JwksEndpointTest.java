@@ -22,9 +22,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.stubbing.Answer;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -40,7 +43,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.security.KeystoreUtils;
 
@@ -55,31 +57,30 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doNothing;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
-@PrepareForTest({CarbonUtils.class, IdentityTenantUtil.class, IdentityUtil.class, OAuthServerConfiguration.class,
-        KeyStoreManager.class, OAuth2Util.class, FrameworkUtils.class, KeystoreUtils.class})
-public class JwksEndpointTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class JwksEndpointTest {
 
     @Mock
     ServerConfiguration serverConfiguration;
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
     @Mock
-    KeyStoreManager keyStoreManager;
+    KeyStoreManager mockKeyStoreManager;
 
     private static final String CERT_THUMB_PRINT = "generatedCertThrumbPrint";
     private static final String ALG = "RS256";
@@ -130,10 +131,6 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
         X5T_ARRAY.put("UPDtpYmK86EVwsUIGUlW5-EU_iNHQ-nSL3Ca58uAG70");
     }
 
-    private void prepareForGetKeyStorePath() throws Exception {
-        mockStatic(KeystoreUtils.class);
-        when(KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
-    }
     @DataProvider(name = "provideTenantDomain")
     public Object[][] provideTenantDomain() {
 
@@ -148,114 +145,137 @@ public class JwksEndpointTest extends PowerMockIdentityBaseTest {
     @Test(dataProvider = "provideTenantDomain")
     public void testJwks(String tenantDomain, int tenantId) throws Exception {
 
-        Path keystorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                "security", "wso2carbon.jks");
-        prepareForGetKeyStorePath();
-        mockOAuthServerConfiguration();
-        mockStatic(CarbonUtils.class);
-        when(CarbonUtils.getServerConfiguration()).thenReturn(serverConfiguration);
-        when(serverConfiguration.getFirstProperty("Security.KeyStore.Location")).thenReturn(keystorePath.toString());
-        when(serverConfiguration.getFirstProperty("Security.KeyStore.Password")).thenReturn("wso2carbon");
-        when(serverConfiguration.getFirstProperty("Security.KeyStore.KeyAlias")).thenReturn("wso2carbon");
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<KeystoreUtils> keystoreUtils = mockStatic(KeystoreUtils.class);) {
 
-        ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
-            protected Map<String, Object> initialValue() {
+            Path keystorePath =
+                    Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
+                            "security", "wso2carbon.jks");
+            keystoreUtils.when(() -> KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-                return new HashMap();
-            }
-        };
+            // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<KeyStoreManager> keyStoreManager = mockStatic(KeyStoreManager.class);) {
 
-        threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, tenantDomain);
+                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
+                when(serverConfiguration.getFirstProperty("Security.KeyStore.Location")).thenReturn(
+                        keystorePath.toString());
+                lenient().when(serverConfiguration.getFirstProperty("Security.KeyStore.Password"))
+                        .thenReturn("wso2carbon");
+                lenient().when(serverConfiguration.getFirstProperty("Security.KeyStore.KeyAlias"))
+                        .thenReturn("wso2carbon");
 
-        Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
+                ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
+                    protected Map<String, Object> initialValue() {
+
+                        return new HashMap();
+                    }
+                };
+
+                threadLocalProperties.get().put(OAuthConstants.TENANT_NAME_FROM_CONTEXT, tenantDomain);
+
+                Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
+                Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
+                getDeclaredFields0.setAccessible(true);
+                Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
+                Field modifiers = null;
+                for (Field each : fields) {
+                    if ("modifiers".equals(each.getName())) {
+                        modifiers = each;
+                        break;
+                    }
+                }
+                modifiers.setAccessible(true);
+                modifiers.setInt(threadLocalPropertiesField,
+                        threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
+
+                threadLocalPropertiesField.setAccessible(true);
+                threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
+
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
+
+                frameworkUtils.when(() -> FrameworkUtils.startTenantFlow("foo.com"))
+                        .thenAnswer((Answer<Void>) invocation -> null);
+                frameworkUtils.when(FrameworkUtils::endTenantFlow).thenAnswer((Answer<Void>) invocation -> null);
+
+                if (tenantDomain == null) {
+                    oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString()))
+                            .thenThrow(new IdentityOAuth2Exception("error"));
+                } else {
+                    oAuth2Util.when(() -> OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
+                }
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA"))
+                        .thenReturn(JWSAlgorithm.RS256);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                        .thenReturn(JWSAlgorithm.RS512);
+                oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA"))
+                        .thenReturn(JWSAlgorithm.RS384);
+                if ("foo.com".equals(tenantDomain)) {
+                    oAuth2Util.when(() -> OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA"))
+                            .thenReturn(JWSAlgorithm.RS256);
+                }
+                oAuth2Util.when(() -> OAuth2Util.getThumbPrint(any(), anyString()))
+                        .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
+                                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
+
+                keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
+                lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
+                        getKeyStoreFromFile("foo-com.jks", "foo.com"));
+
+                String result = jwksEndpoint.jwks();
+
+                try {
+                    JSONObject jwksJson = new JSONObject(result);
+                    JSONArray objectArray = jwksJson.getJSONArray("keys");
+                    JSONObject keyObject = objectArray.getJSONObject(0);
+                    assertEquals(keyObject.get("kid"), CERT_THUMB_PRINT, "Incorrect kid value");
+                    assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
+                    assertEquals(keyObject.get("use"), USE, "Incorrect use value");
+                    assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
+                    if ("foo.com".equals(tenantDomain)) {
+                        assertEquals(objectArray.length(), 2, "Incorrect no of keysets");
+                        assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(0),
+                                "Incorrect x5c value");
+                        assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(0), "Incorrect x5t#S256 value");
+                    } else {
+                        assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
+                        assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(1),
+                                "Incorrect x5c value");
+                        assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(1), "Incorrect x5t#S256 value");
+                    }
+                    String base64UrlEncodedString = (String) keyObject.get("x5t#S256");
+                    byte[] decodedBytes = Base64.getUrlDecoder().decode(base64UrlEncodedString);
+                    assertEquals(decodedBytes.length, 32, "Incorrect x5t#S256 size");
+                } catch (JSONException e) {
+                    if ("invalid.com".equals(tenantDomain)) {
+                        // This is expected. We don't validate for invalid tenants.
+                        assertTrue(true);
+                    } else if (tenantDomain == null) {
+                        assertTrue(result.contains("Error while generating the keyset for"),
+                                "Error message for thrown exception is not found");
+                    } else {
+                        fail("Unexpected exception: " + e.getMessage());
+                    }
+                }
+
+                threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
             }
         }
-        modifiers.setAccessible(true);
-        modifiers.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
-
-        threadLocalPropertiesField.setAccessible(true);
-        threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
-
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(tenantId);
-
-        mockStatic(FrameworkUtils.class);
-        doNothing().when(FrameworkUtils.class, "startTenantFlow", "foo.com");
-        doNothing().when(FrameworkUtils.class, "endTenantFlow");
-
-        mockStatic(OAuth2Util.class);
-
-        if (tenantDomain == null) {
-            when(OAuth2Util.getKID(any(), any(), anyString())).thenThrow(new IdentityOAuth2Exception("error"));
-
-        } else {
-            when(OAuth2Util.getKID(any(), any(), anyString())).thenReturn(CERT_THUMB_PRINT);
-        }
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA256withRSA")).thenReturn(JWSAlgorithm.RS256);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS512);
-        when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA384withRSA")).thenReturn(JWSAlgorithm.RS384);
-        if ("foo.com".equals(tenantDomain)) {
-            when(OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm("SHA512withRSA")).thenReturn(JWSAlgorithm.RS256);
-        }
-        when(OAuth2Util.getThumbPrint(any(), anyString())).thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
-                "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
-        mockStatic(KeyStoreManager.class);
-        when(KeyStoreManager.getInstance(anyInt())).thenReturn(keyStoreManager);
-        when(keyStoreManager.getKeyStore("foo-com.jks")).thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
-
-        String result = jwksEndpoint.jwks();
-
-        try {
-            JSONObject jwksJson = new JSONObject(result);
-            JSONArray objectArray = jwksJson.getJSONArray("keys");
-            JSONObject keyObject = objectArray.getJSONObject(0);
-            assertEquals(keyObject.get("kid"), CERT_THUMB_PRINT, "Incorrect kid value");
-            assertEquals(keyObject.get("alg"), ALG, "Incorrect alg value");
-            assertEquals(keyObject.get("use"), USE, "Incorrect use value");
-            assertEquals(keyObject.get("kty"), "RSA", "Incorrect kty value");
-            if ("foo.com".equals(tenantDomain)) {
-                assertEquals(objectArray.length(), 2, "Incorrect no of keysets");
-                assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(0), "Incorrect x5c value");
-                assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(0), "Incorrect x5t#S256 value");
-            } else {
-                assertEquals(objectArray.length(), 3, "Incorrect no of keysets");
-                assertEquals(((JSONArray) keyObject.get("x5c")).get(0), X5C_ARRAY.get(1), "Incorrect x5c value");
-                assertEquals(keyObject.get("x5t#S256"), X5T_ARRAY.get(1), "Incorrect x5t#S256 value");
-            }
-            String base64UrlEncodedString = (String) keyObject.get("x5t#S256");
-            byte[] decodedBytes = Base64.getUrlDecoder().decode(base64UrlEncodedString);
-            assertEquals(decodedBytes.length, 32, "Incorrect x5t#S256 size");
-        } catch (JSONException e) {
-            if ("invalid.com".equals(tenantDomain)) {
-                // This is expected. We don't validate for invalid tenants.
-                assertTrue(true);
-            } else if (tenantDomain == null) {
-                assertTrue(result.contains("Error while generating the keyset for"),
-                        "Error message for thrown exception is not found");
-            } else {
-                fail("Unexpected exception: " + e.getMessage());
-            }
-        }
-
-        threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
     }
 
-    private void mockOAuthServerConfiguration() throws Exception {
+    private void mockOAuthServerConfiguration(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
+            throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA512withRSA");
-        when(oAuthServerConfiguration.getSignatureAlgorithm()).thenReturn("SHA256withRSA");
-        when(oAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA384withRSA");
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+        lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA512withRSA");
+        lenient().when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn("SHA256withRSA");
+        lenient().when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn("SHA384withRSA");
     }
 
     private KeyStore getKeyStoreFromFile(String keystoreName, String password) throws Exception {

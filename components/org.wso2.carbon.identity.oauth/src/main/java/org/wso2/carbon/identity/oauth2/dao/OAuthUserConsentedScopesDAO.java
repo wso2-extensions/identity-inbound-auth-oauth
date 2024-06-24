@@ -108,6 +108,17 @@ public interface OAuthUserConsentedScopesDAO {
             throws IdentityOAuth2ScopeConsentException;
 
     /**
+     * Remove users' consent given for an application.
+     *
+     * @param appId     Application identifier.
+     * @param tenantId  Tenant Id.
+     * @throws IdentityOAuth2ScopeConsentException
+     */
+    default void revokeConsentOfApplication(String appId, int tenantId) throws IdentityOAuth2ScopeConsentException {
+
+    }
+
+    /**
      * Remove all user consents.
      *
      * @param userId    User identifier.

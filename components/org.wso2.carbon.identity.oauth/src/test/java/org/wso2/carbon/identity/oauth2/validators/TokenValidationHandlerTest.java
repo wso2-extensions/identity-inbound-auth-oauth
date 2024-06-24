@@ -18,16 +18,18 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -39,7 +41,6 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationManag
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -73,19 +74,22 @@ import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
+import java.security.cert.X509Certificate;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.support.membermodification.MemberMatcher.method;
-import static org.powermock.api.support.membermodification.MemberModifier.stub;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertThrows;
@@ -94,13 +98,8 @@ import static org.wso2.carbon.identity.organization.management.service.constant.
 
 @WithCarbonHome
 @WithAxisConfiguration
-@PowerMockIgnore({"javax.xml.*", "org.xml.sax.*", "org.w3c.dom.*"})
-@PrepareForTest({OAuthServerConfiguration.class, JDBCPersistenceManager.class, IdentityDatabaseUtil.class,
-        IdentityApplicationManagementUtil.class, IdentityProviderManager.class, RealmService.class, LoggerUtils.class,
-        FederatedAuthenticatorConfig.class, OAuth2ServiceComponentHolder.class, OAuth2JWTTokenValidator.class,
-        OrganizationManagementConfigUtil.class, IdentityUtil.class, OAuthTokenPersistenceFactory.class,
-        OAuth2Util.class, JWTUtils.class})
-public class TokenValidationHandlerTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class TokenValidationHandlerTest {
 
     private String[] scopeArraySorted = new String[]{"scope1", "scope2", "scope3"};
     private String clientId = "dummyClientId";
@@ -114,7 +113,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     private static final String DEFAULT_TOKEN_TYPE = "Default";
     private static final String JWT_TOKEN_TYPE = "JWT";
     private static final String DB_NAME = "jdbc/WSO2IdentityDB";
-    private static final String H2_SCRIPT_NAME = "token.sql";
+    private static final String H2_SCRIPT_NAME = "identity.sql";
     private Connection conn = null;
     private TokenValidationHandler tokenValidationHandler;
     private OAuth2JWTTokenValidator oAuth2JWTTokenValidator;
@@ -124,7 +123,7 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @Mock
     private OAuthIssuer oAuthIssuer;
     @Mock
-    protected OAuthServerConfiguration oAuthServerConfiguration;
+    protected OAuthServerConfiguration mockOAuthServerConfiguration;
     @Mock
     private RealmService realmService;
     @Mock
@@ -134,11 +133,13 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @Mock
     private RealmConfiguration realmConfiguration;
     @Mock
-    private IdentityProviderManager identityProviderManager;
+    private IdentityProviderManager mockIdentityProviderManager;
     @Mock
     private IdentityProvider identityProvider;
     @Mock
     private FederatedAuthenticatorConfig federatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
+
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     @BeforeMethod
     public void setUp() {
@@ -152,8 +153,14 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
         tokenValidationHandler = TokenValidationHandler.getInstance();
         tokenValidationHandler.addTokenValidator("test", tokenValidator);
         oAuth2JWTTokenValidator = new OAuth2JWTTokenValidator();
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        loggerUtils.close();
     }
 
     @Test
@@ -183,19 +190,46 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @Test(dataProvider = "IdpIDColumnAvailabilityDataProvider")
     public void testFindOAuthConsumerIfTokenIsValid(boolean isIDPIdColumnEnabled) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
-        mockRequiredObjects();
-        OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
-        OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken =
-                oAuth2TokenValidationRequestDTO.new OAuth2AccessToken();
-        oAuth2AccessToken.setIdentifier("testIdentifier");
-        oAuth2AccessToken.setTokenType("bearer");
-        oAuth2TokenValidationRequestDTO.setAccessToken(oAuth2AccessToken);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);) {
+            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
+            mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
 
-        when(OAuth2Util.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        OAuth2ClientApplicationDTO response = tokenValidationHandler
-                .findOAuthConsumerIfTokenIsValid(oAuth2TokenValidationRequestDTO);
-        assertNotNull(response);
+            AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                    refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                    authorizationCode);
+            accessTokenDO.setTokenId("testIdentifier");
+
+            TokenBinding tokenBinding = new TokenBinding();
+            tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+            tokenBinding.setBindingReference("test_binding_reference");
+            tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+            accessTokenDO.setTokenBinding(tokenBinding);
+
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    Mockito.mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolderInstance);
+            TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
+            when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
+            when(tokenProvider.getVerifiedAccessToken(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(
+                    accessTokenDO);
+            OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
+            OAuth2TokenValidationRequestDTO.OAuth2AccessToken oAuth2AccessToken =
+                    oAuth2TokenValidationRequestDTO.new OAuth2AccessToken();
+            oAuth2AccessToken.setIdentifier("testIdentifier");
+            oAuth2AccessToken.setTokenType("bearer");
+            oAuth2TokenValidationRequestDTO.setAccessToken(oAuth2AccessToken);
+
+            oAuth2Util.when(OAuth2Util::getPersistenceProcessor).thenReturn(new PlainTextPersistenceProcessor());
+            OAuth2ClientApplicationDTO response = tokenValidationHandler
+                    .findOAuthConsumerIfTokenIsValid(oAuth2TokenValidationRequestDTO);
+            assertNotNull(response);
+        }
     }
 
     /**
@@ -213,76 +247,87 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
     @Test(dataProvider = "CommonDataProvider")
     public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId) throws Exception {
 
-        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
-        mockRequiredObjects();
-        when(realmService.getTenantManager()).thenReturn(tenantManager);
-        doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
-        OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
-        IdentityTenantUtil.setRealmService(realmService);
-        when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
-        when(IdentityUtil.getPrimaryDomainName()).thenReturn("PRIMARY");
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);) {
 
-        OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
-        OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = oAuth2TokenValidationRequestDTO.new
-                OAuth2AccessToken();
-        accessToken.setIdentifier("testAccessToken");
-        accessToken.setTokenType("bearer");
+            OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
+            mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    Mockito.mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(oAuth2ServiceComponentHolderInstance);
 
-        AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
-                refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
-                authorizationCode);
-        accessTokenDO.setTokenId(accessTokenId);
+            try (MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory =
+                         mockStatic(OAuthTokenPersistenceFactory.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
-        TokenBinding tokenBinding = new TokenBinding();
-        tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
-        tokenBinding.setBindingReference("test_binding_reference");
-        tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
-        accessTokenDO.setTokenBinding(tokenBinding);
+                when(realmService.getTenantManager()).thenReturn(tenantManager);
+                doReturn(MultitenantConstants.SUPER_TENANT_ID).when(tenantManager).getTenantId(Mockito.anyString());
+                lenient().doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(tenantManager)
+                        .getDomain(Mockito.anyInt());
+                OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+                IdentityTenantUtil.setRealmService(realmService);
+                lenient().when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
+                identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
 
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
-                Mockito.mock(OAuth2ServiceComponentHolder.class);
-        TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
-        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
-        when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
-        when(tokenProvider.getVerifiedAccessToken(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(accessTokenDO);
+                OAuth2TokenValidationRequestDTO oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
+                OAuth2TokenValidationRequestDTO.OAuth2AccessToken accessToken = oAuth2TokenValidationRequestDTO.new
+                        OAuth2AccessToken();
+                accessToken.setIdentifier("testAccessToken");
+                accessToken.setTokenType("bearer");
 
-        mockStatic(OAuthTokenPersistenceFactory.class);
-        OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory = Mockito.mock(OAuthTokenPersistenceFactory.class);
-        TokenManagementDAO tokenManagementDAO =
-                Mockito.mock(TokenManagementDAO.class);
-        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(oAuthTokenPersistenceFactory);
-        when(oAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
-        when(tokenManagementDAO.getRefreshToken(Mockito.anyString())).thenReturn(accessTokenDO);
+                AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
+                        refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                        authorizationCode);
+                accessTokenDO.setTokenId(accessTokenId);
 
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setTokenType("Default");
-        oAuthAppDO.setApplicationName("testApp");
-        AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
-        oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getPersistenceProcessor()).thenReturn(new PlainTextPersistenceProcessor());
-        when(OAuth2Util.getAppInformationByAccessTokenDO(Mockito.any())).thenReturn(oAuthAppDO);
-        when(OAuth2Util.getAccessTokenExpireMillis(Mockito.any(), Mockito.anyBoolean())).thenReturn(1000L);
+                TokenBinding tokenBinding = new TokenBinding();
+                tokenBinding.setBindingType(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+                tokenBinding.setBindingReference("test_binding_reference");
+                tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+                accessTokenDO.setTokenBinding(tokenBinding);
 
-        OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = tokenValidationHandler
-                .buildIntrospectionResponse(oAuth2TokenValidationRequestDTO);
-        assertNotNull(oAuth2IntrospectionResponseDTO);
-        assertEquals(oAuth2IntrospectionResponseDTO.getBindingType(),
-                OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
-        assertEquals(oAuth2IntrospectionResponseDTO.getBindingReference(), "test_binding_reference");
-        assertEquals(oAuth2IntrospectionResponseDTO.getCnfBindingValue(),
-                "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
-    }
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+                TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
+                when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
+                when(tokenProvider.getVerifiedAccessToken(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(
+                        accessTokenDO);
 
-    private Property getProperty(String name, String value) {
+                OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory =
+                        Mockito.mock(OAuthTokenPersistenceFactory.class);
+                TokenManagementDAO tokenManagementDAO =
+                        Mockito.mock(TokenManagementDAO.class);
+                oAuthTokenPersistenceFactory.when(
+                        OAuthTokenPersistenceFactory::getInstance).thenReturn(mockOAuthTokenPersistenceFactory);
+                lenient().when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
+                lenient().when(tokenManagementDAO.getRefreshToken(Mockito.anyString())).thenReturn(accessTokenDO);
 
-        Property property = new Property();
-        property.setName(name);
-        property.setValue(value);
-        return property;
+                OAuthAppDO oAuthAppDO = new OAuthAppDO();
+                oAuthAppDO.setTokenType("Default");
+                oAuthAppDO.setApplicationName("testApp");
+                AppInfoCache appInfoCache = AppInfoCache.getInstance();
+                appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
+                oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
+
+                oAuth2Util.when(OAuth2Util::getPersistenceProcessor).thenReturn(new PlainTextPersistenceProcessor());
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(oAuthAppDO);
+                oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), Mockito.anyBoolean()))
+                        .thenReturn(1000L);
+
+                OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = tokenValidationHandler
+                        .buildIntrospectionResponse(oAuth2TokenValidationRequestDTO);
+                assertNotNull(oAuth2IntrospectionResponseDTO);
+                assertEquals(oAuth2IntrospectionResponseDTO.getBindingType(),
+                        OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+                assertEquals(oAuth2IntrospectionResponseDTO.getBindingReference(), "test_binding_reference");
+                assertEquals(oAuth2IntrospectionResponseDTO.getCnfBindingValue(),
+                        "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+            }
+        }
     }
 
     @DataProvider(name = "dataProviderForValidateOrgSwitchedJWTToken")
@@ -351,82 +396,100 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
                                                 boolean expectedValidatorResponse)
             throws Exception {
 
-        mockRequiredObjects();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setOrganizationId(resourceResidentOrganizationId);
-        OAuth2TokenValidationMessageContext validationReqDTO = getOAuth2TokenValidationMessageContext(
-                jwtToken, "bearer", "dummyKey", "dummyValue");
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<IdentityProviderManager> identityProviderManager =
+                     mockStatic(IdentityProviderManager.class);
+             MockedStatic<JWTUtils> jwtUtils = mockStatic(JWTUtils.class);
+             MockedStatic<IdentityApplicationManagementUtil> identityApplicationManagementUtil =
+                     mockStatic(IdentityApplicationManagementUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementConfigUtil> organizationManagementConfigUtil =
+                     mockStatic(OrganizationManagementConfigUtil.class);) {
+            mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(clientAppTenantDomain);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setOrganizationId(resourceResidentOrganizationId);
+            OAuth2TokenValidationMessageContext validationReqDTO = getOAuth2TokenValidationMessageContext(
+                    jwtToken, "bearer", "dummyKey", "dummyValue");
 
-        mockStatic(IdentityProviderManager.class);
-        when(IdentityProviderManager.getInstance()).thenReturn(identityProviderManager);
-        when(identityProviderManager.getResidentIdP(Mockito.anyString())).thenReturn(identityProvider);
-        mockStatic(JWTUtils.class);
-        when(JWTUtils.isJWT(Mockito.anyString())).thenCallRealMethod();
-        when(JWTUtils.parseJWT(Mockito.anyString())).thenCallRealMethod();
-        when(JWTUtils.getJWTClaimSet(Mockito.any())).thenCallRealMethod();
-        when(JWTUtils.validateRequiredFields(Mockito.any())).thenCallRealMethod();
-        when(JWTUtils.getResidentIDPForIssuer(Mockito.any(), Mockito.any())).thenCallRealMethod();
-        when(JWTUtils.getIDPForIssuer(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-                .thenCallRealMethod();
-        when(JWTUtils.getSubOrgStartLevel()).thenCallRealMethod();
-        when(JWTUtils.resolveSubject(Mockito.any())).thenCallRealMethod();
-        when(JWTUtils.getSigningTenantDomain(Mockito.any(), Mockito.any())).thenReturn(clientAppTenantDomain);
-        FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
-        when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
-        mockStatic(IdentityApplicationManagementUtil.class);
-        mockStatic(FederatedAuthenticatorConfig.class);
-        when(IdentityApplicationManagementUtil.getFederatedAuthenticator(federatedAuthenticatorConfigs,
-                "openidconnect")).thenReturn(federatedAuthenticatorConfig);
+            identityProviderManager.when(IdentityProviderManager::getInstance).thenReturn(mockIdentityProviderManager);
+            when(mockIdentityProviderManager.getResidentIdP(Mockito.anyString())).thenReturn(identityProvider);
+            jwtUtils.when(() -> JWTUtils.isJWT(Mockito.anyString())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.parseJWT(Mockito.anyString())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.getJWTClaimSet(any())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.validateRequiredFields(any())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.getResidentIDPForIssuer(any(), any())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.getIDPForIssuer(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+                    .thenCallRealMethod();
+            jwtUtils.when(JWTUtils::getSubOrgStartLevel).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.resolveSubject(any())).thenCallRealMethod();
+            jwtUtils.when(() -> JWTUtils.getSigningTenantDomain(any(), any()))
+                    .thenReturn(clientAppTenantDomain);
+            FederatedAuthenticatorConfig[] federatedAuthenticatorConfigs = new FederatedAuthenticatorConfig[0];
+            when(identityProvider.getFederatedAuthenticatorConfigs()).thenReturn(federatedAuthenticatorConfigs);
 
-        Property[] properties = new Property[0];
-        Property property = new Property();
-        property.setName("IdPEntityId");
-        property.setValue("https://localhost:9443/o/" + switchedOrganizationId + "/oauth2/token");
-        when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
-        when(IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId")).thenReturn(property);
+            identityApplicationManagementUtil.when(
+                    () -> IdentityApplicationManagementUtil.getFederatedAuthenticator(federatedAuthenticatorConfigs,
+                            "openidconnect")).thenReturn(federatedAuthenticatorConfig);
 
-        // Mock OAuth2ServiceComponentHolder instances.
-        mockStatic(OAuth2ServiceComponentHolder.class);
-        OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
-                Mockito.mock(OAuth2ServiceComponentHolder.class);
-        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
-        when(oAuth2ServiceComponentHolderInstance.isOrganizationManagementEnabled()).thenReturn(true);
-        when(oAuth2ServiceComponentHolderInstance.getOrganizationManager()).thenReturn(organizationManager);
-        when(organizationManager.resolveOrganizationId(clientAppTenantDomain)).thenReturn(clientAppOrganizationId);
-        when(organizationManager.getAncestorOrganizationIds(switchedOrganizationId)).thenReturn(
-                parentHierarchyFromSwitchedOrg);
+            Property[] properties = new Property[0];
+            Property property = new Property();
+            property.setName("IdPEntityId");
+            property.setValue("https://localhost:9443/o/" + switchedOrganizationId + "/oauth2/token");
+            when(federatedAuthenticatorConfig.getProperties()).thenReturn(properties);
+            identityApplicationManagementUtil.when(
+                            () -> IdentityApplicationManagementUtil.getProperty(properties, "IdPEntityId"))
+                    .thenReturn(property);
 
-        mockStatic(OrganizationManagementConfigUtil.class);
-        when(OrganizationManagementConfigUtil.getProperty(SUB_ORG_START_LEVEL)).thenReturn(subOrgStartLevel);
-        when(JWTUtils.checkExpirationTime(Mockito.any())).thenReturn(true);
-        stub(method(OAuth2JWTTokenValidator.class, "validateSignature", SignedJWT.class, IdentityProvider.class))
-                .toReturn(true);
+            // Mock OAuth2ServiceComponentHolder instances.
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    Mockito.mock(OAuth2ServiceComponentHolder.class);
+            oAuth2ServiceComponentHolder.when(
+                    OAuth2ServiceComponentHolder::getInstance).thenReturn(oAuth2ServiceComponentHolderInstance);
+            when(oAuth2ServiceComponentHolderInstance.isOrganizationManagementEnabled()).thenReturn(true);
+            when(oAuth2ServiceComponentHolderInstance.getOrganizationManager()).thenReturn(organizationManager);
+            when(organizationManager.resolveOrganizationId(clientAppTenantDomain)).thenReturn(clientAppOrganizationId);
+            when(organizationManager.getAncestorOrganizationIds(switchedOrganizationId)).thenReturn(
+                    parentHierarchyFromSwitchedOrg);
 
-        // Assert response of the validateAccessToken() in OAuth2JWTTokenValidator class.
-        if (expectedValidatorResponse) {
-            assertTrue(oAuth2JWTTokenValidator.validateAccessToken(validationReqDTO));
-        } else {
-            assertThrows(IdentityOAuth2Exception.class, () ->
-                    oAuth2JWTTokenValidator.validateAccessToken(validationReqDTO));
+            organizationManagementConfigUtil.when(
+                            () -> OrganizationManagementConfigUtil.getProperty(SUB_ORG_START_LEVEL))
+                    .thenReturn(subOrgStartLevel);
+            jwtUtils.when(() -> JWTUtils.checkExpirationTime(any())).thenReturn(true);
+            X509Certificate x509Certificate = Mockito.mock(X509Certificate.class);
+            jwtUtils.when(() -> JWTUtils.getCertificateFromClaims(any(JWTClaimsSet.class))).thenReturn(Optional.of(
+                    x509Certificate));
+            jwtUtils.when(() -> JWTUtils.verifyAlgorithm(any(SignedJWT.class))).thenReturn("SHA256withRSA");
+            jwtUtils.when(() -> JWTUtils.verifySignature(any(SignedJWT.class), any(X509Certificate.class), anyString()))
+                    .thenReturn(true);
+
+            // Assert response of the validateAccessToken() in OAuth2JWTTokenValidator class.
+            if (expectedValidatorResponse) {
+                assertTrue(oAuth2JWTTokenValidator.validateAccessToken(validationReqDTO));
+            } else {
+                assertThrows(IdentityOAuth2Exception.class, () ->
+                        oAuth2JWTTokenValidator.validateAccessToken(validationReqDTO));
+            }
         }
     }
 
-    protected void mockRequiredObjects() throws Exception {
+    protected void mockRequiredObjects(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration,
+                                       MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil) throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(OAuthServerConfiguration.getInstance().getOAuthTokenGenerator()).thenReturn(oAuthIssuer);
-        when(OAuthServerConfiguration.getInstance().getSignatureAlgorithm()).thenReturn("SHA256withRSA");
-        when(OAuthServerConfiguration.getInstance().getHashAlgorithm()).thenReturn("SHA-256");
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getOAuthTokenGenerator())
+                .thenReturn(oAuthIssuer);
+        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getSignatureAlgorithm())
+                .thenReturn("SHA256withRSA");
 
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(DEFAULT_TOKEN_TYPE, new OauthTokenIssuerImpl());
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, new JWTTokenIssuer());
-        when(OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
 
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection(false)).thenReturn(getDBConnection());
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(getDBConnection());
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false)).thenReturn(getDBConnection());
+        identityDatabaseUtil.when(IdentityDatabaseUtil::getDBConnection).thenReturn(getDBConnection());
     }
 
     private Connection getDBConnection() throws Exception {
@@ -440,6 +503,8 @@ public class TokenValidationHandlerTest extends PowerMockTestCase {
             try (Connection connection = dataSource.getConnection()) {
                 connection.createStatement()
                         .executeUpdate("RUNSCRIPT FROM '" + TestUtils.getFilePath(H2_SCRIPT_NAME) + "'");
+            } catch (Exception e) {
+                // ignore
             }
             conn = dataSource.getConnection();
         }

@@ -18,17 +18,14 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.dbcp.BasicDataSource;
+import org.mockito.MockedStatic;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-
-public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
+public class TestOAuthEndpointBase {
 
     private static final String ADD_OAUTH_APP_SQL = "INSERT INTO IDN_OAUTH_CONSUMER_APPS " +
             "(CONSUMER_KEY, CONSUMER_SECRET, USERNAME, TENANT_ID, USER_DOMAIN, APP_NAME, OAUTH_VERSION," +
@@ -49,9 +46,15 @@ public class TestOAuthEndpointBase extends PowerMockIdentityBaseTest {
 
         connection = dataSource.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM 'src/test/resources/dbscripts/h2.sql'");
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenAnswer(invocationOnMock -> dataSource.getConnection());
-        when(IdentityDatabaseUtil.getDBConnection(false)).thenAnswer(invocationOnMock -> dataSource.getConnection());
+    }
+
+    protected void mockDatabase(MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil) {
+        identityDatabaseUtil.when(
+                IdentityDatabaseUtil::getDBConnection).thenAnswer(invocationOnMock -> dataSource.getConnection());
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(false))
+                .thenAnswer(invocationOnMock -> dataSource.getConnection());
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true))
+                .thenAnswer(invocationOnMock -> dataSource.getConnection());
     }
 
     protected void createOAuthApp(String clientId, String secret, String username, String appName, String appState)

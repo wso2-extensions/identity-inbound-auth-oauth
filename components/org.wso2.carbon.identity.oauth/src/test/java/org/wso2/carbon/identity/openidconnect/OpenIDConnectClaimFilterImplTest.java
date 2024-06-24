@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -43,7 +42,6 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCache;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCacheEntry;
-import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
@@ -54,22 +52,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @WithCarbonHome
 @WithRegistry
 @WithRealmService
-@WithH2Database(files = {"dbScripts/scope_claim.sql"})
-public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_scope_claim.sql"})
+public class OpenIDConnectClaimFilterImplTest {
 
     private static final String SP_TENANT_DOMAIN = "carbon.super";
     private static final String CLIENT_ID = TestConstants.CLIENT_ID;
 
     private OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
     private ApplicationManagementService applicationMgtService;
-    private  ScopeClaimMappingDAOImpl scopeClaimMappingDAO;
     SSOConsentService ssoConsentService;
     private Set<String> requestedScopes;
     private List  scopeDTOList;
@@ -79,7 +78,6 @@ public class OpenIDConnectClaimFilterImplTest extends PowerMockito {
     public void setUp() throws Exception {
 
         openIDConnectClaimFilter = new OpenIDConnectClaimFilterImpl();
-        scopeClaimMappingDAO = new ScopeClaimMappingDAOImpl();
         ServiceProvider serviceProvider = new ServiceProvider();
         ssoConsentService = mock(SSOConsentServiceImpl.class);
         ClaimMetadataManagementService claimMetadataManagementService =

@@ -18,11 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -32,19 +30,16 @@ import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
-@PrepareForTest({IdentityTenantUtil.class})
-public class SessionDataCacheTest extends PowerMockTestCase {
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
+public class SessionDataCacheTest {
 
     private String sessionDataId = "835434_263277_7722";
+
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
 
     @BeforeMethod
     public void setup() {
@@ -52,9 +47,18 @@ public class SessionDataCacheTest extends PowerMockTestCase {
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
         );
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt()))
+                .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
     }
+
+    @AfterMethod
+    public void tearDown() {
+        identityTenantUtil.close();
+    }
+
     @Test
     public void testGetInstance() throws Exception {
         assertNotNull(SessionDataCache.getInstance(), "Message not equal");
