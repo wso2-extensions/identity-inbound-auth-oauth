@@ -17,8 +17,7 @@
 
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
 
-<suite name="Identity-Oauth-Scope-Endpoint-Test-Suite"
-       object-factory="org.powermock.modules.testng.PowerMockObjectFactory">
+<suite name="Identity-Oauth-Scope-Endpoint-Test-Suite">
     <test name="Util-Tests" preserve-order="true" parallel="false">
         <classes>
             <class name="org.wso2.carbon.identity.oauth.scope.endpoint.util.ScopeUtilsTest"/>

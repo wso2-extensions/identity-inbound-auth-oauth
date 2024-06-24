@@ -16,16 +16,18 @@
 package org.wso2.carbon.identity.oauth2.listener;
 
 import org.mockito.Mock;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth2.TestConstants;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 import org.wso2.carbon.stratos.common.beans.TenantInfoBean;
 import org.wso2.carbon.stratos.common.exception.StratosException;
 
 @WithCarbonHome
-public class TenantCreationEventListenerTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class TenantCreationEventListenerTest {
 
     @Mock
     private TenantCreationEventListener tenantCreationEventListener;

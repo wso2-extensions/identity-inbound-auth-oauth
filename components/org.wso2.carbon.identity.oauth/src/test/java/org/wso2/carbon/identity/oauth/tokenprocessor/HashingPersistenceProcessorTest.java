@@ -20,26 +20,23 @@ package org.wso2.carbon.identity.oauth.tokenprocessor;
 
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
 /**
  * Test Class for the EncryptionDecryptionPersistenceProcessor.
  */
-@PrepareForTest({OAuthServerConfiguration.class})
-public class HashingPersistenceProcessorTest extends PowerMockIdentityBaseTest {
+public class HashingPersistenceProcessorTest {
 
     private static final String CLIENT_ID = "test";
 
@@ -85,50 +82,76 @@ public class HashingPersistenceProcessorTest extends PowerMockIdentityBaseTest {
 
     @Test
     public void testGetProcessedClientSecret() throws IdentityOAuth2Exception {
-        setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedClientSecret(CLIENT_ID), hash(CLIENT_ID));
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            setupMocksForTest(oAuthServerConfiguration);
+            assertEquals(hashingPersistenceProcessor.getProcessedClientSecret(CLIENT_ID), hash(CLIENT_ID));
+        }
     }
 
     @Test
     public void testGetProcessedAuthzCode() throws IdentityOAuth2Exception {
-        setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedAuthzCode(CLIENT_ID), hash(CLIENT_ID));
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            setupMocksForTest(oAuthServerConfiguration);
+            assertEquals(hashingPersistenceProcessor.getProcessedAuthzCode(CLIENT_ID), hash(CLIENT_ID));
+        }
     }
 
     @Test
     public void testGetProcessedAccessTokenIdentifier() throws IdentityOAuth2Exception {
-        setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(CLIENT_ID), hash(CLIENT_ID));
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            setupMocksForTest(oAuthServerConfiguration);
+            assertEquals(hashingPersistenceProcessor.getProcessedAccessTokenIdentifier(CLIENT_ID), hash(CLIENT_ID));
+        }
     }
 
     @Test
     public void testGetProcessedRefreshToken() throws IdentityOAuth2Exception {
-        setupMocksForTest();
-        assertEquals(hashingPersistenceProcessor.getProcessedRefreshToken(CLIENT_ID), hash(CLIENT_ID));
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            setupMocksForTest(oAuthServerConfiguration);
+            assertEquals(hashingPersistenceProcessor.getProcessedRefreshToken(CLIENT_ID), hash(CLIENT_ID));
+        }
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testHashWithNullValue() throws IdentityOAuth2Exception {
-        setupMocksForTest();
-        hashingPersistenceProcessor.getProcessedClientSecret(null);
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            setupMocksForTest(oAuthServerConfiguration);
+            hashingPersistenceProcessor.getProcessedClientSecret(null);
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
-    public void testHahingWithNotExistingHashAlgorithm() throws IdentityOAuth2Exception {
-        setupMocksForTest();
-        when(OAuthServerConfiguration.getInstance().getHashAlgorithm()).thenReturn("TestAlgo");
-        hash("PlainText");
+    public void testHashingWithNotExistingHashAlgorithm() throws IdentityOAuth2Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            setupMocksForTest(oAuthServerConfiguration);
+            oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getHashAlgorithm())
+                    .thenReturn("TestAlgo");
+            hash("PlainText");
+        }
     }
 
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
-    public void testHahingWithEmptyString() throws IdentityOAuth2Exception {
+    public void testHashingWithEmptyString() throws IdentityOAuth2Exception {
         hash("");
     }
 
-    private void setupMocksForTest() {
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(mockedServerConfig);
-        when(OAuthServerConfiguration.getInstance().getHashAlgorithm()).thenReturn("SHA-256");
+    private void setupMocksForTest(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration) {
+
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
+        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getHashAlgorithm())
+                .thenReturn("SHA-256");
     }
 
     /**

@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth2.test.utils;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.om.impl.builder.StAXOMBuilder;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -62,14 +61,6 @@ public class CommonTestUtils {
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(tenantDomain);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(tenantID);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(userName);
-    }
-
-    public static void initPrivilegedCarbonContext() throws Exception {
-        String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-        int tenantID = MultitenantConstants.SUPER_TENANT_ID;
-        String userName = "testUser";
-
-        initPrivilegedCarbonContext(tenantDomain, tenantID, userName);
     }
 
     public static Map<String, ServiceProvider> getFileBasedSPs() throws Exception {

@@ -18,9 +18,11 @@ package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 
 import org.junit.Assert;
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -30,7 +32,6 @@ import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -42,15 +43,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
-import static org.mockito.Matchers.any;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * This class does unit test coverage for OIDCDiscoveryEndpoint class.
  */
-@PrepareForTest({IdentityUtil.class, EndpointUtil.class})
-public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
+@Listeners(MockitoTestNGListener.class)
+public class OIDCDiscoveryEndpointTest {
 
     @Mock
     HttpServletRequest httpServletRequest;
@@ -117,17 +118,18 @@ public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
         threadLocalPropertiesField.setAccessible(true);
         threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
 
-        mockStatic(EndpointUtil.class);
-        when(EndpointUtil.getOIDCService()).thenReturn(defaultOIDCProcessor);
-        when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
-                .thenReturn(oidProviderConfigResponse);
-        when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
-        when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
-                .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        oidcDiscoveryEndpoint.setOidProviderResponseBuilder(new OIDProviderJSONResponseBuilder());
-        Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
-        Assert.assertEquals(expectedResponse, response.getStatus());
-        threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getOIDCService).thenReturn(defaultOIDCProcessor);
+            lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
+                    .thenReturn(oidProviderConfigResponse);
+            lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
+            lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
+                    .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            oidcDiscoveryEndpoint.setOidProviderResponseBuilder(new OIDProviderJSONResponseBuilder());
+            Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
+            Assert.assertEquals(expectedResponse, response.getStatus());
+            threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+        }
     }
 
     private Map<String, Object> getSampleConfigMap() {
@@ -137,5 +139,4 @@ public class OIDCDiscoveryEndpointTest extends PowerMockIdentityBaseTest {
         configMap.put("sampleStringArrayKey", new String[]{"sampleStringArrayElement1", "sampleStringArrayElement2"});
         return configMap;
     }
-
 }

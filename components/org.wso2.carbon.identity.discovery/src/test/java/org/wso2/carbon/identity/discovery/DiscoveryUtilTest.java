@@ -18,33 +18,21 @@
 
 package org.wso2.carbon.identity.discovery;
 
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.wso2.carbon.identity.discovery.DiscoveryUtil.OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY;
 
 /**
  * Unit tests.
  */
-@PrepareForTest({ IdentityUtil.class })
-@PowerMockIgnore({"org.mockito.*"})
 public class DiscoveryUtilTest {
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @BeforeMethod
     public void setUp() {
@@ -53,16 +41,21 @@ public class DiscoveryUtilTest {
 
     @Test
     public void testIsUseEntityIdAsIssuerInOidcDiscovery() {
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(eq(OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY))).thenReturn(null);
-        assertEquals(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery(), true);
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(eq(OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY)))
+                    .thenReturn(null);
+            assertEquals(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery(), true);
+        }
     }
 
     @Test
     public void testIsUseEntityIdAsIssuerInOidcDiscovery1() {
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getProperty(eq(OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY)))
-            .thenReturn(Boolean.FALSE.toString());
-        assertEquals(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery(), false);
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(eq(OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY)))
+                    .thenReturn(Boolean.FALSE.toString());
+            assertEquals(DiscoveryUtil.isUseEntityIdAsIssuerInOidcDiscovery(), false);
+        }
     }
 }

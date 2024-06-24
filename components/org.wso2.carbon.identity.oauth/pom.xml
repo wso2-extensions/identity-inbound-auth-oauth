@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.0.86-SNAPSHOT</version>
+        <version>7.0.101-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -270,20 +270,14 @@
             <classifier>runtime</classifier>
             <scope>test</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-testng -->
         <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-module-testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.powermock</groupId>
-            <artifactId>powermock-api-mockito2</artifactId>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
+            <artifactId>mockito-testng</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -344,6 +338,10 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.cors.mgt.core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
         </dependency>
         <dependency>
             <groupId>org.bitbucket.b_c</groupId>
@@ -447,7 +445,8 @@
                             org.wso2.carbon.identity.multi.attribute.login.mgt.*;
                             version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.api.resource.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.role.v2.mgt.core; version="${carbon.identity.framework.imp.pkg.version.range}"
+                            org.wso2.carbon.identity.role.v2.mgt.core; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.configuration.mgt.core; version="${carbon.identity.framework.imp.pkg.version.range}"
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,
@@ -585,6 +584,15 @@
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <configuration>
                     <threshold>High</threshold>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <configuration>
+                    <excludes>**/IdentityOathEventListenerTest.java,**/AccessTokenIssuerTest.java,
+                        **/OAuthUserStoreConfigListenerImplTest.java,**/NTLMAuthenticationGrantHandlerWithHandshakeTest.java,
+                        **/AuthorizationCodeGrantHandlerTest.java,**/OAuthTenantMgtListenerImplTest.java</excludes>
                 </configuration>
             </plugin>
         </plugins>

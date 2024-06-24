@@ -133,7 +133,7 @@
         <OAuth2AuthzEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/authorize</OAuth2AuthzEPUrl>
         <OAuth2ParEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/par</OAuth2ParEPUrl>
         <OAuth2TokenEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/token</OAuth2TokenEPUrl>
-        <OAuth2RevokeEPUrll>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/revoke</OAuth2RevokeEPUrll>
+        <OAuth2RevokeEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/revoke</OAuth2RevokeEPUrl>
         <OAuth2IntrospectEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/introspect</OAuth2IntrospectEPUrl>
         <OAuth2UserInfoEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oauth2/userinfo</OAuth2UserInfoEPUrl>
         <OIDCCheckSessionEPUrl>${carbon.protocol}://${carbon.host}:${carbon.management.port}/oidc/checksession</OIDCCheckSessionEPUrl>
@@ -220,6 +220,7 @@
             </SupportedGrantType>
             <SupportedGrantType>
                 <GrantTypeName>idTokenNotAllowedGrantType</GrantTypeName>
+                <!-- TODO class name is wrong -->
                 <GrantTypeHandlerImplClass>org.wso2.carbon.identity.oauth2.token.handlers.grant.idTokenNotAllowedGrantHandler</GrantTypeHandlerImplClass>
                 <IdTokenAllowed>false</IdTokenAllowed>
             </SupportedGrantType>
@@ -277,6 +278,12 @@
             <UserInfoEndpointAccessTokenValidator>org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoISAccessTokenValidator</UserInfoEndpointAccessTokenValidator>
             <UserInfoEndpointResponseBuilder>org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJSONResponseBuilder</UserInfoEndpointResponseBuilder>
             <SkipUserConsent>false</SkipUserConsent>
+
+            <SupportedTokenEndpointSigningAlgorithms>
+                <SupportedTokenEndpointSigningAlgorithm>PS256</SupportedTokenEndpointSigningAlgorithm>
+                <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>
+                <SupportedTokenEndpointSigningAlgorithm>SHA256withRSA</SupportedTokenEndpointSigningAlgorithm>
+            </SupportedTokenEndpointSigningAlgorithms>
         </OpenIDConnect>
         <DeviceCodeGrant>
             <KeyLength>6</KeyLength>

@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallback;
 import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -140,6 +142,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokReqMsgCtx.getAuthorizedUser());
         String tokenBindingReference = getTokenBindingReference(tokReqMsgCtx);
         String authorizedOrganization = getAuthorizedOrganization(tokReqMsgCtx);
+
+        // If the authorizedOrganization is deactivated or not available, return an error.
+        if (!(OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization) ||
+                StringUtils.isBlank(authorizedOrganization)) &&
+                !OAuth2Util.isOrganizationValidAndActive(authorizedOrganization)) {
+            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Organization : " + authorizedOrganization + " is invalid or inactive.");
+        }
 
         OauthTokenIssuer oauthTokenIssuer;
         try {
@@ -477,6 +487,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setTenantID(OAuth2Util.getTenantId(tenantDomain));
         newTokenBean.setTokenId(UUID.randomUUID().toString());
         newTokenBean.setGrantType(tokenReq.getGrantType());
+        newTokenBean.setAppResidentTenantId(IdentityTenantUtil.getLoginTenantId());
         /* If the existing token is available, the consented token flag will be extracted from that. Otherwise,
         from the current grant. */
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {

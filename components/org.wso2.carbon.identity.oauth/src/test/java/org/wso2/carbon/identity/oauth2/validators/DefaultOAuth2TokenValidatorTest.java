@@ -18,8 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.validators;
 
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -27,25 +26,24 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
 @WithCarbonHome
-@PrepareForTest({IdentityUtil.class, IdentityTenantUtil.class})
-public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
+public class DefaultOAuth2TokenValidatorTest {
 
     public static final String CONSUMER_KEY = "consumer-key";
     private DefaultOAuth2TokenValidator defaultOAuth2TokenValidator;
@@ -53,12 +51,16 @@ public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
     private OAuth2TokenValidationResponseDTO oAuth2TokenValidationResponseDTO;
     private OAuth2TokenValidationMessageContext oAuth2TokenValidationMessageContext;
 
+    private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
         //todo - match the dependencies in the originating repo
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+        identityTenantUtil.when(()->IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+        identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt()))
+                .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
         defaultOAuth2TokenValidator = new DefaultOAuth2TokenValidator();
         oAuth2TokenValidationRequestDTO = new OAuth2TokenValidationRequestDTO();
@@ -82,6 +84,8 @@ public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
 
     @AfterMethod
     public void tearDown() throws Exception {
+
+            identityTenantUtil.close();
     }
 
     @Test
@@ -99,7 +103,7 @@ public class DefaultOAuth2TokenValidatorTest extends PowerMockTestCase {
         if (scopeValidatorClazz != null) {
             OAuth2ScopeValidator scopeValidator
                     = getClassInstance(scopeValidatorClazz, OAuth2ScopeValidator.class);
-            Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<OAuth2ScopeValidator>();
+            Set<OAuth2ScopeValidator> oAuth2ScopeValidators = new HashSet<>();
             oAuth2ScopeValidators.add(scopeValidator);
             oAuthServerConfiguration.setOAuth2ScopeValidators(oAuth2ScopeValidators);
 

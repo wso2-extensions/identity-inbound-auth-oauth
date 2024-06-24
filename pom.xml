@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.0.86-SNAPSHOT</version>
+    <version>7.0.101-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -598,13 +598,6 @@
                 <scope>test</scope>
                 <version>${jacoco.version}</version>
             </dependency>
-            <!-- https://mvnrepository.com/artifact/org.powermock/powermock-module-testng -->
-            <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-module-testng</artifactId>
-                <version>${powermock.version}</version>
-                <scope>test</scope>
-            </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
@@ -612,9 +605,9 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>org.powermock</groupId>
-                <artifactId>powermock-api-mockito2</artifactId>
-                <version>${powermock.version}</version>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-testng</artifactId>
+                <version>${mockito-testng.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -633,7 +626,7 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.testutil</artifactId>
-                <version>${carbon.identity.framework.testutil.version}</version>
+                <version>${carbon.identity.framework.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -727,6 +720,11 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.role.v2.mgt.core</artifactId>
+                <version>${carbon.identity.framework.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.framework</groupId>
+                <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
         </dependencies>
@@ -906,8 +904,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.2.17</carbon.identity.framework.version>
-        <carbon.identity.framework.testutil.version>7.1.51</carbon.identity.framework.testutil.version>
+        <carbon.identity.framework.version>7.2.37</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -1014,15 +1011,14 @@
 
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>
-        <testng.version>6.9.10</testng.version>
+        <testng.version>7.10.1</testng.version>
         <jacoco.version>0.8.7</jacoco.version>
-        <mockito.version>2.28.2</mockito.version>
-        <powermock.version>2.0.9</powermock.version>
-        <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
+        <mockito.version>5.3.1</mockito.version>
+        <mockito-testng.version>0.5.2</mockito-testng.version>
+        <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <javaee.web.api.version>7.0</javaee.web.api.version>
         <h2database.version>2.1.210</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
-        <org.wso2.carbon.identity.testutil.version>5.23.18</org.wso2.carbon.identity.testutil.version>
         <jaxp-ri.version>1.4.5</jaxp-ri.version>
         <jose4j.version>0.9.5</jose4j.version>
         <!--SAML component version for test-->

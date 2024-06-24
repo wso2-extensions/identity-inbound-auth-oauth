@@ -19,14 +19,13 @@
 package org.wso2.carbon.identity.oauth.config;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.testutil.powermock.PowerMockIdentityBaseTest;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -35,11 +34,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.mockito.Mockito.mockStatic;
+
 /**
  * Unit test covering OAuthServerConfiguration
  */
-@PrepareForTest({IdentityUtil.class})
-public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
+@WithCarbonHome
+public class OAuthServerConfigurationTest {
 
     private static final String oAuth1RequestTokenUrl
             = "${carbon.protocol}://${carbon.host}:${carbon.management.port}" +
@@ -94,21 +95,23 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     public void setUp() throws Exception {
 
         System.setProperty("carbon.home", System.getProperty("user.dir"));
-        PowerMockito.mockStatic(IdentityUtil.class);
-        PowerMockito.when(IdentityUtil.getIdentityConfigDirPath())
-                .thenReturn(System.getProperty("user.dir")
-                        + File.separator + "src"
-                        + File.separator + "test"
-                        + File.separator + "resources"
-                        + File.separator + "conf");
-        Field oAuthServerConfigInstance =
-                OAuthServerConfiguration.class.getDeclaredField("instance");
-        oAuthServerConfigInstance.setAccessible(true);
-        oAuthServerConfigInstance.set(null, null);
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
-        Field instance = IdentityConfigParser.class.getDeclaredField("parser");
-        instance.setAccessible(true);
-        instance.set(null, null);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath)
+                    .thenReturn(System.getProperty("user.dir")
+                            + File.separator + "src"
+                            + File.separator + "test"
+                            + File.separator + "resources"
+                            + File.separator + "conf");
+            Field oAuthServerConfigInstance =
+                    OAuthServerConfiguration.class.getDeclaredField("instance");
+            oAuthServerConfigInstance.setAccessible(true);
+            oAuthServerConfigInstance.set(null, null);
+
+            Field instance = IdentityConfigParser.class.getDeclaredField("parser");
+            instance.setAccessible(true);
+            instance.set(null, null);
+        }
     }
 
     @Test
@@ -131,158 +134,205 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
     @Test
     public void testGetOAuth1RequestTokenUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1RequestTokenUrl))
-                .thenReturn(fillURLPlaceholdersForTest(oAuth1RequestTokenUrl));
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOAuth1RequestTokenUrl(), fillURLPlaceholdersForTest(oAuth1RequestTokenUrl),
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth1RequestTokenUrl))
+                    .thenReturn(fillURLPlaceholdersForTest(oAuth1RequestTokenUrl));
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOAuth1RequestTokenUrl(), fillURLPlaceholdersForTest(oAuth1RequestTokenUrl),
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth1AuthorizeUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1AuthorizeUrl))
-                .thenReturn(fillURLPlaceholdersForTest(oAuth1AuthorizeUrl));
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOAuth1AuthorizeUrl(), fillURLPlaceholdersForTest(oAuth1AuthorizeUrl),
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth1AuthorizeUrl))
+                    .thenReturn(fillURLPlaceholdersForTest(oAuth1AuthorizeUrl));
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOAuth1AuthorizeUrl(), fillURLPlaceholdersForTest(oAuth1AuthorizeUrl),
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth1AccessTokenUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth1AccessTokenUrl))
-                .thenReturn(fillURLPlaceholdersForTest(oAuth1AccessTokenUrl));
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOAuth1AccessTokenUrl(), fillURLPlaceholdersForTest(oAuth1AccessTokenUrl),
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth1AccessTokenUrl))
+                    .thenReturn(fillURLPlaceholdersForTest(oAuth1AccessTokenUrl));
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOAuth1AccessTokenUrl(), fillURLPlaceholdersForTest(oAuth1AccessTokenUrl),
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth2AuthzEPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2AuthzEPUrl))
-                .thenReturn(fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOAuth2AuthzEPUrl(), fillURLPlaceholdersForTest(oAuth2AuthzEPUrl),
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2AuthzEPUrl))
+                    .thenReturn(fillURLPlaceholdersForTest(oAuth2AuthzEPUrl));
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOAuth2AuthzEPUrl(), fillURLPlaceholdersForTest(oAuth2AuthzEPUrl),
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth2ParEPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ParEPUrl))
-                .thenReturn(fillURLPlaceholdersForTest(oAuth2ParEPUrl));
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOAuth2ParEPUrl(), fillURLPlaceholdersForTest(oAuth2ParEPUrl),
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2ParEPUrl))
+                    .thenReturn(fillURLPlaceholdersForTest(oAuth2ParEPUrl));
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOAuth2ParEPUrl(), fillURLPlaceholdersForTest(oAuth2ParEPUrl),
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth2TokenEPUrl() throws Exception {
-
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl))
-                .thenReturn(oAuth2TokenEPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth2TokenEPUrl(), oAuth2TokenEPUrl, "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2TokenEPUrl))
+                    .thenReturn(oAuth2TokenEPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                    .getOAuth2TokenEPUrl(), oAuth2TokenEPUrl, "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth2DCREPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2DCREPUrl))
-                .thenReturn(oAuth2DCREPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOAuth2DCREPUrl(), oAuth2DCREPUrl, "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2DCREPUrl))
+                    .thenReturn(oAuth2DCREPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                    .getOAuth2DCREPUrl(), oAuth2DCREPUrl, "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOAuth2JWKSPageUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2JWKSPage))
-                .thenReturn(oAuth2JWKSPage);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOAuth2JWKSPageUrl(), oAuth2JWKSPage,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2JWKSPage))
+                    .thenReturn(oAuth2JWKSPage);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOAuth2JWKSPageUrl(), oAuth2JWKSPage,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOidcDiscoveryUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCDiscoveryEPUrl))
-                .thenReturn(oIDCDiscoveryEPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                .getOidcDiscoveryUrl(), oIDCDiscoveryEPUrl, "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oIDCDiscoveryEPUrl))
+                    .thenReturn(oIDCDiscoveryEPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                    .getOidcDiscoveryUrl(), oIDCDiscoveryEPUrl, "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOidcWebFingerEPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCWebFingerEPUrl))
-                .thenReturn(oIDCWebFingerEPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOidcWebFingerEPUrl(), oIDCWebFingerEPUrl,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oIDCWebFingerEPUrl))
+                    .thenReturn(oIDCWebFingerEPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOidcWebFingerEPUrl(), oIDCWebFingerEPUrl,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOauth2UserInfoEPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2UserInfoEPUrl))
-                .thenReturn(oAuth2UserInfoEPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOauth2UserInfoEPUrl(), oAuth2UserInfoEPUrl,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2UserInfoEPUrl))
+                    .thenReturn(oAuth2UserInfoEPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOauth2UserInfoEPUrl(), oAuth2UserInfoEPUrl,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOauth2RevocationEPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2RevocationEPUrl))
-                .thenReturn(oAuth2RevocationEPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOauth2RevocationEPUrl(), oAuth2RevocationEPUrl,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2RevocationEPUrl))
+                    .thenReturn(oAuth2RevocationEPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOauth2RevocationEPUrl(), oAuth2RevocationEPUrl,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOauth2IntrospectionEPUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2IntrospectionEPUrl))
-                .thenReturn(oAuth2IntrospectionEPUrl);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOauth2IntrospectionEPUrl(), oAuth2IntrospectionEPUrl,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2IntrospectionEPUrl))
+                    .thenReturn(oAuth2IntrospectionEPUrl);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOauth2IntrospectionEPUrl(), oAuth2IntrospectionEPUrl,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOIDCConsentPageUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oIDCConsentPage))
-                .thenReturn(oIDCConsentPage);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOIDCConsentPageUrl(), oIDCConsentPage,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oIDCConsentPage))
+                    .thenReturn(oIDCConsentPage);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOIDCConsentPageUrl(), oIDCConsentPage,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOauth2ConsentPageUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ConsentPage))
-                .thenReturn(oAuth2ConsentPage);
-        Assert.assertEquals(OAuthServerConfiguration.getInstance()
-                        .getOauth2ConsentPageUrl(), oAuth2ConsentPage,
-                "Expected value not returned from getter");
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2ConsentPage))
+                    .thenReturn(oAuth2ConsentPage);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
+            Assert.assertEquals(OAuthServerConfiguration.getInstance()
+                            .getOauth2ConsentPageUrl(), oAuth2ConsentPage,
+                    "Expected value not returned from getter");
+        }
     }
 
     @Test
     public void testGetOauth2ErrorPageUrl() throws Exception {
 
-        PowerMockito.when(IdentityUtil.fillURLPlaceholders(oAuth2ErrorPage))
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+        identityUtil.when(() -> IdentityUtil.fillURLPlaceholders(oAuth2ErrorPage))
                 .thenReturn(oAuth2ErrorPage);
+            identityUtil.when(IdentityUtil::getIdentityConfigDirPath).thenCallRealMethod();
         Assert.assertEquals(OAuthServerConfiguration.getInstance()
                         .getOauth2ErrorPageUrl(), oAuth2ErrorPage,
                 "Expected value not returned from getter");
+        }
     }
 
     @Test
@@ -452,7 +502,7 @@ public class OAuthServerConfigurationTest extends PowerMockIdentityBaseTest {
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("PS256"));
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("ES256"));
         Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.contains("RS256"));
-        Assert.assertTrue(supportedTokenEndpointSigningAlgorithms.size() == 3);
+        Assert.assertEquals(supportedTokenEndpointSigningAlgorithms.size(), 3);
     }
 
     private String fillURLPlaceholdersForTest(String url) {

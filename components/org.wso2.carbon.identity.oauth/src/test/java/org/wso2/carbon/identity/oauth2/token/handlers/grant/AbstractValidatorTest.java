@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -36,7 +35,7 @@ import static org.testng.AssertJUnit.assertEquals;
 /**
  * This class defines unit test for AbstractValidator class
  */
-public class AbstractValidatorTest extends PowerMockTestCase {
+public class AbstractValidatorTest {
 
     AbstractValidator abstractValidator;
     private static final String KEY   = "key";

@@ -17,8 +17,6 @@
 package org.wso2.carbon.identity.oauth2;
 
 import org.apache.commons.lang.StringUtils;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.powermock.reflect.Whitebox;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -39,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -54,8 +53,8 @@ import static org.testng.Assert.fail;
 
 @WithCarbonHome
 @WithRealmService
-@WithH2Database(files = {"dbScripts/scope.sql", "dbScripts/h2.sql"})
-public class OAuth2ScopeServiceTest extends PowerMockTestCase {
+@WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_local_idp.sql"})
+public class OAuth2ScopeServiceTest {
 
     private OAuth2ScopeService oAuth2ScopeService;
     private static final String SCOPE_NAME = "dummyScopeName";
@@ -88,10 +87,28 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
     @AfterMethod
     public void tearDown() throws Exception {
 
-        Whitebox.setInternalState(IdentityUtil.class, "configuration", new HashMap<>());
-        Whitebox.setInternalState(IdentityUtil.class, "eventListenerConfiguration", new HashMap<>());
-        Whitebox.setInternalState(IdentityUtil.class, "identityCacheConfigurationHolder", new HashMap<>());
-        Whitebox.setInternalState(IdentityUtil.class, "identityCookiesConfigurationHolder", new HashMap<>());
+        try {
+            oAuth2ScopeService.revokeUserConsents("dummyUserId", 1);
+        } catch (Exception e) {
+            // Ignore
+        }
+        try {
+            deleteApp();
+        } catch (Exception e) {
+            // Ignore
+        }
+        setPrivateStaticField(IdentityUtil.class, "configuration", new HashMap<>());
+        setPrivateStaticField(IdentityUtil.class, "eventListenerConfiguration", new HashMap<>());
+        setPrivateStaticField(IdentityUtil.class, "identityCacheConfigurationHolder", new HashMap<>());
+        setPrivateStaticField(IdentityUtil.class, "identityCookiesConfigurationHolder", new HashMap<>());
+    }
+
+    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(null, newValue);
     }
 
     @Test
@@ -262,12 +279,30 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
 
     private void insertAppId(String uuid) throws Exception {
 
-        String sql = "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID) VALUES (?,?,?)";
+        String sql =
+                "INSERT INTO SP_APP (TENANT_ID, APP_NAME, UUID, USER_STORE, USERNAME, AUTH_TYPE) VALUES (?,?,?,?,?,?)";
         try (Connection connection = IdentityDatabaseUtil.getDBConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, 1);
             ps.setString(2, "dummyAppName");
             ps.setString(3, uuid);
+            ps.setString(4, "PRIMARY");
+            ps.setString(5, "dummyUser");
+            ps.setString(6, "oauth2");
+            ps.execute();
+            IdentityDatabaseUtil.commitTransaction(connection);
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error when inserting codeID", e);
+        }
+    }
+
+    private void deleteApp() throws Exception {
+
+        String sql = "DELETE FROM SP_APP WHERE TENANT_ID = ? AND APP_NAME = ?";
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, 1);
+            ps.setString(2, "dummyAppName");
             ps.execute();
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
@@ -479,8 +514,7 @@ public class OAuth2ScopeServiceTest extends PowerMockTestCase {
         String userId = "dummyUserId";
         oAuth2ScopeService.addUserConsentForApplication(userId, appId, tenantId, approvedScopes, deniedScopes);
 
-        List<OAuth2ScopeConsentResponse> response = oAuth2ScopeService.getUserConsents(userId,
-                tenantId);
+        List<OAuth2ScopeConsentResponse> response = oAuth2ScopeService.getUserConsents(userId, tenantId);
         assertEquals(response.get(0).getAppId(), appId);
         assertEquals(response.get(0).getUserId(), userId);
         assertEquals(response.get(0).getApprovedScopes().size(), approvedScopes.size());

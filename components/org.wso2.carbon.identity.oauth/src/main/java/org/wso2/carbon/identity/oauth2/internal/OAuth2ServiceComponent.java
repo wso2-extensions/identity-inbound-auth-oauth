@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -72,6 +73,8 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtService;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
@@ -395,6 +398,8 @@ public class OAuth2ServiceComponent {
 
             OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(new ImpersonationMgtServiceImpl());
             bundleContext.registerService(ImpersonationValidator.class, new SubjectScopeValidator(), null);
+            bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
+                    null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
@@ -1570,5 +1575,39 @@ public class OAuth2ServiceComponent {
     protected void unsetImpersonationValidator(ImpersonationValidator impersonationValidator) {
 
         OAuth2ServiceComponentHolder.getInstance().removeImpersonationValidator(impersonationValidator);
+    }
+
+    /**
+     * Set the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    @Reference(
+            name = "resource.configuration.manager",
+            service = ConfigurationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterConfigurationManager"
+    )
+    protected void registerConfigurationManager(ConfigurationManager configurationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the ConfigurationManager in JWT Client Authenticator ManagementService.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(configurationManager);
+    }
+
+
+    /**
+     * Unset the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    protected void unregisterConfigurationManager(ConfigurationManager configurationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(null);
     }
 }

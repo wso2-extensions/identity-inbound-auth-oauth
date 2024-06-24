@@ -298,6 +298,7 @@ public final class OAuthConstants {
         public static final String REFRESH_TOKEN = "refresh_token";
         public static final String DEVICE_CODE = "device_code";
         public static final String ORGANIZATION_SWITCH = "organization_switch";
+        public static final String TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
 
         private GrantTypes() {
 
@@ -722,6 +723,7 @@ public final class OAuthConstants {
             public static final String VALIDATE_AUTHZ_REQUEST = "validate-authz-request";
             public static final String VALIDATE_INPUT_PARAMS = "validate-input-parameters";
             public static final String VALIDATE_OAUTH_CLIENT = "validate-oauth-client";
+            public static final String VALIDATE_APPLICATION_ENABLED_STATUS = "validate-application-enabled-status";
             public static final String REVOKE_TOKEN = "revoke-token";
             public static final String VALIDATE_TOKEN_BINDING = "validate-token-binding";
             public static final String VALIDATE_PKCE = "validate-pkce";

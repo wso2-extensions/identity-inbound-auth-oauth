@@ -74,7 +74,7 @@ public class SubjectTokenIssuer {
         OauthTokenIssuer oauthTokenIssuer = OAuthServerConfiguration.getInstance().getOauthTokenIssuerMap()
                 .get(JWT_TOKEN_TYPE);
         SubjectTokenDO subjectTokenDO = new SubjectTokenDO();
-        subjectTokenDO.setSubjectToken(oauthTokenIssuer.subjectToken(oauthAuthzMsgCtx));
+        subjectTokenDO.setSubjectToken(oauthTokenIssuer.issueSubjectToken(oauthAuthzMsgCtx));
         return subjectTokenDO;
     }
 

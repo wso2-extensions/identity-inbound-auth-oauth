@@ -23,29 +23,22 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.testng.IObjectFactory;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
 import static org.testng.Assert.assertEquals;
 
-@PrepareForTest(BundleContext.class)
 /**
  * Unit test covering OIDCDiscoveryServiceComponent class.
  */
-@PowerMockIgnore("org.mockito.*")
 public class OIDCDiscoveryServiceComponentTest {
 
     @Mock
@@ -56,12 +49,6 @@ public class OIDCDiscoveryServiceComponentTest {
 
     @Mock
     ClaimMetadataManagementService claimMetadataManagementService;
-
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -79,8 +66,7 @@ public class OIDCDiscoveryServiceComponentTest {
     @Test
     public void testActivate() throws Exception {
 
-        mockStatic(BundleContext.class);
-        when(context.getBundleContext()).thenReturn(bundleContext);
+        when(context.getBundleContext()).thenReturn(this.bundleContext);
 
         final String[] serviceName = new String[1];
 
@@ -92,7 +78,7 @@ public class OIDCDiscoveryServiceComponentTest {
                 serviceName[0] = defaultOIDCProcessor.getClass().getName();
                 return null;
             }
-        }).when(bundleContext).registerService(anyString(), any(DefaultOIDCProcessor.class),
+        }).when(this.bundleContext).registerService(anyString(), any(DefaultOIDCProcessor.class),
                 isNull());
 
         OIDCDiscoveryServiceComponent oidcDiscoveryServiceComponent = new OIDCDiscoveryServiceComponent();

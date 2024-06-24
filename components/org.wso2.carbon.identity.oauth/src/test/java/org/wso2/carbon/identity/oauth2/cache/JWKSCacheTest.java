@@ -18,17 +18,11 @@
 
 package org.wso2.carbon.identity.oauth2.cache;
 
-import org.testng.IObjectFactory;
-import org.testng.annotations.ObjectFactory;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNotNull;
 
 public class JWKSCacheTest {
-    @ObjectFactory
-    public IObjectFactory getObjectFactory() {
-        return new org.powermock.modules.testng.PowerMockObjectFactory();
-    }
 
     @Test
     public void testGetInstance() throws Exception {

@@ -25,8 +25,8 @@ import org.testng.annotations.Test;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ALLOWED_CONTENT_TYPES;
 
 /**
@@ -51,9 +51,9 @@ public class OAuthCommonUtilTest {
         boolean isAllowed = OAuthCommonUtil.isAllowedContentType(contentType, ALLOWED_CONTENT_TYPES);
 
         if (shouldPass) {
-            Assert.assertEquals(isAllowed, true, contentType + " should be an allowed content type");
+            Assert.assertTrue(isAllowed, contentType + " should be an allowed content type");
         } else {
-            Assert.assertEquals(isAllowed, false, contentType + " should not be an allowed content type");
+            Assert.assertFalse(isAllowed, contentType + " should not be an allowed content type");
         }
     }
 

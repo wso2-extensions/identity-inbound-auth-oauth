@@ -21,25 +21,20 @@ package org.wso2.carbon.identity.openidconnect;
 import com.nimbusds.jose.JWSAlgorithm;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
-import org.powermock.reflect.internal.WhiteboxImpl;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
-import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
-import org.wso2.carbon.identity.oauth.RequestObjectValidatorUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
@@ -47,9 +42,9 @@ import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
-import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.lang.reflect.Field;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
@@ -60,21 +55,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
-@PrepareForTest({OAuth2Util.class, IdentityUtil.class, OAuthServerConfiguration.class, OAuthAuthzRequest.class,
-        RequestObjectValidatorImpl.class, IdentityTenantUtil.class, LoggerUtils.class, IdentityEventService.class,
-        CentralLogMgtServiceComponentHolder.class, RequestObjectValidatorUtil.class})
-@PowerMockIgnore({"javax.crypto.*"})
-public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
+@Listeners(MockitoTestNGListener.class)
+public class OIDCRequestObjectUtilTest {
 
     private RSAPrivateKey rsaPrivateKey;
     private KeyStore clientKeyStore;
@@ -112,103 +107,130 @@ public class OIDCRequestObjectUtilTest extends PowerMockTestCase {
     public void testBuildRequestObjectTest(String requestObjectString, Map<String, Object> claims, boolean isSigned,
                                            boolean isEncrypted,
                                            boolean exceptionNotExpected,
-                                           String errorMsg, boolean isFAPITest) throws Exception {
+                                           String errorMsg, boolean isFAPITest, String encryptionAlgo,
+                                           String encryptionMethod) throws Exception {
 
-        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-        oAuth2Parameters.setTenantDomain("carbon.super");
-        oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
-        oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
 
-        OAuthAuthzRequest oAuthAuthzRequest = mock(OAuthAuthzRequest.class);
-        IdentityEventService eventServiceMock = mock(IdentityEventService.class);
-        when(oAuthAuthzRequest.getParam(Constants.REQUEST)).thenReturn(requestObjectString);
-        mockStatic(CentralLogMgtServiceComponentHolder.class);
-        when(CentralLogMgtServiceComponentHolder.getInstance()).thenReturn(centralLogMgtServiceComponentHolderMock);
-        when(centralLogMgtServiceComponentHolderMock.getIdentityEventService()).thenReturn(eventServiceMock);
-        PowerMockito.doNothing().when(eventServiceMock).handleEvent(any());
+            try (MockedStatic<CentralLogMgtServiceComponentHolder> centralLogMgtServiceComponentHolder =
+                         mockStatic(CentralLogMgtServiceComponentHolder.class);
+                 MockedStatic<IdentityUtil> identityUtilMockedStatic = mockStatic(IdentityUtil.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
 
-        mockStatic(IdentityUtil.class);
-        when(IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
-                .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
-                        JWSAlgorithm.RS256.getName()));
+                OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+                oAuth2Parameters.setTenantDomain("carbon.super");
+                oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
+                oAuth2Parameters.setRedirectURI(TestConstants.CALLBACK);
 
-        OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
+                OAuthAuthzRequest oAuthAuthzRequest = mock(OAuthAuthzRequest.class);
+                IdentityEventService eventServiceMock = mock(IdentityEventService.class);
+                when(oAuthAuthzRequest.getParam(Constants.REQUEST)).thenReturn(requestObjectString);
+                centralLogMgtServiceComponentHolder.when(
+                                CentralLogMgtServiceComponentHolder::getInstance)
+                        .thenReturn(centralLogMgtServiceComponentHolderMock);
+                lenient().when(centralLogMgtServiceComponentHolderMock.getIdentityEventService())
+                        .thenReturn(eventServiceMock);
+                lenient().doNothing().when(eventServiceMock).handleEvent(any());
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
-        when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
-        when(OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
-        when(OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
-        when(OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
+                identityUtilMockedStatic.when(
+                                () -> IdentityUtil.getPropertyAsList(TestConstants.FAPI_SIGNATURE_ALG_CONFIGURATION))
+                        .thenReturn(Arrays.asList(JWSAlgorithm.PS256.getName(), JWSAlgorithm.ES256.getName(),
+                                JWSAlgorithm.RS256.getName()));
 
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
-        when(OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
-        when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
+                oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+                oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
+                oAuth2Util.when(() -> OAuth2Util.getX509CertOfOAuthApp(TEST_CLIENT_ID_1,
+                                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                        .thenReturn(clientKeyStore.getCertificate("wso2carbon"));
+                oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(isFAPITest);
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(new ServiceProvider());
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+                OAuthAppDO oAuthAppDO = new OAuthAppDO();
+                oAuthAppDO.setRequestObjectSignatureValidationEnabled(isFAPITest);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(TEST_CLIENT_ID_1)).thenReturn(oAuthAppDO);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(oAuthAppDO);
 
-        RequestObjectValidator requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
-        when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-        PowerMockito.doReturn(SOME_SERVER_URL).when(requestObjectValidator, "getTokenEpURL", anyString());
+                RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
+                lenient().when((oauthServerConfigurationMock.getRequestObjectValidator()))
+                        .thenReturn(requestObjectValidator);
 
-        RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
-        Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
-        requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
-        requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
-        when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
-        try {
-            OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
-        } catch (RequestObjectException e) {
-            Assert.assertFalse(exceptionNotExpected,
-                    errorMsg + " Request Object Building failed due to " + e.getErrorMessage());
+                lenient().doReturn(SOME_SERVER_URL).when(requestObjectValidator).getTokenEpURL(anyString());
+
+                RequestParamRequestObjectBuilder requestParamRequestObjectBuilder =
+                        new RequestParamRequestObjectBuilder();
+                Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
+                requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
+                requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
+                lenient().when((oauthServerConfigurationMock.getRequestObjectBuilders()))
+                        .thenReturn(requestObjectBuilderMap);
+                try {
+                    OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
+                } catch (RequestObjectException e) {
+                    Assert.assertFalse(exceptionNotExpected,
+                            errorMsg + " Request Object Building failed due to " + e.getErrorMessage());
+                }
+            }
         }
     }
 
     @Test(expectedExceptions = {RequestObjectException.class})
     public void testBuildRequestObjectURITest() throws Exception {
-        OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
-        oAuth2Parameters.setTenantDomain("carbon.super");
-        oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
 
-        OAuthAuthzRequest oAuthAuthzRequest = mock(OAuthAuthzRequest.class);
-        when(oAuthAuthzRequest.getParam(Constants.REQUEST_URI)).thenReturn("some-uri");
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+            OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
+            oAuth2Parameters.setTenantDomain("carbon.super");
+            oAuth2Parameters.setClientId(TEST_CLIENT_ID_1);
 
-        OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
+            OAuthAuthzRequest oAuthAuthzRequest = mock(OAuthAuthzRequest.class);
+            when(oAuthAuthzRequest.getParam(Constants.REQUEST)).thenReturn(null);
+            when(oAuthAuthzRequest.getParam(Constants.REQUEST_URI)).thenReturn("some-uri");
 
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
-        when((OAuth2Util.getPrivateKey(anyString(), anyInt()))).thenReturn(rsaPrivateKey);
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
 
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
+            oAuth2Util.when(() -> OAuth2Util.getTenantId("carbon.super")).thenReturn(-1234);
+            oAuth2Util.when(() -> OAuth2Util.getPrivateKey(anyString(), anyInt())).thenReturn(rsaPrivateKey);
 
-        RequestObjectValidator requestObjectValidator = PowerMockito.spy(new RequestObjectValidatorImpl());
-        when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
 
-        PowerMockito.doReturn(SOME_SERVER_URL.toString()).when(requestObjectValidator, "getTokenEpURL",
-                anyString());
+            RequestObjectValidatorImpl requestObjectValidator = spy(new RequestObjectValidatorImpl());
+            when((oauthServerConfigurationMock.getRequestObjectValidator())).thenReturn(requestObjectValidator);
 
-        KeyStoreManager keyStoreManager = Mockito.mock(KeyStoreManager.class);
-        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
-        mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
-        WhiteboxImpl.setInternalState(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
-        Mockito.when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
-        Mockito.when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
+            doReturn(SOME_SERVER_URL.toString()).when(requestObjectValidator).getTokenEpURL(anyString());
 
+            KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
+            ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
+            mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
+            setPrivateStaticField(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
+            when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
+            when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
 
-        RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
-        Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
-        requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
-        requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
-        when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
-        RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
+            RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
+            Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
+            requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
+            requestObjectBuilderMap.put(REQUEST_URI_PARAM_VALUE_BUILDER, null);
+            when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
+            OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, oAuth2Parameters);
+        }
+    }
+
+    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(null, newValue);
     }
 }

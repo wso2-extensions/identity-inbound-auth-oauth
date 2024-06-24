@@ -18,8 +18,8 @@
 package org.wso2.carbon.identity.oauth.par.core;
 
 import org.mockito.Mock;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -42,24 +42,23 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 /**
  * Test class for ParAuthService.
  */
-@PrepareForTest({ParDAOFactory.class, LoggerUtils.class, IdentityConfigParser.class})
-public class ParAuthServiceTest extends PowerMockTestCase {
+public class ParAuthServiceTest {
 
     @Mock
     ParMgtDAO parMgtDAO;
     @Mock
-    ParDAOFactory parDAOFactory;
+    ParDAOFactory mockParDAOFactory;
     @Mock
-    IdentityConfigParser identityConfigParser;
+    IdentityConfigParser mockIdentityConfigParser;
     @Mock
     ParRequestDO parRequestDO;
 
@@ -67,19 +66,29 @@ public class ParAuthServiceTest extends PowerMockTestCase {
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private ParAuthServiceImpl parAuthService;
 
+    private MockedStatic<LoggerUtils> loggerUtils;
+    private MockedStatic<ParDAOFactory> parDAOFactory;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
         initMocks(this);
-        mockStatic(LoggerUtils.class);
-        when(LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
         parAuthService = new ParAuthServiceImpl();
-        mockStatic(ParDAOFactory.class);
-        when(ParDAOFactory.getInstance()).thenReturn(parDAOFactory);
-        when(parDAOFactory.getParAuthMgtDAO()).thenReturn(parMgtDAO);
+        parDAOFactory = mockStatic(ParDAOFactory.class);
+        parDAOFactory.when(ParDAOFactory::getInstance).thenReturn(mockParDAOFactory);
+        when(mockParDAOFactory.getParAuthMgtDAO()).thenReturn(parMgtDAO);
         Field field = ParAuthServiceImpl.class.getDeclaredField("parMgtDAO");
         field.setAccessible(true);
         field.set(parAuthService, ParDAOFactory.getInstance().getParAuthMgtDAO());
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        loggerUtils.close();
+        parDAOFactory.close();
     }
 
     @DataProvider(name = "provideExpiryTimeConfigData")
@@ -100,19 +109,20 @@ public class ParAuthServiceTest extends PowerMockTestCase {
     @Test(dataProvider = "provideExpiryTimeConfigData")
     public void testExpiryTimeConfig(String expiryTime) throws ParCoreException {
 
-        doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
-        when(identityConfigParser.getConfiguration()).thenReturn(
-                new HashMap<String, Object>() {
-                    {
-                        put("OAuth.PAR.ExpiryTime", expiryTime);
-                    }
-                });
-        ParAuthData parAuthData = parAuthService.handleParAuthRequest(new HashMap<>());
-        assertNotNull(parAuthData.getrequestURIReference());
-        long defaultExpiry = 60L;
-        assertEquals(parAuthData.getExpiryTime(), defaultExpiry);
+        try (MockedStatic<IdentityConfigParser> identityConfigParser = mockStatic(IdentityConfigParser.class)) {
+            doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
+            identityConfigParser.when(IdentityConfigParser::getInstance).thenReturn(mockIdentityConfigParser);
+            when(mockIdentityConfigParser.getConfiguration()).thenReturn(
+                    new HashMap<String, Object>() {
+                        {
+                            put("OAuth.PAR.ExpiryTime", expiryTime);
+                        }
+                    });
+            ParAuthData parAuthData = parAuthService.handleParAuthRequest(new HashMap<>());
+            assertNotNull(parAuthData.getrequestURIReference());
+            long defaultExpiry = 60L;
+            assertEquals(parAuthData.getExpiryTime(), defaultExpiry);
+        }
     }
 
     @DataProvider(name = "provideNotANumberExpiryTimeConfigData")
@@ -129,17 +139,18 @@ public class ParAuthServiceTest extends PowerMockTestCase {
     @Test(dataProvider = "provideNotANumberExpiryTimeConfigData")
     public void testNotANumberExpiryTimeFailure(String expiryTime) throws ParCoreException {
 
-        doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(identityConfigParser);
-        Map<String, Object> config = new HashMap<>();
-        config.put("OAuth.PAR.ExpiryTime", expiryTime);
-        when(identityConfigParser.getConfiguration()).thenReturn(config);
+        try (MockedStatic<IdentityConfigParser> identityConfigParser = mockStatic(IdentityConfigParser.class)) {
+            doNothing().when(parMgtDAO).persistRequestData(anyString(), anyString(), anyLong(), anyMap());
+            identityConfigParser.when(IdentityConfigParser::getInstance).thenReturn(mockIdentityConfigParser);
+            Map<String, Object> config = new HashMap<>();
+            config.put("OAuth.PAR.ExpiryTime", expiryTime);
+            when(mockIdentityConfigParser.getConfiguration()).thenReturn(config);
 
-        try {
-            parAuthService.handleParAuthRequest(new HashMap<>());
-        } catch (ParCoreException e) {
-            assertEquals(e.getMessage(), "Error while parsing the expiry time value.");
+            try {
+                parAuthService.handleParAuthRequest(new HashMap<>());
+            } catch (ParCoreException e) {
+                assertEquals(e.getMessage(), "Error while parsing the expiry time value.");
+            }
         }
     }
 

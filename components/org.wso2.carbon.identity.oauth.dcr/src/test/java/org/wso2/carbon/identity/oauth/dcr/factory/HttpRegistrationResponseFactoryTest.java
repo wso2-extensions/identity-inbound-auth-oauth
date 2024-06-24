@@ -19,10 +19,8 @@
 package org.wso2.carbon.identity.oauth.dcr.factory;
 
 import org.json.simple.JSONObject;
-import org.mockito.invocation.InvocationOnMock;
+import org.mockito.MockedConstruction;
 import org.mockito.stubbing.Answer;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -40,12 +38,12 @@ import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.doAnswer;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -53,11 +51,9 @@ import static org.testng.Assert.assertTrue;
 /**
  * Unit test covering HttpRegistrationResponseFactory
  */
-@PrepareForTest(HttpRegistrationResponseFactory.class)
-public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
+public class HttpRegistrationResponseFactoryTest {
 
     private RegistrationResponse mockRegistrationResponse;
-    private HttpIdentityResponse.HttpIdentityResponseBuilder mockHttpIdentityResponseBuilder;
     private HttpRegistrationResponseFactory httpRegistrationResponseFactory;
     private final List<String> grantType = new ArrayList<>();
     private final List<String> redirectUrl = new ArrayList<>();
@@ -135,58 +131,64 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
         assertEquals(jsonObject.get(RegistrationResponse.DCRegisterResponseConstants.REDIRECT_URIS), redirectUrl);
     }
 
-    @DataProvider(name = "instanceDataProvider")
-    public Object[][] getInstanceData() {
+    @Test
+    public void testCreate() throws Exception {
 
-        mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
-        mockRegistrationResponse = mock(RegistrationResponse.class);
-        return new Object[][]{
-                {mockHttpIdentityResponseBuilder},
-                {null}
-        };
-    }
-
-    @Test(dataProvider = "instanceDataProvider")
-    public void testCreate(Object builder) throws Exception {
-
-        if (builder == null) {
-            mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
-        } else {
-            mockHttpIdentityResponseBuilder = (HttpIdentityResponse.HttpIdentityResponseBuilder) builder;
-        }
         RegistrationResponseProfile registrationRequestProfile = mock(RegistrationResponseProfile.class);
 
-        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
-                (mockHttpIdentityResponseBuilder);
         when((mockRegistrationResponse).getRegistrationResponseProfile()).
                 thenReturn(registrationRequestProfile);
 
         final Integer[] statusCode = new Integer[1];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+        final String[] header = new String[1];
+        try (MockedConstruction<HttpIdentityResponse.HttpIdentityResponseBuilder> mockedConstruction = mockConstruction(
+                HttpIdentityResponse.HttpIdentityResponseBuilder.class,
+                (mock, context) -> {
+                    doAnswer((Answer<Object>) invocation -> {
 
-                statusCode[0] = (Integer) invocation.getArguments()[0];
-                return null;
-            }
+                        statusCode[0] = (Integer) invocation.getArguments()[0];
+                        return null;
+                    }).when(mock).setStatusCode(anyInt());
+
+                    doAnswer((Answer<Object>) invocation -> {
+
+                        header[0] = (String) invocation.getArguments()[1];
+                        return null;
+                    }).when(mock).addHeader(anyString(), anyString());
+                })) {
+            httpRegistrationResponseFactory.create(mockRegistrationResponse);
+
+            assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
+            assertEquals(header[0], MediaType.APPLICATION_JSON);
+        }
+    }
+
+    @Test
+    public void testCreateWithBuilder() throws Exception {
+
+        RegistrationResponseProfile registrationRequestProfile = mock(RegistrationResponseProfile.class);
+        HttpIdentityResponse.HttpIdentityResponseBuilder mockHttpIdentityResponseBuilder =
+                mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
+
+        when((mockRegistrationResponse).getRegistrationResponseProfile()).
+                thenReturn(registrationRequestProfile);
+
+        final Integer[] statusCode = new Integer[1];
+        doAnswer((Answer<Object>) invocation -> {
+
+            statusCode[0] = (Integer) invocation.getArguments()[0];
+            return null;
         }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
 
         final String[] header = new String[1];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
+        doAnswer((Answer<Object>) invocation -> {
 
-                header[0] = (String) invocation.getArguments()[1];
-                return null;
-            }
+            header[0] = (String) invocation.getArguments()[1];
+            return null;
         }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
 
-        if (builder == null) {
-            httpRegistrationResponseFactory.create(mockRegistrationResponse);
-        } else {
-            httpRegistrationResponseFactory.create((HttpIdentityResponse.HttpIdentityResponseBuilder) builder,
+        httpRegistrationResponseFactory.create(mockHttpIdentityResponseBuilder,
                     (mockRegistrationResponse));
-        }
         assertEquals((int) statusCode[0], HttpServletResponse.SC_CREATED);
         assertEquals(header[0], MediaType.APPLICATION_JSON);
     }
@@ -215,37 +217,33 @@ public class HttpRegistrationResponseFactoryTest extends PowerMockTestCase {
     @Test(dataProvider = "exceptionDataProvider")
     public void testHandleException(String errorCode, int expected) throws Exception {
 
-        mockHttpIdentityResponseBuilder = mock(HttpIdentityResponse.HttpIdentityResponseBuilder.class);
-        whenNew(HttpIdentityResponse.HttpIdentityResponseBuilder.class).withNoArguments().thenReturn
-                (mockHttpIdentityResponseBuilder);
-
         final Integer[] statusCode = new Integer[1];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-
-                statusCode[0] = (Integer) invocation.getArguments()[0];
-                return null;
-            }
-        }).when(mockHttpIdentityResponseBuilder).setStatusCode(anyInt());
-
         final String[] header = new String[1];
-        doAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
 
-                header[0] = (String) invocation.getArguments()[1];
-                return null;
-            }
-        }).when(mockHttpIdentityResponseBuilder).addHeader(anyString(), anyString());
+        try (MockedConstruction<HttpIdentityResponse.HttpIdentityResponseBuilder> mockedConstruction = mockConstruction(
+                HttpIdentityResponse.HttpIdentityResponseBuilder.class,
+                (mock, context) -> {
+                    doAnswer((Answer<Object>) invocation -> {
 
-        FrameworkException exception = mock(FrameworkException.class);
-        when(exception.getMessage()).thenReturn(dummyDescription);
+                        statusCode[0] = (Integer) invocation.getArguments()[0];
+                        return null;
+                    }).when(mock).setStatusCode(anyInt());
 
-        when(exception.getErrorCode()).thenReturn(errorCode);
-        httpRegistrationResponseFactory.handleException(exception);
+                    doAnswer((Answer<Object>) invocation -> {
 
-        assertEquals((int) statusCode[0], expected);
+                        header[0] = (String) invocation.getArguments()[1];
+                        return null;
+                    }).when(mock).addHeader(anyString(), anyString());
+                })) {
+
+            FrameworkException exception = mock(FrameworkException.class);
+            when(exception.getMessage()).thenReturn(dummyDescription);
+
+            when(exception.getErrorCode()).thenReturn(errorCode);
+            httpRegistrationResponseFactory.handleException(exception);
+
+            assertEquals((int) statusCode[0], expected);
+        }
     }
 
 }

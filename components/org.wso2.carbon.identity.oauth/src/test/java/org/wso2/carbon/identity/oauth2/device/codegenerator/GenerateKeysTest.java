@@ -19,26 +19,19 @@
 package org.wso2.carbon.identity.oauth2.device.codegenerator;
 
 import org.apache.commons.lang.StringUtils;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.testng.PowerMockTestCase;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.utils.CarbonUtils;
 
 import java.nio.file.Paths;
 import java.util.Random;
 
-import static org.powermock.api.mockito.PowerMockito.doReturn;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.spy;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
-@PrepareForTest({IdentityUtil.class, CarbonUtils.class, IdentityConfigParser.class})
-public class GenerateKeysTest extends PowerMockTestCase {
+public class GenerateKeysTest {
 
     private static final int NUMBER_OF_KEYS_GENERATED = 10;
     private static final int MIN_KEY_LENGTH = 1;
@@ -56,21 +49,23 @@ public class GenerateKeysTest extends PowerMockTestCase {
     @Test(dataProvider = "provideKeyLengths")
     public void testGetKey(int[] keyLengths) throws Exception {
 
-        String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
-        spy(CarbonUtils.class);
-        doReturn(carbonHome).when(CarbonUtils.class, "getCarbonHome");
+        try (MockedStatic<IdentityConfigParser> identityConfigParser = mockStatic(IdentityConfigParser.class)) {
+            String carbonHome = Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString();
+            System.setProperty("carbon.home", carbonHome);
 
-        IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
-        mockStatic(IdentityConfigParser.class);
-        when(IdentityConfigParser.getInstance()).thenReturn(mockConfigParser);
+            IdentityConfigParser mockConfigParser = mock(IdentityConfigParser.class);
+            identityConfigParser.when(IdentityConfigParser::getInstance).thenReturn(mockConfigParser);
 
-        // First, test zero length scenario.
-        Assert.assertNotEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));
+            // First, test zero length scenario.
+            Assert.assertNotEquals(StringUtils.EMPTY, GenerateKeys.getKey(0));
 
-        for (int keyLength : keyLengths) {
-            int length = Math.max(keyLength, DEFAULT_KEY_LENGTH);
-            String generatedKey = GenerateKeys.getKey(length);
-            Assert.assertTrue(validateKey(generatedKey, length));
+            for (int keyLength : keyLengths) {
+                int length = Math.max(keyLength, DEFAULT_KEY_LENGTH);
+                String generatedKey = GenerateKeys.getKey(length);
+                Assert.assertTrue(validateKey(generatedKey, length));
+            }
+        } finally {
+            System.clearProperty("carbon.home");
         }
     }
 

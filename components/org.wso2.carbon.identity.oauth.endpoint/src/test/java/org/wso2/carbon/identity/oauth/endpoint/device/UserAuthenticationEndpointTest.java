@@ -18,45 +18,38 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.device;
 
-import com.nimbusds.jwt.SignedJWT;
-import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.reflect.internal.WhiteboxImpl;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
-import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
-import org.wso2.carbon.utils.CarbonUtils;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -68,20 +61,17 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 /**
  * Use for unit tests in user authentication end-point.
  */
-@PrepareForTest({OAuth2Util.class, SessionDataCache.class, OAuthServerConfiguration.class, IdentityDatabaseUtil.class,
-        EndpointUtil.class, FrameworkUtils.class, EndpointUtil.class, OpenIDConnectUserRPStore.class,
-        CarbonOAuthAuthzRequest.class, IdentityTenantUtil.class, OAuthResponse.class, SignedJWT.class,
-        OIDCSessionManagementUtil.class, CarbonUtils.class, SessionDataCache.class, ServiceURLBuilder.class,
-        ServiceURL.class, DeviceFlowPersistenceFactory.class, OAuth2AuthzEndpoint.class})
+@Listeners(MockitoTestNGListener.class)
 public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
@@ -91,7 +81,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     HttpServletResponse httpServletResponse;
 
     @Mock
-    DeviceFlowPersistenceFactory deviceFlowPersistenceFactory;
+    DeviceFlowPersistenceFactory mockDeviceFlowPersistenceFactory;
 
     @Mock
     DeviceFlowDAO deviceFlowDAO;
@@ -100,7 +90,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     OAuthAppDO oAuthAppDO;
 
     @Mock
-    OAuthServerConfiguration oAuthServerConfiguration;
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
@@ -115,7 +105,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     UserAuthenticationEndpoint userAuthenticationEndpoint;
 
     @Mock
-    ServiceURLBuilder serviceURLBuilder;
+    ServiceURLBuilder mockServiceURLBuilder;
 
     @Mock
     ServiceURL serviceURL;
@@ -132,8 +122,10 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     private static final List<String> scopes = new ArrayList<>(Collections.singleton("openid"));
     private static final String TEST_DEVICE_CODE = "testDeviceCode";
 
-    @BeforeTest
-    public void setUp() {
+    MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+
+    @BeforeClass
+    public void setUp() throws Exception {
 
         deviceFlowDOAsNotExpired.setStatus(PENDING);
         deviceFlowDOAsNotExpired.setExpiryTime(new Timestamp(date.getTime() + 400000000));
@@ -149,6 +141,26 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
+        initiateInMemoryH2();
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+
+        cleanData();
+    }
+
+    @BeforeMethod
+    public void setUpBeforeMethod() {
+
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+        mockDatabase(identityDatabaseUtil);
+    }
+
+    @AfterMethod
+    public void tearDownAfterMethod() {
+
+        identityDatabaseUtil.close();
     }
 
     @DataProvider(name = "providePostParams")
@@ -176,40 +188,50 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     public void testDeviceAuthorize(String userCode, String clientId, int expectedValue, String status, String uri)
             throws Exception {
 
-        mockOAuthServerConfiguration();
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        mockStatic(DeviceFlowPersistenceFactory.class);
-        when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
-        when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
-        when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
-        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
-        when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-        when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
-        Response response1;
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
-        mockStatic(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addParameter(any(), any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.build()).thenReturn(serviceURL);
-        when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
+            try (MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
+                         mockStatic(DeviceFlowPersistenceFactory.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
 
-        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class)))
-                .thenReturn(response);
-        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-        userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-        userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
-        response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
-        Assert.assertNotNull(response1);
+                deviceFlowPersistenceFactory.when(
+                        DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
+                lenient().when(mockDeviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
+                lenient().when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
+                lenient().when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
+                when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
+
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+                lenient().when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
+                Response response1;
+
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.addPath(any())).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.addParameter(any(), any())).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.build()).thenReturn(serviceURL);
+                lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
+
+                lenient().when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
+                        any(HttpServletResponse.class))).thenReturn(response);
+                DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                userAuthenticationEndpoint = new UserAuthenticationEndpoint();
+                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
+                setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
+                response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
+                Assert.assertNotNull(response1);
+            }
+        }
     }
 
     /**
@@ -217,19 +239,14 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
      *
      * @throws Exception Error while mocking oauth server configuration.
      */
-    private void mockOAuthServerConfiguration() throws Exception {
+    private void mockOAuthServerConfiguration(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
+            throws Exception {
 
-        mockStatic(OAuthServerConfiguration.class);
-        when(OAuthServerConfiguration.getInstance()).thenReturn(oAuthServerConfiguration);
-        when(oAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        when(oAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
-        when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(new Answer<Object>() {
-            @Override
-            public Object answer(InvocationOnMock invocation) {
-
-                return invocation.getArguments()[0];
-            }
-        });
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+        lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
+        lenient().when(mockOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
+        lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
+                invocation -> invocation.getArguments()[0]);
     }
 
     @DataProvider(name = "providePostParamsForURLBuilderExceptionPath")
@@ -255,43 +272,54 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     public void testDeviceAuthorizeForURLBuilderExceptionPath(String userCode, String clientId, int expectedValue,
                                                               String status, String uri) throws Exception {
 
-        mockOAuthServerConfiguration();
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        mockStatic(DeviceFlowPersistenceFactory.class);
-        when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
-        when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
-        when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
-        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
-        when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-        when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
-        Response response1;
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
-        mockStatic(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addParameter(any(), any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.build()).thenThrow(new URLBuilderException("Throwing URLBuilderException."));
-        when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
+            try (MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
+                         mockStatic(DeviceFlowPersistenceFactory.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
 
-        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class))).
-                thenReturn(response);
-        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-        userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-        userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
-        response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
-        if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
-            Assert.assertNotNull(response1);
-        } else {
-            Assert.assertNull(response1);
+                deviceFlowPersistenceFactory.when(
+                        DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
+                when(mockDeviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
+                lenient().when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
+                when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsNotExpired);
+                when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+                lenient().when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
+                Response response1;
+
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.addPath(any())).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.addParameter(any(), any())).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.build())
+                        .thenThrow(new URLBuilderException("Throwing URLBuilderException."));
+                lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
+
+                when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
+                        any(HttpServletResponse.class))).
+                        thenReturn(response);
+                DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                userAuthenticationEndpoint = new UserAuthenticationEndpoint();
+                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
+                setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
+                response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
+                if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
+                    Assert.assertNotNull(response1);
+                } else {
+                    Assert.assertNull(response1);
+                }
+            }
         }
     }
 
@@ -318,44 +346,61 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     public void testDeviceAuthorizeForIOExceptionPath(String userCode, String clientId, int expectedValue,
                                                       String status, String uri) throws Exception {
 
-        mockOAuthServerConfiguration();
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class)) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
-        mockStatic(IdentityDatabaseUtil.class);
-        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
-        mockStatic(DeviceFlowPersistenceFactory.class);
-        when(DeviceFlowPersistenceFactory.getInstance()).thenReturn(deviceFlowPersistenceFactory);
-        when(deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
-        when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
-        when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsExpired);
-        when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
-        mockStatic(OAuth2Util.class);
-        when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
-        when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
-        Response response1;
-        mockStatic(IdentityTenantUtil.class);
-        when(IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-        when(IdentityTenantUtil.getTenantId(anyString())).thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
-        mockStatic(ServiceURLBuilder.class);
-        when(ServiceURLBuilder.create()).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addPath(any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.addParameter(any(), any())).thenReturn(serviceURLBuilder);
-        when(serviceURLBuilder.build()).thenReturn(serviceURL);
-        when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
-        Mockito.doThrow(new IOException("Throwing IOException.")).when(httpServletResponse).sendRedirect(TEST_URL);
+            try (MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
+                         mockStatic(DeviceFlowPersistenceFactory.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+                deviceFlowPersistenceFactory.when(
+                        DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
+                when(mockDeviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
+                lenient().when(deviceFlowDAO.getClientIdByUserCode(anyString())).thenReturn(clientId);
+                when(deviceFlowDAO.getDetailsForUserCode(anyString())).thenReturn(deviceFlowDOAsExpired);
+                when(httpServletRequest.getParameter(anyString())).thenReturn(userCode);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+                lenient().when(oAuthAppDO.getCallbackUrl()).thenReturn(uri);
+                Response response1;
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                        MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
-        when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class), any(HttpServletResponse.class)))
-                .thenReturn(response);
-        DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-        userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-        userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
-        WhiteboxImpl.setInternalState(userAuthenticationEndpoint, OAuth2AuthzEndpoint.class, oAuth2AuthzEndpoint);
-        response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
-        if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
-            Assert.assertNotNull(response1);
-        } else {
-            Assert.assertNull(response1);
+                serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
+                when(mockServiceURLBuilder.addPath(any())).thenReturn(mockServiceURLBuilder);
+                when(mockServiceURLBuilder.addParameter(any(), any())).thenReturn(mockServiceURLBuilder);
+                when(mockServiceURLBuilder.build()).thenReturn(serviceURL);
+                when(serviceURL.getAbsolutePublicURL()).thenReturn(TEST_URL);
+                lenient().doThrow(new IOException("Throwing IOException.")).when(httpServletResponse)
+                        .sendRedirect(TEST_URL);
+
+                lenient().when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
+                                any(HttpServletResponse.class))).thenReturn(response);
+                DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                userAuthenticationEndpoint = new UserAuthenticationEndpoint();
+                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
+                setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
+                response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
+                if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
+                    Assert.assertNotNull(response1);
+                } else {
+                    Assert.assertNull(response1);
+                }
+            }
         }
+    }
+
+    private void setInternalState(Object object, String fieldName, Object value)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        // set internal state of an object using java reflection
+        Field declaredField = object.getClass().getDeclaredField(fieldName);
+        declaredField.setAccessible(true);
+        declaredField.set(object, value);
     }
 }

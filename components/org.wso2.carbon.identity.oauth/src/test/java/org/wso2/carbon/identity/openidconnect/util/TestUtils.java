@@ -66,7 +66,8 @@ import java.util.Map;
 public class TestUtils {
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT_NAME = "scope_claim.sql";
+    public static final String H2_SCRIPT_NAME = "identity.sql";
+    public static final String H2_SCRIPT2_NAME = "insert_scope_claim.sql";
     public static Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
     private static final String NBF = "nbf";
     private static final String EXP = "exp";
@@ -80,6 +81,7 @@ public class TestUtils {
         dataSource.setUrl("jdbc:h2:mem:test" + DB_NAME);
         Connection connection = dataSource.getConnection();
         connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT_NAME) + "'");
+        connection.createStatement().executeUpdate("RUNSCRIPT FROM '" + getFilePath(H2_SCRIPT2_NAME) + "'");
 
         dataSourceMap.put(DB_NAME, dataSource);
     }
@@ -360,8 +362,7 @@ public class TestUtils {
     }
 
     public static Object[][] getRequestObjects(Key privateKey, Key privateKey2 , PublicKey publicKey, String
-            testClientId, String audience) throws
-            Exception {
+            testClientId, String audience) throws Exception {
 
         Map<String, Object> claims1 = new HashMap<>();
         Map<String, Object> claims2 = new HashMap<>();
@@ -425,33 +426,41 @@ public class TestUtils {
                 JWSAlgorithm.RS384.getName(), privateKey, publicKey, 0, claims5);
         String jsonWebEncryption5 = buildJWE(testClientId, testClientId, "2001", audience,
                 JWSAlgorithm.NONE.getName(), privateKey, publicKey, 0, claims5);
-        String jsonWebEncryption6 = buildJWE(testClientId, testClientId, "2001", audience,
-                JWSAlgorithm.RS256.getName(), privateKey, publicKey, 0, claims1);
         return new Object[][]{
-                {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted.", false},
-                {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted.", false},
-                {jsonWebToken3, claims2, true, false, true, "Valid Request Object, signed, not encrypted.", false},
-                {jsonWebToken4, claims2, false, false, true, "Valid Request Object, not signed, not encrypted.", false},
+                {jsonWebToken1, claims1, true, false, true, "Valid Request Object, signed, not encrypted.", false,
+                        JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
+                {jsonWebToken2, claims1, false, false, true, "Valid Request Object, not signed, not encrypted.", false,
+                        JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
+                {jsonWebToken3, claims2, true, false, true, "Valid Request Object, signed, not encrypted.", false,
+                        JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
+                {jsonWebToken4, claims2, false, false, true, "Valid Request Object, not signed, not encrypted.", false,
+                        JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
                 {jsonWebToken5, claims3, false, false, false, "Invalid Request Object, not signed, not encrypted, " +
-                        "mismatching client_id.", false},
+                        "mismatching client_id.", false, JWEAlgorithm.NONE.toString(),
+                        EncryptionMethod.NONE.toString()},
                 {jsonWebToken6, claims2, true, false, false, "Invalid Request Object, signed but with different key, " +
-                        "not encrypted.", false},
-                {jsonWebToken7, claims4, true, false, true, "Valid Request Object, signed, not encrypted.", false},
+                        "not encrypted.", false, JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
+                {jsonWebToken7, claims4, true, false, true, "Valid Request Object, signed, not encrypted.", false,
+                        JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
                 {"some-request-object", null, false, false, false, "Invalid Request Object string, " +
-                        "signed not encrypted.", false},
-                {"", null, false, false, false, "Invalid Request Object, signed not encrypted.", false},
-                {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted.", false},
-                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted.", false},
+                        "signed not encrypted.", false, JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
+                {"", null, false, false, false, "Invalid Request Object, signed not encrypted.", false,
+                        JWEAlgorithm.NONE.toString(), EncryptionMethod.NONE.toString()},
+                {jsonWebEncryption1, claims1, false, true, true, "Valid Request Object, signed and encrypted.", false,
+                        JWEAlgorithm.RSA_OAEP.toString(), EncryptionMethod.A128GCM.toString()},
+                {jsonWebEncryption2, claims1, true, true, true, "Valid Request Object, signed and encrypted.", false,
+                        JWEAlgorithm.RSA_OAEP_256.toString(), EncryptionMethod.A256GCM.toString()},
                 // FAPI tests.
                 // For testing, PS256, RS256 and ES256 are assumed as permitted algorithms.
                 {jsonWebEncryption3, claims5, true, true, true, "FAPI Request Object with a permitted signing " +
-                        "algorithm RS256, signed and encrypted.", true},
+                        "algorithm RS256, signed and encrypted.", true, JWEAlgorithm.RSA_OAEP_256.toString(),
+                        EncryptionMethod.A256GCM.toString()},
                 {jsonWebEncryption4, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
-                        "algorithm RS384, signed and encrypted.", true},
-                {jsonWebEncryption5, claims5, true, true, false, "FAPI Request Object with an unpermitted signing " +
-                        "algorithm NONE, signed and encrypted.", true},
-                {jsonWebEncryption6, claims5, true, true, false, "FAPI Request Object without mandatory parameters " +
-                        "and signed with a permitted signing algorithm RS256, signed and encrypted.", true}
+                        "algorithm RS384, signed and encrypted.", true, JWEAlgorithm.RSA_OAEP_256.toString(),
+                        EncryptionMethod.A256GCM.toString()},
+                {jsonWebEncryption5, claims5, false, true, false, "FAPI Request Object with an unpermitted signing " +
+                        "algorithm NONE, signed and encrypted.", true, JWEAlgorithm.RSA_OAEP.toString(),
+                        EncryptionMethod.A128GCM.toString()}
         };
     }
 }

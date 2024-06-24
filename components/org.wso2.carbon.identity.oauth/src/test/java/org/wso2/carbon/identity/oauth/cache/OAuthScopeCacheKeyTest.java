@@ -20,8 +20,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.assertNotEquals;
 
 public class OAuthScopeCacheKeyTest {
     String scopeName = "Scope1";
@@ -43,14 +42,14 @@ public class OAuthScopeCacheKeyTest {
     }
 
     @Test(dataProvider = "TestEqualsAuthorizationGrant")
-    public void testEquals(boolean istrue) throws Exception {
+    public void testEquals(boolean isTrue) throws Exception {
         Object object = new Object();
         OAuthScopeCacheKey oauthScopeCacheKey = new OAuthScopeCacheKey(scopeName);
         OAuthScopeCacheKey oAuthScopeCacheKeySample = new OAuthScopeCacheKey(scopeName);
-        if (istrue) {
-            assertTrue(oauthScopeCacheKey.equals(oAuthScopeCacheKeySample));
+        if (isTrue) {
+            assertEquals(oAuthScopeCacheKeySample, oauthScopeCacheKey);
         }
-        assertFalse(oauthScopeCacheKey.equals(object));
+        assertNotEquals(object, oauthScopeCacheKey);
     }
 
     @Test
