@@ -366,6 +366,8 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                         OAuth2ErrorCodes.INVALID_CLIENT},
                 {OAuth2ErrorCodes.SERVER_ERROR, null, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                         OAuth2ErrorCodes.SERVER_ERROR},
+                {OAuth2ErrorCodes.ACCESS_DENIED, null, HttpServletResponse.SC_BAD_REQUEST,
+                        OAuth2ErrorCodes.ACCESS_DENIED},
                 {SQL_ERROR, null, HttpServletResponse.SC_BAD_GATEWAY, OAuth2ErrorCodes.SERVER_ERROR},
                 {TOKEN_ERROR, null, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},
                 {TOKEN_ERROR, headers1, HttpServletResponse.SC_BAD_REQUEST, TOKEN_ERROR},

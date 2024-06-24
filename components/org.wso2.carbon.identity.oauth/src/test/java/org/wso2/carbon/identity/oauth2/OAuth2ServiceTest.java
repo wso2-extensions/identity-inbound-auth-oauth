@@ -498,6 +498,7 @@ public class OAuth2ServiceTest {
         return new Object[][]{
                 {new IdentityOAuth2Exception(""), "server_error"},
                 {new InvalidOAuthClientException(""), "invalid_client"},
+                {new IdentityOAuth2ClientException("access_denied", ""), "access_denied"}
         };
     }
 

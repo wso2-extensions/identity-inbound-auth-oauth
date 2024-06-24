@@ -21,7 +21,7 @@ package org.wso2.carbon.identity.oauth2.validators.validationhandler;
 /**
  * ScopeValidatorPolicyHandlerClientException
  */
-public class ScopeValidationHandlerClientException extends ScopeValidationHandlerException{
+public class ScopeValidationHandlerClientException extends ScopeValidationHandlerException {
 
     /**
      * Constructs a new exception with an error message.
