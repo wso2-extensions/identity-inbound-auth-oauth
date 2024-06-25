@@ -122,6 +122,7 @@ public class JWTTokenIssuerTest {
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
     private static final String DUMMY_TOKEN_ENDPOINT = "https://localhost:9443/oauth2/token";
+    private static final String DUMMY_MTLS_TOKEN_ENDPOINT = "https://mtls.localhost:9443/oauth2/token";
     private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
     private static final String DUMMY_USER_ID = "DUMMY_USER_ID";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
@@ -460,12 +461,15 @@ public class JWTTokenIssuerTest {
                                    long expectedExpiry, boolean ppidEnabled) throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
             OAuthAppDO appDO = spy(new OAuthAppDO());
             when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
                     .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
             mockGrantHandlers();
             mockCustomClaimsCallbackHandler();
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME))
+                    .thenReturn(DUMMY_MTLS_TOKEN_ENDPOINT);
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
 
@@ -477,7 +481,8 @@ public class JWTTokenIssuerTest {
             Certificate cert = wso2KeyStore.getCertificate("wso2carbon");
             oAuth2Util.when(() -> OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
             oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), anyBoolean())).thenCallRealMethod();
-            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any())).thenAnswer((Answer<Void>) invocation -> null);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any(), anyBoolean()))
+                    .thenAnswer((Answer<Void>) invocation -> null);
             oAuth2Util.when(() -> OAuth2Util.getKID(any(Certificate.class), any(JWSAlgorithm.class), anyString()))
                     .thenAnswer((Answer<Void>) invocation -> null);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))

@@ -372,7 +372,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 // Set authenticated client context
                 request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);
 
-                identityUtil.when(IdentityUtil::getProperty(OAuthConstants.MTLS_HOSTNAME).thenReturn(SERVER_BASE_PATH);
+                identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME))
+                        .thenReturn(SERVER_BASE_PATH);
                 request.setAttribute(OAuthConstants.TRANSPORT_ENDPOINT_ADDRESS, PAR_EP_URL);
 
                 endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
