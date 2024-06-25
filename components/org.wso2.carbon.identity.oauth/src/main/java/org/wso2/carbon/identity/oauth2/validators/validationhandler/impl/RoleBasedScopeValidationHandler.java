@@ -101,12 +101,13 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             List<String> filteredScopes = appAuthorizedScopes.stream().filter(associatedScopes::contains)
                     .collect(Collectors.toList());
             return requestedScopes.stream().filter(filteredScopes::contains).collect(Collectors.toList());
-        } catch (IdentityOAuth2ClientException e) {
+        } catch (IdentityOAuth2Exception | IdentityRoleManagementException e) {
+            if (e instanceof IdentityOAuth2ClientException) {
                 throw new ScopeValidationHandlerClientException("Error while validating scope with RBAC Scope " +
                         "Validation handler", e);
-        } catch (IdentityOAuth2Exception | IdentityRoleManagementException e) {
-                throw new ScopeValidationHandlerException("Error while validating scope with RBAC Scope Validation " +
-                        "handler", e);
+            }
+            throw new ScopeValidationHandlerException("Error while validation scope with RBAC Scope Validation " +
+                    "handler", e);
         }
     }
 
