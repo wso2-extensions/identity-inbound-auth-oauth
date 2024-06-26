@@ -44,6 +44,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String[] scopeValidators = null;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
+    private boolean hybridFlowEnabled;
+    private String hybridFlowResponseType;
     private String state;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
@@ -203,6 +205,22 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     public void setPkceMandatory(boolean pkceMandatory) {
         this.pkceMandatory = pkceMandatory;
+    }
+
+    public boolean isHybridFlowEnabled() {
+        return hybridFlowEnabled;
+    }
+
+    public void setHybridFlowEnabled(boolean hybridFlowEnabled) {
+        this.hybridFlowEnabled = hybridFlowEnabled;
+    }
+
+    public String getHybridFlowResponseType() {
+        return hybridFlowResponseType;
+    }
+
+    public void setHybridFlowResponseType(String hybridFlowResponseType) {
+        this.hybridFlowResponseType = hybridFlowResponseType;
     }
 
     public void setState(String state) {

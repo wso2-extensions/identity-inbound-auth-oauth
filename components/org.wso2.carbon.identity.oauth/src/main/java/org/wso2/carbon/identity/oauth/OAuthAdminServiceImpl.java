@@ -375,6 +375,8 @@ public class OAuthAdminServiceImpl {
                         app.setAudiences(application.getAudiences());
                         app.setPkceMandatory(application.getPkceMandatory());
                         app.setPkceSupportPlain(application.getPkceSupportPlain());
+                        app.setHybridFlowEnabled(application.isHybridFlowEnabled());
+                        app.setHybridFlowResponseType(application.getHybridFlowResponseType());
                         // Validate access token expiry configurations.
                         validateTokenExpiryConfigurations(application);
                         app.setUserAccessTokenExpiryTime(application.getUserAccessTokenExpiryTime());
@@ -796,6 +798,9 @@ public class OAuthAdminServiceImpl {
         oAuthAppDO.setApplicationName(consumerAppDTO.getApplicationName());
         oAuthAppDO.setPkceMandatory(consumerAppDTO.getPkceMandatory());
         oAuthAppDO.setPkceSupportPlain(consumerAppDTO.getPkceSupportPlain());
+        oAuthAppDO.setHybridFlowEnabled(consumerAppDTO.isHybridFlowEnabled());
+        oAuthAppDO.setHybridFlowResponseType(consumerAppDTO.getHybridFlowResponseType());
+
         // Validate access token expiry configurations.
         validateTokenExpiryConfigurations(consumerAppDTO);
         oAuthAppDO.setUserAccessTokenExpiryTime(consumerAppDTO.getUserAccessTokenExpiryTime());

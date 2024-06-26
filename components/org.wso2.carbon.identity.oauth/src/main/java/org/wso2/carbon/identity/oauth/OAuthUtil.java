@@ -523,6 +523,8 @@ public final class OAuthUtil {
         dto.setState(appDO.getState());
         dto.setPkceMandatory(appDO.isPkceMandatory());
         dto.setPkceSupportPlain(appDO.isPkceSupportPlain());
+        dto.setHybridFlowEnabled(appDO.isHybridFlowEnabled());
+        dto.setHybridFlowResponseType(appDO.getHybridFlowResponseType());
         dto.setUserAccessTokenExpiryTime(appDO.getUserAccessTokenExpiryTime());
         dto.setApplicationAccessTokenExpiryTime(appDO.getApplicationAccessTokenExpiryTime());
         dto.setRefreshTokenExpiryTime(appDO.getRefreshTokenExpiryTime());

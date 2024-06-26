@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth.common.CodeTokenResponseValidator;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
@@ -62,6 +63,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -364,6 +366,13 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                 loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
 
                 HttpServletRequest request = mockHttpRequest(requestParams, new HashMap<>());
+
+                if (Objects.equals(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE),
+                        RESPONSE_TYPE_CODE_ID_TOKEN)) {
+                    OAuthAppDO oauthAppDO = OAuth2Util.getAppInformationByClientId(CLIENT_ID_VALUE);
+                    oauthAppDO.setHybridFlowEnabled(true);
+                    oauthAppDO.setHybridFlowResponseType(RESPONSE_TYPE_CODE_ID_TOKEN);
+                }
 
                 // Set authenticated client context
                 request.setAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT, oAuthClientAuthnContext);

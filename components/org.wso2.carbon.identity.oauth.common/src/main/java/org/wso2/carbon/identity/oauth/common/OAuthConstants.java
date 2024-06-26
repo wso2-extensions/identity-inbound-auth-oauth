@@ -608,6 +608,8 @@ public final class OAuthConstants {
         public static final String BACK_CHANNEL_LOGOUT_URL = "backChannelLogoutURL";
         public static final String FRONT_CHANNEL_LOGOUT_URL = "frontchannelLogoutURL";
         public static final String TOKEN_TYPE = "tokenType";
+        public static final String HYBRID_FLOW_ENABLED = "hybridFlowEnabled";
+        public static final String HYBRID_FLOW_RESPONSE_TYPE = "hybridFlowResponseType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
