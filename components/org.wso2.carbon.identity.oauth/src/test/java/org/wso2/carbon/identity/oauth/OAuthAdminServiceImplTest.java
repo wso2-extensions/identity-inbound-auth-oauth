@@ -850,6 +850,34 @@ public class OAuthAdminServiceImplTest {
         }
     }
 
+    @DataProvider(name = "getTokenAuthMethodAndTokenReuseConfigData")
+    public Object[][] getTokenAuthMethodAndTokenReuseConfigData() {
+
+        return new Object[][]{
+                // Client auth method, Expected result.
+                {"private_key_jwt", null, true},
+                {null, true, true},
+                {"", true, true},
+                {" ", true, true},
+                {"dummy_method", true, true},
+                {"private_key_jwt", true, false},
+                {null, null, false},
+                {"dummy_method", null, false}};
+    }
+
+    @Test(description = "Test invalid reuse token config & client auth method combination.",
+            dataProvider = "getTokenAuthMethodAndTokenReuseConfigData")
+    private void testInvalidReuseTokenRequestAndClientAuthMethod(String tokenEndpointAuthMethod,
+                                                                  Boolean tokenEndpointReusePvtKeyJWT,
+                                                                  boolean expectedResult) throws Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+
+        Assert.assertEquals(invokePrivateMethod(oAuthAdminService,
+                "isInvalidTokenEPReusePvtKeyJWTRequest", new Class[]{String.class, Boolean.class},
+                tokenEndpointAuthMethod, tokenEndpointReusePvtKeyJWT), expectedResult);
+    }
+
     @Test(description = "Test validating signature algorithm")
     private void testValidateSignatureAlgorithm() throws Exception {
 
@@ -1055,6 +1083,14 @@ public class OAuthAdminServiceImplTest {
                 paramTypes[i] = params[i].getClass().getInterfaces()[0];
             }
         }
+        Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
+        method.setAccessible(true);
+        return method.invoke(object, params);
+    }
+
+    private Object invokePrivateMethod(Object object, String methodName, Class<?>[] paramTypes, Object... params)
+            throws Exception {
+
         Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
         method.setAccessible(true);
         return method.invoke(object, params);
