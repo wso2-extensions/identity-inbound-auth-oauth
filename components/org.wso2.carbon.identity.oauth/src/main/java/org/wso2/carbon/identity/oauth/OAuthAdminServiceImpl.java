@@ -431,8 +431,8 @@ public class OAuthAdminServiceImpl {
                             app.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
                         }
                         Boolean tokenEndpointReusePvtKeyJWT = application.isTokenEndpointAllowReusePvtKeyJwt();
-                        if (tokenEndpointAuthMethod != null && !tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT)
-                                && tokenEndpointReusePvtKeyJWT != null) {
+                        if (isInvalidTokenEPReusePvtKeyJWTRequest(tokenEndpointAuthMethod,
+                                tokenEndpointReusePvtKeyJWT)) {
                             throw handleClientError(INVALID_REQUEST,
                                     "Invalid token endpoint authentication method requested.");
                         }
@@ -863,11 +863,10 @@ public class OAuthAdminServiceImpl {
             }
             oAuthAppDO.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
 
-            // Todo: Do we really need to throw an error. Though the auth mechanism is not pvt ket jwt there's no harm
-            //  in storing this either.
-            boolean tokenEndpointReusePvtKeyJWT = consumerAppDTO.isTokenEndpointAllowReusePvtKeyJwt();
-            if (!tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT) && tokenEndpointReusePvtKeyJWT) {
-                throw handleClientError(INVALID_REQUEST, "Invalid token endpoint authentication method requested.");
+            Boolean tokenEndpointReusePvtKeyJWT = consumerAppDTO.isTokenEndpointAllowReusePvtKeyJwt();
+            if (isInvalidTokenEPReusePvtKeyJWTRequest(tokenEndpointAuthMethod, tokenEndpointReusePvtKeyJWT)) {
+                throw handleClientError(INVALID_REQUEST,
+                        "Invalid token endpoint authentication method requested.");
             }
             oAuthAppDO.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointReusePvtKeyJWT);
 
@@ -2505,6 +2504,27 @@ public class OAuthAdminServiceImpl {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
             }
+        }
+    }
+
+    /**
+     * Return whether the request of updating the tokenEndpointReusePvtKeyJWT is valid.
+     *
+     * @param tokenEndpointAuthMethod     token endpoint client authentication method.
+     * @param tokenEndpointReusePvtKeyJWT During client authentication whether to reuse private key JWT.
+     * @return True if tokenEndpointAuthMethod and tokenEndpointReusePvtKeyJWT is NOT in the correct format.
+     */
+    private boolean isInvalidTokenEPReusePvtKeyJWTRequest(String tokenEndpointAuthMethod,
+                                                          Boolean tokenEndpointReusePvtKeyJWT) {
+
+        if (StringUtils.isNotBlank(tokenEndpointAuthMethod)) {
+            if (tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT)) {
+                return tokenEndpointReusePvtKeyJWT == null;
+            } else {
+                return tokenEndpointReusePvtKeyJWT != null;
+            }
+        } else {
+            return tokenEndpointReusePvtKeyJWT != null;
         }
     }
 
