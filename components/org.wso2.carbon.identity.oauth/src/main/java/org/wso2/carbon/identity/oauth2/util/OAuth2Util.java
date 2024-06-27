@@ -4171,9 +4171,15 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
+        return getIdTokenIssuer(tenantDomain, false);
+    }
+
+    public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
+
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
+                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -4184,12 +4190,14 @@ public class OAuth2Util {
         }
     }
 
-    public static String getIdTokenIssuer(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
+    public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
+            throws IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
-                        PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
+                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
+                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
+                                PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -5427,5 +5435,15 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
                     authenticatedUser.getUserResidentOrganization(), e);
         }
+    }
+
+    /**
+     * Check whether the request URL is a mtls endpoint.
+     * @param requestUrl Request URL.
+     * @return True if the request URL is a mtls endpoint.
+     */
+    public static boolean isMtlsRequest(String requestUrl) {
+
+        return requestUrl.contains(IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
     }
 }

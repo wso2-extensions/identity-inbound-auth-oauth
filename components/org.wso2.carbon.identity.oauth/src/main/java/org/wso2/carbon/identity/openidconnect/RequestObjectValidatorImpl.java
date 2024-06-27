@@ -163,7 +163,8 @@ public class RequestObjectValidatorImpl implements RequestObjectValidator {
     protected boolean isValidAudience(RequestObject requestObject, OAuth2Parameters oAuth2Parameters) throws
             RequestObjectException {
 
-        String tokenEPUrl = getTokenEpURL(oAuth2Parameters.getTenantDomain());
+        String tokenEPUrl = oAuth2Parameters.isMtlsRequest() ? OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl() :
+                getTokenEpURL(oAuth2Parameters.getTenantDomain());
         List<String> audience = requestObject.getClaimsSet().getAudience();
         return validateAudience(tokenEPUrl, audience);
     }

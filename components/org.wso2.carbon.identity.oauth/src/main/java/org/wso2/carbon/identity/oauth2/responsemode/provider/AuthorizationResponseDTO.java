@@ -35,6 +35,7 @@ public class AuthorizationResponseDTO {
     private String redirectUrl;
     private String responseMode;
     private String responseType;
+    private boolean isMtlsRequest;
 
     private int responseCode = HttpServletResponse.SC_FOUND;
 
@@ -192,5 +193,15 @@ public class AuthorizationResponseDTO {
     public void setResponseCode(int responseCode) {
 
         this.responseCode = responseCode;
+    }
+
+    public boolean isMtlsRequest() {
+
+        return isMtlsRequest;
+    }
+
+    public void setMtlsRequest(boolean mtlsRequest) {
+
+        isMtlsRequest = mtlsRequest;
     }
 }

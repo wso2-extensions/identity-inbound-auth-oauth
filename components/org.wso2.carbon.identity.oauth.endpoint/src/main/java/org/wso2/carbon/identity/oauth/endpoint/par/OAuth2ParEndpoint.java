@@ -29,6 +29,7 @@ import org.json.JSONObject;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -102,6 +103,11 @@ public class OAuth2ParEndpoint {
 
         try {
             Map<String, String> parameters = transformParams(params);
+            String basePath = request.getAttribute(OAuthConstants.TRANSPORT_ENDPOINT_ADDRESS).toString();
+            /* If the request is coming from the MTLS PAR endpoint, we need to keep track of it in order to validate
+            the audience value and set issuer claims. */
+            boolean isMTLSRequest = basePath.contains(IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
+            parameters.put(OAuthConstants.X_WSO2_MTLS_REQUEST, String.valueOf(isMTLSRequest));
 
             /* Validate signature and override request object parameters.
             Until the JAR(rfc 9101) specification is implemented, this is added as a workaround to allow sending PAR
@@ -389,6 +395,8 @@ public class OAuth2ParEndpoint {
                     parameters.setRedirectURI(oAuthAuthzRequest.getRedirectURI());
                     parameters.setResponseType(oAuthAuthzRequest.getResponseType());
                     parameters.setTenantDomain(getSPTenantDomainFromClientId(oAuthAuthzRequest.getClientId()));
+                    parameters.setIsMtlsRequest(
+                            Boolean.parseBoolean(oAuthAuthzRequest.getParam(OAuthConstants.X_WSO2_MTLS_REQUEST)));
 
                     requestObject = OIDCRequestObjectUtil.buildRequestObject(oAuthAuthzRequest, parameters);
                     if (requestObject == null) {

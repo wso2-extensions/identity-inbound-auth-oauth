@@ -642,6 +642,7 @@ public class OAuth2AuthzEndpoint {
         authorizationResponseDTO.setState(oauth2Params.getState());
         authorizationResponseDTO.setResponseMode(oauth2Params.getResponseMode());
         authorizationResponseDTO.setResponseType(oauth2Params.getResponseType());
+        authorizationResponseDTO.setMtlsRequest(oauth2Params.isMtlsRequest());
 
         return authorizationResponseDTO;
     }
@@ -1599,6 +1600,7 @@ public class OAuth2AuthzEndpoint {
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
                 oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
+        oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
         if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
@@ -2576,6 +2578,9 @@ public class OAuth2AuthzEndpoint {
         }
 
         handleMaxAgeParameter(oauthRequest, params);
+
+        Object isMtls = oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_MTLS_REQUEST);
+        params.setIsMtlsRequest(isMtls != null && Boolean.parseBoolean(isMtls.toString()));
 
         /*
             OIDC Request object will supersede parameters sent in the OAuth Authorization request. So handling the
