@@ -313,7 +313,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder);
 
-        authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
+        if (StringUtils.isNotBlank(accessToken)) {
+            authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
+        }
         authzReqMessageContext
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);
