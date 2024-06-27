@@ -68,10 +68,12 @@ public class ApplicationRegistrationRequest implements Serializable {
     private Map<String, Object> additionalAttributes;
 
     public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
+
         this.additionalAttributes = additionalAttributes;
     }
 
     public Map<String, Object> getAdditionalAttributes() {
+
         return additionalAttributes;
     }
 
