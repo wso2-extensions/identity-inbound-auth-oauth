@@ -64,48 +64,57 @@ public class OldTokensCleanDAO {
         }
     }
 
-    public void cleanupTokenByTokenValue(String token, Connection connection) throws SQLException {
+    /**
+     * This method is used to clean-up old tokens by token hash value.
+     *
+     * @param tokenHash  Token hash value.
+     * @param connection Database connection.
+     * @throws SQLException If an error occurs while cleaning up the token.
+     */
+    public void cleanupTokenByTokenValue(String tokenHash, Connection connection) throws SQLException {
+
         OldAccessTokenDO oldAccessTokenObject = new OldAccessTokenDO();
-
-        String sql;
-        if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH_WITH_IDP_NAME;
-        } else {
-            sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH;
-        }
-
-        PreparedStatement prepStmt = connection.prepareStatement(sql);
-        prepStmt.setString(1, token);
-        ResultSet resultSet = prepStmt.executeQuery();
-        //iterate result set and insert to AccessTokenDO object.
-        if (resultSet.next()) {
-            oldAccessTokenObject.setTokenId(resultSet.getString(1));
-            oldAccessTokenObject.setAccessToken(resultSet.getString(2));
-            oldAccessTokenObject.setRefreshToken(resultSet.getString(3));
-            oldAccessTokenObject.setConsumerKeyId(resultSet.getInt(4));
-            oldAccessTokenObject.setAuthzUser(resultSet.getString(5));
-            oldAccessTokenObject.setTenantId(resultSet.getInt(6));
-            oldAccessTokenObject.setUserDomain(resultSet.getString(7));
-            oldAccessTokenObject.setUserType(resultSet.getString(8));
-            oldAccessTokenObject.setGrantType(resultSet.getString(9));
-            oldAccessTokenObject.setTimeCreated(resultSet.getTimestamp(10));
-            oldAccessTokenObject.setRefreshTokenTimeCreated(resultSet.getTimestamp(11));
-            oldAccessTokenObject.setValdityPeriod(resultSet.getLong(12));
-            oldAccessTokenObject.setRefreshTokenValidityPeriod(resultSet.getLong(13));
-            oldAccessTokenObject.setTokenScopeHash(resultSet.getString(14));
-            oldAccessTokenObject.setTokenState(resultSet.getString(15));
-            oldAccessTokenObject.setTokenStateId(resultSet.getString(16));
-            oldAccessTokenObject.setSubjectIdentifier(resultSet.getString(17));
-            oldAccessTokenObject.setAccessTokenHash(resultSet.getString(18));
-            oldAccessTokenObject.setRefreshTokenHash(resultSet.getString(19));
-            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                oldAccessTokenObject.setIdpId(resultSet.getInt(20));
-            }
-        }
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
+            String sql;
+            if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH_WITH_IDP_NAME;
+            } else {
+                sql = SQLQueries.RETRIEVE_OLD_TOKEN_BY_TOKEN_HASH;
+            }
+
+            PreparedStatement prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, tokenHash);
+            ResultSet resultSet = prepStmt.executeQuery();
+            //iterate result set and insert to AccessTokenDO object.
+            if (resultSet.next()) {
+                oldAccessTokenObject.setTokenId(resultSet.getString(1));
+                oldAccessTokenObject.setAccessToken(resultSet.getString(2));
+                oldAccessTokenObject.setRefreshToken(resultSet.getString(3));
+                oldAccessTokenObject.setConsumerKeyId(resultSet.getInt(4));
+                oldAccessTokenObject.setAuthzUser(resultSet.getString(5));
+                oldAccessTokenObject.setTenantId(resultSet.getInt(6));
+                oldAccessTokenObject.setUserDomain(resultSet.getString(7));
+                oldAccessTokenObject.setUserType(resultSet.getString(8));
+                oldAccessTokenObject.setGrantType(resultSet.getString(9));
+                oldAccessTokenObject.setTimeCreated(resultSet.getTimestamp(10));
+                oldAccessTokenObject.setRefreshTokenTimeCreated(resultSet.getTimestamp(11));
+                oldAccessTokenObject.setValdityPeriod(resultSet.getLong(12));
+                oldAccessTokenObject.setRefreshTokenValidityPeriod(resultSet.getLong(13));
+                oldAccessTokenObject.setTokenScopeHash(resultSet.getString(14));
+                oldAccessTokenObject.setTokenState(resultSet.getString(15));
+                oldAccessTokenObject.setTokenStateId(resultSet.getString(16));
+                oldAccessTokenObject.setSubjectIdentifier(resultSet.getString(17));
+                oldAccessTokenObject.setAccessTokenHash(resultSet.getString(18));
+                oldAccessTokenObject.setRefreshTokenHash(resultSet.getString(19));
+                if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
+                    oldAccessTokenObject.setIdpId(resultSet.getInt(20));
+                }
+            }
             saveTokenInAuditTable(oldAccessTokenObject, connection);
+            removeTokenFromMainTable(oldAccessTokenObject.getTokenId(), connection);
+        } else {
+            removeTokenFromMainTableByTokenHash(tokenHash, connection);
         }
-        removeTokenFromMainTable(oldAccessTokenObject.getTokenId(), connection);
     }
 
     private void saveTokenInAuditTable(OldAccessTokenDO oldAccessTokenDAO, Connection connection) throws SQLException {
@@ -160,6 +169,27 @@ public class OldTokensCleanDAO {
             if (log.isDebugEnabled()) {
                 log.debug(
                         "Successfully old access token deleted from access token table. Token ID: " + oldAccessTokenID);
+            }
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            log.error("SQL error occurred while remove token from main table", e);
+        }
+    }
+
+    private void removeTokenFromMainTableByTokenHash(String accessTokenHash, Connection connection)
+            throws SQLException {
+
+        connection.setAutoCommit(false);
+        try {
+            PreparedStatement deletefromaccesstokentable =
+                    connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_TOKEN_HASH);
+            deletefromaccesstokentable.setString(1, accessTokenHash);
+            deletefromaccesstokentable.executeUpdate();
+            if (log.isDebugEnabled()) {
+                log.debug(
+                        "Successfully old access token deleted from access token table. Token Hash: " +
+                                accessTokenHash);
             }
             connection.commit();
         } catch (SQLException e) {
