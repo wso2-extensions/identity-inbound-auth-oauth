@@ -1,8 +1,11 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -47,6 +50,7 @@ public class UpdateRequestDTO {
     private String requestObjectEncryptionAlgorithm = null;
     private String requestObjectEncryptionMethod = null;
     private String softwareStatement = null;
+    private final Map<String, Object> additionalAttributes = new HashMap<>();
 
     @ApiModelProperty(value = "")
     @JsonProperty("redirect_uris")
@@ -386,6 +390,14 @@ public class UpdateRequestDTO {
         this.jwksUri = jwksUri;
     }
 
+    @JsonAnySetter
+    public void setAdditionalAttributes(String key, Object value) {
+        additionalAttributes.put(key, value);
+    }
+
+    public Map<String, Object> getAdditionalAttributes() {
+        return additionalAttributes;
+    }
 
     @Override
     public String toString() {
@@ -417,6 +429,7 @@ public class UpdateRequestDTO {
         sb.append("  id_token_encrypted_response_enc: ").append(idTokenEncryptedResponseEnc).append("\n");
         sb.append("  request_object_signing_alg: ").append(requestObjectSigningAlg).append("\n");
         sb.append("  tls_client_auth_subject_dn: ").append(tlsClientAuthSubjectDn).append("\n");
+        sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
         sb.append("}\n");
         return sb.toString();
     }

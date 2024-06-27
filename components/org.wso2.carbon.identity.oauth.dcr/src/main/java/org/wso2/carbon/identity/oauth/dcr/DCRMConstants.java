@@ -57,7 +57,9 @@ public class DCRMConstants {
         FAILED_TO_VALIDATE_TENANT_DOMAIN("Error occurred during validating tenant domain for consumer key: %s"),
         FAILED_TO_GET_TENANT_ADMIN("Error occurred during white getting tenant admin."),
         SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement"),
-        MANDATORY_SOFTWARE_STATEMENT("Mandatory software statement is missing");
+        MANDATORY_SOFTWARE_STATEMENT("Mandatory software statement is missing"),
+        FAILED_TO_READ_SSA("Error occurred while reading the software statement"),
+        ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes");
 
         private final String message;
         private final String errorCode;

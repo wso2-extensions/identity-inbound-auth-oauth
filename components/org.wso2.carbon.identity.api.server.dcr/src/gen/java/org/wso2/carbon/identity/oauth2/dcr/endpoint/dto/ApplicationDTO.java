@@ -1,7 +1,10 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import io.swagger.annotations.*;
 import com.fasterxml.jackson.annotation.*;
 
@@ -76,8 +79,8 @@ public class ApplicationDTO  {
     private String requestObjectEncryptionAlgorithm = null;
     private String requestObjectEncryptionMethod = null;
     private String softwareStatement = null;
+    private  Map<String, Object> additionalAttributes;
 
-  
   /**
    **/
   @ApiModelProperty(value = "")
@@ -423,6 +426,15 @@ public class ApplicationDTO  {
     this.softwareStatement = softwareStatement;
   }
 
+  public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
+    this.additionalAttributes = additionalAttributes;
+  }
+
+  @JsonAnyGetter
+  public Map<String, Object> getAdditionalAttributes() {
+    return additionalAttributes;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -458,6 +470,7 @@ public class ApplicationDTO  {
     sb.append("  requestObjectEncryptionAlgorithm: ").append(requestObjectEncryptionAlgorithm).append("\n");
     sb.append("  requestObjectEncryptionMethod: ").append(requestObjectEncryptionMethod).append("\n");
     sb.append("  softwareStatement: ").append(softwareStatement).append("\n");
+    sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
         
     sb.append("}\n");
     return sb.toString();

@@ -1,11 +1,16 @@
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.dto;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import org.json.JSONObject;
 
 import javax.validation.constraints.NotNull;
 
@@ -57,6 +62,7 @@ public class RegistrationRequestDTO  {
   private String requestObjectEncryptionAlgorithm = null;
   private String requestObjectEncryptionMethod = null;
   private String softwareStatement = null;
+  private final Map<String, Object> additionalAttributes = new HashMap<>();
 
   @ApiModelProperty(required = true)
   @JsonProperty("redirect_uris")
@@ -459,6 +465,15 @@ public class RegistrationRequestDTO  {
     this.softwareStatement = softwareStatement;
   }
 
+  @JsonAnySetter
+  public void setAdditionalAttributes(String key, Object value) {
+    additionalAttributes.put(key, value);
+  }
+
+  public Map<String, Object> getAdditionalAttributes() {
+    return additionalAttributes;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -505,6 +520,7 @@ public class RegistrationRequestDTO  {
     sb.append(" subject_type: ").append(subjectType).append("\n");
     sb.append(" request_object_encryption_alg: ").append(requestObjectEncryptionAlgorithm).append("\n");
     sb.append(" request_object_encryption_enc").append(requestObjectEncryptionMethod).append("\n");
+    sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
