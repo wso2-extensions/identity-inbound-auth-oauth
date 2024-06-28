@@ -4097,6 +4097,12 @@ public class OAuth2Util {
                         "User id is not available for user: " + authzUser.getLoggableMaskedUserId(), e);
             }
         }
+        if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
+            authzUser.setAccessingOrganization(authzUser.getAccessingOrganization());
+            authzUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
+            // Update user tenant domain.
+            authzUser.setTenantDomain(authzUser.getTenantDomain());
+        }
         return authenticatedUser;
     }
 
@@ -4144,6 +4150,62 @@ public class OAuth2Util {
             authenticatedUser.setFederatedIdPName(idpName);
         }
 
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username        username of the user
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName         idp name
+     * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantID The tenant ID of the application where user get authenticated.
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, int appTenantID)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        /* For organization bound access tokens, the authenticated user should be populated considering
+                    below factors. */
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            authenticatedUser.setAccessingOrganization(accessingOrganization);
+            String userResidentOrg = resolveOrganizationId(tenantDomain);
+            authenticatedUser.setUserResidentOrganization(userResidentOrg);
+            // Set authorized user tenant domain to the tenant domain of the application.
+            authenticatedUser.setTenantDomain(IdentityTenantUtil.getTenantDomain(appTenantID));
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username        username of the user
+     * @param userStoreDomain user store domain
+     * @param tenantDomain    tenent domain
+     * @param idpName         idp name
+     * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantDomain The tenant domain of the application where user get authenticated.
+     * @return an instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, String appTenantDomain)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        /* For organization bound access tokens, the authenticated user should be populated considering
+                    below factors. */
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            authenticatedUser.setAccessingOrganization(accessingOrganization);
+            String userResidentOrg = resolveOrganizationId(tenantDomain);
+            authenticatedUser.setUserResidentOrganization(userResidentOrg);
+            // Set authorized user tenant domain to the tenant domain of the application.
+            authenticatedUser.setTenantDomain(appTenantDomain);
+        }
         return authenticatedUser;
     }
 
@@ -5445,5 +5507,16 @@ public class OAuth2Util {
     public static boolean isMtlsRequest(String requestUrl) {
 
         return requestUrl.contains(IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
+    }
+
+    private static String resolveOrganizationId(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving organization ID for the tenant domain: " +
+                    tenantDomain, e);
+        }
     }
 }

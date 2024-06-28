@@ -574,14 +574,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setGrantType(grantType);
                     accessTokenDO.setAppResidentTenantId(appTenantId);
 
-                    if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
-                        accessTokenDO.getAuthzUser().setAccessingOrganization(authzUser.getAccessingOrganization());
-                        accessTokenDO.getAuthzUser()
-                                .setUserResidentOrganization(authzUser.getUserResidentOrganization());
-                        // Update user tenant domain.
-                        accessTokenDO.getAuthzUser().setTenantDomain(authzUser.getTenantDomain());
-                    }
-
                     if (StringUtils.isNotEmpty(isConsentedToken)) {
                         accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
                     }
@@ -998,7 +990,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     String authorizedOrganization = resultSet.getString(12);
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(tenantAwareUsernameWithNoUserDomain,
-                            userDomain, tenantDomain, authenticatedIDP);
+                            userDomain, tenantDomain, authenticatedIDP, authorizedOrganization, appTenantId);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -1008,15 +1000,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                                 "for client id " + consumerKey, e);
                     }
                     user.setAuthenticatedSubjectIdentifier(subjectIdentifier, serviceProvider);
-                    /* For organization bound access tokens, the authenticated user should be populated considering
-                    below factors. */
-                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
-                        user.setAccessingOrganization(authorizedOrganization);
-                        String userResidentOrg = resolveOrganizationId(user.getTenantDomain());
-                        user.setUserResidentOrganization(userResidentOrg);
-                        // Set authorized user tenant domain to the tenant domain of the application.
-                        user.setTenantDomain(IdentityTenantUtil.getTenantDomain(appTenantId));
-                    }
                     AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                             refreshTokenIssuedTime, validityPeriodInMillis,
                             refreshTokenValidityPeriodMillis, tokenType);
@@ -1133,7 +1116,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     }
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authorizedUser,
-                            userDomain, tenantDomain, authenticatedIDP);
+                            userDomain, tenantDomain, authenticatedIDP, authorizedOrganization, appResideTenantId);
                     ServiceProvider serviceProvider;
                     try {
                         serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().
@@ -1154,16 +1137,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
                     dataDO.setAppResidentTenantId(appResideTenantId);
-
-                    /* For organization bound access tokens, the authenticated user should be populated considering
-                    below factors. */
-                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
-                        dataDO.getAuthzUser().setAccessingOrganization(authorizedOrganization);
-                        String userResidentOrg = resolveOrganizationId(dataDO.getAuthzUser().getTenantDomain());
-                        dataDO.getAuthzUser().setUserResidentOrganization(userResidentOrg);
-                        // Set authorized user tenant domain to the tenant domain of the application.
-                        dataDO.getAuthzUser().setTenantDomain(IdentityTenantUtil.getTenantDomain(appResideTenantId));
-                    }
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
@@ -1992,16 +1965,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         authorizedOrganizationId = rs.getString(8);
                     }
                     String[] scope = OAuth2Util.buildScopeArray(tokenSope);
-                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
-                            userDomain, OAuth2Util.getTenantDomain(tenentId), authenticatedIDP);
+                    AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userDomain,
+                            OAuth2Util.getTenantDomain(tenentId), authenticatedIDP, authorizedOrganizationId,
+                            appTenantId);
                     user.setAuthenticatedSubjectIdentifier(rs.getString(7));
-                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganizationId)) {
-                        user.setAccessingOrganization(authorizedOrganizationId);
-                        String userResidentOrg = resolveOrganizationId(user.getTenantDomain());
-                        user.setUserResidentOrganization(userResidentOrg);
-                        // Set authorized user tenant domain to the tenant domain of the application.
-                        user.setTenantDomain(IdentityTenantUtil.getTenantDomain(appTenantId));
-                    }
                     AccessTokenDO aTokenDetail = new AccessTokenDO();
                     aTokenDetail.setAccessToken(token);
                     aTokenDetail.setConsumerKey(consumerKey);
@@ -2213,16 +2180,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     }
 
                     AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain,
-                            OAuth2Util.getTenantDomain(tenantId), authenticatedIDP);
-                    /* For organization bound access tokens, the authenticated user should be populated considering
-                    below factors. */
-                    if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
-                        user.setAccessingOrganization(authorizedOrganization);
-                        String userResidentOrg = resolveOrganizationId(user.getTenantDomain());
-                        user.setUserResidentOrganization(userResidentOrg);
-                        // Set authorized user tenant domain to the tenant domain of the application.
-                        user.setTenantDomain(rootTenantDomain);
-                    }
+                            OAuth2Util.getTenantDomain(tenantId), authenticatedIDP, authorizedOrganization,
+                            rootTenantDomain);
                     AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                             refreshTokenIssuedTime, validityPeriodInMillis,
                             refreshTokenValidityPeriodMillis, tokenType);
@@ -2289,13 +2248,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                         }
 
                         AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser, userStoreDomain,
-                                OAuth2Util.getTenantDomain(tenantId), authenticatedIDP);
-                        /* For organization bound access tokens, the authenticated user should be populated considering
-                            below factors. */
-                        user.setAccessingOrganization(organizationId);
-                        String userResidentOrg = resolveOrganizationId(user.getTenantDomain());
-                        user.setUserResidentOrganization(userResidentOrg);
-                        user.setTenantDomain(rootTenantDomain);
+                                OAuth2Util.getTenantDomain(tenantId), authenticatedIDP, organizationId,
+                                rootTenantDomain);
                         AccessTokenDO dataDO = new AccessTokenDO(consumerKey, user, scope, issuedTime,
                                 refreshTokenIssuedTime, validityPeriodInMillis,
                                 refreshTokenValidityPeriodMillis, tokenType);
@@ -3046,12 +3000,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         PreparedStatement ps = null;
         ResultSet resultSet = null;
         Set<AccessTokenDO> accessTokens = new HashSet<>();
+        int appTenantId = IdentityTenantUtil.getLoginTenantId();
         try {
             String sqlQuery = OAuth2Util.getTokenPartitionedSqlByUserStore(SQLQueries.
                     GET_ACCESS_TOKENS_FOR_CONSUMER_KEY_AND_SCOPE, userStoreDomain);
             ps = connection.prepareStatement(sqlQuery);
             ps.setString(1, consumerKey);
-            ps.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            ps.setInt(2, appTenantId);
             ps.setString(3, OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
             ps.setString(4, scope);
             resultSet = ps.executeQuery();
@@ -3073,18 +3028,10 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 tokenBinding.setBindingReference(bindingRef);
 
                 AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
-                        userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
+                        userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName, authorizedOrganization,
+                        appTenantId);
                 user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
-                    user.setAccessingOrganization(authorizedOrganization);
-                    user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
-                                /* Tenant domain of the application is set as the authenticated user tenant domain
-                                for the organization SSO login users. */
-                    if (user.isFederatedUser()) {
-                        user.setTenantDomain(
-                                OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
-                    }
-                }
+
                 Timestamp issuedTime = resultSet
                         .getTimestamp(OAuthColumnName.TIME_CREATED, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 Timestamp refreshTokenIssuedTime =
@@ -3239,18 +3186,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             String authenticatedIDPName = resultSet.getString("NAME");
                             String authorizedOrganization = resultSet.getString("AUTHORIZED_ORGANIZATION");
                             AuthenticatedUser user = OAuth2Util.createAuthenticatedUser(authzUser,
-                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName);
+                                    userDomain, OAuth2Util.getTenantDomain(tenantId), authenticatedIDPName,
+                                    authorizedOrganization, IdentityTenantUtil.getTenantDomainFromContext());
                             user.setAuthenticatedSubjectIdentifier(subjectIdentifier);
-                            if (!OAuthConstants.AuthorizedOrganization.NONE.equals(authorizedOrganization)) {
-                                user.setAccessingOrganization(authorizedOrganization);
-                                user.setUserResidentOrganization(resolveOrganizationId(user.getTenantDomain()));
-                                /* Tenant domain of the application is set as the authenticated user tenant domain
-                                for the organization SSO login users. */
-                                if (user.isFederatedUser()) {
-                                    user.setTenantDomain(
-                                            OAuth2Util.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
-                                }
-                            }
                             Timestamp issuedTime = resultSet
                                     .getTimestamp("TIME_CREATED", Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                             Timestamp refreshTokenIssuedTime =
