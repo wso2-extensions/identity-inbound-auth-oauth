@@ -162,10 +162,10 @@ public class OldTokensCleanDAO {
 
         connection.setAutoCommit(false);
         try {
-            PreparedStatement deletefromaccesstokentable =
+            PreparedStatement deleteFromAccessTokenTable =
                     connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_ID);
-            deletefromaccesstokentable.setString(1, oldAccessTokenID);
-            deletefromaccesstokentable.executeUpdate();
+            deleteFromAccessTokenTable.setString(1, oldAccessTokenID);
+            deleteFromAccessTokenTable.executeUpdate();
             if (log.isDebugEnabled()) {
                 log.debug(
                         "Successfully old access token deleted from access token table. Token ID: " + oldAccessTokenID);
@@ -182,10 +182,10 @@ public class OldTokensCleanDAO {
 
         connection.setAutoCommit(false);
         try {
-            PreparedStatement deletefromaccesstokentable =
+            PreparedStatement deleteFromAccessTokenTable =
                     connection.prepareStatement(SQLQueries.DELETE_OLD_TOKEN_BY_TOKEN_HASH);
-            deletefromaccesstokentable.setString(1, accessTokenHash);
-            deletefromaccesstokentable.executeUpdate();
+            deleteFromAccessTokenTable.setString(1, accessTokenHash);
+            deleteFromAccessTokenTable.executeUpdate();
             if (log.isDebugEnabled()) {
                 log.debug(
                         "Successfully old access token deleted from access token table. Token Hash: " +
