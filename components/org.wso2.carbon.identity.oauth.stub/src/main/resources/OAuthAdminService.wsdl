@@ -432,9 +432,8 @@
                     <xs:element minOccurs="0" name="tlsClientAuthSubjectDN" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingType" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenBindingValidationEnabled" type="xs:boolean"/>
+                    <xs:element minOccurs="0" name="tokenEndpointAllowReusePvtKeyJwt" nillable="true" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenEndpointAuthMethod" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="tokenEndpointAllowReusePvtKeyJwt" nillable="true"
-                                type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenEndpointAuthSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenRevocationWithIDPSessionTerminationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
