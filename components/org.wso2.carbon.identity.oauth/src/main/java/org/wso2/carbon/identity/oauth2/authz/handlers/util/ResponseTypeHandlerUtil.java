@@ -402,7 +402,9 @@ public class ResponseTypeHandlerUtil {
             throws IdentityOAuth2Exception {
         if (isOIDCRequest(oauthAuthzMsgCtx)) {
             OAuth2AuthorizeRespDTO newRespDTO = new OAuth2AuthorizeRespDTO();
-            newRespDTO.setAccessToken(accessTokenDO.getAccessToken());
+            if (accessTokenDO != null) {
+                newRespDTO.setAccessToken(accessTokenDO.getAccessToken());
+            }
             newRespDTO.setAuthorizationCode(respDTO.getAuthorizationCode());
             buildIdToken(oauthAuthzMsgCtx, newRespDTO);
             respDTO.setIdToken(newRespDTO.getIdToken());
