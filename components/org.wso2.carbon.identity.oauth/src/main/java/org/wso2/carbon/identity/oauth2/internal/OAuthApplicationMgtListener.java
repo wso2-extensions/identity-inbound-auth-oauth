@@ -541,9 +541,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
      * @param authzCodes    Set of authorization codes.
      * @param tenantDomain  Tenant domain of the application.
      *
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
-    private void clearCacheEntriesAgainstAuthzCodeByConsumerKey(Set<String> authzCodes, String tenantDomain)
+    private void clearCacheEntriesAgainstAuthzCodeByConsumerKey(Set<String> authzCodes, String tenantDomain,
+                                                                String consumerKey)
             throws IdentityOAuth2Exception {
 
         for (String authzCode : authzCodes) {
@@ -556,7 +557,9 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             if (oauthCacheEntry != null) {
                 OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
             }
-
+            OAuthCacheKey cacheKey = new OAuthCacheKey(OAuth2Util.buildCacheKeyStringForAuthzCode(
+                    consumerKey, authzCode));
+            OAuthCache.getInstance().clearCacheEntry(cacheKey);
         }
     }
 
@@ -777,7 +780,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
                             .getAuthorizationCodeDAO()
                             .getActiveAuthorizationCodesByConsumerKey(oauthKey);
-                    clearCacheEntriesAgainstAuthzCodeByConsumerKey(authorizationCodes, tenantDomain);
+                    clearCacheEntriesAgainstAuthzCodeByConsumerKey(authorizationCodes, tenantDomain, oauthKey);
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                             .revokeAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]));
                 } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
