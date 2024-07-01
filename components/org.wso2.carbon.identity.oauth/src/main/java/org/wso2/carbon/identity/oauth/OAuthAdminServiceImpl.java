@@ -430,13 +430,13 @@ public class OAuthAdminServiceImpl {
                             }
                             app.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
                         }
-                        Boolean tokenEndpointReusePvtKeyJWT = application.isTokenEndpointAllowReusePvtKeyJwt();
-                        if (isInvalidTokenEPReusePvtKeyJWTRequest(tokenEndpointAuthMethod,
-                                tokenEndpointReusePvtKeyJWT)) {
+                        Boolean tokenEndpointAllowReusePvtKeyJwt = application.isTokenEndpointAllowReusePvtKeyJwt();
+                        if (isInvalidTokenEPReusePvtKeyJwtRequest(tokenEndpointAuthMethod,
+                                tokenEndpointAllowReusePvtKeyJwt)) {
                             throw handleClientError(INVALID_REQUEST,
                                     "Invalid token endpoint authentication method requested.");
                         }
-                        application.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointReusePvtKeyJWT);
+                        app.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointAllowReusePvtKeyJwt);
                         String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
                             if (isFAPIConformanceEnabled) {
@@ -863,12 +863,12 @@ public class OAuthAdminServiceImpl {
             }
             oAuthAppDO.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
 
-            Boolean tokenEndpointReusePvtKeyJWT = consumerAppDTO.isTokenEndpointAllowReusePvtKeyJwt();
-            if (isInvalidTokenEPReusePvtKeyJWTRequest(tokenEndpointAuthMethod, tokenEndpointReusePvtKeyJWT)) {
+            Boolean tokenEndpointAllowReusePvtKeyJwt = consumerAppDTO.isTokenEndpointAllowReusePvtKeyJwt();
+            if (isInvalidTokenEPReusePvtKeyJwtRequest(tokenEndpointAuthMethod, tokenEndpointAllowReusePvtKeyJwt)) {
                 throw handleClientError(INVALID_REQUEST,
                         "Invalid token endpoint authentication method requested.");
             }
-            oAuthAppDO.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointReusePvtKeyJWT);
+            oAuthAppDO.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointAllowReusePvtKeyJwt);
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
@@ -2508,23 +2508,23 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * Return whether the request of updating the tokenEndpointReusePvtKeyJWT is valid.
+     * Return whether the request of updating the tokenEndpointAllowReusePvtKeyJwt is valid.
      *
      * @param tokenEndpointAuthMethod     token endpoint client authentication method.
-     * @param tokenEndpointReusePvtKeyJWT During client authentication whether to reuse private key JWT.
-     * @return True if tokenEndpointAuthMethod and tokenEndpointReusePvtKeyJWT is NOT in the correct format.
+     * @param tokenEndpointAllowReusePvtKeyJwt During client authentication whether to reuse private key JWT.
+     * @return True if tokenEndpointAuthMethod and tokenEndpointAllowReusePvtKeyJwt is NOT in the correct format.
      */
-    private boolean isInvalidTokenEPReusePvtKeyJWTRequest(String tokenEndpointAuthMethod,
-                                                          Boolean tokenEndpointReusePvtKeyJWT) {
+    private boolean isInvalidTokenEPReusePvtKeyJwtRequest(String tokenEndpointAuthMethod,
+                                                          Boolean tokenEndpointAllowReusePvtKeyJwt) {
 
         if (StringUtils.isNotBlank(tokenEndpointAuthMethod)) {
             if (tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT)) {
-                return tokenEndpointReusePvtKeyJWT == null;
+                return tokenEndpointAllowReusePvtKeyJwt == null;
             } else {
-                return tokenEndpointReusePvtKeyJWT != null;
+                return tokenEndpointAllowReusePvtKeyJwt != null;
             }
         } else {
-            return tokenEndpointReusePvtKeyJWT != null;
+            return tokenEndpointAllowReusePvtKeyJwt != null;
         }
     }
 

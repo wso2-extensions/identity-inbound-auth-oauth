@@ -1642,9 +1642,11 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
 
-            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT,
-                    String.valueOf(consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt()));
+            if (consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT,
+                        String.valueOf(consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt()));
+            }
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_SIGNATURE_ALGORITHM, consumerAppDO.getTokenEndpointAuthSignatureAlgorithm());
@@ -1806,10 +1808,10 @@ public class OAuthAppDAO {
         if (tokenAuthMethod != null) {
             oauthApp.setTokenEndpointAuthMethod(tokenAuthMethod);
         }
-        String tokenEPAllowReusePvtKeyJWT = OAuthUtil.getValueOfTokenEPAllowReusePvtKeyJWT(
+        String tokenEPAllowReusePvtKeyJwt = OAuthUtil.getValueOfTokenEPAllowReusePvtKeyJwt(
                 getFirstPropertyValue(spOIDCProperties, TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT), tokenAuthMethod);
-        if (tokenEPAllowReusePvtKeyJWT != null) {
-            oauthApp.setTokenEndpointAllowReusePvtKeyJwt(Boolean.parseBoolean(tokenEPAllowReusePvtKeyJWT));
+        if (tokenEPAllowReusePvtKeyJwt != null) {
+            oauthApp.setTokenEndpointAllowReusePvtKeyJwt(Boolean.parseBoolean(tokenEPAllowReusePvtKeyJwt));
         }
         String tokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_SIGNATURE_ALGORITHM);
         if (tokenSignatureAlgorithm != null) {

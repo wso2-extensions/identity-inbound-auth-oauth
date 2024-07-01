@@ -868,14 +868,14 @@ public class OAuthAdminServiceImplTest {
     @Test(description = "Test invalid reuse token config & client auth method combination.",
             dataProvider = "getTokenAuthMethodAndTokenReuseConfigData")
     private void testInvalidReuseTokenRequestAndClientAuthMethod(String tokenEndpointAuthMethod,
-                                                                  Boolean tokenEndpointReusePvtKeyJWT,
+                                                                  Boolean tokenEndpointAllowReusePvtKeyJwt,
                                                                   boolean expectedResult) throws Exception {
 
         OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
 
         Assert.assertEquals(invokePrivateMethod(oAuthAdminService,
-                "isInvalidTokenEPReusePvtKeyJWTRequest", new Class[]{String.class, Boolean.class},
-                tokenEndpointAuthMethod, tokenEndpointReusePvtKeyJWT), expectedResult);
+                "isInvalidTokenEPReusePvtKeyJwtRequest", new Class[]{String.class, Boolean.class},
+                tokenEndpointAuthMethod, tokenEndpointAllowReusePvtKeyJwt), expectedResult);
     }
 
     @Test(description = "Test validating signature algorithm")

@@ -1248,51 +1248,52 @@ public final class OAuthUtil {
     /**
      * Get the value of the Tenant configuration of Reuse Private key JWT from the tenant configuration.
      *
-     * @param tokenEPAllowReusePvtKeyJWTValue   Value of the tokenEPAllowReusePvtKeyJWT configuration.
+     * @param tokenEPAllowReusePvtKeyJwtValue   Value of the tokenEPAllowReusePvtKeyJwt configuration.
      * @param tokenAuthMethod                   Token authentication method.
-     * @return Value of the tokenEPAllowReusePvtKeyJWT configuration.
+     * @return Value of the tokenEPAllowReusePvtKeyJwt configuration.
      * @throws IdentityOAuth2ServerException IdentityOAuth2ServerException exception.
      */
-    public static String getValueOfTokenEPAllowReusePvtKeyJWT(String tokenEPAllowReusePvtKeyJWTValue,
+    public static String getValueOfTokenEPAllowReusePvtKeyJwt(String tokenEPAllowReusePvtKeyJwtValue,
                                                               String tokenAuthMethod)
             throws IdentityOAuth2ServerException {
 
-        if (tokenEPAllowReusePvtKeyJWTValue == null && tokenAuthMethod != null) {
+        if (tokenEPAllowReusePvtKeyJwtValue == null && StringUtils.isNotBlank(tokenAuthMethod)
+                && OAuthConstants.PRIVATE_KEY_JWT.equals(tokenAuthMethod)) {
             try {
-                tokenEPAllowReusePvtKeyJWTValue = readTenantConfigurationPvtKeyJWTReuse();
+                tokenEPAllowReusePvtKeyJwtValue = readTenantConfigurationPvtKeyJWTReuse();
             } catch (ConfigurationManagementException e) {
                 throw new IdentityOAuth2ServerException("Unable to retrieve JWT Authenticator tenant configuration.",
                         e);
             }
-            if (tokenEPAllowReusePvtKeyJWTValue == null) {
-                tokenEPAllowReusePvtKeyJWTValue = readServerConfigurationPvtKeyJWTReuse();
-                if (tokenEPAllowReusePvtKeyJWTValue == null) {
-                    tokenEPAllowReusePvtKeyJWTValue = String.valueOf(DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE);
+            if (tokenEPAllowReusePvtKeyJwtValue == null) {
+                tokenEPAllowReusePvtKeyJwtValue = readServerConfigurationPvtKeyJWTReuse();
+                if (tokenEPAllowReusePvtKeyJwtValue == null) {
+                    tokenEPAllowReusePvtKeyJwtValue = String.valueOf(DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE);
                 }
             }
         }
-        return tokenEPAllowReusePvtKeyJWTValue;
+        return tokenEPAllowReusePvtKeyJwtValue;
     }
 
     private static String readTenantConfigurationPvtKeyJWTReuse() throws ConfigurationManagementException {
 
-        String tokenEPAllowReusePvtKeyJWTTenantConfig = null;
+        String tokenEPAllowReusePvtKeyJwtTenantConfig = null;
         Resource resource = OAuthComponentServiceHolder.getInstance().getConfigurationManager()
                 .getResource(JWT_CONFIGURATION_RESOURCE_TYPE_NAME, JWT_CONFIGURATION_RESOURCE_NAME);
 
         if (resource != null) {
-            tokenEPAllowReusePvtKeyJWTTenantConfig = resource.getAttributes().stream()
+            tokenEPAllowReusePvtKeyJwtTenantConfig = resource.getAttributes().stream()
                     .filter(attribute -> ENABLE_TOKEN_REUSE.equals(attribute.getKey()))
                     .map(Attribute::getValue)
                     .findFirst()
                     .orElse(null);
         }
-        return tokenEPAllowReusePvtKeyJWTTenantConfig;
+        return tokenEPAllowReusePvtKeyJwtTenantConfig;
     }
 
     private static String readServerConfigurationPvtKeyJWTReuse() {
 
-        String tokenEPAllowReusePvtKeyJWTTenantConfig = null;
+        String tokenEPAllowReusePvtKeyJwtTenantConfig = null;
         IdentityEventListenerConfig identityEventListenerConfig = IdentityUtil.readEventListenerProperty(
                 AbstractIdentityHandler.class.getName(), PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME);
 
@@ -1304,12 +1305,12 @@ public final class OAuthUtil {
                     String value = (String) property.getValue();
                     if (Objects.equals(key, PREVENT_TOKEN_REUSE)) {
                         boolean preventTokenReuse = Boolean.parseBoolean(value);
-                        tokenEPAllowReusePvtKeyJWTTenantConfig = String.valueOf(!preventTokenReuse);
+                        tokenEPAllowReusePvtKeyJwtTenantConfig = String.valueOf(!preventTokenReuse);
                         break;
                     }
                 }
             }
         }
-        return tokenEPAllowReusePvtKeyJWTTenantConfig;
+        return tokenEPAllowReusePvtKeyJwtTenantConfig;
     }
 }
