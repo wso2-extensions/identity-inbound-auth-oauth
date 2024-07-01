@@ -3267,14 +3267,15 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
     }
 
-    private String getRootTenantDomainByOrganizationId(String organizationId) {
+    private String getRootTenantDomainByOrganizationId(String organizationId) throws IdentityOAuth2Exception {
 
         try {
             String rootOrgID = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                     .getPrimaryOrganizationId(organizationId);
             return OAuthComponentServiceHolder.getInstance().getOrganizationManager().resolveTenantDomain(rootOrgID);
         } catch (OrganizationManagementException e) {
-            throw new RuntimeException(e);
+            throw new IdentityOAuth2Exception("Error occurred while resolving root tenant domain by organization ID: " +
+                    organizationId, e);
         }
     }
 }
