@@ -5512,7 +5512,8 @@ public class OAuth2Util {
     }
 
     private static void addOrganizationUserDetails(AuthenticatedUser authenticatedUser, String accessingOrganization,
-                                            String tenantDomain, String appTenantDomain) throws IdentityOAuth2Exception {
+                                            String tenantDomain, String appTenantDomain)
+            throws IdentityOAuth2Exception {
 
         authenticatedUser.setAccessingOrganization(accessingOrganization);
         String userResidentOrg = resolveOrganizationId(tenantDomain);
