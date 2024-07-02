@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -51,10 +52,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -70,9 +69,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_SECRET;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.PASSWORD;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERNAME;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.PROP_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getHttpServletResponseWrapper;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
@@ -240,10 +236,9 @@ public class OAuth2TokenEndpoint {
 
         String queryString = request.getQueryString();
         if (StringUtils.isNotBlank(queryString)) {
-            Set<String> sensitiveKeys = new HashSet<>(Arrays.asList(USERNAME, PASSWORD, CLIENT_SECRET));
             boolean containsSensitiveData = Arrays.stream(queryString.split("&"))
                     .map(param -> param.split("=")[0])
-                    .anyMatch(sensitiveKeys::contains);
+                    .anyMatch(OAuthServerConfiguration.getInstance().getRestrictedQueryParameters()::contains);
             if (containsSensitiveData) {
                 throw new TokenEndpointBadRequestException("Invalid request with sensitive data in the URL.");
             }

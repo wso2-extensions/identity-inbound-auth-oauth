@@ -322,6 +322,8 @@ public class OAuthServerConfiguration {
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
 
+    private final List<String> restrictedQueryParameters = new ArrayList<>();
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -529,6 +531,9 @@ public class OAuthServerConfiguration {
 
         // Read config for scope metadata extension implementation.
         parseScopeMetadataExtensionImpl(oauthElem);
+
+        // Read config for restricted query parameters in oauth requests
+        parseRestrictedQueryParameters(oauthElem);
     }
 
     /**
@@ -1451,6 +1456,10 @@ public class OAuthServerConfiguration {
 
     public boolean isUseMultiValueSeparatorForAuthContextToken() {
         return useMultiValueSeparatorForAuthContextToken;
+    }
+
+    public List<String> getRestrictedQueryParameters() {
+        return restrictedQueryParameters;
     }
 
     public TokenPersistenceProcessor getPersistenceProcessor() throws IdentityOAuth2Exception {
@@ -3741,6 +3750,20 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseRestrictedQueryParameters(OMElement oauthConfigElem) {
+
+        OMElement restrictedQueryParametersElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.RESTRICTED_QUERY_PARAMETERS_ELEMENT));
+        if (restrictedQueryParametersElem != null) {
+            Iterator paramIterator = restrictedQueryParametersElem.getChildrenWithName(getQNameWithIdentityNS(
+                    ConfigElements.RESTRICTED_QUERY_PARAMETER_ELEMENT));
+            while (paramIterator.hasNext()) {
+                OMElement paramElement = (OMElement) paramIterator.next();
+                restrictedQueryParameters.add(paramElement.getText());
+            }
+        }
+    }
+
     /**
      * Get scope metadata service extension impl class.
      *
@@ -4016,6 +4039,8 @@ public class OAuthServerConfiguration {
         private static final String USE_LEGACY_PERMISSION_ACCESS_FOR_USER_BASED_AUTH =
                 "UseLegacyPermissionAccessForUserBasedAuth";
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
+        private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
+        private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "RestrictedQueryParameter";
     }
 
 }
