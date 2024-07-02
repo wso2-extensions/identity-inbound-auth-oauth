@@ -676,7 +676,7 @@ public class AuthorizationHandlerManager {
         return false;
     }
 
-    private OAuthAppDO getAppInformation(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception,
+    public OAuthAppDO getAppInformation(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
         OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(authzReqDTO.getConsumerKey());
         if (oAuthAppDO != null) {

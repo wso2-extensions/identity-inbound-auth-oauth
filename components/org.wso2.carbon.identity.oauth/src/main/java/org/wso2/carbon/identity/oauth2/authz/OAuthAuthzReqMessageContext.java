@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.authz;
 
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.rar.common.model.AuthorizationDetails;
 
 import java.io.Serializable;
 import java.util.Properties;
@@ -55,6 +56,8 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private boolean isSubjectTokenFlow;
 
     private Properties properties = new Properties();
+
+    private AuthorizationDetails authorizationDetails;
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -211,5 +214,27 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setSubjectTokenFlow(boolean subjectTokenFlow) {
 
         isSubjectTokenFlow = subjectTokenFlow;
+    }
+
+    /**
+     * Retrieves the current authorization details.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the current authorization information.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getAuthorizationDetails() {
+
+        return this.authorizationDetails;
+    }
+
+    /**
+     * Sets the authorization details.
+     * This method updates the authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     */
+    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+
+        this.authorizationDetails = authorizationDetails;
     }
 }
