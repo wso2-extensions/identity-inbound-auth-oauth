@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.application.authentication.framework.UserSession
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
-import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
@@ -521,39 +520,5 @@ public class OAuthServiceComponent {
             log.debug("Unset organization user sharing service.");
         }
         OAuthComponentServiceHolder.getInstance().setOrganizationUserSharingService(null);
-    }
-
-    /**
-     * Set the ConfigurationManager.
-     *
-     * @param configurationManager The {@code ConfigurationManager} instance.
-     */
-    @Reference(
-            name = "resource.configuration.manager",
-            service = ConfigurationManager.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unregisterConfigurationManager"
-    )
-    protected void registerConfigurationManager(ConfigurationManager configurationManager) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Registering the ConfigurationManager in JWT Client Authenticator ManagementService.");
-        }
-        OAuthComponentServiceHolder.getInstance().setConfigurationManager(configurationManager);
-    }
-
-
-    /**
-     * Unset the ConfigurationManager.
-     *
-     * @param configurationManager The {@code ConfigurationManager} instance.
-     */
-    protected void unregisterConfigurationManager(ConfigurationManager configurationManager) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
-        }
-        OAuthComponentServiceHolder.getInstance().setConfigurationManager(null);
     }
 }

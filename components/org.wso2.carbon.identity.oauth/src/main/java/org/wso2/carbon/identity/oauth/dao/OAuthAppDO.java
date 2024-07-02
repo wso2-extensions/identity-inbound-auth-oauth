@@ -81,7 +81,6 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
     private String tokenEndpointAuthMethod;
-    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String tokenEndpointAuthSignatureAlgorithm;
     private String sectorIdentifierURI;
     private String idTokenSignatureAlgorithm;
@@ -382,16 +381,6 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
 
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
-    }
-
-    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
-
-        return tokenEndpointAllowReusePvtKeyJwt;
-    }
-
-    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
-
-        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     public String getTokenEndpointAuthSignatureAlgorithm() {

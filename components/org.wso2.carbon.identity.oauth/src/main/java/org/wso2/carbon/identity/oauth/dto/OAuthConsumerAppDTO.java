@@ -67,7 +67,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean tokenBindingValidationEnabled;
     private String tokenEndpointAuthMethod;
     private String tokenEndpointAuthSignatureAlgorithm;
-    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String sectorIdentifierURI;
     private String idTokenSignatureAlgorithm;
     private String requestObjectSignatureAlgorithm;
@@ -383,16 +382,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
 
         this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
-    }
-
-    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
-
-        return tokenEndpointAllowReusePvtKeyJwt;
-    }
-
-    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
-
-        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     public String getSectorIdentifierURI() {

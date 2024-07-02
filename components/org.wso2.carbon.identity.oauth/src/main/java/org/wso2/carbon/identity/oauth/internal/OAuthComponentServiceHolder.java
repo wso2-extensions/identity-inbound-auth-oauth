@@ -22,7 +22,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
-import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
@@ -81,7 +80,6 @@ public class OAuthComponentServiceHolder {
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private IdpManager idpManager;
     private OrganizationUserSharingService organizationUserSharingService;
-    private ConfigurationManager configurationManager;
 
     /**
      * Get the list of scope validator implementations available.
@@ -512,25 +510,5 @@ public class OAuthComponentServiceHolder {
     public void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
 
         this.organizationUserSharingService = organizationUserSharingService;
-    }
-
-    /**
-     * Get the ConfigurationManager instance.
-     *
-     * @return ConfigurationManager The ConfigurationManager instance.
-     */
-    public ConfigurationManager getConfigurationManager() {
-
-        return configurationManager;
-    }
-
-    /**
-     * Set the ConfigurationManager instance.
-     *
-     * @param configurationManager ConfigurationManager The ConfigurationManager instance.
-     */
-    public void setConfigurationManager(ConfigurationManager configurationManager) {
-
-        this.configurationManager = configurationManager;
     }
 }

@@ -81,8 +81,6 @@ public class DCRMUtils {
         appRegistrationRequest.setExtTokenType(registrationRequestDTO.getExtTokenType());
         appRegistrationRequest.setJwksURI(registrationRequestDTO.getJwksUri());
         appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
-        appRegistrationRequest.setTokenEndpointAllowReusePvtKeyJwt(registrationRequestDTO
-                .isTokenEndpointAllowReusePvtKeyJwt());
         appRegistrationRequest.setTokenEndpointAuthSignatureAlgorithm
                 (registrationRequestDTO.getTokenEndpointAuthSigningAlg());
         appRegistrationRequest.setSectorIdentifierURI(registrationRequestDTO.getSectorIdentifierUri());
@@ -127,8 +125,6 @@ public class DCRMUtils {
         applicationUpdateRequest.setExtTokenType(updateRequestDTO.getExtTokenType());
         applicationUpdateRequest.setJwksURI(updateRequestDTO.getJwksUri());
         applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
-        applicationUpdateRequest.setTokenEndpointAllowReusePvtKeyJwt(
-                updateRequestDTO.isTokenEndpointAllowReusePvtKeyJwt());
         applicationUpdateRequest.setTokenEndpointAuthSignatureAlgorithm
                 (updateRequestDTO.getTokenEndpointAuthSigningAlg());
         applicationUpdateRequest.setSectorIdentifierURI(updateRequestDTO.getSectorIdentifierUri());
@@ -239,7 +235,6 @@ public class DCRMUtils {
         applicationDTO.setExtTokenType(application.getExtTokenType());
         applicationDTO.setJwksUri(application.getJwksURI());
         applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
-        applicationDTO.setTokenEndpointAllowReusePvtKeyJwt(application.isTokenEndpointAllowReusePvtKeyJwt());
         applicationDTO.setTokenEndpointAuthSigningAlg(application.getTokenEndpointAuthSignatureAlgorithm());
         applicationDTO.setSectorIdentifierUri(application.getSectorIdentifierURI());
         applicationDTO.setIdTokenSignedResponseAlg(application.getIdTokenSignatureAlgorithm());

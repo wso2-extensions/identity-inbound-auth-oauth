@@ -65,7 +65,6 @@ public class ApplicationDTO  {
 
     private String jwksUri = null;
     private String tokenEndpointAuthMethod = null;
-    private Boolean tokenEndpointAllowReusePvtKeyJwt = null;
     private String tokenEndpointAuthSigningAlg = null;
     private String sectorIdentifierUri = null;
     private String idTokenSignedResponseAlg = null;
@@ -293,17 +292,6 @@ public class ApplicationDTO  {
     this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
   }
 
-  @ApiModelProperty(value = "")
-  @JsonProperty("token_endpoint_allow_reuse_pvt_key_jwt")
-  public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
-
-      return tokenEndpointAllowReusePvtKeyJwt;
-  }
-
-  public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
-
-      this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
-  }
 
   @ApiModelProperty(value = "")
   @JsonProperty("token_endpoint_auth_signing_alg")
