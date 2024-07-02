@@ -103,6 +103,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.rar.common.util.AuthorizationDetailsConstants;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
@@ -867,6 +869,12 @@ public class EndpointUtil {
                 consentPageUrl = consentPageUrl + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
+
+                // Append authorization details to consent page url
+                if (AuthorizationDetailsUtils.isRichAuthorizationRequest(params)) {
+                    consentPageUrl = consentPageUrl + "&" + AuthorizationDetailsConstants.AUTHORIZATION_DETAILS + "="
+                            + URLEncoder.encode(params.getAuthorizationDetails().toJsonString(), UTF_8);
+                }
 
                 // Append scope metadata to additionalQueryParams.
                 String scopeMetadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
