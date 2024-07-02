@@ -33,9 +33,11 @@ import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
@@ -44,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerClientException;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
@@ -206,6 +209,10 @@ public class DefaultOAuth2ScopeValidator {
                         validatedScopes = scopeValidationHandler.validateScopes(requestedScopes,
                                 authorizedScopes.getScopes(), scopeValidationContext);
                     } catch (ScopeValidationHandlerException e) {
+                        if (e instanceof ScopeValidationHandlerClientException) {
+                            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.ACCESS_DENIED,
+                                    "User is not allowed to access the organization", e);
+                        }
                         throw new IdentityOAuth2Exception("Error while validating policies roles from " +
                                 "authorization service.", e);
                     }
