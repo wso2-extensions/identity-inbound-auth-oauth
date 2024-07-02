@@ -50,8 +50,11 @@ import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuth2TokenRespon
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
@@ -67,6 +70,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_SECRET;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.PASSWORD;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERNAME;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.PROP_CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getHttpServletResponseWrapper;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.parseJsonTokenRequest;
@@ -156,6 +162,7 @@ public class OAuth2TokenEndpoint {
                 startSuperTenantFlow();
             }
             validateRepeatedParams(request, paramMap);
+            validateSensitiveDataInQueryParams(request);
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
             OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
@@ -225,6 +232,21 @@ public class OAuth2TokenEndpoint {
 
         if (!validateParams(request, paramMap)) {
             throw new TokenEndpointBadRequestException("Invalid request with repeated parameters.");
+        }
+    }
+
+    private void validateSensitiveDataInQueryParams(HttpServletRequest request)
+            throws TokenEndpointBadRequestException {
+
+        String queryString = request.getQueryString();
+        if (StringUtils.isNotBlank(queryString)) {
+            Set<String> sensitiveKeys = new HashSet<>(Arrays.asList(USERNAME, PASSWORD, CLIENT_SECRET));
+            boolean containsSensitiveData = Arrays.stream(queryString.split("&"))
+                    .map(param -> param.split("=")[0])
+                    .anyMatch(sensitiveKeys::contains);
+            if (containsSensitiveData) {
+                throw new TokenEndpointBadRequestException("Invalid request with sensitive data in the URL.");
+            }
         }
     }
 

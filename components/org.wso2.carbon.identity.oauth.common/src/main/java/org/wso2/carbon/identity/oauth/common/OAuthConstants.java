@@ -363,6 +363,9 @@ public final class OAuthConstants {
         public static final String RESPONSE_TYPE = "response_type";
         public static final String RESPONSE_MODE = "response_mode";
         public static final String REQUEST = "request";
+        public static final String USERNAME = "username";
+        public static final String PASSWORD = "password";
+        public static final String CLIENT_SECRET = "client_secret";
         public static final String REQUESTED_SUBJECT = "requested_subject";
 
         private OAuth20Params() {
