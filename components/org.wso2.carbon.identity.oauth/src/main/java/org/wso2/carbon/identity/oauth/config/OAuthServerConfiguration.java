@@ -4040,7 +4040,7 @@ public class OAuthServerConfiguration {
                 "UseLegacyPermissionAccessForUserBasedAuth";
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
-        private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "RestrictedQueryParameter";
+        private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
     }
 
 }
