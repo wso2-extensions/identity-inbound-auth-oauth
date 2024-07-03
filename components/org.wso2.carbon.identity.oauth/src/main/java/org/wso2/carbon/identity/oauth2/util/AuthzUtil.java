@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.Scope;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -209,10 +208,10 @@ public class AuthzUtil {
         try {
             Optional<String> optionalOrganizationUserId = OrganizationSharedUserUtil
                     .getUserIdOfAssociatedUserByOrgId(associatedUserId, authenticatedUser.getAccessingOrganization());
-            return optionalOrganizationUserId.orElseThrow(() -> new IdentityOAuth2ClientException(
-                    OAuth2ErrorCodes.ACCESS_DENIED, "User is not allowed to access the organization"));
+            return optionalOrganizationUserId.orElseThrow(() ->
+                    new IdentityOAuth2ClientException("User is not allowed to access the organization"));
         } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error while resolving shared user ID", e);
+            throw new IdentityOAuth2Exception("Error while resolving shared user ID" , e);
         }
     }
 
