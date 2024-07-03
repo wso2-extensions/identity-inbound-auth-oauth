@@ -238,7 +238,7 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.wso2.eclipse.osgi</groupId>
+            <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi.services</artifactId>
         </dependency>
         <dependency>
@@ -428,6 +428,13 @@
                             org.wso2.carbon.identity.oauth2.OAuth2ScopeService,
                             org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl
                         </ListenerManager-RequiredServices>
+                        <Provide-Capability>
+                            osgi.service;objectClass=org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService,
+                            osgi.service;objectClass=org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService,
+                            osgi.service;objectClass=org.wso2.carbon.identity.application.mgt.ApplicationManagementService,
+                            osgi.service;objectClass=org.wso2.carbon.identity.oauth2.OAuth2ScopeService,
+                            osgi.service;objectClass=org.wso2.carbon.identity.role.mgt.core.RoleManagementService
+                        </Provide-Capability>
                     </instructions>
                 </configuration>
             </plugin>
