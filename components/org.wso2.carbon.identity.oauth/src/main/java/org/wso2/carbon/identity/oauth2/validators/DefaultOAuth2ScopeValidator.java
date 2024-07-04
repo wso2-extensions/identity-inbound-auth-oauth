@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
@@ -44,6 +45,7 @@ import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationContext;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
+import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerClientException;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandlerException;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
@@ -205,6 +207,8 @@ public class DefaultOAuth2ScopeValidator {
                     try {
                         validatedScopes = scopeValidationHandler.validateScopes(requestedScopes,
                                 authorizedScopes.getScopes(), scopeValidationContext);
+                    } catch (ScopeValidationHandlerClientException e) {
+                        throw new IdentityOAuth2ClientException(e.getMessage(), e);
                     } catch (ScopeValidationHandlerException e) {
                         throw new IdentityOAuth2Exception("Error while validating policies roles from " +
                                 "authorization service.", e);
