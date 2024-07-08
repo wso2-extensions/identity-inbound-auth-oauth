@@ -4738,7 +4738,8 @@ public class OAuth2Util {
     public static boolean isValidTokenBinding(TokenBinding tokenBinding, HttpServletRequest request) {
 
         if (request == null || tokenBinding == null || StringUtils.isBlank(tokenBinding.getBindingReference())
-                || StringUtils.isBlank(tokenBinding.getBindingType())) {
+                || StringUtils.isBlank(tokenBinding.getBindingType())
+                || OAuthConstants.REQUEST_BINDING_TYPE.equals(tokenBinding.getBindingType())) {
             return true;
         }
 
