@@ -4738,8 +4738,13 @@ public class OAuth2Util {
     public static boolean isValidTokenBinding(TokenBinding tokenBinding, HttpServletRequest request) {
 
         if (request == null || tokenBinding == null || StringUtils.isBlank(tokenBinding.getBindingReference())
-                || StringUtils.isBlank(tokenBinding.getBindingType())
-                || OAuthConstants.REQUEST_BINDING_TYPE.equals(tokenBinding.getBindingType())) {
+                || StringUtils.isBlank(tokenBinding.getBindingType())) {
+            return true;
+        }
+
+        /* The request token binding type can't be validated, as it is an auto generated UUID to issue unique JWT tokens
+            by avoiding revocation of already issued JWT tokens. */
+        if (OAuthConstants.REQUEST_BINDING_TYPE.equals(tokenBinding.getBindingType())) {
             return true;
         }
 
