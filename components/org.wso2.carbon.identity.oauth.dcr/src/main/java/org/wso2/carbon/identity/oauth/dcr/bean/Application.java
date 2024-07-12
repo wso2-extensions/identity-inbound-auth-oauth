@@ -46,7 +46,6 @@ public class Application implements Serializable {
     private String extTokenType = null;
     private String jwksURI = null;
     private String tokenEndpointAuthMethod = null;
-    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String tokenEndpointAuthSignatureAlgorithm = null;
     private String sectorIdentifierURI = null;
     private String idTokenSignatureAlgorithm = null;
@@ -252,16 +251,6 @@ public class Application implements Serializable {
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
 
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
-    }
-
-    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
-
-        return tokenEndpointAllowReusePvtKeyJwt;
-    }
-
-    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
-
-        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     public String getTokenEndpointAuthSignatureAlgorithm() {
