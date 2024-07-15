@@ -22,7 +22,6 @@ package org.wso2.carbon.identity.oauth2.impersonation.validators;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -113,7 +112,7 @@ public class SubjectScopeValidator implements ImpersonationValidator {
             authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
             authenticatedUser.setTenantDomain(tenantDomain);
             return authenticatedUser;
-        } catch (UserStoreException | IdentityApplicationManagementException e) {
+        } catch (UserStoreException | IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Use mapped local subject is mandatory but a local user couldn't be found");
         }

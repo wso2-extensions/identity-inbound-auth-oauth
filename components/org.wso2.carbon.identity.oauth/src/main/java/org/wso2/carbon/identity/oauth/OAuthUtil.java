@@ -1164,10 +1164,10 @@ public final class OAuthUtil {
      * @param userId   The user id.
      * @param tenantId The tenant id where user resides.
      * @return User object from tenant userStoreManager.
-     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
+     * @throws IdentityOAuth2Exception Error when user cannot be resolved.
      */
     public static User getUserFromTenant(String userId, int tenantId)
-            throws IdentityApplicationManagementException {
+            throws IdentityOAuth2Exception {
 
         User user = null;
         try {
@@ -1179,7 +1179,7 @@ public final class OAuthUtil {
             }
             return user;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
-            throw new IdentityApplicationManagementException("Error finding user in tenant.", e);
+            throw new IdentityOAuth2Exception("Error finding user in tenant.", e);
         }
     }
 
