@@ -1158,6 +1158,31 @@ public final class OAuthUtil {
         return user;
     }
 
+    /**
+     * Get user from tenant by user id.
+     *
+     * @param userId   The user id.
+     * @param tenantId The tenant id where user resides.
+     * @return User object from tenant userStoreManager.
+     * @throws IdentityApplicationManagementException Error when user cannot be resolved.
+     */
+    public static User getUserFromTenant(String userId, int tenantId)
+            throws IdentityApplicationManagementException {
+
+        User user = null;
+        try {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
+                            .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            if (StringUtils.isNotEmpty(userId) && userStoreManager.isExistingUserWithID(userId)) {
+                user = getApplicationUser(userStoreManager.getUser(userId, null));
+            }
+            return user;
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new IdentityApplicationManagementException("Error finding user in tenant.", e);
+        }
+    }
+
     private static User getApplicationUser(org.wso2.carbon.user.core.common.User coreUser) {
 
         User user = new User();
