@@ -1177,10 +1177,10 @@ public final class OAuthUtil {
             if (StringUtils.isNotEmpty(userId) && userStoreManager.isExistingUserWithID(userId)) {
                 user = getApplicationUser(userStoreManager.getUser(userId, null));
             }
+            return user;
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new IdentityApplicationManagementException("Error finding user in tenant.", e);
         }
-        return user;
     }
 
     private static User getApplicationUser(org.wso2.carbon.user.core.common.User coreUser) {
