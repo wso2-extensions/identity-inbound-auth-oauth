@@ -94,6 +94,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean fapiConformanceEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private String[] jwtAccessTokenClaims;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -511,5 +512,15 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setSubjectTokenExpiryTime(int subjectTokenExpiryTime) {
 
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
+    }
+
+    public String[] getJwtAccessTokenClaims() {
+
+        return jwtAccessTokenClaims;
+    }
+
+    public void setJwtAccessTokenClaims(String[] jwtAccessTokenClaims) {
+
+        this.jwtAccessTokenClaims = jwtAccessTokenClaims;
     }
 }

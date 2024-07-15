@@ -210,6 +210,7 @@ public class OAuthAppDAO {
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
+                    addJwtAccessTokenClaims(connection, consumerAppDO);
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
                     IdentityDatabaseUtil.commitTransaction(connection);
@@ -476,6 +477,7 @@ public class OAuthAppDAO {
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
+                            oauthApp.setJwtAccessTokenClaims(getJwtAccessTokenClaims(connection, consumerKey));
                         }
                     }
 
@@ -774,6 +776,7 @@ public class OAuthAppDAO {
                 }
                 int count = prepStmt.executeUpdate();
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
+                updateJwtAccessTokenClaims(connection, oauthAppDO);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("No. of records updated for updating consumer application. : " + count);
                 }
@@ -1531,6 +1534,120 @@ public class OAuthAppDAO {
             stmt.execute();
         }
         addScopeValidators(connection, appId, scopeValidators);
+    }
+
+    /**
+     * Update JWT Access Token Claims.
+     *
+     * @param connection Same db connection used in OAuth creation.
+     * @param oauthAppDO Consumer app.
+     * @throws SQLException Sql error.
+     */
+    private void updateJwtAccessTokenClaims(Connection connection, OAuthAppDO oauthAppDO)
+            throws SQLException {
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Removing  Scope validators registered for OAuth consumer key %s and " +
+                            "tenantDomain %s", oauthAppDO.getOauthConsumerKey(), oauthAppDO.getAppOwner()
+                    .getTenantDomain()));
+        }
+        String consumerKey = oauthAppDO.getOauthConsumerKey();
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .REMOVE_JWT_ACCESS_TOKEN_CLAIMS)) {
+            stmt.setString(1, consumerKey);
+            stmt.setInt(2, tenantId);
+            stmt.execute();
+        }
+        addJwtAccessTokenClaims(connection, oauthAppDO);
+    }
+
+    /**
+     * Add JWT access token claims for consumerApp using connection.
+     *
+     * @param connection Same db connection used in OAuth creation.
+     * @param oauthAppDO Consumer app.
+     * @throws SQLException Sql error.
+     */
+    private void addJwtAccessTokenClaims(Connection connection, OAuthAppDO oauthAppDO) throws SQLException {
+
+        String consumerKey = oauthAppDO.getOauthConsumerKey();
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        if (oauthAppDO.getJwtAccessTokenClaims() != null && oauthAppDO.getJwtAccessTokenClaims().length > 0) {
+            LOG.debug(String.format("Adding %s JWT access token claims registered for OAuth concumer key %s",
+                    oauthAppDO.getJwtAccessTokenClaims().length, oauthAppDO.getOauthConsumerKey()));
+            try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                    .INSERT_JWT_ACCESS_TOKEN_CLAIMS)) {
+                for (String claim : oauthAppDO.getJwtAccessTokenClaims()) {
+                    stmt.setString(1, claim);
+                    stmt.setString(2, consumerKey);
+                    stmt.setInt(3, tenantId);
+                    stmt.addBatch();
+                }
+                stmt.executeBatch();
+            }
+        }
+    }
+
+    /**
+     * Get JWT Access Token Claims.
+     *
+     * @param connection  DB connection.
+     * @param consumerKey consumer key.
+     * @return list of JWT Access Token Claims.
+     * @throws SQLException Sql error.
+     */
+    private String[] getJwtAccessTokenClaims(Connection connection, String consumerKey) throws SQLException {
+
+        List<String> claims = new ArrayList<>();
+        int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
+                .GET_JWT_ACCESS_TOKEN_CLAIMS)) {
+            stmt.setString(1, consumerKey);
+            stmt.setInt(2, tenantId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(rs.getString(1));
+                }
+            }
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Retrieving %d JWT Access Token Claims registered for OAuth consumerKey %s",
+                    claims.size(), consumerKey));
+        }
+        return claims.toArray(new String[0]);
+    }
+
+    /**
+     * Get allowed JWT Access Token claims.
+     *
+     * @param consumerKey    consumer key
+     * @param spTenantDomain tenant domain
+     * @return list of allowed JWT Access Token claims
+     */
+    public List<String> getAllowedJWTAccessTokenClaims(String consumerKey,
+                                                       String spTenantDomain) throws IdentityOAuth2Exception {
+        List<String> tokenClaims = new ArrayList<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            PreparedStatement prepStmt =
+                    connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_JWT_ACCESS_TOKEN_CLAIMS);
+            prepStmt.setString(1, consumerKey);
+            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(spTenantDomain));
+            ResultSet rs = prepStmt.executeQuery();
+            while (rs.next()) {
+                String claimUri = rs.getString(1);
+                if (claimUri != null) {
+                    tokenClaims.add(claimUri);
+                }
+            }
+        } catch (SQLException e) {
+            String msg = "Error while checking client ID unique constraint in the IDN_OAUTH_CONSUMER_APPS table.";
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, e);
+            }
+            throw new IdentityOAuth2Exception(msg, e);
+        }
+        return tokenClaims;
     }
 
     /**

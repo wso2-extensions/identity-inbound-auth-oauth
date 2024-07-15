@@ -39,6 +39,8 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -128,6 +130,7 @@ public class OAuthAdminServiceImpl {
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -513,6 +516,8 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
+                        validateJwtAccessTokenClaims(application, tenantDomain);
+                        app.setJwtAccessTokenClaims(application.getJwtAccessTokenClaims());
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
@@ -940,7 +945,9 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
-            oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());;
+            oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+            validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
+            oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenClaims());
         }
         dao.updateConsumerApplication(oAuthAppDO);
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
@@ -2701,6 +2708,50 @@ public class OAuthAdminServiceImpl {
 
         for (AccessTokenDO detailToken : activeDetailedTokens) {
             clearTokensFromCache(consumerKey, detailToken, detailToken.getAccessToken());
+        }
+    }
+
+    /**
+     * validate JWT access token claims.
+     *
+     * @param consumerAppDTO OAuthConsumerAppDTO
+     * @param tenantDomain   tenant domain
+     * @throws IdentityOAuthAdminException if the claim is invalid
+     */
+    private void validateJwtAccessTokenClaims(OAuthConsumerAppDTO consumerAppDTO, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        if (consumerAppDTO.getJwtAccessTokenClaims() != null) {
+            Map<String, String> oidcToLocalClaimMappings;
+            try {
+                oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
+                for (String claimURI : consumerAppDTO.getJwtAccessTokenClaims()) {
+                    if (!oidcToLocalClaimMappings.containsKey(claimURI)) {
+                        throw handleClientError(INVALID_REQUEST, "Invalid JWT access token claim URI: "
+                                + claimURI);
+                    }
+                }
+            } catch (IdentityOAuth2Exception e) {
+                throw handleError("Error while retrieving OIDC to Local claim mappings for " +
+                        "JWT access token claims validation.", e);
+            }
+        }
+    }
+
+    /**
+     * Get OIDC to Local claim mappings.
+     *
+     * @param tenantDomain tenant domain
+     * @return OIDC to Local claim mappings
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving OIDC to Local claim mappings
+     */
+    private Map<String, String> getOIDCToLocalClaimMappings(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false);
+        } catch (ClaimMetadataException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OIDC to Local claim mappings.", e);
         }
     }
 }

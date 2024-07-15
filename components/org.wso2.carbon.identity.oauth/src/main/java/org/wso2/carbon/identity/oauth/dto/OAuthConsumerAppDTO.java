@@ -79,6 +79,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean fapiConformanceEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private String[] jwtAccessTokenClaims;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -516,6 +517,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setSubjectTokenExpiryTime(int subjectTokenExpiryTime) {
 
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
+    }
+
+    public String[] getJwtAccessTokenClaims() {
+
+        return jwtAccessTokenClaims;
+    }
+
+    public void setJwtAccessTokenClaims(String[] jwtAccessTokenClaims) {
+
+        this.jwtAccessTokenClaims = jwtAccessTokenClaims;
     }
 }
 

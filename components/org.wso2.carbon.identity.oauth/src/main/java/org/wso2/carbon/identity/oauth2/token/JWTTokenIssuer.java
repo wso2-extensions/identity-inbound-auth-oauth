@@ -622,10 +622,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
+        // TODO : We need to handle jwt access token claims issuing for old and new application.
         if (authAuthzReqMessageContext != null) {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
         } else {
-            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+            jwtClaimsSet = handleJWTAccessTokenOIDCClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
@@ -865,6 +866,25 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+    }
+
+    protected JWTClaimsSet handleJWTAccessTokenOIDCClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                              OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        if (tokenReqMessageContext != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
+                OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
+
+            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type.
+            return jwtClaimsSetBuilder.build();
+        }
+
+        CustomClaimsCallbackHandler claimsCallBackHandler =
+                OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
