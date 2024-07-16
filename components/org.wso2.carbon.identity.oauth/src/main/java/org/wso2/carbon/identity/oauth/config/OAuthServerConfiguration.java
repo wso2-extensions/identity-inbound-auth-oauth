@@ -3777,6 +3777,11 @@ public class OAuthServerConfiguration {
         return scopeMetadataExtensionImpl;
     }
 
+    /**
+     * Get JWTAccessTokenOIDCClaimsHandler
+     *
+     * @return JWTAccessTokenOIDCClaimsHandler
+     */
     public CustomClaimsCallbackHandler getJWTAccessTokenOIDCClaimsHandler() {
         if (jwtAccessTokenOIDCClaimsHandler == null) {
             synchronized (CustomClaimsCallbackHandler.class) {
