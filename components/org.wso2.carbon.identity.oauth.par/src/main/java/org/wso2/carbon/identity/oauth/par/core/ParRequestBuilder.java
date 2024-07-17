@@ -61,6 +61,10 @@ public class ParRequestBuilder implements OAuthAuthorizationRequestBuilder {
                     "Error occurred while retrieving params from PAR request", e);
         }
         request.setAttribute(OAuthConstants.IS_PUSH_AUTHORIZATION_REQUEST, true);
+        /* Set whether the request originated from mtls endpoint as a request attribute.
+        This is used in the auth flow for audience validation and issuer identification. */
+        request.setAttribute(OAuthConstants.IS_MTLS_REQUEST,
+                Boolean.parseBoolean(params.get(OAuthConstants.X_WSO2_MTLS_REQUEST)));
         return new OAuthParRequestWrapper(request, params);
     }
 

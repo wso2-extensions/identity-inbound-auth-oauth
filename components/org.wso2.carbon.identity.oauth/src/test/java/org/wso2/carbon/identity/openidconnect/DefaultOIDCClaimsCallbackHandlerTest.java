@@ -70,6 +70,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
@@ -1029,6 +1030,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             when(requestMsgCtx.getScope()).thenReturn(APPROVED_SCOPES);
             when(requestMsgCtx.getProperty(OAuthConstants.ACCESS_TOKEN)).thenReturn(SAMPLE_ACCESS_TOKEN);
+            when(requestMsgCtx.getProperty(AccessTokenIssuer.OAUTH_APP_DO)).thenReturn(null);
             when(requestMsgCtx.getProperty(OAuthConstants.AUTHZ_CODE)).thenReturn(null);
             when(requestMsgCtx.getProperty("device_code")).thenReturn(null);
             when(requestMsgCtx.getProperty("previousAccessToken")).thenReturn(null);

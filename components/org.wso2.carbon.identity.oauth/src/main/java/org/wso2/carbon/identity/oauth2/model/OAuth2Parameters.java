@@ -53,6 +53,7 @@ public class OAuth2Parameters implements Serializable {
     private String sessionDataKey;
     private String loginTenantDomain;
     private boolean isRequestObjectFlow;
+    private boolean isMtlsRequest;
     private String requestedSubjectId;
 
     public String getRequestedSubjectId() {
@@ -308,5 +309,23 @@ public class OAuth2Parameters implements Serializable {
     public void setRequestObjectFlow(boolean isRequestObjectFlow) {
 
         this.isRequestObjectFlow = isRequestObjectFlow;
+    }
+
+    /**
+     * @return  Whether the request is a mutual TLS request or not.
+     */
+    public boolean isMtlsRequest() {
+
+        return isMtlsRequest;
+    }
+
+    /**
+     * Sets whether the request is a mutual TLS request or not.
+     *
+     * @param isMtlsRequest Whether the request is a mutual TLS request or not.
+     */
+    public void setIsMtlsRequest(boolean isMtlsRequest) {
+
+        this.isMtlsRequest = isMtlsRequest;
     }
 }

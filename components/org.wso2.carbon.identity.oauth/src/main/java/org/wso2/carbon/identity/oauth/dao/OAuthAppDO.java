@@ -54,6 +54,8 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String[] scopeValidators;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
+    private boolean hybridFlowEnabled;
+    private String hybridFlowResponseType;
     private String state;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
@@ -79,6 +81,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
     private String tokenEndpointAuthMethod;
+    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String tokenEndpointAuthSignatureAlgorithm;
     private String sectorIdentifierURI;
     private String idTokenSignatureAlgorithm;
@@ -196,8 +199,24 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         return pkceMandatory;
     }
 
+    public boolean isHybridFlowEnabled() {
+        return hybridFlowEnabled;
+    }
+
+    public void setHybridFlowEnabled(boolean hybridFlowEnabled) {
+        this.hybridFlowEnabled = hybridFlowEnabled;
+    }
+
     public void setPkceMandatory(boolean pkceMandatory) {
         this.pkceMandatory = pkceMandatory;
+    }
+
+    public String getHybridFlowResponseType() {
+        return hybridFlowResponseType;
+    }
+
+    public void setHybridFlowResponseType(String hybridFlowResponseType) {
+        this.hybridFlowResponseType = hybridFlowResponseType;
     }
 
     public void setState(String state) {
@@ -363,6 +382,16 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
 
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
+
+        return tokenEndpointAllowReusePvtKeyJwt;
+    }
+
+    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
+
+        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     public String getTokenEndpointAuthSignatureAlgorithm() {

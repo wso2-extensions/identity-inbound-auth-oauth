@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -77,6 +78,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
@@ -100,6 +103,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
@@ -981,6 +985,10 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT, String.valueOf(oauthAppDO.isTokenEndpointAllowReusePvtKeyJwt()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_AUTH_SIGNATURE_ALGORITHM, oauthAppDO.getTokenEndpointAuthSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
@@ -1030,6 +1038,16 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        if (oauthAppDO.isHybridFlowEnabled()) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    HYBRID_FLOW_RESPONSE_TYPE, oauthAppDO.getHybridFlowResponseType(),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
 
         // Execute batched add/update/delete.
         prepStatementForPropertyAdd.executeBatch();
@@ -1624,6 +1642,12 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
 
+            if (consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT,
+                        String.valueOf(consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt()));
+            }
+
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_SIGNATURE_ALGORITHM, consumerAppDO.getTokenEndpointAuthSignatureAlgorithm());
 
@@ -1667,6 +1691,14 @@ public class OAuthAppDAO {
             }
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    HYBRID_FLOW_ENABLED,
+                    String.valueOf(consumerAppDO.isHybridFlowEnabled()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE,
+                    String.valueOf(consumerAppDO.getHybridFlowResponseType()));
 
             prepStmtAddOIDCProperty.executeBatch();
         }
@@ -1712,7 +1744,8 @@ public class OAuthAppDAO {
         return spOIDCProperties;
     }
 
-    private void setSpOIDCProperties(Map<String, List<String>> spOIDCProperties, OAuthAppDO oauthApp) {
+    private void setSpOIDCProperties(Map<String, List<String>> spOIDCProperties, OAuthAppDO oauthApp)
+            throws IdentityOAuth2ServerException {
 
         // Handle OIDC audience values
         if (isOIDCAudienceEnabled() &&
@@ -1775,6 +1808,11 @@ public class OAuthAppDAO {
         if (tokenAuthMethod != null) {
             oauthApp.setTokenEndpointAuthMethod(tokenAuthMethod);
         }
+        String tokenEPAllowReusePvtKeyJwt = OAuthUtil.getValueOfTokenEPAllowReusePvtKeyJwt(
+                getFirstPropertyValue(spOIDCProperties, TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT), tokenAuthMethod);
+        if (tokenEPAllowReusePvtKeyJwt != null) {
+            oauthApp.setTokenEndpointAllowReusePvtKeyJwt(Boolean.parseBoolean(tokenEPAllowReusePvtKeyJwt));
+        }
         String tokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_SIGNATURE_ALGORITHM);
         if (tokenSignatureAlgorithm != null) {
             oauthApp.setTokenEndpointAuthSignatureAlgorithm(tokenSignatureAlgorithm);
@@ -1833,6 +1871,15 @@ public class OAuthAppDAO {
         if (subjectTokenExpiryTime != null) {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
         }
+
+        boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
+                HYBRID_FLOW_ENABLED));
+        oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+
+        String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
+                OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+
+        oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {

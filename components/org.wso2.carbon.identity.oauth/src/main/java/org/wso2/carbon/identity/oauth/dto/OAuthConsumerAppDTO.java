@@ -44,6 +44,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String[] scopeValidators = null;
     private boolean pkceSupportPlain;
     private boolean pkceMandatory;
+    private boolean hybridFlowEnabled;
+    private String hybridFlowResponseType;
     private String state;
     private long userAccessTokenExpiryTime;
     private long applicationAccessTokenExpiryTime;
@@ -65,6 +67,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean tokenBindingValidationEnabled;
     private String tokenEndpointAuthMethod;
     private String tokenEndpointAuthSignatureAlgorithm;
+    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String sectorIdentifierURI;
     private String idTokenSignatureAlgorithm;
     private String requestObjectSignatureAlgorithm;
@@ -203,6 +206,22 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
 
     public void setPkceMandatory(boolean pkceMandatory) {
         this.pkceMandatory = pkceMandatory;
+    }
+
+    public boolean isHybridFlowEnabled() {
+        return hybridFlowEnabled;
+    }
+
+    public void setHybridFlowEnabled(boolean hybridFlowEnabled) {
+        this.hybridFlowEnabled = hybridFlowEnabled;
+    }
+
+    public String getHybridFlowResponseType() {
+        return hybridFlowResponseType;
+    }
+
+    public void setHybridFlowResponseType(String hybridFlowResponseType) {
+        this.hybridFlowResponseType = hybridFlowResponseType;
     }
 
     public void setState(String state) {
@@ -364,6 +383,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setTokenEndpointAuthSignatureAlgorithm(String tokenEndpointAuthSignatureAlgorithm) {
 
         this.tokenEndpointAuthSignatureAlgorithm = tokenEndpointAuthSignatureAlgorithm;
+    }
+
+    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
+
+        return tokenEndpointAllowReusePvtKeyJwt;
+    }
+
+    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
+
+        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     public String getSectorIdentifierURI() {

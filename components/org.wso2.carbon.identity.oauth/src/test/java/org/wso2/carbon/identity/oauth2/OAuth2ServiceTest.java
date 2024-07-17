@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,10 +11,11 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth2;
 
 import org.apache.oltu.oauth2.common.message.types.GrantType;
@@ -344,6 +345,27 @@ public class OAuth2ServiceTest {
         }
     }
 
+    @Test(dataProvider = "ValidateClientInfoDataProvider")
+    public void testValidateHybridFlowValidRequest(String clientId, String grantType,
+                                                   String callbackUrl, String tenantDomain,
+                                                   int tenantId, String callbackURI) throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain,
+                    tenantId, identityTenantUtil, oAuth2Util);
+            oAuthAppDO.setHybridFlowEnabled(true);
+            oAuthAppDO.setHybridFlowResponseType("code token");
+            when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
+            when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
+            when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code token");
+            OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
+                    validateClientInfo(mockHttpServletRequest);
+            assertNotNull(oAuth2ClientValidationResponseDTO);
+            assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+        }
+    }
+
     private OAuthAppDO getOAuthAppDO(String clientId, String grantType, String callbackUrl, String tenantDomain,
                                      int tenantId, MockedStatic<IdentityTenantUtil> identityTenantUtil,
                                      MockedStatic<OAuth2Util> oAuth2Util)
@@ -498,6 +520,7 @@ public class OAuth2ServiceTest {
         return new Object[][]{
                 {new IdentityOAuth2Exception(""), "server_error"},
                 {new InvalidOAuthClientException(""), "invalid_client"},
+                {new IdentityOAuth2ClientException("access_denied", ""), "access_denied"}
         };
     }
 

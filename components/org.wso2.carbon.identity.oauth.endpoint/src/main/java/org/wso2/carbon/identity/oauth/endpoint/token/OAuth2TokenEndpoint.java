@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuth2TokenRespon
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -156,6 +158,7 @@ public class OAuth2TokenEndpoint {
                 startSuperTenantFlow();
             }
             validateRepeatedParams(request, paramMap);
+            validateSensitiveDataInQueryParams(request);
             HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
             CarbonOAuthTokenRequest oauthRequest = buildCarbonOAuthTokenRequest(httpRequest);
             OAuthClientAuthnContext oauthClientAuthnContext = oauthRequest.getoAuthClientAuthnContext();
@@ -225,6 +228,20 @@ public class OAuth2TokenEndpoint {
 
         if (!validateParams(request, paramMap)) {
             throw new TokenEndpointBadRequestException("Invalid request with repeated parameters.");
+        }
+    }
+
+    private void validateSensitiveDataInQueryParams(HttpServletRequest request)
+            throws TokenEndpointBadRequestException {
+
+        String queryString = request.getQueryString();
+        if (StringUtils.isNotBlank(queryString)) {
+            boolean containsSensitiveData = Arrays.stream(queryString.split("&"))
+                    .map(param -> param.split("=")[0])
+                    .anyMatch(OAuthServerConfiguration.getInstance().getRestrictedQueryParameters()::contains);
+            if (containsSensitiveData) {
+                throw new TokenEndpointBadRequestException("Invalid request with sensitive data in the URL.");
+            }
         }
     }
 

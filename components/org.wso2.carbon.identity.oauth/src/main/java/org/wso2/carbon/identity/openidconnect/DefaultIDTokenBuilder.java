@@ -110,7 +110,10 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
-        String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, clientId);
+        String requestURL = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getHttpServletRequestWrapper()
+                .getRequestURL().toString();
+        String idTokenIssuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, clientId,
+                OAuth2Util.isMtlsRequest(requestURL));
         String accessToken = tokenRespDTO.getAccessToken();
         JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
@@ -241,7 +244,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         String accessToken = tokenRespDTO.getAccessToken();
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         String spTenantDomain = getSpTenantDomain(authzReqMessageContext);
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        Object isMtls = authzReqMessageContext.getProperty(OAuthConstants.IS_MTLS_REQUEST);
+        boolean isMtlsRequest = isMtls != null && Boolean.parseBoolean(isMtls.toString());
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMtlsRequest);
         JWSAlgorithm idTokenSignatureAlgorithm = signatureAlgorithm;
 
         // Initialize OAuthAppDO using the client ID.
@@ -313,7 +318,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         setUserRealm(authorizedUser, jwtClaimsSetBuilder);
         setAdditionalClaims(authzReqMessageContext, tokenRespDTO, jwtClaimsSetBuilder);
 
-        authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
+        if (StringUtils.isNotBlank(accessToken)) {
+            authzReqMessageContext.addProperty(OAuthConstants.ACCESS_TOKEN, accessToken);
+        }
         authzReqMessageContext
                 .addProperty(MultitenantConstants.TENANT_DOMAIN, getSpTenantDomain(authzReqMessageContext));
         jwtClaimsSetBuilder.subject(subject);

@@ -81,6 +81,8 @@ public class DCRMUtils {
         appRegistrationRequest.setExtTokenType(registrationRequestDTO.getExtTokenType());
         appRegistrationRequest.setJwksURI(registrationRequestDTO.getJwksUri());
         appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
+        appRegistrationRequest.setTokenEndpointAllowReusePvtKeyJwt(registrationRequestDTO
+                .isTokenEndpointAllowReusePvtKeyJwt());
         appRegistrationRequest.setTokenEndpointAuthSignatureAlgorithm
                 (registrationRequestDTO.getTokenEndpointAuthSigningAlg());
         appRegistrationRequest.setSectorIdentifierURI(registrationRequestDTO.getSectorIdentifierUri());
@@ -100,6 +102,7 @@ public class DCRMUtils {
                 (registrationRequestDTO.isTlsClientCertificateBoundAccessToken());
         appRegistrationRequest.setSubjectType(registrationRequestDTO.getSubjectType());
         appRegistrationRequest.setSoftwareStatement(registrationRequestDTO.getSoftwareStatement());
+        appRegistrationRequest.setAdditionalAttributes(registrationRequestDTO.getAdditionalAttributes());
         return appRegistrationRequest;
 
     }
@@ -124,6 +127,8 @@ public class DCRMUtils {
         applicationUpdateRequest.setExtTokenType(updateRequestDTO.getExtTokenType());
         applicationUpdateRequest.setJwksURI(updateRequestDTO.getJwksUri());
         applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
+        applicationUpdateRequest.setTokenEndpointAllowReusePvtKeyJwt(
+                updateRequestDTO.isTokenEndpointAllowReusePvtKeyJwt());
         applicationUpdateRequest.setTokenEndpointAuthSignatureAlgorithm
                 (updateRequestDTO.getTokenEndpointAuthSigningAlg());
         applicationUpdateRequest.setSectorIdentifierURI(updateRequestDTO.getSectorIdentifierUri());
@@ -142,6 +147,7 @@ public class DCRMUtils {
                 (updateRequestDTO.isTlsClientCertificateBoundAccessToken());
         applicationUpdateRequest.setSubjectType(updateRequestDTO.getSubjectType());
         applicationUpdateRequest.setSoftwareStatement(updateRequestDTO.getSoftwareStatement());
+        applicationUpdateRequest.setAdditionalAttributes(updateRequestDTO.getAdditionalAttributes());
         return applicationUpdateRequest;
     }
 
@@ -233,6 +239,7 @@ public class DCRMUtils {
         applicationDTO.setExtTokenType(application.getExtTokenType());
         applicationDTO.setJwksUri(application.getJwksURI());
         applicationDTO.setTokenEndpointAuthMethod(application.getTokenEndpointAuthMethod());
+        applicationDTO.setTokenEndpointAllowReusePvtKeyJwt(application.isTokenEndpointAllowReusePvtKeyJwt());
         applicationDTO.setTokenEndpointAuthSigningAlg(application.getTokenEndpointAuthSignatureAlgorithm());
         applicationDTO.setSectorIdentifierUri(application.getSectorIdentifierURI());
         applicationDTO.setIdTokenSignedResponseAlg(application.getIdTokenSignatureAlgorithm());
@@ -247,6 +254,7 @@ public class DCRMUtils {
         applicationDTO.setRequirePushAuthorizationRequest(application.isRequirePushedAuthorizationRequests());
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
+        applicationDTO.setAdditionalAttributes(application.getAdditionalAttributes());
         return applicationDTO;
     }
 

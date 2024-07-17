@@ -213,6 +213,7 @@ public final class OAuthConstants {
 
     public static final String RESPONSE_HEADERS_PROPERTY = "RESPONSE_HEADERS";
     public static final String CLIENT_AUTHN_CONTEXT = "oauth.client.authentication.context";
+    public static final String TRANSPORT_ENDPOINT_ADDRESS = "org.apache.cxf.transport.endpoint.address";
 
     //Constants used for multiple scopes
     public static final String OIDC_SCOPE_CONFIG_PATH = "oidc-scope-config.xml";
@@ -243,6 +244,8 @@ public final class OAuthConstants {
             "OAuth.JWT.RenewTokenWithoutRevokingExisting.Enable";
     public static final String OAUTH_BUILD_ISSUER_WITH_HOSTNAME = "OAuth.BuildIssuerWithHostname";
     public static final String MTLS_HOSTNAME = "OAuth.MutualTLSAliases.Hostname";
+    public static final String X_WSO2_MTLS_REQUEST = "x-wso2-mtls-request";
+    public static final String IS_MTLS_REQUEST = "isMtlsRequest";
 
     public static final String REQUEST_BINDING_TYPE = "request";
     public static final String ORG_ID = "org_id";
@@ -278,6 +281,7 @@ public final class OAuthConstants {
     public static final String PRIVATE_KEY_JWT = "private_key_jwt";
     public static final String TLS_CLIENT_AUTH = "tls_client_auth";
     public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
+    public static final String ADDITIONAL_ATTRIBUTE_FILTER = "OAuth.DCRM.AdditionalAttributeFilter";
 
     private OAuthConstants() {
 
@@ -608,6 +612,8 @@ public final class OAuthConstants {
         public static final String BACK_CHANNEL_LOGOUT_URL = "backChannelLogoutURL";
         public static final String FRONT_CHANNEL_LOGOUT_URL = "frontchannelLogoutURL";
         public static final String TOKEN_TYPE = "tokenType";
+        public static final String HYBRID_FLOW_ENABLED = "hybridFlowEnabled";
+        public static final String HYBRID_FLOW_RESPONSE_TYPE = "hybridFlowResponseType";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";
@@ -616,6 +622,7 @@ public final class OAuthConstants {
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
         public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
+        public static final String TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT =  "tokenEndpointAllowReusePvtKeyJwt";
         public static final String TOKEN_AUTH_SIGNATURE_ALGORITHM = "tokenEndpointAuthSigningAlg";
         public static final String SECTOR_IDENTIFIER_URI = "sectorIdentifierUri";
         public static final String ID_TOKEN_SIGNATURE_ALGORITHM = "idTokenSignedResponseAlg";
@@ -630,7 +637,14 @@ public final class OAuthConstants {
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
-
+        public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
+        public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
+        // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.
+        public static final String JWT_CONFIGURATION_RESOURCE_TYPE_NAME = "PK_JWT_CONFIGURATION";
+        // Name of the {@code JWTClientAuthenticatorConfig} resource (per tenant) in the Configuration Management API.
+        public static final String JWT_CONFIGURATION_RESOURCE_NAME = "TENANT_PK_JWT_CONFIGURATION";
+        public static final String PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME = "PrivateKeyJWTClientAuthenticator";
+        public static final String ENABLE_TOKEN_REUSE = "EnableTokenReuse";
         private OIDCConfigProperties() {
 
         }
