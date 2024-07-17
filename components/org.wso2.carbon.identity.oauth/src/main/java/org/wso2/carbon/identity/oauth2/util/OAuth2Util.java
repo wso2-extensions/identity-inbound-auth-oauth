@@ -5521,17 +5521,4 @@ public class OAuth2Util {
         // Set authorized user tenant domain to the tenant domain of the application.
         authenticatedUser.setTenantDomain(appTenantDomain);
     }
-
-    /**
-     * Get allowed JWT access token claims for the application.
-     *
-     * @param clientId     Client ID of the application.
-     * @param tenantDomain Tenant domain.
-     * @return List of allowed JWT access token claims.
-     */
-    public static List<String> getAllowedJWTAccessTokenClaims(String clientId, String tenantDomain)
-            throws IdentityOAuth2Exception {
-
-        return new OAuthAppDAO().getAllowedJWTAccessTokenClaims(clientId, tenantDomain);
-    }
 }

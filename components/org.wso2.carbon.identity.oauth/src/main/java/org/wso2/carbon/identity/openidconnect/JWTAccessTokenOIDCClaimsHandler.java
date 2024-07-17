@@ -29,16 +29,21 @@ import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +71,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         String tenantDomain = request.getOauth2AccessTokenReqDTO().getTenantDomain();
 
         // Get allowed JWT access token claims.
-        List<String> allowedClaims = OAuth2Util.getAllowedJWTAccessTokenClaims(clientId, tenantDomain);
+        List<String> allowedClaims = getJWTAccessTokenClaims(clientId, tenantDomain);
         // Get OIDC to Local claim mappings.
         Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
 
@@ -77,6 +82,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             String[] userRoles = getUserRoles(request.getAuthorizedUser(), clientId);
             claims.put(ROLES, String.join(FrameworkUtils.getMultiAttributeSeparator(), userRoles));
         }
+        // Filter claims
+        handleClaimsFormat(claims, tenantDomain);
         return setClaimsToJwtClaimSet(builder, claims);
     }
 
@@ -241,6 +248,31 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             throw new IdentityOAuth2Exception("Error while getting roles associated with application : " + applicationId
                     + " tenant : " +  tenantDomain);
         }
+    }
+
+    /**
+     * Get JWT access token claims.
+     *
+     * @param clientId Client Id.
+     * @param tenantDomain Tenant Domain.
+     * @return List of JWT access token claims.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private List<String> getJWTAccessTokenClaims(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
+            String[] claimsArray = oAuthAppDO.getJwtAccessTokenClaims();
+            return new ArrayList<>(Arrays.asList(claimsArray));
+        } catch (InvalidOAuthClientException e) {
+            String error = "Error occurred while getting app information for client_id: " + clientId;
+            throw new IdentityOAuth2Exception(error, e);
+        }
+    }
+
+    private void handleClaimsFormat(Map<String, Object> userClaims, String tenantDomain) {
+        OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityOpenIDConnectClaimFilter()
+                .handleClaimsFormatting(userClaims, tenantDomain);
     }
 
     /**

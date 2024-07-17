@@ -1619,38 +1619,6 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Get allowed JWT Access Token claims.
-     *
-     * @param consumerKey    consumer key
-     * @param spTenantDomain tenant domain
-     * @return list of allowed JWT Access Token claims
-     */
-    public List<String> getAllowedJWTAccessTokenClaims(String consumerKey,
-                                                       String spTenantDomain) throws IdentityOAuth2Exception {
-        List<String> tokenClaims = new ArrayList<>();
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            PreparedStatement prepStmt =
-                    connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries.GET_JWT_ACCESS_TOKEN_CLAIMS);
-            prepStmt.setString(1, consumerKey);
-            prepStmt.setInt(2, IdentityTenantUtil.getTenantId(spTenantDomain));
-            ResultSet rs = prepStmt.executeQuery();
-            while (rs.next()) {
-                String claimUri = rs.getString(1);
-                if (claimUri != null) {
-                    tokenClaims.add(claimUri);
-                }
-            }
-        } catch (SQLException e) {
-            String msg = "Error while checking client ID unique constraint in the IDN_OAUTH_CONSUMER_APPS table.";
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(msg, e);
-            }
-            throw new IdentityOAuth2Exception(msg, e);
-        }
-        return tokenClaims;
-    }
-
-    /**
      * Get the application id using the client id.
      *
      * @param connection Same db connection used in OAuth creation.
