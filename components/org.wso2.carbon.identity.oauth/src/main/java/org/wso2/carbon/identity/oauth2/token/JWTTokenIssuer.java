@@ -103,6 +103,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
     private static final String ENABLE_PPID_FOR_ACCESS_TOKENS = "OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken";
+    private static final String ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN =
+            "OAuth.OpenIDConnect.EnableOIDCClaimsSeparationForJWTAccessToken";
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
@@ -622,11 +624,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
-        // TODO : We need to handle jwt access token claims issuing for old and new application.
         if (authAuthzReqMessageContext != null) {
-            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext, oAuthAppDO);
         } else {
-            jwtClaimsSet = handleJWTAccessTokenOIDCClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext, oAuthAppDO);
         }
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
@@ -863,14 +864,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
             return jwtClaimsSetBuilder.build();
         }
-
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
-    protected JWTClaimsSet handleJWTAccessTokenOIDCClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                              OAuthTokenReqMessageContext tokenReqMessageContext)
+    private JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                              OAuthTokenReqMessageContext tokenReqMessageContext, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
         if (tokenReqMessageContext != null &&
@@ -879,12 +879,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                         OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
                 OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
 
-            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type.
+            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
             return jwtClaimsSetBuilder.build();
         }
 
-        CustomClaimsCallbackHandler claimsCallBackHandler =
-                OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
+        CustomClaimsCallbackHandler claimsCallBackHandler;
+        if (isJWTAccessTokenOIDCClaimsSeparationFeatureEnabled() &&
+                oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+            claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
+        } else {
+            claimsCallBackHandler = OAuthServerConfiguration.getInstance()
+                    .getOpenIDConnectCustomClaimsCallbackHandler();
+        }
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
@@ -904,6 +910,21 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
     }
 
+    private JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                            OAuthAuthzReqMessageContext authzReqMessageContext,
+                                            OAuthAppDO oAuthAppDO)
+            throws IdentityOAuth2Exception {
+
+        CustomClaimsCallbackHandler claimsCallBackHandler;
+        if (isJWTAccessTokenOIDCClaimsSeparationFeatureEnabled() &&
+                oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+            claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
+        } else {
+            claimsCallBackHandler = OAuthServerConfiguration.getInstance()
+                    .getOpenIDConnectCustomClaimsCallbackHandler();
+        }
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
+    }
 
     private boolean isUserAccessTokenType(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
@@ -998,6 +1019,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private boolean checkPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
+    }
+
+    private boolean isJWTAccessTokenOIDCClaimsSeparationFeatureEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN));
     }
 
     /**

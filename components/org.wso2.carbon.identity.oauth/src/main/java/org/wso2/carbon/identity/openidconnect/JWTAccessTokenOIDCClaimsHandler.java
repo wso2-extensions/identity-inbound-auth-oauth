@@ -91,7 +91,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder builder, OAuthAuthzReqMessageContext request)
             throws IdentityOAuth2Exception {
 
-        return null;
+        return builder.build();
     }
 
     /**

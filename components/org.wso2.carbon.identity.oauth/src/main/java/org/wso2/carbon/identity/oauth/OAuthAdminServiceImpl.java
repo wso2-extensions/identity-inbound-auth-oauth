@@ -107,6 +107,7 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
@@ -518,6 +519,8 @@ public class OAuthAdminServiceImpl {
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                         validateJwtAccessTokenClaims(application, tenantDomain);
                         app.setJwtAccessTokenClaims(application.getJwtAccessTokenClaims());
+                        app.setIsJwtAccessTokenOIDCClaimSeparationEnabled(
+                                IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {

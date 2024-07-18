@@ -95,6 +95,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] jwtAccessTokenClaims;
+    private boolean isJwtAccessTokenOIDCClaimSeparationEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -522,5 +523,15 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setJwtAccessTokenClaims(String[] jwtAccessTokenClaims) {
 
         this.jwtAccessTokenClaims = jwtAccessTokenClaims;
+    }
+
+    public boolean isJwtAccessTokenOIDCClaimSeparationEnabled() {
+
+        return isJwtAccessTokenOIDCClaimSeparationEnabled;
+    }
+
+    public void setIsJwtAccessTokenOIDCClaimSeparationEnabled(boolean isJwtAccessTokenOIDCClaimSeparationEnabled) {
+
+        this.isJwtAccessTokenOIDCClaimSeparationEnabled = isJwtAccessTokenOIDCClaimSeparationEnabled;
     }
 }

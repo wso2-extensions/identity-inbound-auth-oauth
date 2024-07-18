@@ -636,6 +636,9 @@ public final class OAuthConstants {
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
+        public static final String IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED =
+                "isJWTAccessTokenOIDCClaimsSeparationEnabled";
+        public static final boolean IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE = true;
 
         private OIDCConfigProperties() {
 

@@ -85,6 +85,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_SUBJECT_TOKEN_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
@@ -1766,6 +1767,10 @@ public class OAuthAppDAO {
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED,
+                    String.valueOf(consumerAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     HYBRID_FLOW_ENABLED,
                     String.valueOf(consumerAppDO.isHybridFlowEnabled()));
 
@@ -1937,6 +1942,13 @@ public class OAuthAppDAO {
         String subjectTokenExpiryTime = getFirstPropertyValue(spOIDCProperties, SUBJECT_TOKEN_EXPIRY_TIME);
         if (subjectTokenExpiryTime != null) {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
+        }
+
+        String isJwtAccessTokenOIDCClaimsSeparationEnabled = getFirstPropertyValue(spOIDCProperties,
+                IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED);
+        if (isJwtAccessTokenOIDCClaimsSeparationEnabled != null) {
+            oauthApp.setIsJwtAccessTokenOIDCClaimSeparationEnabled(
+                    Boolean.parseBoolean(isJwtAccessTokenOIDCClaimsSeparationEnabled));
         }
 
         boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
