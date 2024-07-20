@@ -64,7 +64,6 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -85,13 +84,10 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.*;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -160,7 +156,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -169,8 +164,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
@@ -193,7 +186,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -349,9 +341,6 @@ public class OAuth2Util {
     private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
     // System flag to allow the weak keys (key length less than 2048) to be used for the signing.
     private static final String ALLOW_WEAK_RSA_SIGNER_KEY = "allow_weak_rsa_signer_key";
-
-    private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
-    private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
 
     // Supported Signature Algorithms
     private static final String NONE = "NONE";
@@ -2834,16 +2823,8 @@ public class OAuth2Util {
                 return false;
             }
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            RSAPublicKey publicKey;
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
+            RSAPublicKey publicKey = IdentityKeyStoreResolver.getInstance()
+                    .getPublicKey(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
             SignedJWT signedJWT = SignedJWT.parse(idToken);
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
@@ -2852,6 +2833,9 @@ public class OAuth2Util {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating id token signature.");
             }
+            return false;
+        }  catch (IdentityKeyStoreResolverException e) {
+            log.error("Error occurred while validating id token signature.");
             return false;
         } catch (Exception e) {
             log.error("Error occurred while validating id token signature.");
@@ -3361,40 +3345,12 @@ public class OAuth2Util {
 
     public static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
-        Key privateKey;
-        if (!(privateKeys.containsKey(tenantId))) {
-
-            try {
-                IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
-            } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
-                        e);
-            }
-
-            // get tenant's key store manager
-            KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                // derive key store name
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                // obtain private key
-                privateKey = tenantKSM.getPrivateKey(fileName, tenantDomain);
-
-            } else {
-                try {
-                    privateKey = tenantKSM.getDefaultPrivateKey();
-                } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
-                }
-            }
-            //privateKey will not be null always
-            privateKeys.put(tenantId, privateKey);
-        } else {
-            //privateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
-            // does not allow to store null values
-            privateKey = privateKeys.get(tenantId);
+        try {
+            return IdentityKeyStoreResolver.getInstance().getPrivateKey(
+                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+        } catch (IdentityKeyStoreResolverException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining private key", e);
         }
-        return privateKey;
     }
 
     /**
@@ -3552,56 +3508,12 @@ public class OAuth2Util {
      */
     public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
-        Certificate publicCert = null;
-
-        if (!(publicCerts.containsKey(tenantId))) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Obtaining certificate for the tenant %s", tenantDomain));
-            }
-            try {
-                IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
-            } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
-                        e);
-            }
-
-            // get tenant's key store manager
-            KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-
-            KeyStore keyStore = null;
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                // derive key store name
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Loading default tenant certificate for tenant : %s from the KeyStore" +
-                            " %s", tenantDomain, fileName));
-                }
-                try {
-                    keyStore = tenantKSM.getKeyStore(fileName);
-                    publicCert = keyStore.getCertificate(tenantDomain);
-                } catch (KeyStoreException e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
-                            tenantDomain, e);
-                } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading Keystore for tenant: " +
-                            tenantDomain, e);
-                }
-
-            } else {
-                try {
-                    publicCert = tenantKSM.getDefaultPrimaryCertificate();
-                } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading default public " +
-                            "certificate for tenant: " + tenantDomain, e);
-                }
-            }
-            if (publicCert != null) {
-                publicCerts.put(tenantId, publicCert);
-            }
-        } else {
-            publicCert = publicCerts.get(tenantId);
+        try {
+            return IdentityKeyStoreResolver.getInstance().getCertificate(
+                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+        } catch (IdentityKeyStoreResolverException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining public certificate.", e);
         }
-        return publicCert;
     }
 
     /**
