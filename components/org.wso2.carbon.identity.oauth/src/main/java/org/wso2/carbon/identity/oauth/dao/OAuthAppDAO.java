@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -102,6 +103,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_TYPE_NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_BINDING_VALIDATION;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
@@ -983,6 +985,10 @@ public class OAuthAppDAO {
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT, String.valueOf(oauthAppDO.isTokenEndpointAllowReusePvtKeyJwt()),
+                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+
+        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_AUTH_SIGNATURE_ALGORITHM, oauthAppDO.getTokenEndpointAuthSignatureAlgorithm(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
@@ -1636,6 +1642,12 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
 
+            if (consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt() != null) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT,
+                        String.valueOf(consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt()));
+            }
+
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_SIGNATURE_ALGORITHM, consumerAppDO.getTokenEndpointAuthSignatureAlgorithm());
 
@@ -1732,7 +1744,8 @@ public class OAuthAppDAO {
         return spOIDCProperties;
     }
 
-    private void setSpOIDCProperties(Map<String, List<String>> spOIDCProperties, OAuthAppDO oauthApp) {
+    private void setSpOIDCProperties(Map<String, List<String>> spOIDCProperties, OAuthAppDO oauthApp)
+            throws IdentityOAuth2ServerException {
 
         // Handle OIDC audience values
         if (isOIDCAudienceEnabled() &&
@@ -1794,6 +1807,11 @@ public class OAuthAppDAO {
         String tokenAuthMethod = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_METHOD);
         if (tokenAuthMethod != null) {
             oauthApp.setTokenEndpointAuthMethod(tokenAuthMethod);
+        }
+        String tokenEPAllowReusePvtKeyJwt = OAuthUtil.getValueOfTokenEPAllowReusePvtKeyJwt(
+                getFirstPropertyValue(spOIDCProperties, TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT), tokenAuthMethod);
+        if (tokenEPAllowReusePvtKeyJwt != null) {
+            oauthApp.setTokenEndpointAllowReusePvtKeyJwt(Boolean.parseBoolean(tokenEPAllowReusePvtKeyJwt));
         }
         String tokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_SIGNATURE_ALGORITHM);
         if (tokenSignatureAlgorithm != null) {

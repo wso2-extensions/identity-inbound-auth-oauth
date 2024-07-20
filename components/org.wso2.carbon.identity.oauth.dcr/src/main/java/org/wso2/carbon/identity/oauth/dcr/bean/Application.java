@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dcr.bean;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This object contains the context related to OAuth application.
@@ -45,6 +46,7 @@ public class Application implements Serializable {
     private String extTokenType = null;
     private String jwksURI = null;
     private String tokenEndpointAuthMethod = null;
+    private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String tokenEndpointAuthSignatureAlgorithm = null;
     private String sectorIdentifierURI = null;
     private String idTokenSignatureAlgorithm = null;
@@ -59,6 +61,18 @@ public class Application implements Serializable {
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareStatement = null;
+
+    private Map<String, Object> additionalAttributes;
+
+    public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
+
+        this.additionalAttributes = additionalAttributes;
+    }
+
+    public Map<String, Object> getAdditionalAttributes() {
+
+        return additionalAttributes;
+    }
 
     public String getSoftwareStatement() {
 
@@ -238,6 +252,16 @@ public class Application implements Serializable {
     public void setTokenEndpointAuthMethod(String tokenEndpointAuthMethod) {
 
         this.tokenEndpointAuthMethod = tokenEndpointAuthMethod;
+    }
+
+    public Boolean isTokenEndpointAllowReusePvtKeyJwt() {
+
+        return tokenEndpointAllowReusePvtKeyJwt;
+    }
+
+    public void setTokenEndpointAllowReusePvtKeyJwt(Boolean tokenEndpointAllowReusePvtKeyJwt) {
+
+        this.tokenEndpointAllowReusePvtKeyJwt = tokenEndpointAllowReusePvtKeyJwt;
     }
 
     public String getTokenEndpointAuthSignatureAlgorithm() {

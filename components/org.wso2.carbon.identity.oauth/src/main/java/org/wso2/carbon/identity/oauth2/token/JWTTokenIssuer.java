@@ -244,8 +244,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         try {
             JWT parsedJwtToken = JWTParser.parse(accessToken);
+            // JWT ClaimsSet can be null if the ID token is encrypted.
+            if (parsedJwtToken.getJWTClaimsSet() == null) {
+                throw new OAuthSystemException("JWT claims set is null in the JWT token.");
+            }
             String jwtId = parsedJwtToken.getJWTClaimsSet().getJWTID();
-            if (jwtId == null) {
+            if (StringUtils.isBlank(jwtId)) {
                 throw new OAuthSystemException("JTI could not be retrieved from the JWT token.");
             }
             return jwtId;
@@ -574,7 +578,18 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
 
-        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain);
+        boolean isMTLSrequest;
+        if (authAuthzReqMessageContext != null) {
+            /* If the auth request is originated from a request object reference(ex: PAR), then that endpoint should be
+            considered when determining the audience and issuer claims. */
+            Object isMTLSProp = authAuthzReqMessageContext.getProperty(OAuthConstants.IS_MTLS_REQUEST);
+            isMTLSrequest = isMTLSProp != null && Boolean.parseBoolean(isMTLSProp.toString());
+        } else {
+            // For the token requests, the token gateway is considered when determining the issuer and the audience.
+            isMTLSrequest = OAuth2Util.isMtlsRequest(tokenReqMessageContext.getOauth2AccessTokenReqDTO()
+                    .getHttpServletRequestWrapper().getRequestURL().toString());
+        }
+        String issuer = OAuth2Util.getIdTokenIssuer(spTenantDomain, isMTLSrequest);
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);

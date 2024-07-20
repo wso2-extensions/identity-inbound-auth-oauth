@@ -4099,6 +4099,12 @@ public class OAuth2Util {
                         "User id is not available for user: " + authzUser.getLoggableMaskedUserId(), e);
             }
         }
+        if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
+            authzUser.setAccessingOrganization(authzUser.getAccessingOrganization());
+            authzUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
+            // Update user tenant domain.
+            authzUser.setTenantDomain(authzUser.getTenantDomain());
+        }
         return authenticatedUser;
     }
 
@@ -4150,6 +4156,53 @@ public class OAuth2Util {
     }
 
     /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username        Username of the user.
+     * @param userStoreDomain User store domain.
+     * @param tenantDomain    Tenant domain.
+     * @param idpName         Idp name.
+     * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantID The tenant ID of the application where user get authenticated.
+     * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, int appTenantID)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        // For organization bound access tokens, the authenticated user should be populated considering below factors.
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain,
+                    IdentityTenantUtil.getTenantDomain(appTenantID));
+        }
+        return authenticatedUser;
+    }
+
+    /**
+     * Creates an instance of AuthenticatedUser{@link AuthenticatedUser} for the given parameters.
+     *
+     * @param username        Username of the user.
+     * @param userStoreDomain User store domain.
+     * @param tenantDomain    Tenant domain.
+     * @param idpName         Idp name.
+     * @param accessingOrganization The organization where the user is authorized to access.
+     * @param appTenantDomain The tenant domain of the application where user get authenticated.
+     * @return An instance of AuthenticatedUser{@link AuthenticatedUser}
+     */
+    public static AuthenticatedUser createAuthenticatedUser(String username, String userStoreDomain, String
+            tenantDomain, String idpName, String accessingOrganization, String appTenantDomain)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedUser = createAuthenticatedUser(username, userStoreDomain, tenantDomain, idpName);
+        // For organization bound access tokens, the authenticated user should be populated considering below factors.
+        if (!OAuthConstants.AuthorizedOrganization.NONE.equals(accessingOrganization)) {
+            addOrganizationUserDetails(authenticatedUser, accessingOrganization, tenantDomain, appTenantDomain);
+        }
+        return authenticatedUser;
+    }
+
+    /**
      * Get the user if of the federated user from the user session store.
      *
      * @param username     Username.
@@ -4173,9 +4226,15 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain) throws IdentityOAuth2Exception {
 
+        return getIdTokenIssuer(tenantDomain, false);
+    }
+
+    public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
+
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
+                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
+                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -4186,12 +4245,14 @@ public class OAuth2Util {
         }
     }
 
-    public static String getIdTokenIssuer(String tenantDomain, String clientId) throws IdentityOAuth2Exception {
+    public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
+            throws IdentityOAuth2Exception {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
-                return ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
-                        PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
+                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
+                        ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
+                                PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the" +
                         " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
@@ -4680,6 +4741,12 @@ public class OAuth2Util {
 
         if (request == null || tokenBinding == null || StringUtils.isBlank(tokenBinding.getBindingReference())
                 || StringUtils.isBlank(tokenBinding.getBindingType())) {
+            return true;
+        }
+
+        /* The request token binding type can't be validated, as it is an auto generated UUID to issue unique JWT tokens
+            by avoiding revocation of already issued JWT tokens. */
+        if (OAuthConstants.REQUEST_BINDING_TYPE.equals(tokenBinding.getBindingType())) {
             return true;
         }
 
@@ -5429,6 +5496,38 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
                     authenticatedUser.getUserResidentOrganization(), e);
         }
+    }
+
+    /**
+     * Check whether the request URL is a mtls endpoint.
+     * @param requestUrl Request URL.
+     * @return True if the request URL is a mtls endpoint.
+     */
+    public static boolean isMtlsRequest(String requestUrl) {
+
+        return requestUrl.contains(IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
+    }
+
+    private static String resolveOrganizationId(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving organization ID for the tenant domain: " +
+                    tenantDomain, e);
+        }
+    }
+
+    private static void addOrganizationUserDetails(AuthenticatedUser authenticatedUser, String accessingOrganization,
+                                            String tenantDomain, String appTenantDomain)
+            throws IdentityOAuth2Exception {
+
+        authenticatedUser.setAccessingOrganization(accessingOrganization);
+        String userResidentOrg = resolveOrganizationId(tenantDomain);
+        authenticatedUser.setUserResidentOrganization(userResidentOrg);
+        // Set authorized user tenant domain to the tenant domain of the application.
+        authenticatedUser.setTenantDomain(appTenantDomain);
     }
 
     public static boolean isPairwiseSubEnabledForAccessTokens() {

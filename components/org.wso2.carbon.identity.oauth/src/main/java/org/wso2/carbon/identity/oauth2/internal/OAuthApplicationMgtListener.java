@@ -493,6 +493,76 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         }
     }
 
+    /**
+     * Clear the cache entries against the token.
+     *
+     * @param accessTokenDOSet Set of access token DO.
+     * @param consumerKey      Consumer key of the application.
+     * @param tenantDomain     Tenant domain of the application.
+     *
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private void clearCacheEntriesAgainstTokenByConsumerKey(Set<AccessTokenDO> accessTokenDOSet, String consumerKey,
+                                                            String tenantDomain) throws IdentityOAuth2Exception {
+
+        AppInfoCache appInfoCache = AppInfoCache.getInstance();
+        appInfoCache.clearCacheEntry(consumerKey);
+        OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
+        if (isNotEmpty(accessTokenDOSet)) {
+            for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
+                // Remove access token from AuthorizationGrantCache
+                AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
+                        accessTokenDo.getAccessToken());
+                AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
+                OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessTokenDo.getAccessToken());
+                CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
+                if (oauthCacheEntry != null) {
+                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
+                }
+                String tokenBindingReference = "NONE";
+                if (accessTokenDo.getTokenBinding() != null && StringUtils
+                        .isNotBlank(accessTokenDo.getTokenBinding().getBindingReference())) {
+                    tokenBindingReference = accessTokenDo.getTokenBinding().getBindingReference();
+                }
+                // Remove access token from OAuthCache.
+                OAuthUtil.clearOAuthCache(accessTokenDo.getConsumerKey(), accessTokenDo.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDo.getScope()), tokenBindingReference);
+                OAuthUtil.clearOAuthCache(accessTokenDo.getConsumerKey(), accessTokenDo.getAuthzUser(),
+                        OAuth2Util.buildScopeString(accessTokenDo.getScope()));
+                OAuthUtil.clearOAuthCache(accessTokenDo.getConsumerKey(), accessTokenDo.getAuthzUser());
+                OAuthUtil.clearOAuthCache(accessTokenDo);
+            }
+        }
+    }
+
+    /**
+     * Clear the cache entries against the authorization code.
+     *
+     * @param authzCodes    Set of authorization codes.
+     * @param tenantDomain  Tenant domain of the application.
+     *
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private void clearCacheEntriesAgainstAuthzCodeByConsumerKey(Set<String> authzCodes, String tenantDomain,
+                                                                String consumerKey)
+            throws IdentityOAuth2Exception {
+
+        for (String authzCode : authzCodes) {
+            // Remove authorization code from AuthorizationGrantCache
+            AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(authzCode);
+            AuthorizationGrantCache.getInstance().clearCacheEntryByCode(grantCacheKey);
+            // Remove authorization code from OAuthCache
+            OAuthCacheKey oauthCacheKey = new OAuthCacheKey(authzCode);
+            CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
+            if (oauthCacheEntry != null) {
+                OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
+            }
+            OAuthCacheKey cacheKey = new OAuthCacheKey(OAuth2Util.buildCacheKeyStringForAuthzCode(
+                    consumerKey, authzCode));
+            OAuthCache.getInstance().clearCacheEntry(cacheKey);
+        }
+    }
+
     private void removeEntriesFromCache(ServiceProvider serviceProvider,
                                         String tenantDomain) throws IdentityApplicationManagementException {
 
@@ -677,6 +747,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         accessTokens[countToken] = token;
                         countToken++;
                     }
+                    clearCacheEntriesAgainstTokenByConsumerKey(activeDetailedTokens, oauthKey, tenantDomain);
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                             .revokeTokens(oauthKey, accessTokens);
                 } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
@@ -709,6 +780,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     Set<String> authorizationCodes = OAuthTokenPersistenceFactory.getInstance()
                             .getAuthorizationCodeDAO()
                             .getActiveAuthorizationCodesByConsumerKey(oauthKey);
+                    clearCacheEntriesAgainstAuthzCodeByConsumerKey(authorizationCodes, tenantDomain, oauthKey);
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                             .revokeAuthzCodes(oauthKey, authorizationCodes.toArray(new String[0]));
                 } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {

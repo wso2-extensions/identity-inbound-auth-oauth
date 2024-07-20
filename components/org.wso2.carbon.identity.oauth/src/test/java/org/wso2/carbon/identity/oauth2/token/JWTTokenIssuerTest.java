@@ -78,6 +78,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.servlet.http.HttpServletRequestWrapper;
+
 import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -119,6 +121,8 @@ public class JWTTokenIssuerTest {
     private static final String APPLICATION_ACCESS_TOKEN_GRANT_TYPE = "applicationAccessTokenGrantType";
     private static final String DUMMY_CLIENT_ID = "dummyClientID";
     private static final String DUMMY_SECTOR_IDENTIFIER = "https://mockhost.com/file_of_redirect_uris.json";
+    private static final String DUMMY_TOKEN_ENDPOINT = "https://localhost:9443/oauth2/token";
+    private static final String DUMMY_MTLS_TOKEN_ENDPOINT = "https://mtls.localhost:9443/oauth2/token";
     private static final String DUMMY_CONSUMER_KEY = "DUMMY_CONSUMER_KEY";
     private static final String DUMMY_USER_ID = "DUMMY_USER_ID";
     private static final String ID_TOKEN_ISSUER = "idTokenIssuer";
@@ -176,6 +180,9 @@ public class JWTTokenIssuerTest {
             OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
             accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
             accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+            HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+            when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+            accessTokenReqDTO.setHttpServletRequestWrapper(httpServletRequestWrapper);
             OAuthTokenReqMessageContext reqMessageContext = new OAuthTokenReqMessageContext(accessTokenReqDTO);
             reqMessageContext.setScope(requestScopes);
             reqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
@@ -304,6 +311,7 @@ public class JWTTokenIssuerTest {
         authorizeReqDTO.setUser(authenticatedUserForAuthz);
         OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
         authzReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
+        authzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, false);
         authzReqMessageContext.setConsentedToken(true);
 
         OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
@@ -313,6 +321,9 @@ public class JWTTokenIssuerTest {
         AuthenticatedUser authenticatedUserForTokenReq = new AuthenticatedUser(authenticatedUserForAuthz);
         tokenReqMessageContext.setAuthorizedUser(authenticatedUserForTokenReq);
         tokenReqMessageContext.setConsentedToken(false);
+        HttpServletRequestWrapper httpServletRequestWrapper = mock(HttpServletRequestWrapper.class);
+        when(httpServletRequestWrapper.getRequestURL()).thenReturn(new StringBuffer(DUMMY_TOKEN_ENDPOINT));
+        tokenReqMessageContext.getOauth2AccessTokenReqDTO().setHttpServletRequestWrapper(httpServletRequestWrapper);
         Calendar cal = Calendar.getInstance(); // creates calendar
         cal.setTime(new Date()); // sets calendar time/date
         cal.add(Calendar.HOUR_OF_DAY, 1); // adds one hour
@@ -369,7 +380,7 @@ public class JWTTokenIssuerTest {
             mockCustomClaimsCallbackHandler();
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
-            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString())).thenReturn(ID_TOKEN_ISSUER);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any())).thenReturn(Collections.singletonList
                     (DUMMY_CLIENT_ID));
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
@@ -450,12 +461,15 @@ public class JWTTokenIssuerTest {
                                    long expectedExpiry, boolean ppidEnabled) throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
             OAuthAppDO appDO = spy(new OAuthAppDO());
             when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
                     .thenReturn(DEFAULT_USER_ACCESS_TOKEN_EXPIRY_TIME);
             mockGrantHandlers();
             mockCustomClaimsCallbackHandler();
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME))
+                    .thenReturn(DUMMY_MTLS_TOKEN_ENDPOINT);
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
 
@@ -467,7 +481,8 @@ public class JWTTokenIssuerTest {
             Certificate cert = wso2KeyStore.getCertificate("wso2carbon");
             oAuth2Util.when(() -> OAuth2Util.getCertificate(anyString(), anyInt())).thenReturn(cert);
             oAuth2Util.when(() -> OAuth2Util.getThumbPrintWithPrevAlgorithm(any(), anyBoolean())).thenCallRealMethod();
-            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any())).thenAnswer((Answer<Void>) invocation -> null);
+            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(any(), anyBoolean()))
+                    .thenAnswer((Answer<Void>) invocation -> null);
             oAuth2Util.when(() -> OAuth2Util.getKID(any(Certificate.class), any(JWSAlgorithm.class), anyString()))
                     .thenAnswer((Answer<Void>) invocation -> null);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any()))
