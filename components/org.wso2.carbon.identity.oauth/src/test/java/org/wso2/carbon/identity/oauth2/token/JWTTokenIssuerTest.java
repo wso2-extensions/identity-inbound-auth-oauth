@@ -318,6 +318,7 @@ public class JWTTokenIssuerTest {
         cal.add(Calendar.HOUR_OF_DAY, 1); // adds one hour
         tokenReqMessageContext.addProperty(EXPIRY_TIME_JWT, cal.getTime());
         tokenReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+        tokenReqMessageContext.setAudiences(Collections.singletonList(DUMMY_CLIENT_ID));
         authenticatedUserForTokenReq.setFederatedUser(false);
 
         return new Object[][]{
@@ -372,6 +373,7 @@ public class JWTTokenIssuerTest {
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any())).thenReturn(Collections.singletonList
                     (DUMMY_CLIENT_ID));
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
+            oAuth2Util.when(OAuth2Util::isPairwiseSubEnabledForAccessTokens).thenReturn(ppidEnabled);
 
             when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
             when(mockOAuthServerConfiguration.getUserAccessTokenValidityPeriodInSeconds())
@@ -381,8 +383,6 @@ public class JWTTokenIssuerTest {
 
             JWTTokenIssuer jwtTokenIssuer = spy(new JWTTokenIssuer());
 
-            identityUtil.when(() -> IdentityUtil.getProperty("OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken"))
-                    .thenReturn(String.valueOf(ppidEnabled));
 
             JWTClaimsSet jwtClaimSet = jwtTokenIssuer.createJWTClaimSet(
                     (OAuthAuthzReqMessageContext) authzReqMessageContext,

@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Contains authenticated user attributes and nonce value.
@@ -83,6 +84,12 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private boolean isApiBasedAuthRequest;
 
     private List<FederatedTokenDO> federatedTokens;
+
+    private List<String> audiences;
+
+    private Map<String, Object> customClaims;
+
+    private boolean isPreIssueAccessTokenActionsExecuted;
 
     public String getSubjectClaim() {
         return subjectClaim;
@@ -142,6 +149,10 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     public AuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
         this.userAttributes = userAttributes;
+    }
+
+    public AuthorizationGrantCacheEntry() {
+
     }
 
     public String getNonceValue() {
@@ -349,5 +360,35 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setApiBasedAuthRequest(boolean apiBasedAuthRequest) {
 
         isApiBasedAuthRequest = apiBasedAuthRequest;
+    }
+
+    public List<String> getAudiences() {
+
+        return audiences;
+    }
+
+    public void setAudiences(List<String> audiences) {
+
+        this.audiences = audiences;
+    }
+
+    public Map<String, Object> getCustomClaims() {
+
+        return customClaims;
+    }
+
+    public void setCustomClaims(Map<String, Object> customClaims) {
+
+        this.customClaims = customClaims;
+    }
+
+    public boolean isPreIssueAccessTokenActionsExecuted() {
+
+        return isPreIssueAccessTokenActionsExecuted;
+    }
+
+    public void setPreIssueAccessTokenActionsExecuted(boolean preIssueAccessTokenActionsExecuted) {
+
+        isPreIssueAccessTokenActionsExecuted = preIssueAccessTokenActionsExecuted;
     }
 }

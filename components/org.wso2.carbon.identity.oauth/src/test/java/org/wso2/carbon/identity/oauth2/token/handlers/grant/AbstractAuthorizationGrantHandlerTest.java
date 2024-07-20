@@ -18,10 +18,16 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.actions.ActionExecutorService;
+import org.wso2.carbon.identity.actions.ActionType;
+import org.wso2.carbon.identity.actions.exception.ActionExecutionException;
+import org.wso2.carbon.identity.actions.model.ActionExecutionResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -52,7 +58,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -64,10 +73,11 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
         files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
                 "dbScripts/insert_consumer_app.sql", "dbScripts/insert_local_idp.sql"})
 @WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
-
 public class AbstractAuthorizationGrantHandlerTest {
 
     private AbstractAuthorizationGrantHandler handler;
+   @Mock
+    private ActionExecutorService mockActionExecutionService;
 
     private RefreshGrantHandler refreshGrantHandler;
     private AuthenticatedUser authenticatedUser;
@@ -82,11 +92,17 @@ public class AbstractAuthorizationGrantHandlerTest {
     private OAuthAppDO oAuthAppDO;
 
     @BeforeMethod
-    public void setUp() throws IdentityOAuth2Exception, IdentityOAuthAdminException {
+    public void setUp() throws IdentityOAuth2Exception, IdentityOAuthAdminException, ActionExecutionException {
         authenticatedUser = new AuthenticatedUser() {
 
         };
         OAuthComponentServiceHolder.getInstance().setRealmService(IdentityTenantUtil.getRealmService());
+
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+        MockitoAnnotations.initMocks(this);
+        when(mockActionExecutionService.execute(any(ActionType.class), anyMap())).thenReturn(
+                new ActionExecutionResponse());
+
         authenticatedUser.setUserName("randomUser");
         authenticatedUser.setTenantDomain("Homeless");
         authenticatedUser.setUserStoreDomain("Street");

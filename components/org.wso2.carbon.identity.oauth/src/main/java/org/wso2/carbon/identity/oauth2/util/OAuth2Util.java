@@ -334,6 +334,8 @@ public class OAuth2Util {
      */
     public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
 
+    private static final String ENABLE_PPID_FOR_ACCESS_TOKENS = "OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken";
+
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
@@ -5427,5 +5429,10 @@ public class OAuth2Util {
             throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain of organization ID: " +
                     authenticatedUser.getUserResidentOrganization(), e);
         }
+    }
+
+    public static boolean isPairwiseSubEnabledForAccessTokens() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }
 }

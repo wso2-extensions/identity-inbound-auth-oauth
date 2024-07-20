@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.actions.ActionExecutorService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
@@ -80,6 +81,8 @@ public class OAuthComponentServiceHolder {
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private IdpManager idpManager;
     private OrganizationUserSharingService organizationUserSharingService;
+
+    private ActionExecutorService actionExecutorService;
 
     /**
      * Get the list of scope validator implementations available.
@@ -510,5 +513,15 @@ public class OAuthComponentServiceHolder {
     public void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
 
         this.organizationUserSharingService = organizationUserSharingService;
+    }
+
+    public ActionExecutorService getActionExecutorService() {
+
+        return actionExecutorService;
+    }
+
+    public void setActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        this.actionExecutorService = actionExecutorService;
     }
 }

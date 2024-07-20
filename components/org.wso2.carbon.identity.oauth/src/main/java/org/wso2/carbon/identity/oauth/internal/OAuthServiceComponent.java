@@ -26,6 +26,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.actions.ActionExecutorServiceImpl;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
@@ -111,6 +112,8 @@ public class OAuthServiceComponent {
                     authProtocolApplicationService, null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
+
+            OAuthComponentServiceHolder.getInstance().setActionExecutorService(ActionExecutorServiceImpl.getInstance());
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");

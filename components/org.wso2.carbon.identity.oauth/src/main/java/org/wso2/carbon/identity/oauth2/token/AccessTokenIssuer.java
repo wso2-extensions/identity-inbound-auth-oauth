@@ -167,6 +167,8 @@ public class AccessTokenIssuer {
         String grantType = tokenReqDTO.getGrantType();
         OAuth2AccessTokenRespDTO tokenRespDTO = null;
 
+        log.info("=== Starting access token issue flow. grantType: " + grantType);
+
         AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
@@ -573,6 +575,12 @@ public class AccessTokenIssuer {
             }
         }
 
+        log.info("=== End of access token issue flow. grantType: " + grantType + " tokenRespDTO: " + "{"
+                + "accessToken: " + tokenRespDTO.getAccessToken() + ", refreshToken: " + tokenRespDTO.getRefreshToken()
+                + ", expiresIn: " + tokenRespDTO.getExpiresIn() + ", authorizedScopes: " +
+                tokenRespDTO.getAuthorizedScopes() + ", tokenType: " + tokenRespDTO.getTokenType() +
+                ", parameterObjects: " + tokenRespDTO.getParameterObjects() + "}");
+
         if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
             Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
             if (deviceCodeOptional.isPresent()) {
@@ -589,6 +597,8 @@ public class AccessTokenIssuer {
         if (GrantType.PASSWORD.toString().equals(grantType)) {
             addUserAttributesAgainstAccessTokenForPasswordGrant(tokenRespDTO, tokReqMsgCtx);
         }
+
+        persistCustomizedAccessTokenAttributesForRefreshToken(tokenRespDTO, tokReqMsgCtx);
 
         if (GrantType.AUTHORIZATION_CODE.toString().equals(grantType)) {
             // Cache entry against the authorization code has no value beyond the token request.
@@ -1234,6 +1244,37 @@ public class AccessTokenIssuer {
             authorizationGrantCacheEntry.setValidityPeriod(
                     TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+        }
+    }
+
+    private void persistCustomizedAccessTokenAttributesForRefreshToken(OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        /*
+          If pre issue access token actions are executed it may have done modifications to the audience list, claims,
+          incorporated to the access token which are not persisted in the access token table.
+          If so, persist those custom modifications against the token id in the transaction session store
+          to populate the authorized access token context back at refresh token flow.
+         */
+        if (tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted()) {
+            AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getTokenId());
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    new AuthorizationGrantCacheEntry();
+            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+            authorizationGrantCacheEntry.setPreIssueAccessTokenActionsExecuted(
+                    tokReqMsgCtx.isPreIssueAccessTokenActionsExecuted());
+            authorizationGrantCacheEntry.setAudiences(tokReqMsgCtx.getAudiences());
+            authorizationGrantCacheEntry.setCustomClaims(tokReqMsgCtx.getAdditionalAccessTokenClaims());
+
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
+            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                        "Customized audience list and access token attributes from pre issue access token actions are persisted in the AuthorizationGrantCache against the token id: %s.",
+                        tokenRespDTO.getTokenId()));
+            }
         }
     }
 

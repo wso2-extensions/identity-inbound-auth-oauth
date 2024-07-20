@@ -288,7 +288,7 @@ public class OIDCClaimUtil {
      * @return subject type
      */
 
-    private static SubjectType getSubjectType(OAuthAppDO authAppDO) {
+    public static SubjectType getSubjectType(OAuthAppDO authAppDO) {
 
         if (StringUtils.isNotEmpty(authAppDO.getSubjectType())) {
             return SubjectType.fromValue(authAppDO.getSubjectType());

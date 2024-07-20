@@ -24,6 +24,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.actions.ActionType;
+import org.wso2.carbon.identity.actions.exception.ActionExecutionException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -37,6 +39,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -55,9 +58,12 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -109,11 +115,13 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // context property.
         RefreshTokenValidationDataDO validationBean = (RefreshTokenValidationDataDO) tokReqMsgCtx
                 .getProperty(PREV_ACCESS_TOKEN);
-
         if (isRefreshTokenExpired(validationBean)) {
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
+        tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
+
+        executePreIssueAccessTokenActions(validationBean,tokReqMsgCtx);
         AccessTokenDO accessTokenBean = getRefreshTokenGrantProcessor()
                 .createAccessTokenBean(tokReqMsgCtx, tokenReq, validationBean, getTokenType(tokReqMsgCtx));
 
@@ -664,6 +672,56 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(oldAuthorizationGrantCacheKey,
                     oldAccessToken.getTokenId());
             AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey, grantCacheEntry);
+        }
+    }
+
+    private void executePreIssueAccessTokenActions(RefreshTokenValidationDataDO refreshTokenValidationDataDO,
+                                                   OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        //todo: read from Action Management Service and check if there are actions to engage
+        boolean preIssueAccessTokenActionAvailable = true;
+
+        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+
+        if (preIssueAccessTokenActionAvailable && "JWT".equals(oAuthAppBean.getTokenType())) {
+
+            setCustomizedAccessTokenAttributesToMessageContext(refreshTokenValidationDataDO, tokenReqMessageContext);
+
+            Map<String, Object> additionalProperties = new HashMap<>();
+            Consumer<Map<String, Object>> mapInitializer = map -> {
+                map.put("tokenMessageContext", tokenReqMessageContext);
+            };
+            mapInitializer.accept(additionalProperties);
+
+            try {
+                OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties);
+            } catch (ActionExecutionException e) {
+                // If error ignore and proceed
+                log.error("Error while executing pre issue access token action", e);
+            }
+        }
+    }
+
+    private void setCustomizedAccessTokenAttributesToMessageContext(RefreshTokenValidationDataDO refreshTokenData,
+                                                                    OAuthTokenReqMessageContext tokenRequestContext) {
+
+        AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(refreshTokenData.getTokenId());
+        AuthorizationGrantCacheEntry grantCacheEntry = AuthorizationGrantCache.getInstance()
+                .getValueFromCacheByTokenId(grantCacheKey, refreshTokenData.getTokenId());
+
+        if (grantCacheEntry != null && grantCacheEntry.isPreIssueAccessTokenActionsExecuted()) {
+            tokenRequestContext.setPreIssueAccessTokenActionsExecuted(true);
+            tokenRequestContext.setAdditionalAccessTokenClaims(grantCacheEntry.getCustomClaims());
+            tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
+            if (log.isDebugEnabled()) {
+                log.debug(String.format(
+                        "Updated OAuthTokenReqMessageContext with customized audience list and access token attributes in the AuthorizationGrantCache for token id: %s.",
+                        refreshTokenData.getTokenId()));
+            }
+
+            AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
         }
     }
 
