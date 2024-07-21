@@ -32,8 +32,9 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -79,7 +80,7 @@ public class JwksEndpointTest {
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
     @Mock
-    KeyStoreManager mockKeyStoreManager;
+    IdentityKeyStoreResolver mockIdentityKeyStoreResolver;
 
     private static final String CERT_THUMB_PRINT = "generatedCertThrumbPrint";
     private static final String ALG = "RS256";
@@ -149,21 +150,15 @@ public class JwksEndpointTest {
                 OAuthServerConfiguration.class);
              MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<KeystoreUtils> keystoreUtils = mockStatic(KeystoreUtils.class);) {
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);) {
 
-            Path keystorePath =
-                    Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                            "security", "wso2carbon.jks");
-            keystoreUtils.when(() -> KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
             // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<KeyStoreManager> keyStoreManager = mockStatic(KeyStoreManager.class);
+                 MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolver =
+                         mockStatic(IdentityKeyStoreResolver.class);
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
-
-                carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
 
                 ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
                     protected Map<String, Object> initialValue() {
@@ -218,11 +213,16 @@ public class JwksEndpointTest {
                         .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
                                 "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
 
-                keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
-                lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
-                        getKeyStoreFromFile("foo-com.jks", "foo.com"));
-                lenient().when(mockKeyStoreManager.getPrimaryKeyStore()).thenReturn(
-                        getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
+                identityKeyStoreResolver.when(() ->
+                        IdentityKeyStoreResolver.getInstance()).thenReturn(mockIdentityKeyStoreResolver);
+
+                lenient().when(mockIdentityKeyStoreResolver
+                                .getKeyStore("carbon.super", IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH))
+                        .thenReturn(getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
+                lenient().when(mockIdentityKeyStoreResolver
+                        .getKeyStore("foo.com", IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH))
+                        .thenReturn(getKeyStoreFromFile("foo-com.jks", "foo.com"));
+
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
 
                 String result = jwksEndpoint.jwks();
