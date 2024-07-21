@@ -3250,7 +3250,14 @@ public class OAuth2Util {
         }
     }
 
-    public static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
+    /**
+     * Method to obatin Default Private key for OAuth2 protocol.
+     *
+     * @param tenantDomain Tenant Domain as a String.
+     * @return Default Private key for OAuth2 protocol.
+     * @throws IdentityOAuth2Exception When failed to obtain the private key for the requested tenant.
+     */
+    public static Key getPrivateKey(String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             return IdentityKeyStoreResolver.getInstance().getPrivateKey(
@@ -3258,6 +3265,19 @@ public class OAuth2Util {
         } catch (IdentityKeyStoreResolverException e) {
             throw new IdentityOAuth2Exception("Error while obtaining private key", e);
         }
+    }
+
+    /**
+     * Method to obatin Default Private key for OAuth2 protocol.
+     *
+     * @param tenantDomain Tenant Domain as a String.
+     * @param tenantId     Tenan ID as an integer.
+     * @return Default Private key for OAuth2 protocol.
+     * @throws IdentityOAuth2Exception When failed to obtain the private key for the requested tenant.
+     */
+    public static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
+
+        return getPrivateKey(tenantDomain);
     }
 
     /**
@@ -3409,11 +3429,10 @@ public class OAuth2Util {
      * Method to obatin Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String.
-     * @param tenantId     Tenan ID as an integer.
-     * @return Default Signing Certificate of the tenant domain.
+     * @return Default Signing Certificate of the tenant domain for the OAuth2 protocol.
      * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
      */
-    public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
+    public static Certificate getCertificate(String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             return IdentityKeyStoreResolver.getInstance().getCertificate(
@@ -3421,6 +3440,19 @@ public class OAuth2Util {
         } catch (IdentityKeyStoreResolverException e) {
             throw new IdentityOAuth2Exception("Error while obtaining public certificate.", e);
         }
+    }
+
+    /**
+     * Method to obatin Default Signing certificate for the tenant.
+     *
+     * @param tenantDomain Tenant Domain as a String.
+     * @param tenantId     Tenan ID as an integer.
+     * @return Default Signing Certificate of the tenant domain for the OAuth2 protocol.
+     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
+     */
+    public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
+
+        return getCertificate(tenantDomain);
     }
 
     /**
