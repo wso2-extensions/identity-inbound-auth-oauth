@@ -506,7 +506,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                                             String tenantDomain) throws IdentityOAuth2Exception {
 
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.clearCacheEntry(consumerKey);
+        appInfoCache.clearCacheEntry(consumerKey, tenantDomain);
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         if (isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
