@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
-import org.wso2.carbon.identity.actions.model.Request;
+import org.wso2.carbon.identity.action.execution.model.Request;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -89,12 +89,12 @@ public class TokenRequest extends Request {
 
     public static class Builder {
 
+        private final Map<String, String[]> additionalHeaders = new HashMap<>();
+        private final Map<String, String[]> additionalParams = new HashMap<>();
         private String clientId;
         private String grantType;
         private String redirectUri;
         private List<String> scopes = new ArrayList<>();
-        private final Map<String, String[]> additionalHeaders = new HashMap<>();
-        private final Map<String, String[]> additionalParams = new HashMap<>();
 
         public Builder clientId(String clientId) {
 

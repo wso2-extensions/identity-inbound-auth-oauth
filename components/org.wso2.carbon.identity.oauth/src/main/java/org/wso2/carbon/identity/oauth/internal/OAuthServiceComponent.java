@@ -26,7 +26,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.identity.actions.ActionExecutorServiceImpl;
+import org.wso2.carbon.identity.action.execution.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
@@ -71,6 +71,7 @@ public class OAuthServiceComponent {
     private ServiceRegistration serviceRegistration = null;
 
     protected void activate(ComponentContext context) {
+
         try {
             // initialize the OAuth Server configuration
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
@@ -113,8 +114,6 @@ public class OAuthServiceComponent {
                     authProtocolApplicationService, null);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
-
-            OAuthComponentServiceHolder.getInstance().setActionExecutorService(ActionExecutorServiceImpl.getInstance());
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -267,10 +266,10 @@ public class OAuthServiceComponent {
     }
 
     @Reference(name = "token.binding.service",
-               service = TokenBinderInfo.class,
-               cardinality = ReferenceCardinality.MULTIPLE,
-               policy = ReferencePolicy.DYNAMIC,
-               unbind = "unsetTokenBinderInfo")
+            service = TokenBinderInfo.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetTokenBinderInfo")
     protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
@@ -288,10 +287,10 @@ public class OAuthServiceComponent {
     }
 
     @Reference(name = "oauth.application.mgt.listener",
-               service = OAuthApplicationMgtListener.class,
-               cardinality = ReferenceCardinality.MULTIPLE,
-               policy = ReferencePolicy.DYNAMIC,
-               unbind = "unsetOAuthApplicationMgtListener")
+            service = OAuthApplicationMgtListener.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOAuthApplicationMgtListener")
     protected void setOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
 
         if (log.isDebugEnabled()) {
@@ -546,7 +545,6 @@ public class OAuthServiceComponent {
         OAuthComponentServiceHolder.getInstance().setConfigurationManager(configurationManager);
     }
 
-
     /**
      * Unset the ConfigurationManager.
      *
@@ -558,5 +556,28 @@ public class OAuthServiceComponent {
             log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
         }
         OAuthComponentServiceHolder.getInstance().setConfigurationManager(null);
+    }
+
+    @Reference(
+            name = "action.execution.service.component",
+            service = ActionExecutorService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterActionExecutorService"
+    )
+    protected void registerActionExecutionService(ActionExecutorService actionExecutorService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the ActionExecutorService in OAuthServiceComponent.");
+        }
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(actionExecutorService);
+    }
+
+    protected void unregisterActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
+        }
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(null);
     }
 }

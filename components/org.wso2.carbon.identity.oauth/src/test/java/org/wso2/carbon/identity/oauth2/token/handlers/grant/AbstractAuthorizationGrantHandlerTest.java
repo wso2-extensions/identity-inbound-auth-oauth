@@ -24,10 +24,8 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.actions.ActionExecutorService;
-import org.wso2.carbon.identity.actions.ActionType;
-import org.wso2.carbon.identity.actions.exception.ActionExecutionException;
-import org.wso2.carbon.identity.actions.model.ActionExecutionResponse;
+import org.wso2.carbon.identity.action.execution.ActionExecutorService;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -50,6 +48,8 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.model.ActionType;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -100,8 +100,8 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
         MockitoAnnotations.initMocks(this);
-        when(mockActionExecutionService.execute(any(ActionType.class), anyMap())).thenReturn(
-                new ActionExecutionResponse());
+        when(mockActionExecutionService.execute(any(ActionType.class), anyMap(), any())).thenReturn(
+                new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, null));
 
         authenticatedUser.setUserName("randomUser");
         authenticatedUser.setTenantDomain("Homeless");

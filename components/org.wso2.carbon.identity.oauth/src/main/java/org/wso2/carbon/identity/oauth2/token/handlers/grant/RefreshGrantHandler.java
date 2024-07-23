@@ -24,10 +24,11 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.actions.ActionType;
-import org.wso2.carbon.identity.actions.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -696,7 +697,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
             try {
                 OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties);
+                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
+                                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
             } catch (ActionExecutionException e) {
                 // If error ignore and proceed
                 log.error("Error while executing pre issue access token action", e);

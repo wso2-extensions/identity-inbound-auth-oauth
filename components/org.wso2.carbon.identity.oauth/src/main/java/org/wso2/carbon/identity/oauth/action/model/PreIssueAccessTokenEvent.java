@@ -18,12 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
-import org.wso2.carbon.identity.actions.model.Event;
-import org.wso2.carbon.identity.actions.model.Organization;
-import org.wso2.carbon.identity.actions.model.Request;
-import org.wso2.carbon.identity.actions.model.Tenant;
-import org.wso2.carbon.identity.actions.model.User;
-import org.wso2.carbon.identity.actions.model.UserStore;
+import org.wso2.carbon.identity.action.execution.model.Event;
+import org.wso2.carbon.identity.action.execution.model.Organization;
+import org.wso2.carbon.identity.action.execution.model.Request;
+import org.wso2.carbon.identity.action.execution.model.Tenant;
+import org.wso2.carbon.identity.action.execution.model.User;
+import org.wso2.carbon.identity.action.execution.model.UserStore;
 
 /**
  * PreIssueATEvent.

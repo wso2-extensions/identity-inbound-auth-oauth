@@ -32,9 +32,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.actions.ActionExecutionRequestBuilderFactory;
-import org.wso2.carbon.identity.actions.ActionExecutionResponseProcessorFactory;
-import org.wso2.carbon.identity.actions.ActionType;
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
@@ -51,8 +48,6 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
-import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenRequestBuilder;
-import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenProcessor;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -468,11 +463,11 @@ public class OAuth2ServiceComponent {
             initializeLegacyScopeToNewScopeMappings();
         }
 
-        ActionExecutionRequestBuilderFactory.registerActionInvocationRequestBuilder(ActionType.PRE_ISSUE_ACCESS_TOKEN,
-                PreIssueAccessTokenRequestBuilder.getInstance());
-        ActionExecutionResponseProcessorFactory.registerActionInvocationResponseProcessor(
-                ActionType.PRE_ISSUE_ACCESS_TOKEN,
-                PreIssueAccessTokenProcessor.getInstance());
+//        ActionExecutionRequestBuilderFactory.registerActionInvocationRequestBuilder(ActionType.PRE_ISSUE_ACCESS_TOKEN,
+//                PreIssueAccessTokenRequestBuilder.getInstance());
+//        ActionExecutionResponseProcessorFactory.registerActionInvocationResponseProcessor(
+//                ActionType.PRE_ISSUE_ACCESS_TOKEN,
+//                PreIssueAccessTokenProcessor.getInstance());
     }
 
     /**

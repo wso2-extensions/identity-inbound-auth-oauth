@@ -26,8 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.actions.ActionType;
-import org.wso2.carbon.identity.actions.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -277,7 +277,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         Set<OAuth2ScopeHandler> scopeHandlers = OAuthServerConfiguration.getInstance().getOAuth2ScopeHandlers();
         boolean isValid = true;
 
-        for (OAuth2ScopeHandler scopeHandler: scopeHandlers) {
+        for (OAuth2ScopeHandler scopeHandler : scopeHandlers) {
             if (scopeHandler != null && scopeHandler.canHandle(tokReqMsgCtx)) {
                 isValid = scopeHandler.validateScope(tokReqMsgCtx);
                 if (log.isDebugEnabled()) {
@@ -325,6 +325,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     @Override
     public boolean authorizeAccessDelegation(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
+
         OAuthCallback authzCallback = new OAuthCallback(tokReqMsgCtx.getAuthorizedUser(),
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(),
                 OAuthCallback.OAuthCallbackType.ACCESS_DELEGATION_TOKEN);
@@ -362,7 +363,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         try {
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .insertAccessToken(newAccessToken, oAuth2AccessTokenReqDTO.getClientId(),
-                    newTokenBean, existingTokenBean, userStoreDomain);
+                            newTokenBean, existingTokenBean, userStoreDomain);
         } catch (IdentityException e) {
             String maskedToken = LoggerUtils.isLogMaskingEnable ? LoggerUtils.getMaskedContent(newAccessToken) :
                     newAccessToken;
@@ -475,14 +476,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             try {
                 OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties);
+                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
+                                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
             } catch (ActionExecutionException e) {
                 // If error ignore and proceed
                 log.error("Error while executing pre issue access token action", e);
             }
         }
     }
-
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {
 
@@ -768,7 +769,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
                 OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
-                GrantType.REFRESH_TOKEN.toString())) {
+                        GrantType.REFRESH_TOKEN.toString())) {
             String grantTypes = oAuthAppDO.getGrantTypes();
             List<String> supportedGrantTypes = new ArrayList<>();
             if (StringUtils.isNotEmpty(grantTypes)) {

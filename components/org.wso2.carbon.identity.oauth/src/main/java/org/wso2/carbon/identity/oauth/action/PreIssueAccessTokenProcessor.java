@@ -21,12 +21,14 @@ package org.wso2.carbon.identity.oauth.action;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.actions.ActionExecutionResponseProcessor;
-import org.wso2.carbon.identity.actions.ActionType;
-import org.wso2.carbon.identity.actions.model.ActionExecutionResponse;
-import org.wso2.carbon.identity.actions.model.ActionExecutionStatus;
-import org.wso2.carbon.identity.actions.model.Event;
-import org.wso2.carbon.identity.actions.model.PerformableOperation;
+import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionResponseProcessorException;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
+import org.wso2.carbon.identity.action.execution.model.ActionInvocationErrorResponse;
+import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessResponse;
+import org.wso2.carbon.identity.action.execution.model.ActionType;
+import org.wso2.carbon.identity.action.execution.model.Event;
+import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
@@ -51,39 +53,26 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
     private static final String OPERATION_REPLACE = "replace";
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
     private static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
-
     private static final PreIssueAccessTokenProcessor instance = new PreIssueAccessTokenProcessor();
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].[^\\s]*)|(^[a-zA-Z0-9.-]+$)");
-
-    // Validate if the input is a valid StringOrURI
 
     public static PreIssueAccessTokenProcessor getInstance() {
 
         return instance;
     }
 
-    private boolean validateNQChar(String input) {
-
-        Matcher matcher = NQCHAR_PATTERN.matcher(input);
-        return matcher.matches();
-    }
-
-    private boolean isValidStringOrURI(String input) {
-
-        Matcher matcher = STRING_OR_URI_PATTERN.matcher(input);
-        return matcher.matches();
-    }
-
     @Override
-    public ActionExecutionStatus processResponse(ActionType actionType, Map<String, Object> eventContext,
-                                                 Event actionEvent, ActionExecutionResponse actionExecutionResponse) {
+    public ActionExecutionStatus processSuccessResponse(ActionType actionType, Map<String, Object> eventContext,
+                                                        Event event,
+                                                        ActionInvocationSuccessResponse actionInvocationSuccessResponse)
+            throws ActionExecutionResponseProcessorException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
                 (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
-        PreIssueAccessTokenEvent preIssueAccessTokenEvent = (PreIssueAccessTokenEvent) actionEvent;
-        List<PerformableOperation> operationsToPerform = actionExecutionResponse.getOperations();
+        PreIssueAccessTokenEvent preIssueAccessTokenEvent = (PreIssueAccessTokenEvent) event;
+        List<PerformableOperation> operationsToPerform = actionInvocationSuccessResponse.getOperations();
 
         AccessToken requestAccessToken = preIssueAccessTokenEvent.getAccessToken();
         AccessToken.Builder responseAccessTokenBuilder = preIssueAccessTokenEvent.getAccessToken().copy();
@@ -101,8 +90,7 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
                         handleReplaceOperation(operation, requestAccessToken, responseAccessTokenBuilder);
                         break;
                     default:
-                        // todo: add a diagnostic log indicating the operation is not supported
-                        LOG.info("Operation is not supported: " + operation.getOp());
+                        break;
                 }
             }
         }
@@ -110,7 +98,15 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
         updateTokenMessageContext(tokenMessageContext, responseAccessToken);
 
-        return new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, null);
+        return new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, eventContext);
+    }
+
+    @Override
+    public ActionExecutionStatus processErrorResponse(ActionType actionType, Map<String, Object> map, Event event,
+                                                      ActionInvocationErrorResponse actionInvocationErrorResponse)
+            throws ActionExecutionResponseProcessorException {
+
+        return null;
     }
 
     private void updateTokenMessageContext(OAuthTokenReqMessageContext tokenMessageContext,
@@ -538,5 +534,17 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
 
         LOG.info("Invalid index: " + indexPart);
         return -1;
+    }
+
+    private boolean validateNQChar(String input) {
+
+        Matcher matcher = NQCHAR_PATTERN.matcher(input);
+        return matcher.matches();
+    }
+
+    private boolean isValidStringOrURI(String input) {
+
+        Matcher matcher = STRING_OR_URI_PATTERN.matcher(input);
+        return matcher.matches();
     }
 }

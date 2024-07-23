@@ -21,17 +21,17 @@ package org.wso2.carbon.identity.oauth.action;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.actions.ActionExecutionRequestBuilder;
-import org.wso2.carbon.identity.actions.ActionType;
-import org.wso2.carbon.identity.actions.exception.ActionExecutionException;
-import org.wso2.carbon.identity.actions.model.ActionExecutionRequest;
-import org.wso2.carbon.identity.actions.model.AllowedOperation;
-import org.wso2.carbon.identity.actions.model.Event;
-import org.wso2.carbon.identity.actions.model.Organization;
-import org.wso2.carbon.identity.actions.model.Request;
-import org.wso2.carbon.identity.actions.model.Tenant;
-import org.wso2.carbon.identity.actions.model.User;
-import org.wso2.carbon.identity.actions.model.UserStore;
+import org.wso2.carbon.identity.action.execution.ActionExecutionRequestBuilder;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionRequestBuilderException;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.model.ActionType;
+import org.wso2.carbon.identity.action.execution.model.AllowedOperation;
+import org.wso2.carbon.identity.action.execution.model.Event;
+import org.wso2.carbon.identity.action.execution.model.Organization;
+import org.wso2.carbon.identity.action.execution.model.Request;
+import org.wso2.carbon.identity.action.execution.model.Tenant;
+import org.wso2.carbon.identity.action.execution.model.User;
+import org.wso2.carbon.identity.action.execution.model.UserStore;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -74,8 +74,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     @Override
-    public ActionExecutionRequest buildActionInvocationRequest(ActionType actionType, Map<String, Object> eventContext)
-            throws ActionExecutionException {
+    public ActionExecutionRequest buildActionExecutionRequest(ActionType actionType, Map<String, Object> eventContext)
+            throws ActionExecutionRequestBuilderException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
                 (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
@@ -91,7 +91,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private Event getEvent(OAuthTokenReqMessageContext tokenMessageContext, Map<String, Object> claimsToAdd)
-            throws ActionExecutionException {
+            throws ActionExecutionRequestBuilderException {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
         AuthenticatedUser authorizedUser = tokenMessageContext.getAuthorizedUser();
@@ -151,7 +151,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private AccessToken getAccessToken(OAuthTokenReqMessageContext tokenMessageContext, Map<String, Object> claimsToAdd)
-            throws ActionExecutionException {
+            throws ActionExecutionRequestBuilderException {
 
         try {
             OAuthAppDO oAuthAppDO = getAppInformation(tokenMessageContext);
@@ -181,7 +181,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                     "Failed to generate pre issue access token action request. Application: %s. Grant type: %s. Error: %s.",
                     tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
                     tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e.getMessage());
-            throw new ActionExecutionException(errorMessage, e);
+            throw new ActionExecutionRequestBuilderException(errorMessage, e);
         }
     }
 
@@ -220,7 +220,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private Map<String, Object> getAdditionalClaimsToAddToToken(OAuthTokenReqMessageContext tokenMessageContext)
-            throws ActionExecutionException {
+            throws ActionExecutionRequestBuilderException {
          /*
          Directly return custom claims if pre-issue access token actions have been executed.
          This is to ensure that the custom claims added are incorporated in the refresh token flow.
@@ -241,7 +241,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             String errorMessage =
                     String.format("Failed to retrieve OIDC claim set for the access token. Grant type: %s Error: %s",
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e.getMessage());
-            throw new ActionExecutionException(errorMessage, e);
+            throw new ActionExecutionRequestBuilderException(errorMessage, e);
         }
     }
 
@@ -296,7 +296,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private boolean isAccessTokenAuthorizedForUser(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws ActionExecutionException {
+            throws ActionExecutionRequestBuilderException {
 
         AuthorizationGrantHandler grantHandler =
                 OAuthServerConfiguration.getInstance().getSupportedGrantTypes().get(grantType);
@@ -307,7 +307,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             String errorMessage =
                     String.format("Failed to determine the authorized entity of the token. Grant type: %s Error: %s",
                             grantType, e.getMessage());
-            throw new ActionExecutionException(errorMessage, e.getCause());
+            throw new ActionExecutionRequestBuilderException(errorMessage, e.getCause());
         }
     }
 }
