@@ -518,6 +518,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
                 if (oauthCacheEntry != null) {
                     OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
+                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenDo.getAuthzUser()
+                            .getTenantDomain());
                 }
                 String tokenBindingReference = "NONE";
                 if (accessTokenDo.getTokenBinding() != null && StringUtils
