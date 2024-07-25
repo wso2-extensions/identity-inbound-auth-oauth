@@ -192,7 +192,6 @@ public class AccessTokenIssuer {
             }
         }
 
-
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
 
         OAuthClientAuthnContext oAuthClientAuthnContext = tokenReqDTO.getoAuthClientAuthnContext();
@@ -788,7 +787,6 @@ public class AccessTokenIssuer {
             removeAuthorizedScopes(tokReqMsgCtx, authorizedScopes);
         }
 
-
         boolean isDropUnregisteredScopes = OAuthServerConfiguration.getInstance().isDropUnregisteredScopes();
         if (isDropUnregisteredScopes) {
             if (log.isDebugEnabled()) {
@@ -840,6 +838,7 @@ public class AccessTokenIssuer {
     }
 
     private ServiceProvider getServiceProvider(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
+
         ServiceProvider serviceProvider;
         try {
             serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
@@ -914,6 +913,7 @@ public class AccessTokenIssuer {
 
     private String getDefaultSubject(ServiceProvider serviceProvider, AuthenticatedUser authenticatedUser)
             throws UserIdNotFoundException {
+
         String subject;
         boolean useUserIdForDefaultSubject = false;
         ServiceProviderProperty[] spProperties = serviceProvider.getSpProperties();
@@ -1138,8 +1138,8 @@ public class AccessTokenIssuer {
 
         if (OAuth2Constants.TokenBinderType.CLIENT_REQUEST.equals(tokenBinder.getBindingType()) &&
                 tokenBindingValueOptional.get().length() >= MAX_ALLOWED_LENGTH) {
-                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Token binding reference length exceeds limit");
+            throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Token binding reference length exceeds limit");
         }
 
         String tokenBindingValue = tokenBindingValueOptional.get();
@@ -1233,7 +1233,7 @@ public class AccessTokenIssuer {
     }
 
     private void addUserAttributesAgainstAccessTokenForPasswordGrant(OAuth2AccessTokenRespDTO tokenRespDTO,
-                                                           OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         if (tokReqMsgCtx.getAuthorizedUser() != null) {
             AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
@@ -1271,9 +1271,10 @@ public class AccessTokenIssuer {
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
 
             if (log.isDebugEnabled()) {
-                log.debug(String.format(
-                        "Customized audience list and access token attributes from pre issue access token actions are persisted in the AuthorizationGrantCache against the token id: %s.",
-                        tokenRespDTO.getTokenId()));
+                log.debug(
+                        "Customized audience list and access token attributes from pre issue access token actions " +
+                                "are persisted in the AuthorizationGrantCache against the token id: " +
+                                tokenRespDTO.getTokenId());
             }
         }
     }
@@ -1384,7 +1385,7 @@ public class AccessTokenIssuer {
      * provide the correct user store manager from the user realm.
      *
      * @param tenantDomain The tenant domain of the authenticated user.
-     * @param userId The ID of the authenticated user.
+     * @param userId       The ID of the authenticated user.
      * @return User store manager of the user reside organization.
      */
     private Optional<AbstractUserStoreManager> getUserStoreManagerFromRealmOfUserResideOrganization(String tenantDomain,

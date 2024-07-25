@@ -26,6 +26,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.action.execution.ActionExecutionRequestBuilder;
+import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
 import org.wso2.carbon.identity.action.execution.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -37,6 +39,8 @@ import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
+import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenProcessor;
+import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenRequestBuilder;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -112,6 +116,8 @@ public class OAuthServiceComponent {
                     authProtocolApplicationService);
             context.getBundleContext().registerService(ApplicationInboundAuthConfigHandler.class,
                     authProtocolApplicationService, null);
+
+            registerActionRequestBuilderAndResponseProcessor(context);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -123,6 +129,14 @@ public class OAuthServiceComponent {
             log.error(errMsg, e);
             throw new RuntimeException(errMsg, e);
         }
+    }
+
+    private void registerActionRequestBuilderAndResponseProcessor(ComponentContext context) {
+
+        context.getBundleContext()
+                .registerService(ActionExecutionRequestBuilder.class, new PreIssueAccessTokenRequestBuilder(), null);
+        context.getBundleContext()
+                .registerService(ActionExecutionResponseProcessor.class, new PreIssueAccessTokenProcessor(), null);
     }
 
     protected void deactivate(ComponentContext context) {
@@ -559,7 +573,7 @@ public class OAuthServiceComponent {
     }
 
     @Reference(
-            name = "action.execution.service.component",
+            name = "action.execution.service",
             service = ActionExecutorService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
