@@ -25,7 +25,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.ActionExecutorService;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
+import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -48,8 +50,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
-import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
-import org.wso2.carbon.identity.action.execution.model.ActionType;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -72,11 +72,11 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.T
 @WithH2Database(jndiName = "jdbc/WSO2IdentityDB",
         files = {"dbScripts/identity.sql", "dbScripts/insert_application_and_token.sql",
                 "dbScripts/insert_consumer_app.sql", "dbScripts/insert_local_idp.sql"})
-@WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class })
+@WithRealmService(injectToSingletons = {OAuthComponentServiceHolder.class})
 public class AbstractAuthorizationGrantHandlerTest {
 
     private AbstractAuthorizationGrantHandler handler;
-   @Mock
+    @Mock
     private ActionExecutorService mockActionExecutionService;
 
     private RefreshGrantHandler refreshGrantHandler;
@@ -146,26 +146,27 @@ public class AbstractAuthorizationGrantHandlerTest {
                 { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, false, true },
                 { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, false, false },
 
-                { true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true },
-                { true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false },
-                { true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true },
-                { true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
-                { false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false },
-                { false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
-                { false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
-                { true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false },
-                { true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true },
-                { true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false },
-                { true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, true },
-                { false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, false } };
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true},
+                {true, true, 0L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false},
+                {true, true, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, true},
+                {true, false, 0L, 0L, 0L, 0L, false, TOKEN_STATE_ACTIVE, true, false},
+                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
+                {false, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false},
+                {false, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
+                {false, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false},
+                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
+                {true, false, 0L, 0L, 3600L, 0L, true, TOKEN_STATE_REVOKED, true, false},
+                {true, false, 0L, 0L, 0L, 0L, true, TOKEN_STATE_ACTIVE, true, true},
+                {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false},
+                {true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, true},
+                {false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, false}};
     }
 
     @Test(dataProvider = "IssueDataProvider")
     public void testIssue(boolean cacheEnabled, boolean cacheEntryAvailable, long cachedTokenValidity,
-            long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
-            boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable, boolean isIDPIdColumnEnabled)
+                          long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
+                          boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable,
+                          boolean isIDPIdColumnEnabled)
             throws Exception {
 
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
@@ -179,7 +180,7 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
-        tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
 
         OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
         assertNotNull(tokenRespDTO.getAccessToken());
@@ -187,12 +188,14 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @DataProvider(name = "AuthorizeAccessDelegationDataProvider")
     public Object[][] buildAuthorizeAccessDelegationDataProvider() {
-        return new Object[][] { { GrantType.SAML20_BEARER.toString() }, { GrantType.IWA_NTLM.toString() },
-                { PASSWORD_GRANT } };
+
+        return new Object[][]{{GrantType.SAML20_BEARER.toString()}, {GrantType.IWA_NTLM.toString()},
+                {PASSWORD_GRANT}};
     }
 
     @Test(dataProvider = "AuthorizeAccessDelegationDataProvider")
     public void testAuthorizeAccessDelegation(String grantType) throws Exception {
+
         Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
         callbackHandlerMetaData.add(new OAuthCallbackHandlerMetaData(DEFAULT_CALLBACK_HANDLER_CLASS_NAME, null, 1));
 
@@ -207,7 +210,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         oAuth2AccessTokenReqDTO.setGrantType(grantType);
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
-        tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         boolean result = handler.authorizeAccessDelegation(tokReqMsgCtx);
@@ -216,11 +219,12 @@ public class AbstractAuthorizationGrantHandlerTest {
 
     @DataProvider(name = "IsAuthorizedClientDataProvider")
     public Object[][] buildIsAuthorizedClient() {
-        return new Object[][] {
-                { true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString() + " " + PASSWORD_GRANT,
-                        PASSWORD_GRANT, true },
-                { true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString(), PASSWORD_GRANT,
-                        false }, { true, null, PASSWORD_GRANT, false }, { false, null, PASSWORD_GRANT, false }, };
+
+        return new Object[][]{
+                {true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString() + " " + PASSWORD_GRANT,
+                        PASSWORD_GRANT, true},
+                {true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString(), PASSWORD_GRANT,
+                        false}, {true, null, PASSWORD_GRANT, false}, {false, null, PASSWORD_GRANT, false},};
     }
 
     @Test(dataProvider = "IsAuthorizedClientDataProvider")
@@ -232,7 +236,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         oAuth2AccessTokenReqDTO.setGrantType(grantType);
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
-        tokReqMsgCtx.setScope(new String[] { "scope1", "scope2" });
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
         tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
 
         if (oAuthAppDOAvailable) {
@@ -251,7 +255,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         AccessTokenDO newAccessTokenDO = new AccessTokenDO();
         AccessTokenDO existingAccessTokenDO = new AccessTokenDO();
         newAccessTokenDO.setAuthzUser(authenticatedUser);
-        newAccessTokenDO.setScope(new String[] { "scope1", "scope2" });
+        newAccessTokenDO.setScope(new String[]{"scope1", "scope2"});
 
         handler.storeAccessToken(oAuth2AccessTokenReqDTO, TestConstants.USERSTORE_DOMAIN, newAccessTokenDO,
                 TestConstants.NEW_ACCESS_TOKEN, existingAccessTokenDO);
@@ -319,15 +323,15 @@ public class AbstractAuthorizationGrantHandlerTest {
         scopeHandlers.add(oAuth2ScopeHandler2);
         scopeHandlers.add(oAuth2ScopeHandler3);
 
-        return new Object[][] { { oAuthTokenReqMessageContext1, Collections.EMPTY_SET, true },
-                { oAuthTokenReqMessageContext2, Collections.EMPTY_SET, true },
-                { oAuthTokenReqMessageContext3, Collections.EMPTY_SET, true },
-                { oAuthTokenReqMessageContext3, scopeHandlers, false } };
+        return new Object[][]{{oAuthTokenReqMessageContext1, Collections.EMPTY_SET, true},
+                {oAuthTokenReqMessageContext2, Collections.EMPTY_SET, true},
+                {oAuthTokenReqMessageContext3, Collections.EMPTY_SET, true},
+                {oAuthTokenReqMessageContext3, scopeHandlers, false}};
     }
 
     @Test(dataProvider = "BuildTokenRequestMessageContext")
     public void testValidateScope(Object tokenRequestMessageContext, Set<OAuth2ScopeHandler> scopeHandlers,
-            boolean expectedValue) throws IdentityOAuth2Exception {
+                                  boolean expectedValue) throws IdentityOAuth2Exception {
 
         OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMessageContext;
         OAuthServerConfiguration serverConfiguration = OAuthServerConfiguration.getInstance();
@@ -356,10 +360,10 @@ public class AbstractAuthorizationGrantHandlerTest {
         oAuthTokenReqMessageContext2.addProperty("OAuthAppDO", oAuthAppDO2);
         oAuthTokenReqMessageContext3.addProperty("OAuthAppDO", oAuthAppDO3);
 
-        return new Object[][] { { oAuthTokenReqMessageContext1, false, false },
-                { oAuthTokenReqMessageContext1, true, false }, { oAuthTokenReqMessageContext2, false, true },
-                { oAuthTokenReqMessageContext2, true, true }, { oAuthTokenReqMessageContext3, false, false },
-                { oAuthTokenReqMessageContext3, true, false } };
+        return new Object[][]{{oAuthTokenReqMessageContext1, false, false},
+                {oAuthTokenReqMessageContext1, true, false}, {oAuthTokenReqMessageContext2, false, true},
+                {oAuthTokenReqMessageContext2, true, true}, {oAuthTokenReqMessageContext3, false, false},
+                {oAuthTokenReqMessageContext3, true, false}};
     }
 
     @Test(dataProvider = "BuildTokenRequestMsgContextForAuthorizedClient")
