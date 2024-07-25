@@ -258,36 +258,22 @@ public class DefaultOAuth2ScopeValidator {
     }
 
     /**
-     * Get the authorized scopes for the given appId and/or tenant domain.
+     * Get the authorized scopes for the given appId and tenant domain.
      *
      * @param appId        App id.
      * @param tenantDomain Tenant domain.
      * @return Authorized scopes.
-     * @throws IdentityOAuth2Exception if an error occurs while retrieving authorized scopes.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving authorized scopes for app.
      */
     private List<AuthorizedScopes> getAuthorizedScopes(String appId, String tenantDomain)
             throws IdentityOAuth2Exception {
 
         try {
-            if (OAuthServerConfiguration.getInstance().isAuthorizeAllScopes()) {
-                List<Scope> scopes = OAuth2ServiceComponentHolder.getInstance()
-                        .getApiResourceManager().getScopesByTenantDomain(tenantDomain, "");
-                List<AuthorizedScopes> allScopesList = Collections.singletonList(
-                        new AuthorizedScopes("RBAC", scopes.stream()
-                                .map(Scope::getName)
-                                .collect(Collectors.toCollection(ArrayList::new)))
-                );
-                return allScopesList;
-            } else {
-                return OAuth2ServiceComponentHolder.getInstance()
-                        .getAuthorizedAPIManagementService().getAuthorizedScopes(appId, tenantDomain);
-            }
+            return OAuth2ServiceComponentHolder.getInstance()
+                    .getAuthorizedAPIManagementService().getAuthorizedScopes(appId, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while retrieving authorized scopes for app : " + appId
                     + "tenant domain : " + tenantDomain, e);
-        } catch (APIResourceMgtException e) {
-            throw new IdentityOAuth2Exception("Error while retrieving scopes for tenant domain : "
-                    + tenantDomain, e);
         }
     }
 
@@ -376,7 +362,7 @@ public class DefaultOAuth2ScopeValidator {
     }
 
     /**
-     * Get the requested OIDC scopes.
+     * Get the requested OIDC scopes
      *
      * @param tenantDomain    Tenant domain.
      * @param requestedScopes Requested scopes.
@@ -409,7 +395,7 @@ public class DefaultOAuth2ScopeValidator {
     }
 
     /**
-     * Get the application resource id for the given client id.
+     * Get the application resource id for the given client id
      *
      * @param clientId   Client Id.
      * @param tenantName Tenant name.
@@ -428,7 +414,7 @@ public class DefaultOAuth2ScopeValidator {
     }
 
     /**
-     * Checks if the scopes list is empty.
+     * Checks if the scopes list is empty
      *
      * @param scopes Scopes list
      * @return true if scopes list is empty
