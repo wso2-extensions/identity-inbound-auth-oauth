@@ -18,11 +18,11 @@
 
 package org.wso2.carbon.identity.oauth.action;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
-import org.wso2.carbon.identity.action.execution.exception.ActionExecutionResponseProcessorException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationErrorResponse;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessResponse;
@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.action.execution.model.Event;
 import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
+import org.wso2.carbon.identity.oauth.action.model.OperationExecutionResult;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
@@ -43,31 +44,32 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@SuppressWarnings("unchecked")
+/**
+ * This class is responsible for processing the response received from the action execution
+ * of the pre issue access token.
+ */
 public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProcessor {
 
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenProcessor.class);
-
-    private static final String OPERATION_ADD = "add";
-    private static final String OPERATION_REMOVE = "remove";
-    private static final String OPERATION_REPLACE = "replace";
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
     private static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
-    private static final PreIssueAccessTokenProcessor instance = new PreIssueAccessTokenProcessor();
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
-            Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].[^\\s]*)|(^[a-zA-Z0-9.-]+$)");
+            Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
+    private static final String LAST_ELEMENT_CHARACTER = "-";
+    private static final char PATH_SEPARATOR = '/';
 
-    public static PreIssueAccessTokenProcessor getInstance() {
+    @Override
+    public ActionType getSupportedActionType() {
 
-        return instance;
+        return ActionType.PRE_ISSUE_ACCESS_TOKEN;
     }
 
     @Override
     public ActionExecutionStatus processSuccessResponse(ActionType actionType, Map<String, Object> eventContext,
                                                         Event event,
-                                                        ActionInvocationSuccessResponse actionInvocationSuccessResponse)
-            throws ActionExecutionResponseProcessorException {
+                                                        ActionInvocationSuccessResponse
+                                                                actionInvocationSuccessResponse) {
 
         OAuthTokenReqMessageContext tokenMessageContext =
                 (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
@@ -76,18 +78,22 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
 
         AccessToken requestAccessToken = preIssueAccessTokenEvent.getAccessToken();
         AccessToken.Builder responseAccessTokenBuilder = preIssueAccessTokenEvent.getAccessToken().copy();
+        List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
 
         if (operationsToPerform != null) {
             for (PerformableOperation operation : operationsToPerform) {
                 switch (operation.getOp()) {
-                    case OPERATION_ADD:
-                        handleAddOperation(operation, requestAccessToken, responseAccessTokenBuilder);
+                    case ADD:
+                        operationExecutionResultList.add(
+                                handleAddOperation(operation, requestAccessToken, responseAccessTokenBuilder));
                         break;
-                    case OPERATION_REMOVE:
-                        handleRemoveOperation(operation, requestAccessToken, responseAccessTokenBuilder);
+                    case REMOVE:
+                        operationExecutionResultList.add(
+                                handleRemoveOperation(operation, requestAccessToken, responseAccessTokenBuilder));
                         break;
-                    case OPERATION_REPLACE:
-                        handleReplaceOperation(operation, requestAccessToken, responseAccessTokenBuilder);
+                    case REPLACE:
+                        operationExecutionResultList.add(
+                                handleReplaceOperation(operation, requestAccessToken, responseAccessTokenBuilder));
                         break;
                     default:
                         break;
@@ -95,17 +101,37 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
             }
         }
 
+        logOperationExecutionResults(actionType, operationExecutionResultList);
+
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
         updateTokenMessageContext(tokenMessageContext, responseAccessToken);
 
         return new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, eventContext);
     }
 
+    private void logOperationExecutionResults(ActionType actionType,
+                                              List<OperationExecutionResult> operationExecutionResultList) {
+
+        //todo: need to add to diagnostic logs
+        if (LOG.isDebugEnabled()) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                String executionSummary = objectMapper.writeValueAsString(operationExecutionResultList);
+                LOG.debug(String.format("Processed response for action type: %s. Results of operations performed: %s",
+                        actionType, executionSummary));
+            } catch (JsonProcessingException e) {
+                LOG.debug("Error occurred while logging operation execution results.", e);
+            }
+        }
+    }
+
     @Override
     public ActionExecutionStatus processErrorResponse(ActionType actionType, Map<String, Object> map, Event event,
-                                                      ActionInvocationErrorResponse actionInvocationErrorResponse)
-            throws ActionExecutionResponseProcessorException {
+                                                      ActionInvocationErrorResponse actionInvocationErrorResponse) {
 
+        //todo: need to implement to process the error so that if a processable error is received
+        // it is communicated to the client.
+        // we will look into this as we go along with other extension types validating the way to model this.
         return null;
     }
 
@@ -114,9 +140,9 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
 
         tokenMessageContext.setScope(responseAccessToken.getScopes().toArray(new String[0]));
 
-        String expires_in_claim_name = CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName();
+        String expiresInClaimName = CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName();
         responseAccessToken.getClaims().stream()
-                .filter(claim -> expires_in_claim_name.equals(claim.getName()))
+                .filter(claim -> expiresInClaimName.equals(claim.getName()))
                 .findFirst()
                 .map(claim -> Long.parseLong(claim.getValue().toString()) * 1000)
                 .ifPresent(tokenMessageContext::setValidityPeriod);
@@ -144,209 +170,485 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
         tokenMessageContext.setPreIssueAccessTokenActionsExecuted(true);
     }
 
-    private void handleAddOperation(PerformableOperation operation, AccessToken requestAccessToken,
-                                    AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult handleAddOperation(PerformableOperation operation, AccessToken requestAccessToken,
+                                                        AccessToken.Builder responseAccessToken) {
 
         if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
-            List<String> authorizedScopes =
-                    responseAccessToken.getScopes() != null ? responseAccessToken.getScopes() : new ArrayList<>();
-
-            int index = validateIndex(operation.getPath(), authorizedScopes.size());
-            if (index == -1) {
-                return;
-            }
-
-            String scopeToAdd = operation.getValue().toString();
-            if (validateNQChar(scopeToAdd) && !authorizedScopes.contains(scopeToAdd)) {
-                authorizedScopes.add(scopeToAdd);
-                LOG.info("Scope added. Scope : " + scopeToAdd);
-            } else {
-                //todo: add a diagnostic log indicating this is null
-                LOG.info("Scope exists or is null: " + scopeToAdd);
-            }
-
-            responseAccessToken.scopes(authorizedScopes);
+            return addScope(operation, responseAccessToken);
         } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
-            addClaim(operation, requestAccessToken, responseAccessToken);
+            return addClaim(operation, requestAccessToken, responseAccessToken);
         }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                "Unknown path.");
     }
 
-    private void addClaim(PerformableOperation operation, AccessToken requestAccessToken,
-                          AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult addScope(PerformableOperation operation,
+                                              AccessToken.Builder responseAccessToken) {
+
+        List<String> authorizedScopes =
+                responseAccessToken.getScopes() != null ? responseAccessToken.getScopes() : new ArrayList<>();
+
+        int index = validateIndex(operation.getPath(), authorizedScopes.size());
+        if (index == -1) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid index.");
+        }
+
+        String scopeToAdd = operation.getValue().toString();
+        if (authorizedScopes.contains(scopeToAdd) || !validateNQChar(scopeToAdd)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Scope exists or is invalid.");
+        }
+
+        authorizedScopes.add(scopeToAdd);
+        responseAccessToken.scopes(authorizedScopes);
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Scope added.");
+    }
+
+    private OperationExecutionResult addClaim(PerformableOperation operation, AccessToken requestAccessToken,
+                                              AccessToken.Builder responseAccessToken) {
 
         List<AccessToken.Claim> claims = requestAccessToken.getClaims();
 
         if (claims == null || claims.isEmpty()) {
-            // todo: add a diagnostic log indicating there are no claims to replace
-            LOG.warn("No claims to replace");
-            return;
+            // todo: not sure why this is here. If it's an add we don't need to check for empty claims rather just add.
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claims not found.");
         }
 
         if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
-
-            AccessToken.Claim audience = requestAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
-            if (audience != null && audience.getValue() != null && audience.getValue() instanceof List) {
-                List<String> audienceList = (List<String>) audience.getValue();
-
-                int index = validateIndex(operation.getPath(), audienceList.size());
-                if (index == -1) {
-                    return;
-                }
-
-                String audienceToAdd = operation.getValue().toString();
-                if (!isValidStringOrURI(audienceToAdd)) {
-                    LOG.warn("Audience is invalid: " + audienceToAdd);
-                    return;
-                }
-
-                AccessToken.Claim responseAudience =
-                        responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
-                List<String> responseAudienceList = (List<String>) responseAudience.getValue();
-                if (!responseAudienceList.contains(audienceToAdd)) {
-                    responseAudienceList.add(audienceToAdd);
-                    LOG.info("Audience added: " + audienceToAdd);
-                } else {
-                    LOG.warn("Audience already exists: " + audienceToAdd);
-                }
-            }
+            return addAudience(operation, requestAccessToken, responseAccessToken);
         } else {
+            return addToOtherClaims(operation, requestAccessToken, responseAccessToken);
+        }
+    }
 
-            int index = validateIndex(operation.getPath(), requestAccessToken.getClaims().size());
+    private OperationExecutionResult addAudience(PerformableOperation operation, AccessToken requestAccessToken,
+                                                 AccessToken.Builder responseAccessToken) {
+
+        AccessToken.Claim audience = requestAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
+        if (audience != null && audience.getValue() != null && audience.getValue() instanceof List) {
+            List<String> audienceList = (List<String>) audience.getValue();
+
+            int index = validateIndex(operation.getPath(), audienceList.size());
             if (index == -1) {
-                return;
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Invalid index.");
             }
 
-            Object claimToAdd = operation.getValue();
+            String audienceToAdd = operation.getValue().toString();
+            if (!isValidStringOrURI(audienceToAdd)) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Audience is invalid.");
+            }
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-                AccessToken.Claim claim = objectMapper.convertValue(claimToAdd, AccessToken.Claim.class);
-                if (requestAccessToken.getClaim(claim.getName()) != null) {
-                    LOG.warn("An access token claim with the same name already exists: " + claim.getName());
-                    return;
-                }
+            AccessToken.Claim responseAudience =
+                    responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
+            List<String> responseAudienceList = (List<String>) responseAudience.getValue();
+            if (responseAudienceList.contains(audienceToAdd)) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Audience already exists.");
+            }
 
-                Object claimValue = claim.getValue();
-                if (!isValidClaimValue(claimValue, true)) {
-                    LOG.warn("Claim value is of an invalid type: " + claimValue.getClass().getSimpleName());
-                    return;
-                }
+            responseAudienceList.add(audienceToAdd);
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Audience added.");
+        }
 
+        //todo: In the add path it should be possible to add audience irrespective of the fact the access token
+        // included a set of audiences or not. Need to recheck this.
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                "Audience claim not found.");
+    }
+
+    private OperationExecutionResult addToOtherClaims(PerformableOperation operation,
+                                                      AccessToken requestAccessToken,
+                                                      AccessToken.Builder responseAccessToken) {
+
+        int index = validateIndex(operation.getPath(), requestAccessToken.getClaims().size());
+        if (index == -1) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid index.");
+        }
+
+        Object claimToAdd = operation.getValue();
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            AccessToken.Claim claim = objectMapper.convertValue(claimToAdd, AccessToken.Claim.class);
+            if (requestAccessToken.getClaim(claim.getName()) != null) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "An access token claim already exists.");
+            }
+
+            Object claimValue = claim.getValue();
+            if (isValidPrimitiveValue(claimValue) || isValidListValue(claimValue)) {
                 responseAccessToken.addClaim(claim.getName(), claimValue);
-                LOG.info("Claim added: " + claim.getName() + " with value: " + claimValue);
-            } catch (IllegalArgumentException e) {
-                LOG.warn("Failed to convert the claim value to a primitive type: " + claimToAdd.getClass().getName(),
-                        e);
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Claim added.");
+
+            } else {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Invalid claim value.");
             }
+        } catch (IllegalArgumentException e) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid claim.");
         }
     }
 
-    private boolean isValidClaimValue(Object value, boolean isList) {
-
-        if (value instanceof String || value instanceof Number || value instanceof Boolean) {
-            return true;
-        } else if (isList && value instanceof List<?>) {
-            List<?> list = (List<?>) value;
-            return list.stream().allMatch(item -> item instanceof String);
-        }
-        return false;
-    }
-
-    private void handleRemoveOperation(PerformableOperation operation, AccessToken requestAccessToken,
-                                       AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult handleRemoveOperation(PerformableOperation operation,
+                                                           AccessToken requestAccessToken,
+                                                           AccessToken.Builder responseAccessToken) {
 
         if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
-
-            if (requestAccessToken.getScopes() == null || requestAccessToken.getScopes().isEmpty()) {
-                // todo: add a diagnostic log indicating there are no scopes to remove
-                LOG.info("No scopes to remove");
-                return;
-            }
-
-            int index = validateIndex(operation.getPath(), requestAccessToken.getScopes().size());
-            if (index == -1) {
-                return;
-            }
-
-            String scopeToRemove = requestAccessToken.getScopes().get(index);
-            boolean removed = responseAccessToken.getScopes().remove(scopeToRemove);
-            if (removed) {
-                // todo: add a diagnostic log to indicate scope is removed.
-                LOG.info("Scope is removed: " + scopeToRemove);
-            }
-
+            return removeScope(operation, requestAccessToken, responseAccessToken);
         } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
-            removeClaim(operation, requestAccessToken, responseAccessToken);
+            return removeClaim(operation, requestAccessToken, responseAccessToken);
+        }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                "Unknown path.");
+    }
+
+    private OperationExecutionResult removeScope(PerformableOperation operation,
+                                                 AccessToken requestAccessToken,
+                                                 AccessToken.Builder responseAccessToken) {
+
+        if (requestAccessToken.getScopes() == null || requestAccessToken.getScopes().isEmpty()) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "No scopes to remove.");
+        }
+
+        int index = validateIndex(operation.getPath(), requestAccessToken.getScopes().size());
+        if (index == -1) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid index.");
+        }
+
+        String scopeToRemove = requestAccessToken.getScopes().get(index);
+        boolean removed = responseAccessToken.getScopes().remove(scopeToRemove);
+        if (removed) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Scope removed.");
+        } else {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Failed to remove scope.");
         }
     }
 
-    private void removeClaim(PerformableOperation operation, AccessToken requestAccessToken,
-                             AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult removeClaim(PerformableOperation operation, AccessToken requestAccessToken,
+                                                 AccessToken.Builder responseAccessToken) {
+
+        List<AccessToken.Claim> claims = requestAccessToken.getClaims();
+        if (claims == null || claims.isEmpty()) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "No claims to remove.");
+        }
+
+        if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
+            return removeAudience(operation, requestAccessToken, responseAccessToken);
+        } else {
+            return removeOtherClaims(operation, requestAccessToken, responseAccessToken);
+        }
+    }
+
+    private OperationExecutionResult removeAudience(PerformableOperation operation,
+                                                    AccessToken requestAccessToken,
+                                                    AccessToken.Builder responseAccessToken) {
+
+        AccessToken.Claim audience = requestAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
+        if (audience != null && audience.getValue() != null && audience.getValue() instanceof List) {
+            List<String> audienceList = (List<String>) audience.getValue();
+
+            int index = validateIndex(operation.getPath(), audienceList.size());
+            if (index == -1) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Invalid index.");
+            }
+
+            String audienceToRemove = audienceList.get(index);
+            AccessToken.Claim responseAudience =
+                    responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
+            List<String> responseAudienceList = (List<String>) responseAudience.getValue();
+            boolean removed = responseAudienceList.remove(audienceToRemove);
+            if (removed) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                        "Audience removed.");
+            }
+        }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Audience not found.");
+    }
+
+    private OperationExecutionResult removeOtherClaims(PerformableOperation operation,
+                                                       AccessToken requestAccessToken,
+                                                       AccessToken.Builder responseAccessToken) {
+
+        ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
+        AccessToken.Claim claim = requestAccessToken.getClaim(claimPathInfo.getClaimName());
+        if (claim == null) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE, "Claim not found.");
+        }
+
+        if (claimPathInfo.getIndex() != -1) {
+            return removeClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim,
+                    responseAccessToken);
+        } else {
+            return removePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
+        }
+    }
+
+    private OperationExecutionResult removeClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
+                                                                               ClaimPathInfo claimPathInfo,
+                                                                               AccessToken.Claim claim,
+                                                                               AccessToken.Builder
+                                                                                       responseAccessToken) {
+
+        if (!(claim.getValue() instanceof List)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claim to remove the value from is not an array.");
+        }
+
+        List<String> claimValueList = (List<String>) claim.getValue();
+        if (claimPathInfo.getIndex() < 0 || claimPathInfo.getIndex() >= claimValueList.size()) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid index.");
+        }
+
+        String claimValueToRemove = claimValueList.get(claimPathInfo.getIndex());
+
+        AccessToken.Claim claimInResponse =
+                responseAccessToken.getClaim(claimPathInfo.getClaimName());
+        List<String> claimValueListInResponse = (List<String>) claimInResponse.getValue();
+        boolean removed = claimValueListInResponse.remove(claimValueToRemove);
+
+        if (removed) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Claim value removed.");
+        } else {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Failed to remove claim value.");
+        }
+    }
+
+    private OperationExecutionResult removePrimitiveTypeClaim(PerformableOperation operation,
+                                                              ClaimPathInfo claimPathInfo,
+                                                              AccessToken.Builder responseAccessToken) {
+
+        boolean claimRemoved =
+                responseAccessToken.getClaims().removeIf(claim -> claim.getName().equals(claimPathInfo.getClaimName()));
+
+        if (claimRemoved) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Claim removed.");
+        } else {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Failed to remove claim.");
+        }
+    }
+
+    private OperationExecutionResult handleReplaceOperation(PerformableOperation operation,
+                                                            AccessToken requestAccessToken,
+                                                            AccessToken.Builder responseAccessToken) {
+
+        if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
+            return replaceScope(operation, requestAccessToken, responseAccessToken);
+        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
+            return replaceClaim(operation, requestAccessToken, responseAccessToken);
+        }
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                "Unknown path.");
+    }
+
+    private OperationExecutionResult replaceScope(PerformableOperation operation, AccessToken requestAccessToken,
+                                                  AccessToken.Builder responseAccessToken) {
+
+        List<String> scopes = requestAccessToken.getScopes();
+        if (scopes == null || scopes.isEmpty()) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "No scopes.");
+        }
+
+        int index = validateIndex(operation.getPath(), scopes.size());
+        if (index == -1) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid index.");
+        }
+
+        String scopeToAdd = operation.getValue().toString();
+        if (!validateNQChar(scopeToAdd)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid scope.");
+        }
+
+        if (scopes.contains(scopeToAdd)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Scope already exists.");
+        }
+
+        String scopeToReplace = scopes.get(index);
+        responseAccessToken.getScopes().remove(scopeToReplace);
+        responseAccessToken.getScopes().add(scopeToAdd);
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Scope replaced.");
+    }
+
+    private OperationExecutionResult replaceClaim(PerformableOperation operation, AccessToken requestAccessToken,
+                                                  AccessToken.Builder responseAccessToken) {
 
         List<AccessToken.Claim> claims = requestAccessToken.getClaims();
 
         if (claims == null || claims.isEmpty()) {
-            // todo: add a diagnostic log indicating there are no claims to replace
-            LOG.warn("No claims to remove");
-            return;
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "No claims to replace.");
         }
 
-        if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
-
-            AccessToken.Claim audience = requestAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
-            if (audience != null && audience.getValue() != null && audience.getValue() instanceof List) {
-                List<String> audienceList = (List<String>) audience.getValue();
-
-                int index = validateIndex(operation.getPath(), audienceList.size());
-                if (index == -1) {
-                    return;
-                }
-
-                String audienceToRemove = audienceList.get(index);
-
-                AccessToken.Claim responseAudience =
-                        responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
-                List<String> responseAudienceList = (List<String>) responseAudience.getValue();
-                boolean removed = responseAudienceList.remove(audienceToRemove);
-                if (removed) {
-                    LOG.info("Audience removed: " + audienceToRemove);
-                }
-            }
+        if (operation.getPath().equals(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName())) {
+            return replaceExpiresIn(operation, responseAccessToken);
+        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
+            return replaceAudience(operation, requestAccessToken, responseAccessToken);
         } else {
-
-            String operationPath = operation.getPath();
-            ClaimPathInfo claimPathInfo = parseOperationPath(operationPath);
-
-            if (requestAccessToken.getClaim(claimPathInfo.getClaimName()) != null) {
-                if (claimPathInfo.getIndex() != -1) {
-                    AccessToken.Claim claim = requestAccessToken.getClaim(claimPathInfo.getClaimName());
-                    List<String> claimValueList = (List<String>) claim.getValue();
-                    if (claimPathInfo.getIndex() >= 0 && claimPathInfo.getIndex() < claimValueList.size()) {
-                        String claimValueToRemove = claimValueList.get(claimPathInfo.getIndex());
-
-                        AccessToken.Claim claimInResponse = responseAccessToken.getClaim(claimPathInfo.getClaimName());
-                        List<String> claimValueListInResponse = (List<String>) claimInResponse.getValue();
-                        boolean removed = claimValueListInResponse.remove(claimValueToRemove);
-                        if (removed) {
-                            LOG.info("Claim value from claim removed. Claim: " + claimPathInfo.getClaimName() +
-                                    " Claim value: " + claimValueToRemove);
-                        }
-                    } else {
-                        LOG.warn("Index is out of bounds for claim. Claim: " + claimPathInfo.getClaimName() +
-                                " Index: " + claimPathInfo.getIndex());
-                    }
-                } else {
-                    boolean claimRemoved = responseAccessToken.getClaims()
-                            .removeIf(claim -> claim.getName().equals(claimPathInfo.getClaimName()));
-                    if (claimRemoved) {
-                        LOG.info("Claim removed: " + claimPathInfo.getClaimName());
-                    }
-                }
-            }
+            return replaceOtherClaims(operation, requestAccessToken, responseAccessToken);
         }
     }
 
-    public ClaimPathInfo parseOperationPath(String operationPath) {
+    private OperationExecutionResult replaceExpiresIn(PerformableOperation operation,
+                                                      AccessToken.Builder responseAccessToken) {
+
+        long expiresIn;
+        try {
+            expiresIn = Long.parseLong(operation.getValue().toString());
+        } catch (NumberFormatException e) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid expiry time format.");
+        }
+
+        if (expiresIn <= 0) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid expiry time. Must be positive.");
+        }
+
+        responseAccessToken.getClaims().removeIf(
+                claim -> claim.getName()
+                        .equals(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName()));
+        responseAccessToken.addClaim(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName(),
+                expiresIn);
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Expiry time updated.");
+    }
+
+    private OperationExecutionResult replaceOtherClaims(PerformableOperation operation, AccessToken requestAccessToken,
+                                                        AccessToken.Builder responseAccessToken) {
+
+        ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
+        AccessToken.Claim claim = requestAccessToken.getClaim(claimPathInfo.getClaimName());
+
+        if (claim == null) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claim not found.");
+        }
+
+        if (claimPathInfo.getIndex() != -1) {
+            return replaceClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim, responseAccessToken);
+        } else {
+            return replacePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
+        }
+    }
+
+    private OperationExecutionResult replaceClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
+                                                                                ClaimPathInfo claimPathInfo,
+                                                                                AccessToken.Claim claim,
+                                                                                AccessToken.Builder
+                                                                                        responseAccessToken) {
+
+        if (!(claim.getValue() instanceof List)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claim to replace the value is not an array.");
+        }
+
+        List<String> claimValueList = (List<String>) claim.getValue();
+        if (claimPathInfo.getIndex() < 0 || claimPathInfo.getIndex() >= claimValueList.size()) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE, "Invalid index.");
+        }
+
+        Object claimValue = operation.getValue();
+        if (!isValidPrimitiveValue(claimValue)) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Invalid claim value. Must be a valid string, number or boolean.");
+        }
+
+        // Replace claim value in the response access token
+        AccessToken.Claim claimInResponse = responseAccessToken.getClaim(claimPathInfo.getClaimName());
+        List<String> claimValueListInResponse = (List<String>) claimInResponse.getValue();
+        String claimToReplace = claimValueList.get(claimPathInfo.getIndex());
+        if (claimValueListInResponse.contains(claimValue.toString())) {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Claim value already exists.");
+        }
+        claimValueListInResponse.remove(claimToReplace);
+        claimValueListInResponse.add(claimValue.toString());
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                "Claim value replaced.");
+    }
+
+    private OperationExecutionResult replacePrimitiveTypeClaim(PerformableOperation operation,
+                                                               ClaimPathInfo claimPathInfo,
+                                                               AccessToken.Builder responseAccessToken) {
+
+        boolean claimRemoved = responseAccessToken.getClaims()
+                .removeIf(claim -> claim.getName().equals(claimPathInfo.getClaimName()));
+        if (claimRemoved) {
+            responseAccessToken.addClaim(claimPathInfo.getClaimName(),
+                    operation.getValue());
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Claim replaced.");
+        } else {
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                    "Failed to replace claim.");
+        }
+    }
+
+    private OperationExecutionResult replaceAudience(PerformableOperation operation, AccessToken
+            requestAccessToken,
+                                                     AccessToken.Builder responseAccessToken) {
+
+        AccessToken.Claim audience = requestAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
+        if (audience != null && audience.getValue() != null && audience.getValue() instanceof List) {
+            List<String> audienceList = (List<String>) audience.getValue();
+
+            int index = validateIndex(operation.getPath(), audienceList.size());
+            if (index == -1) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Invalid index.");
+            }
+
+            String audienceToAdd = operation.getValue().toString();
+            if (!isValidStringOrURI(audienceToAdd)) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Invalid Audience. Must be a valid string or URI.");
+            }
+
+            if (audienceList.contains(audienceToAdd)) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Audience to replace already exists.");
+            }
+
+            String audienceToReplace = audienceList.get(index);
+
+            AccessToken.Claim responseAudience =
+                    responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
+            List<String> responseAudienceList = (List<String>) responseAudience.getValue();
+            responseAudienceList.remove(audienceToReplace);
+            responseAudienceList.add(audienceToAdd);
+            return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
+                    "Audience replaced.");
+        }
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                "Audience claim not found.");
+    }
+
+    private ClaimPathInfo parseOperationPath(String operationPath) {
 
         String[] pathSegments = operationPath.split("/");
         String lastSegment = pathSegments[pathSegments.length - 1];
@@ -366,160 +668,27 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
         return new ClaimPathInfo(claimName, index);
     }
 
-    private void handleReplaceOperation(PerformableOperation operation, AccessToken requestAccessToken,
-                                        AccessToken.Builder responseAccessToken) {
+    private boolean isValidPrimitiveValue(Object value) {
 
-        if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
-            replaceScope(operation, requestAccessToken, responseAccessToken);
-        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
-            replaceClaim(operation, requestAccessToken, responseAccessToken);
-        }
+        return value instanceof String || value instanceof Number || value instanceof Boolean;
     }
 
-    private void replaceScope(PerformableOperation operation, AccessToken requestAccessToken,
-                              AccessToken.Builder responseAccessToken) {
+    private boolean isValidListValue(Object value) {
 
-        List<String> scopes = requestAccessToken.getScopes();
-        if (scopes == null || scopes.isEmpty()) {
-            LOG.warn("Attempted to replace a scope, but no scopes are available.");
-            return;
+        if (!(value instanceof List<?>)) {
+            return false;
         }
-
-        int index = validateIndex(operation.getPath(), scopes.size());
-        if (index == -1) {
-            return;
-        }
-
-        String scopeToAdd = operation.getValue().toString();
-        if (!validateNQChar(scopeToAdd)) {
-            LOG.warn("Scope is invalid: " + scopeToAdd);
-            return;
-        }
-
-        if (scopes.contains(scopeToAdd)) {
-            LOG.warn("Scope already exists: " + scopeToAdd);
-            return;
-        }
-
-        String scopeToReplace = scopes.get(index);
-        responseAccessToken.getScopes().remove(scopeToReplace);
-        responseAccessToken.getScopes().add(scopeToAdd);
-        LOG.info("Scope replaced: " + scopeToReplace + " with " + scopeToAdd);
-    }
-
-    private void replaceClaim(PerformableOperation operation, AccessToken requestAccessToken,
-                              AccessToken.Builder responseAccessToken) {
-
-        List<AccessToken.Claim> claims = requestAccessToken.getClaims();
-
-        if (claims == null || claims.isEmpty()) {
-            // todo: add a diagnostic log indicating there are no claims to replace
-            LOG.warn("No claims to replace");
-            return;
-        }
-
-        if (operation.getPath().equals(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName())) {
-            long expiresIn;
-            try {
-                expiresIn = Long.parseLong(operation.getValue().toString());
-            } catch (NumberFormatException e) {
-                LOG.warn("Invalid expiry time format: " + operation.getValue().toString(), e);
-                return;
-            }
-
-            if (expiresIn <= 0) {
-                LOG.warn("Invalid expiry time: must be positive, but was " + expiresIn);
-                return;
-            }
-
-            responseAccessToken.getClaims().removeIf(
-                    claim -> claim.getName().equals(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName()));
-            responseAccessToken.addClaim(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName(), expiresIn);
-            LOG.info("Expiry time claim replaced with: " + expiresIn);
-        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
-
-            AccessToken.Claim audience = requestAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
-            if (audience != null && audience.getValue() != null && audience.getValue() instanceof List) {
-                List<String> audienceList = (List<String>) audience.getValue();
-
-                int index = validateIndex(operation.getPath(), audienceList.size());
-                if (index == -1) {
-                    return;
-                }
-
-                String audienceToAdd = operation.getValue().toString();
-                if (!isValidStringOrURI(audienceToAdd)) {
-                    LOG.warn("Audience is invalid: " + audienceToAdd);
-                    return;
-                }
-
-                if (audienceList.contains(audienceToAdd)) {
-                    LOG.warn("Audience already exists: " + audienceToAdd);
-                    return;
-                }
-
-                String audienceToReplace = audienceList.get(index);
-
-                AccessToken.Claim responseAudience =
-                        responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName());
-                List<String> responseAudienceList = (List<String>) responseAudience.getValue();
-                responseAudienceList.remove(audienceToReplace);
-                responseAudienceList.add(audienceToAdd);
-
-                LOG.info("Audience replaced: " + audienceToReplace + " with " + audienceToAdd);
-            }
-        } else {
-            String operationPath = operation.getPath();
-            ClaimPathInfo claimPathInfo = parseOperationPath(operationPath);
-
-            if (requestAccessToken.getClaim(claimPathInfo.getClaimName()) != null) {
-                if (claimPathInfo.getIndex() != -1) {
-                    AccessToken.Claim claim = requestAccessToken.getClaim(claimPathInfo.getClaimName());
-                    List<String> claimValueList = (List<String>) claim.getValue();
-                    if (claimPathInfo.getIndex() >= 0 && claimPathInfo.getIndex() < claimValueList.size()) {
-                        String claimToReplace = claimValueList.get(claimPathInfo.getIndex());
-
-                        Object claimValue = operation.getValue();
-                        if (!isValidClaimValue(claimValue, false)) {
-                            LOG.warn("Claim value is of an invalid type: " + claimValue.getClass().getSimpleName());
-                            return;
-                        }
-
-                        AccessToken.Claim claimInResponse = responseAccessToken.getClaim(claimPathInfo.getClaimName());
-                        List<String> claimValueListInResponse = (List<String>) claimInResponse.getValue();
-
-                        if (claimValueListInResponse.contains(claimValue.toString())) {
-                            LOG.warn("Claim value already exists: " + claimValue);
-                            return;
-                        }
-
-                        claimValueListInResponse.remove(claimToReplace);
-                        claimValueListInResponse.add(claimValue.toString());
-                        LOG.info("Claim value from claim replaced. Claim: " + claimPathInfo.getClaimName() +
-                                " Replaced: " + claimToReplace + " with: " + claimValue);
-                    } else {
-                        LOG.warn("Index is out of bounds for claim. Claim: " + claimPathInfo.getClaimName() +
-                                " Index: " + claimPathInfo.getIndex());
-                    }
-                } else {
-                    boolean claimRemoved = responseAccessToken.getClaims()
-                            .removeIf(claim -> claim.getName().equals(claimPathInfo.getClaimName()));
-                    if (claimRemoved) {
-                        responseAccessToken.addClaim(claimPathInfo.getClaimName(),
-                                operation.getValue());
-                        LOG.info("Claim removed: " + claimPathInfo.getClaimName());
-                    }
-                }
-            }
-        }
+        List<?> list = (List<?>) value;
+        return list.stream().allMatch(item -> item instanceof String);
     }
 
     private int validateIndex(String operationPath, int listSize) {
 
-        String indexPart = operationPath.substring(operationPath.lastIndexOf('/') + 1);
-        if ("-".equals(indexPart)) {
+        String indexPart = operationPath.substring(operationPath.lastIndexOf(PATH_SEPARATOR) + 1);
+        if (LAST_ELEMENT_CHARACTER.equals(indexPart)) {
             return listSize > 0 ? listSize - 1 : 0;
         }
+
         try {
             int index = Integer.parseInt(indexPart);
             if (index >= 0 && index < listSize) {

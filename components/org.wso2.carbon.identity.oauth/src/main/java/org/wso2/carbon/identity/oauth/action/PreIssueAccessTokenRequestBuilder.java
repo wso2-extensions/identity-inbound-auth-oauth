@@ -27,6 +27,7 @@ import org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.model.Event;
+import org.wso2.carbon.identity.action.execution.model.Operation;
 import org.wso2.carbon.identity.action.execution.model.Organization;
 import org.wso2.carbon.identity.action.execution.model.Request;
 import org.wso2.carbon.identity.action.execution.model.Tenant;
@@ -61,16 +62,18 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * Event builder for PreIssueATEvent.
+ * This class is responsible for building the action execution request for the pre issue access token action.
  */
 public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequestBuilder {
 
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
-    private static final PreIssueAccessTokenRequestBuilder instance = new PreIssueAccessTokenRequestBuilder();
+    public static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
+    public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
 
-    public static PreIssueAccessTokenRequestBuilder getInstance() {
+    @Override
+    public ActionType getSupportedActionType() {
 
-        return instance;
+        return ActionType.PRE_ISSUE_ACCESS_TOKEN;
     }
 
     @Override
@@ -97,26 +100,14 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         AuthenticatedUser authorizedUser = tokenMessageContext.getAuthorizedUser();
 
         PreIssueAccessTokenEvent.Builder eventBuilder = new PreIssueAccessTokenEvent.Builder();
-
         eventBuilder.tenant(new Tenant(String.valueOf(IdentityTenantUtil.getTenantId(tokenReqDTO.getTenantDomain())),
                 tokenReqDTO.getTenantDomain()));
 
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser) {
-
             eventBuilder.organization(new Organization(authorizedUser.getUserResidentOrganization(),
                     authorizedUser.getUserResidentOrganization()));
-
-            try {
-                eventBuilder.user(new User(authorizedUser.getUserId()));
-            } catch (UserIdNotFoundException e) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug(String.format(
-                            "Error occurred while retrieving user id of the authorized user for application: %s, grantType: %s.",
-                            tokenReqDTO.getClientId(), tokenReqDTO.getGrantType()), e);
-                }
-            }
-
+            setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
 
@@ -124,6 +115,20 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         eventBuilder.request(getRequest(tokenReqDTO));
 
         return eventBuilder.build();
+    }
+
+    private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder, AuthenticatedUser user,
+                                        String clientID, String granType) {
+
+        try {
+            eventBuilder.user(new User(user.getUserId()));
+        } catch (UserIdNotFoundException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format(
+                        "Error occurred while retrieving user id of the authorized user for application: " + clientID +
+                                "for grantType: " + granType), e);
+            }
+        }
     }
 
     private Request getRequest(OAuth2AccessTokenReqDTO tokenRequestDTO) {
@@ -150,7 +155,23 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         return tokenRequestBuilder.build();
     }
 
-    private AccessToken getAccessToken(OAuthTokenReqMessageContext tokenMessageContext, Map<String, Object> claimsToAdd)
+    private boolean isAccessTokenAuthorizedForUser(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws ActionExecutionRequestBuilderException {
+
+        AuthorizationGrantHandler grantHandler =
+                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().get(grantType);
+
+        try {
+            return grantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
+        } catch (IdentityOAuth2Exception e) {
+            throw new ActionExecutionRequestBuilderException(
+                    "Failed to determine the authorized entity of the token for grant type: " +
+                            grantType, e);
+        }
+    }
+
+    private AccessToken getAccessToken(OAuthTokenReqMessageContext
+                                               tokenMessageContext, Map<String, Object> claimsToAdd)
             throws ActionExecutionRequestBuilderException {
 
         try {
@@ -159,29 +180,18 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             List<String> audience = getAudience(tokenMessageContext, oAuthAppDO);
             String tokenType = oAuthAppDO.getTokenType();
 
-            AccessToken.Builder accessTokenBuilder = new AccessToken.Builder()
-                    .tokenType(tokenType)
-                    .addClaim(AccessToken.ClaimNames.ISS.getName(), issuer)
-                    .addClaim(AccessToken.ClaimNames.CLIENT_ID.getName(),
-                            tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId())
-                    .addClaim(AccessToken.ClaimNames.AUTHORIZED_USER_TYPE.getName(),
-                            String.valueOf(tokenMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE)))
-                    .addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(),
-                            tokenMessageContext.getValidityPeriod() / 1000)
-                    .addClaim(AccessToken.ClaimNames.AUD.getName(), audience)
-                    .scopes(Arrays.asList(tokenMessageContext.getScope()));
+            AccessToken.Builder accessTokenBuilder = new AccessToken.Builder();
 
+            handleStandardClaims(tokenMessageContext, tokenType, issuer, audience, accessTokenBuilder);
             handleSubjectClaim(tokenMessageContext.getAuthorizedUser(), oAuthAppDO, accessTokenBuilder);
             handleTokenBindingClaims(tokenMessageContext, accessTokenBuilder);
             claimsToAdd.forEach(accessTokenBuilder::addClaim);
-
             return accessTokenBuilder.build();
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            String errorMessage = String.format(
-                    "Failed to generate pre issue access token action request. Application: %s. Grant type: %s. Error: %s.",
-                    tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
-                    tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e.getMessage());
-            throw new ActionExecutionRequestBuilderException(errorMessage, e);
+            throw new ActionExecutionRequestBuilderException(
+                    "Failed to generate pre issue access token action request for application: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " grant type: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);
         }
     }
 
@@ -205,6 +215,21 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         } else {
             return OAuth2Util.getOIDCAudience(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO);
         }
+    }
+
+    private void handleStandardClaims(OAuthTokenReqMessageContext tokenMessageContext, String tokenType,
+                                      String issuer, List<String> audience, AccessToken.Builder accessTokenBuilder) {
+
+        accessTokenBuilder.tokenType(tokenType)
+                .addClaim(AccessToken.ClaimNames.ISS.getName(), issuer)
+                .addClaim(AccessToken.ClaimNames.CLIENT_ID.getName(),
+                        tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId())
+                .addClaim(AccessToken.ClaimNames.AUTHORIZED_USER_TYPE.getName(),
+                        String.valueOf(tokenMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE)))
+                .addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(),
+                        tokenMessageContext.getValidityPeriod() / 1000)
+                .addClaim(AccessToken.ClaimNames.AUD.getName(), audience)
+                .scopes(Arrays.asList(tokenMessageContext.getScope()));
     }
 
     private void handleSubjectClaim(AuthenticatedUser authorizedUser, OAuthAppDO oAuthAppDO,
@@ -238,10 +263,9 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                     claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), tokenMessageContext);
             return Optional.ofNullable(claimsSet).map(JWTClaimsSet::getClaims).orElseGet(HashMap::new);
         } catch (IdentityOAuth2Exception e) {
-            String errorMessage =
-                    String.format("Failed to retrieve OIDC claim set for the access token. Grant type: %s Error: %s",
-                            tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e.getMessage());
-            throw new ActionExecutionRequestBuilderException(errorMessage, e);
+            throw new ActionExecutionRequestBuilderException(
+                    "Failed to retrieve OIDC claim set for the access token for grant type: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);
         }
     }
 
@@ -256,38 +280,46 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    //todo: revalidate further
-    private List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims) {
+    public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims) {
+
+        List<String> removeOrReplacePaths = getRemoveOrReplacePaths(oidcClaims);
+
+        List<String> replacePaths = new ArrayList<>(removeOrReplacePaths);
+        replacePaths.add(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName());
+
+        AllowedOperation addOperation =
+                createAllowedOperation(Operation.ADD, Arrays.asList(CLAIMS_PATH_PREFIX, SCOPES_PATH_PREFIX,
+                        CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/"));
+        AllowedOperation removeOperation = createAllowedOperation(Operation.REMOVE, removeOrReplacePaths);
+        AllowedOperation replaceOperation = createAllowedOperation(Operation.REPLACE, replacePaths);
+
+        return Arrays.asList(addOperation, removeOperation, replaceOperation);
+    }
+
+    private List<String> getRemoveOrReplacePaths(Map<String, Object> oidcClaims) {
 
         List<String> removeOrReplacePaths = oidcClaims.entrySet().stream()
                 .filter(entry -> entry.getValue() instanceof String || entry.getValue() instanceof Number ||
                         entry.getValue() instanceof Boolean || entry.getValue() instanceof List ||
                         entry.getValue() instanceof String[])
-                .map(entry -> {
-                    String path = "/accessToken/claims/" + entry.getKey();
-                    if (entry.getValue() instanceof List || entry.getValue() instanceof String[]) {
-                        path += "/";
-                    }
-                    return path;
-                })
+                .map(this::generatePathForClaim)
                 .collect(Collectors.toList());
 
-        removeOrReplacePaths.add("/accessToken/scopes/");
-        removeOrReplacePaths.add("/accessToken/claims/" + AccessToken.ClaimNames.AUD.getName() + "/");
-
-        List<String> replacePaths = new ArrayList<>(removeOrReplacePaths);
-        replacePaths.add("/accessToken/claims/" + AccessToken.ClaimNames.EXPIRES_IN.getName());
-
-        AllowedOperation addOperation =
-                createAllowedOperation("add", Arrays.asList("/accessToken/claims/", "/accessToken/scopes/",
-                        "/accessToken/claims/" + AccessToken.ClaimNames.AUD.getName() + "/"));
-        AllowedOperation removeOperation = createAllowedOperation("remove", removeOrReplacePaths);
-        AllowedOperation replaceOperation = createAllowedOperation("replace", replacePaths);
-
-        return Arrays.asList(addOperation, removeOperation, replaceOperation);
+        removeOrReplacePaths.add(SCOPES_PATH_PREFIX);
+        removeOrReplacePaths.add(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/");
+        return removeOrReplacePaths;
     }
 
-    private AllowedOperation createAllowedOperation(String op, List<String> paths) {
+    private String generatePathForClaim(Map.Entry<String, Object> entry) {
+
+        String basePath = CLAIMS_PATH_PREFIX + entry.getKey();
+        if (entry.getValue() instanceof List || entry.getValue() instanceof String[]) {
+            basePath += "/";
+        }
+        return basePath;
+    }
+
+    private AllowedOperation createAllowedOperation(Operation op, List<String> paths) {
 
         AllowedOperation operation = new AllowedOperation();
         operation.setOp(op);
@@ -295,19 +327,4 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         return operation;
     }
 
-    private boolean isAccessTokenAuthorizedForUser(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws ActionExecutionRequestBuilderException {
-
-        AuthorizationGrantHandler grantHandler =
-                OAuthServerConfiguration.getInstance().getSupportedGrantTypes().get(grantType);
-
-        try {
-            return grantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
-        } catch (IdentityOAuth2Exception e) {
-            String errorMessage =
-                    String.format("Failed to determine the authorized entity of the token. Grant type: %s Error: %s",
-                            grantType, e.getMessage());
-            throw new ActionExecutionRequestBuilderException(errorMessage, e.getCause());
-        }
-    }
 }

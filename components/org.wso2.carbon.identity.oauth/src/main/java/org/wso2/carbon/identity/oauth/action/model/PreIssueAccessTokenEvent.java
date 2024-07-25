@@ -26,7 +26,9 @@ import org.wso2.carbon.identity.action.execution.model.User;
 import org.wso2.carbon.identity.action.execution.model.UserStore;
 
 /**
- * PreIssueATEvent.
+ * This class models the event at a pre issue access token trigger.
+ * PreIssueAccessTokenEvent is the entity that represents the event that is sent to the Action
+ * over {@link org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest}.
  */
 public class PreIssueAccessTokenEvent extends Event {
 
@@ -47,6 +49,9 @@ public class PreIssueAccessTokenEvent extends Event {
         return accessToken;
     }
 
+    /**
+     * Builder for the PreIssueAccessTokenEvent.
+     */
     public static class Builder {
 
         private AccessToken accessToken;

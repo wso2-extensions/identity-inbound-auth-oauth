@@ -26,7 +26,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * AccessToken.
+ * This class represents the model of the access token sent in the json request
+ * to the API endpoint of the pre issue access token action.
  */
 public class AccessToken {
 
@@ -77,6 +78,9 @@ public class AccessToken {
                 .claims(this.claims.stream().map(Claim::copy).collect(Collectors.toList()));
     }
 
+    /**
+     * Enum for standard claim names.
+     */
     public enum ClaimNames {
 
         SUB("sub"),
@@ -109,6 +113,9 @@ public class AccessToken {
         }
     }
 
+    /**
+     * Model class for claims.
+     */
     public static class Claim {
 
         private String name;
@@ -172,9 +179,11 @@ public class AccessToken {
                 return value;
             }
         }
-
     }
 
+    /**
+     * Builder for AccessToken.
+     */
     public static class Builder {
 
         private String tokenType;

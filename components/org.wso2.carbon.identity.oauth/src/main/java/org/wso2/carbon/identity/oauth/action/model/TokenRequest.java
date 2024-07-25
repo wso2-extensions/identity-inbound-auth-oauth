@@ -25,6 +25,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * This class models the request at a pre issue access token trigger.
+ * TokenRequest is the entity that represents the request that is sent to Action
+ * over {@link org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest}.
+ */
 public class TokenRequest extends Request {
 
     private static final List<String> headersToAvoid = new ArrayList<>();
@@ -87,6 +92,9 @@ public class TokenRequest extends Request {
         return scopes;
     }
 
+    /**
+     * Builder for TokenRequest.
+     */
     public static class Builder {
 
         private final Map<String, String[]> additionalHeaders = new HashMap<>();

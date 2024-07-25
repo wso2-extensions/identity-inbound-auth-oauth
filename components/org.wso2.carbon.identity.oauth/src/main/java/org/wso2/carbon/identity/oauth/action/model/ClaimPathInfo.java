@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
+/**
+ * This class is used to identify the claim and the index of the value of the claim to be updated in the
+ * {@link AccessToken}. The claim value of the {@link AccessToken} is an array in this case.
+ */
 public class ClaimPathInfo {
 
     private final String claimName;
@@ -38,5 +42,4 @@ public class ClaimPathInfo {
 
         return index;
     }
-
 }
