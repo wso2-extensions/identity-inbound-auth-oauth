@@ -27,6 +27,7 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -73,6 +74,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -461,28 +463,43 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private void executePreIssueAccessTokenActions(OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        //todo: read from Action Management Service and check if there are actions to engage
-        boolean preIssueAccessTokenActionAvailable = true;
-
-        OAuthAppDO oAuthAppBean = getoAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
-
-        if (preIssueAccessTokenActionAvailable && "JWT".equals(oAuthAppBean.getTokenType())) {
+        if (checkExecutePreIssueAccessTokensActions(tokenReqMessageContext)) {
 
             Map<String, Object> additionalProperties = new HashMap<>();
-            Consumer<Map<String, Object>> mapInitializer = map -> {
-                map.put("tokenMessageContext", tokenReqMessageContext);
-            };
+            Consumer<Map<String, Object>> mapInitializer =
+                    map -> map.put("tokenMessageContext", tokenReqMessageContext);
             mapInitializer.accept(additionalProperties);
 
             try {
-                OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
-                                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                ActionExecutionStatus executionStatus =
+                        OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                                .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
+                                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format(
+                            "Invoked pre issue access token action for clientID: %s grant types: %s. Status: %s",
+                            tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                            tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                            Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
+                }
             } catch (ActionExecutionException e) {
                 // If error ignore and proceed
                 log.error("Error while executing pre issue access token action", e);
             }
         }
+    }
+
+    private boolean checkExecutePreIssueAccessTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        OAuthAppDO oAuthAppBean = getoAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+
+        // Allow for following grant types and for JWT access tokens only.
+        return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
+                OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
+                OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
+                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) && "JWT".equals(oAuthAppBean.getTokenType());
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {

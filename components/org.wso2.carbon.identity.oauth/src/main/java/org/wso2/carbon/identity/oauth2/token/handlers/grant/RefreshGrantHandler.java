@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -122,7 +123,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
 
-        executePreIssueAccessTokenActions(validationBean,tokReqMsgCtx);
+        executePreIssueAccessTokenActions(validationBean, tokReqMsgCtx);
         AccessTokenDO accessTokenBean = getRefreshTokenGrantProcessor()
                 .createAccessTokenBean(tokReqMsgCtx, tokenReq, validationBean, getTokenType(tokReqMsgCtx));
 
@@ -680,30 +681,45 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                                    OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        //todo: read from Action Management Service and check if there are actions to engage
-        boolean preIssueAccessTokenActionAvailable = true;
-
-        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
-
-        if (preIssueAccessTokenActionAvailable && "JWT".equals(oAuthAppBean.getTokenType())) {
+        if (checkExecutePreIssueAccessTokensActions(refreshTokenValidationDataDO, tokenReqMessageContext)) {
 
             setCustomizedAccessTokenAttributesToMessageContext(refreshTokenValidationDataDO, tokenReqMessageContext);
 
             Map<String, Object> additionalProperties = new HashMap<>();
-            Consumer<Map<String, Object>> mapInitializer = map -> {
-                map.put("tokenMessageContext", tokenReqMessageContext);
-            };
+            Consumer<Map<String, Object>> mapInitializer =
+                    map -> map.put("tokenMessageContext", tokenReqMessageContext);
             mapInitializer.accept(additionalProperties);
 
             try {
-                OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
-                                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                ActionExecutionStatus executionStatus =
+                        OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                                .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
+                                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format(
+                            "Invoked pre issue access token action for clientID: %s grant types: %s. Status: %s",
+                            tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                            tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                            Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
+                }
             } catch (ActionExecutionException e) {
                 // If error ignore and proceed
                 log.error("Error while executing pre issue access token action", e);
             }
         }
+    }
+
+    private boolean checkExecutePreIssueAccessTokensActions(RefreshTokenValidationDataDO refreshTokenValidationDataDO,
+                                                            OAuthTokenReqMessageContext tokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+        String grantType = refreshTokenValidationDataDO.getGrantType();
+
+        // Allow if refresh token is issued for token requests from following grant types and,
+        // for JWT access tokens only.
+        return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
+                OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) && "JWT".equals(oAuthAppBean.getTokenType());
     }
 
     private void setCustomizedAccessTokenAttributesToMessageContext(RefreshTokenValidationDataDO refreshTokenData,
@@ -718,9 +734,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenRequestContext.setAdditionalAccessTokenClaims(grantCacheEntry.getCustomClaims());
             tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
             if (log.isDebugEnabled()) {
-                log.debug(String.format(
-                        "Updated OAuthTokenReqMessageContext with customized audience list and access token attributes in the AuthorizationGrantCache for token id: %s.",
-                        refreshTokenData.getTokenId()));
+                log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
+                        " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
             }
 
             AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
