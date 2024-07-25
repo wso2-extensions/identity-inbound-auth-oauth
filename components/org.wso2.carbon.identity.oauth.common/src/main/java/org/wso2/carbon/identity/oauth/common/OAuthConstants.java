@@ -718,7 +718,7 @@ public final class OAuthConstants {
 
             public static final String SCOPE_VALIDATION = "validate-scope";
             public static final String ISSUE_ACCESS_TOKEN = "issue-access-token";
-            public static final String ISSUE_SUBJECT_TOKEN = "issue-access-token";
+            public static final String ISSUE_SUBJECT_TOKEN = "issue-subject-token";
             public static final String ISSUE_ID_TOKEN = "issue-id-token";
             public static final String VALIDATE_AUTHORIZATION_CODE = "validate-authz-code";
             public static final String ISSUE_AUTHZ_CODE = "issue-authz-code";
@@ -777,6 +777,7 @@ public final class OAuthConstants {
             public static final String CALLBACK_URI = "callback URI";
             public static final String PROMPT = "prompt";
             public static final String APP_STATE = "app state";
+            public static final String IMPERSONATOR = "impersonator";
         }
 
         /**

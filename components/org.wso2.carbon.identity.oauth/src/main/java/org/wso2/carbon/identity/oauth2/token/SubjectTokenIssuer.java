@@ -96,7 +96,8 @@ public class SubjectTokenIssuer {
                             oauthAuthzMsgCtx.getAuthorizationReqDTO().getConsumerKey())
                     .inputParam(OAuthConstants.LogConstants.InputKeys.AUTHORIZED_SCOPES,
                             oauthAuthzMsgCtx.getApprovedScope())
-                    .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, "Code")
+                    .inputParam(OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE,
+                            oauthAuthzMsgCtx.getAuthorizationReqDTO().getResponseType())
                     .inputParam("token expiry time (s)", subjectTokenLifeTime)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .resultMessage("Subject token issued for the application.")
@@ -114,8 +115,8 @@ public class SubjectTokenIssuer {
                     }
                 }
             }
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
         }
-
         return subjectTokenDO;
     }
 
