@@ -1766,9 +1766,11 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
 
-            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                    IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED,
-                    String.valueOf(consumerAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()));
+            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
+                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                        IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED,
+                        String.valueOf(consumerAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()));
+            }
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     HYBRID_FLOW_ENABLED,

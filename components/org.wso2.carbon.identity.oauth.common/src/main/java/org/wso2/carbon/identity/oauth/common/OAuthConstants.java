@@ -282,6 +282,8 @@ public final class OAuthConstants {
     public static final String TLS_CLIENT_AUTH = "tls_client_auth";
     public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
     public static final String ADDITIONAL_ATTRIBUTE_FILTER = "OAuth.DCRM.AdditionalAttributeFilter";
+    public static final String ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN =
+            "OAuth.OpenIDConnect.EnableOIDCClaimsSeparationForJWTAccessToken";
 
     private OAuthConstants() {
 

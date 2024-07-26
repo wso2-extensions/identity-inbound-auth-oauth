@@ -517,10 +517,12 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
-                        validateJwtAccessTokenClaims(application, tenantDomain);
-                        app.setJwtAccessTokenClaims(application.getJwtAccessTokenClaims());
-                        app.setIsJwtAccessTokenOIDCClaimSeparationEnabled(
-                                IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
+                        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
+                            validateJwtAccessTokenClaims(application, tenantDomain);
+                            app.setJwtAccessTokenClaims(application.getJwtAccessTokenClaims());
+                            app.setIsJwtAccessTokenOIDCClaimSeparationEnabled(
+                                    IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
+                        }
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
@@ -949,8 +951,10 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
-            validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
-            oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenClaims());
+            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
+                validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
+                oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenClaims());
+            }
         }
         dao.updateConsumerApplication(oAuthAppDO);
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);

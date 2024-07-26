@@ -202,6 +202,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -5520,5 +5521,11 @@ public class OAuth2Util {
         authenticatedUser.setUserResidentOrganization(userResidentOrg);
         // Set authorized user tenant domain to the tenant domain of the application.
         authenticatedUser.setTenantDomain(appTenantDomain);
+    }
+
+
+    public static boolean isJWTAccessTokenOIDCClaimsSeparationEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN));
     }
 }

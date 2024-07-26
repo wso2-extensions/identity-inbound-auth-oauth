@@ -103,8 +103,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private Algorithm signatureAlgorithm = null;
     private static final String ENABLE_PPID_FOR_ACCESS_TOKENS = "OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken";
-    private static final String ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN =
-            "OAuth.OpenIDConnect.EnableOIDCClaimsSeparationForJWTAccessToken";
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
@@ -884,7 +882,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         CustomClaimsCallbackHandler claimsCallBackHandler;
-        if (isJWTAccessTokenOIDCClaimsSeparationFeatureEnabled() &&
+        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
                 oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
             claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
         } else {
@@ -916,7 +914,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             throws IdentityOAuth2Exception {
 
         CustomClaimsCallbackHandler claimsCallBackHandler;
-        if (isJWTAccessTokenOIDCClaimsSeparationFeatureEnabled() &&
+        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
                 oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
             claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
         } else {
@@ -1019,11 +1017,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private boolean checkPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
-    }
-
-    private boolean isJWTAccessTokenOIDCClaimsSeparationFeatureEnabled() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN));
     }
 
     /**
