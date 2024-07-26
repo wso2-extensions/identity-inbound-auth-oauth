@@ -46,6 +46,9 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.OAuth2TokenResponse;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -407,6 +410,19 @@ public class OAuth2TokenEndpoint {
             tokenReqDTO.setWindowsToken(oauthRequest.getWindowsToken());
         }
         tokenReqDTO.addAuthenticationMethodReference(grantType);
+
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(oauthRequest)) {
+            final String encodedAuthorizationDetailsJson = oauthRequest
+                    .getParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS);
+            final String authorizationDetailsJson = AuthorizationDetailsUtils
+                    .getUrlDecodedAuthorizationDetails(encodedAuthorizationDetailsJson);
+
+            if (log.isDebugEnabled()) {
+                log.debug("Adding requested authorization details to tokenReqDTO: " + authorizationDetailsJson);
+            }
+            tokenReqDTO.setAuthorizationDetails(new AuthorizationDetails(authorizationDetailsJson));
+        }
+
         return tokenReqDTO;
     }
 }

@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.LinkedHashSet;
@@ -61,6 +62,7 @@ public class OAuth2AuthorizeReqDTO {
     private boolean isRequestObjectFlow;
     private String state;
     private String requestedSubjectId;
+    private AuthorizationDetails authorizationDetails;
 
     public String getRequestedSubjectId() {
 
@@ -302,5 +304,27 @@ public class OAuth2AuthorizeReqDTO {
     public void setHttpServletRequestWrapper(HttpServletRequestWrapper httpServletRequestWrapper) {
 
         this.httpServletRequestWrapper = httpServletRequestWrapper;
+    }
+
+    /**
+     * Retrieves the authorization details requested by the client.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the {@code authorization_details} requested
+     * by the client. If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getAuthorizationDetails() {
+
+        return this.authorizationDetails;
+    }
+
+    /**
+     * Sets the authorization details requested by the client.
+     * This method updates the authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     */
+    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+
+        this.authorizationDetails = authorizationDetails;
     }
 }

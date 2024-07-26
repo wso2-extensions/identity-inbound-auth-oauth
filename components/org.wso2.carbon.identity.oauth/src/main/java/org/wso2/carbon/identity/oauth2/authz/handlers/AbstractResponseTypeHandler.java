@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -60,7 +59,6 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
     protected boolean cacheEnabled;
     protected OAuthCache oauthCache;
     private OAuthCallbackManager callbackManager;
-    protected IdentityOAuth2AuthorizationDetailsService identityOAuth2AuthorizationDetailsService;
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -70,7 +68,6 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         if (cacheEnabled) {
             oauthCache = OAuthCache.getInstance();
         }
-        this.identityOAuth2AuthorizationDetailsService = new IdentityOAuth2AuthorizationDetailsService();
     }
 
     @Override
@@ -228,6 +225,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
         respDTO.setScope(oauthAuthzMsgCtx.getApprovedScope());
+        respDTO.setAuthorizationDetails(oauthAuthzMsgCtx.getAuthorizationDetails());
         return respDTO;
     }
 

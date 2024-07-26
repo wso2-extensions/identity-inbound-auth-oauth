@@ -47,8 +47,6 @@ public class CodeResponseTypeHandler extends AbstractResponseTypeHandler {
 
         AuthzCodeDO authorizationCode =
                 ResponseTypeHandlerUtil.generateAuthorizationCode(oauthAuthzMsgCtx, cacheEnabled);
-        super.identityOAuth2AuthorizationDetailsService
-                .storeOAuth2CodeAuthorizationDetails(authorizationCode, oauthAuthzMsgCtx);
         String sessionDataKey = oauthAuthzMsgCtx.getAuthorizationReqDTO().getSessionDataKey();
 
         if (log.isDebugEnabled()) {

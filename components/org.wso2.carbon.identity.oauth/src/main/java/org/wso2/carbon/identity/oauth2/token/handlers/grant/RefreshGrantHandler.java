@@ -131,6 +131,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             // sets accessToken, refreshToken and validity data
             setTokenData(accessTokenBean, tokReqMsgCtx, validationBean, tokenReq, accessTokenBean.getIssuedTime());
             persistNewToken(tokReqMsgCtx, accessTokenBean, tokenReq.getClientId());
+            super.authorizationDetailsService
+                    .replaceAccessTokenAuthorizationDetails(validationBean.getTokenId(), accessTokenBean, tokReqMsgCtx);
 
             if (log.isDebugEnabled()) {
                 log.debug("Persisted an access token for the refresh token, " +
@@ -222,6 +224,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
+        super.setRARPropertiesForTokenGeneration(tokReqMsgCtx);
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,

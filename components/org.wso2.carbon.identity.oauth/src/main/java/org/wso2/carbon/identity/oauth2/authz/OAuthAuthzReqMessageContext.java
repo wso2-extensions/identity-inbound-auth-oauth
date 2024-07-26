@@ -19,7 +19,7 @@
 package org.wso2.carbon.identity.oauth2.authz;
 
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
-import org.wso2.carbon.identity.oauth2.rar.common.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 
 import java.io.Serializable;
 import java.util.Properties;

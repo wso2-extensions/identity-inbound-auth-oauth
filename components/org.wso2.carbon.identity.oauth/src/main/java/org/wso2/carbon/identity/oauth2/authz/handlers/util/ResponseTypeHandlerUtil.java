@@ -610,6 +610,9 @@ public class ResponseTypeHandlerUtil {
         // Persist the access token in database
         persistAccessTokenInDB(oauthAuthzMsgCtx, existingTokenBean, newTokenBean);
         deactivateCurrentAuthorizationCode(newTokenBean.getAuthorizationCode(), newTokenBean.getTokenId());
+        // Persist access token authorization details in database
+        OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                .storeAccessTokenAuthorizationDetails(newTokenBean, oauthAuthzMsgCtx);
         //update cache with newly added token
         if (isHashDisabled && cacheEnabled) {
             addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUserId, authenticatedIDP),

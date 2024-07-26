@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+
 import java.util.Properties;
 
 /**
@@ -39,6 +41,7 @@ public class OAuth2AuthorizeRespDTO {
     private String pkceCodeChallenge;
     private String pkceCodeChallengeMethod;
     private String oidcSessionId;
+    private AuthorizationDetails authorizationDetails;
 
     private String subjectToken;
     public String getAuthorizationCode() {
@@ -199,5 +202,27 @@ public class OAuth2AuthorizeRespDTO {
     public void setSubjectToken(String subjectToken) {
 
         this.subjectToken = subjectToken;
+    }
+
+    /**
+     * Retrieves the validated authorization details to be included in the authorize response.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the validated authorization information.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getAuthorizationDetails() {
+
+        return this.authorizationDetails;
+    }
+
+    /**
+     * Sets the authorization details.
+     * This method sets {@link AuthorizationDetails} that can potentially be included in the authorization response.
+     *
+     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     */
+    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+
+        this.authorizationDetails = authorizationDetails;
     }
 }

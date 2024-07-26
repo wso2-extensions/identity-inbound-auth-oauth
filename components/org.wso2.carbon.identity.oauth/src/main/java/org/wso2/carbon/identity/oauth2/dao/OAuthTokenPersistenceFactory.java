@@ -21,8 +21,8 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth2.rar.common.dao.AuthorizationDetailsDAO;
-import org.wso2.carbon.identity.oauth2.rar.common.dao.AuthorizationDetailsDAOImpl;
+import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAO;
+import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;

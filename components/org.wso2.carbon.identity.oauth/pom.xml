@@ -260,7 +260,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.rar.common</artifactId>
+            <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
             <scope>provided</scope>
         </dependency>
         <!--Test Dependencies-->
