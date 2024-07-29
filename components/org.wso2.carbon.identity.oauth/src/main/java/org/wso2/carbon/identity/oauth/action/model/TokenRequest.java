@@ -45,8 +45,6 @@ public class TokenRequest extends Request {
         headersToAvoid.add("content-type");
         // parameters from authorization code grant
         paramsToAvoid.add("code");
-        paramsToAvoid.add("client_id");
-        paramsToAvoid.add("client_secret");
         paramsToAvoid.add("redirect_uri");
         paramsToAvoid.add("grant_type");
         paramsToAvoid.add("scope");
@@ -55,6 +53,11 @@ public class TokenRequest extends Request {
         paramsToAvoid.add("password");
         // parameters from refresh token grant
         paramsToAvoid.add("refresh_token");
+        // parameters used for client authentication for token endpoint
+        paramsToAvoid.add("client_id");
+        paramsToAvoid.add("client_secret");
+        paramsToAvoid.add("client_assertion_type");
+        paramsToAvoid.add("client_assertion");
     }
 
     private final String clientId;
