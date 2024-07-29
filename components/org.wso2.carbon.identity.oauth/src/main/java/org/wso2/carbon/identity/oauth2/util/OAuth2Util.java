@@ -87,7 +87,13 @@ import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentSer
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.util.*;
+import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -2834,10 +2840,7 @@ public class OAuth2Util {
                 log.debug("Error occurred while validating id token signature.");
             }
             return false;
-        }  catch (IdentityKeyStoreResolverException e) {
-            log.error("Error occurred while validating id token signature.");
-            return false;
-        } catch (Exception e) {
+        }  catch (Exception e) {
             log.error("Error occurred while validating id token signature.");
             return false;
         }
