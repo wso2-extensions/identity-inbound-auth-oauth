@@ -45,7 +45,7 @@ public class OAuthTokenReqMessageContext {
 
     private long refreshTokenvalidityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
 
-    private Timestamp accessTokenIssuedTimestamp;
+    private long accessTokenIssuedTime;
 
     private long refreshTokenIssuedTime;
 
@@ -145,17 +145,12 @@ public class OAuthTokenReqMessageContext {
 
     public long getAccessTokenIssuedTime() {
 
-        return accessTokenIssuedTimestamp.getTime();
+        return accessTokenIssuedTime;
     }
 
     public void setAccessTokenIssuedTime(long accessTokenIssuedTime) {
 
-        accessTokenIssuedTimestamp = new Timestamp(accessTokenIssuedTime);
-    }
-
-    public Timestamp getAccessTokenIssuedTimestamp() {
-
-        return accessTokenIssuedTimestamp;
+        this.accessTokenIssuedTime = accessTokenIssuedTime;
     }
 
     public long getRefreshTokenIssuedTime() {

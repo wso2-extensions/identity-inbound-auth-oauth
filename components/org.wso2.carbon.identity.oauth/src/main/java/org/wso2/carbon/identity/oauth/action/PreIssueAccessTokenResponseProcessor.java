@@ -50,9 +50,9 @@ import java.util.regex.Pattern;
  * This class is responsible for processing the response received from the action execution
  * of the pre issue access token.
  */
-public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProcessor {
+public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResponseProcessor {
 
-    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenProcessor.class);
+    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenResponseProcessor.class);
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
     private static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");

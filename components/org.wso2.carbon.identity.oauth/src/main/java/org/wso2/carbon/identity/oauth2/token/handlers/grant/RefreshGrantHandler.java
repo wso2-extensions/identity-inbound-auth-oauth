@@ -71,6 +71,7 @@ import java.util.stream.Stream;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
+import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId;
 
@@ -719,7 +720,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Allow if refresh token is issued for token requests from following grant types and,
         // for JWT access tokens only.
         return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
-                OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) && "JWT".equals(oAuthAppBean.getTokenType());
+                OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) && JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
     private void setCustomizedAccessTokenAttributesToMessageContext(RefreshTokenValidationDataDO refreshTokenData,

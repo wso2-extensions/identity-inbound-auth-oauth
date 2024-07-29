@@ -81,6 +81,7 @@ import java.util.function.Consumer;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 
 /**
@@ -499,7 +500,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
                 OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
                 OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) && "JWT".equals(oAuthAppBean.getTokenType());
+                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) && JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {
@@ -539,7 +540,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setAppResidentTenantId(IdentityTenantUtil.getLoginTenantId());
         newTokenBean.setIsConsentedToken(tokReqMsgCtx.isConsentedToken());
         newTokenBean.setTokenType(getTokenType(tokReqMsgCtx));
-        newTokenBean.setIssuedTime(tokReqMsgCtx.getAccessTokenIssuedTimestamp());
+        newTokenBean.setIssuedTime(new Timestamp(tokReqMsgCtx.getAccessTokenIssuedTime()));
         newTokenBean.setAccessToken(getNewAccessToken(tokReqMsgCtx, oauthTokenIssuer));
         newTokenBean.setValidityPeriodInMillis(tokReqMsgCtx.getValidityPeriod());
         newTokenBean.setValidityPeriod(tokReqMsgCtx.getValidityPeriod() / SECONDS_TO_MILISECONDS_FACTOR);
@@ -591,7 +592,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean);
         } else {
             // no valid refresh token found in existing Token
-            newTokenBean.setRefreshTokenIssuedTime(tokReqMsgCtx.getAccessTokenIssuedTimestamp());
+            newTokenBean.setRefreshTokenIssuedTime(new Timestamp(tokReqMsgCtx.getAccessTokenIssuedTime()));
             // Set refresh token validity period.
             newTokenBean.setRefreshTokenValidityPeriodInMillis(tokReqMsgCtx.getRefreshTokenvalidityPeriod());
             newTokenBean.setRefreshToken(getRefreshToken(tokReqMsgCtx, oauthTokenIssuer));

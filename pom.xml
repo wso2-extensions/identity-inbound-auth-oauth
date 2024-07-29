@@ -279,7 +279,7 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.action.execution</artifactId>
-                <version>${carbon.identity.framework.action.execution.version}</version>
+                <version>${carbon.identity.framework.version}</version>
             </dependency>
 
             <!--SAML Common Util dependency-->
@@ -909,10 +909,9 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.3.22</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.3.50</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
-        <carbon.identity.framework.action.execution.version>7.3.50-SNAPSHOT</carbon.identity.framework.action.execution.version>
 
         <carbon.identity.organization.management.version>1.4.7
         </carbon.identity.organization.management.version>

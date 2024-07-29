@@ -105,6 +105,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser) {
+            // todo: improve to incoporate the organization properly
             eventBuilder.organization(new Organization(authorizedUser.getUserResidentOrganization(),
                     authorizedUser.getUserResidentOrganization()));
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());

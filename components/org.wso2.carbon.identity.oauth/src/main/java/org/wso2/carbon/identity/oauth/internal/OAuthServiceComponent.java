@@ -39,8 +39,8 @@ import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
-import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenProcessor;
 import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenRequestBuilder;
+import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenResponseProcessor;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -136,7 +136,8 @@ public class OAuthServiceComponent {
         context.getBundleContext()
                 .registerService(ActionExecutionRequestBuilder.class, new PreIssueAccessTokenRequestBuilder(), null);
         context.getBundleContext()
-                .registerService(ActionExecutionResponseProcessor.class, new PreIssueAccessTokenProcessor(), null);
+                .registerService(ActionExecutionResponseProcessor.class, new PreIssueAccessTokenResponseProcessor(),
+                        null);
     }
 
     protected void deactivate(ComponentContext context) {
@@ -581,17 +582,13 @@ public class OAuthServiceComponent {
     )
     protected void registerActionExecutionService(ActionExecutorService actionExecutorService) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Registering the ActionExecutorService in OAuthServiceComponent.");
-        }
+        log.debug("Registering the ActionExecutorService in OAuthServiceComponent.");
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(actionExecutorService);
     }
 
     protected void unregisterActionExecutorService(ActionExecutorService actionExecutorService) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
-        }
+        log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(null);
     }
 }
