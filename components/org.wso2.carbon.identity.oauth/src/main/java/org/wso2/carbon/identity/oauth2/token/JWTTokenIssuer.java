@@ -572,7 +572,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     getAccessTokenLifeTimeInMillis(authAuthzReqMessageContext, oAuthAppDO, consumerKey);
             spTenantDomain = authAuthzReqMessageContext.getAuthorizationReqDTO().getTenantDomain();
         } else {
-            // todo: should be updated based on context
             accessTokenLifeTimeInMillis =
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
             spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
@@ -998,16 +997,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = jwtClaimsSetBuilder.build();
         }
         return jwtClaimsSet;
-    }
-
-    /**
-     * Check whether pairwise subject identifier is enabled for access token response.
-     *
-     * @return true if pairwise subject identifier is enabled for access token response.
-     */
-    private boolean checkPairwiseSubEnabledForAccessTokens() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }
 
     /**
