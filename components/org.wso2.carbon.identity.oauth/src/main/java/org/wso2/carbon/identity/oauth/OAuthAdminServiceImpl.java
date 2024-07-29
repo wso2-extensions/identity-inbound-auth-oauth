@@ -33,6 +33,8 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -2336,12 +2338,49 @@ public class OAuthAdminServiceImpl {
         int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
         oauthApp = dao.getAppInformation(consumerKey, tenantID);
         if (oauthApp != null) {
+            if (!oauthApp.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+                //migrate the existing apps to the new model
+                addJwtAccessTokenClaims(oauthApp, tenantDomain, dao);
+            }
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
             }
             AppInfoCache.getInstance().addToCache(consumerKey, oauthApp, tenantDomain);
         }
         return oauthApp;
+    }
+
+    private void addJwtAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain, OAuthAppDAO dao) throws
+            IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
+                .getApplicationMgtService();
+        try {
+            List<String> jwtAccessTokenClaims = new ArrayList<>();
+            ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getId());
+            if (serviceProvider != null) {
+                ClaimMapping[] claimMappings = serviceProvider.getClaimConfig().getClaimMappings();
+                if (claimMappings != null && claimMappings.length > 0) {
+                    Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
+                    for (ClaimMapping claimMapping : claimMappings) {
+                        if (claimMapping.isRequested()) {
+                            for (Map.Entry<String, String> entry : oidcToLocalClaimMappings.entrySet()) {
+                                if (entry.getValue().equals(claimMapping.getLocalClaim().getClaimUri())) {
+                                    jwtAccessTokenClaims.add(entry.getKey());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!jwtAccessTokenClaims.isEmpty()) {
+                oauthApp.setJwtAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
+                dao.updateJwtAccessTokenClaims(oauthApp);
+            }
+        } catch (IdentityApplicationManagementException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception("Error while updating JWT access token claims for application " +
+                    oauthApp.getApplicationName(), e);
+        }
     }
 
     /**
