@@ -462,12 +462,6 @@ public class OAuth2ServiceComponent {
                 || OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
             initializeLegacyScopeToNewScopeMappings();
         }
-
-//        ActionExecutionRequestBuilderFactory.registerActionInvocationRequestBuilder(ActionType.PRE_ISSUE_ACCESS_TOKEN,
-//                PreIssueAccessTokenRequestBuilder.getInstance());
-//        ActionExecutionResponseProcessorFactory.registerActionInvocationResponseProcessor(
-//                ActionType.PRE_ISSUE_ACCESS_TOKEN,
-//                PreIssueAccessTokenProcessor.getInstance());
     }
 
     /**

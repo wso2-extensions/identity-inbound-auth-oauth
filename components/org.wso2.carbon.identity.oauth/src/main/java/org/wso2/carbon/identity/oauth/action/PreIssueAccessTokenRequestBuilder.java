@@ -66,9 +66,9 @@ import java.util.stream.Collectors;
  */
 public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequestBuilder {
 
-    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
     public static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
+    private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
 
     @Override
     public ActionType getSupportedActionType() {
@@ -77,7 +77,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     @Override
-    public ActionExecutionRequest buildActionExecutionRequest(ActionType actionType, Map<String, Object> eventContext)
+    public ActionExecutionRequest buildActionExecutionRequest(Map<String, Object> eventContext)
             throws ActionExecutionRequestBuilderException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
@@ -86,7 +86,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         Map<String, Object> additionalClaimsToAddToToken = getAdditionalClaimsToAddToToken(tokenMessageContext);
 
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
-        actionRequestBuilder.actionType(actionType);
+        actionRequestBuilder.actionType(getSupportedActionType());
         actionRequestBuilder.event(getEvent(tokenMessageContext, additionalClaimsToAddToToken));
         actionRequestBuilder.allowedOperations(getAllowedOperations(additionalClaimsToAddToToken));
 

@@ -167,8 +167,6 @@ public class AccessTokenIssuer {
         String grantType = tokenReqDTO.getGrantType();
         OAuth2AccessTokenRespDTO tokenRespDTO = null;
 
-        log.info("=== Starting access token issue flow. grantType: " + grantType);
-
         AuthorizationGrantHandler authzGrantHandler = authzGrantHandlers.get(grantType);
 
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
@@ -573,12 +571,6 @@ public class AccessTokenIssuer {
                 }
             }
         }
-
-        log.info("=== End of access token issue flow. grantType: " + grantType + " tokenRespDTO: " + "{"
-                + "accessToken: " + tokenRespDTO.getAccessToken() + ", refreshToken: " + tokenRespDTO.getRefreshToken()
-                + ", expiresIn: " + tokenRespDTO.getExpiresIn() + ", authorizedScopes: " +
-                tokenRespDTO.getAuthorizedScopes() + ", tokenType: " + tokenRespDTO.getTokenType() +
-                ", parameterObjects: " + tokenRespDTO.getParameterObjects() + "}");
 
         if (Constants.DEVICE_FLOW_GRANT_TYPE.equals(grantType)) {
             Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);

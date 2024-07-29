@@ -18,11 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.action;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
+import org.wso2.carbon.identity.action.execution.exception.ActionExecutionResponseProcessorException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationErrorResponse;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessResponse;
@@ -66,10 +68,9 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
     }
 
     @Override
-    public ActionExecutionStatus processSuccessResponse(ActionType actionType, Map<String, Object> eventContext,
-                                                        Event event,
-                                                        ActionInvocationSuccessResponse
-                                                                actionInvocationSuccessResponse) {
+    public ActionExecutionStatus processSuccessResponse(Map<String, Object> eventContext, Event event,
+                                                        ActionInvocationSuccessResponse actionInvocationSuccessResponse)
+            throws ActionExecutionResponseProcessorException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
                 (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
@@ -101,7 +102,7 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
             }
         }
 
-        logOperationExecutionResults(actionType, operationExecutionResultList);
+        logOperationExecutionResults(getSupportedActionType(), operationExecutionResultList);
 
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
         updateTokenMessageContext(tokenMessageContext, responseAccessToken);
@@ -115,6 +116,8 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
         //todo: need to add to diagnostic logs
         if (LOG.isDebugEnabled()) {
             ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
             try {
                 String executionSummary = objectMapper.writeValueAsString(operationExecutionResultList);
                 LOG.debug(String.format("Processed response for action type: %s. Results of operations performed: %s",
@@ -126,8 +129,9 @@ public class PreIssueAccessTokenProcessor implements ActionExecutionResponseProc
     }
 
     @Override
-    public ActionExecutionStatus processErrorResponse(ActionType actionType, Map<String, Object> map, Event event,
-                                                      ActionInvocationErrorResponse actionInvocationErrorResponse) {
+    public ActionExecutionStatus processErrorResponse(Map<String, Object> map, Event event,
+                                                      ActionInvocationErrorResponse actionInvocationErrorResponse)
+            throws ActionExecutionResponseProcessorException {
 
         //todo: need to implement to process the error so that if a processable error is received
         // it is communicated to the client.
