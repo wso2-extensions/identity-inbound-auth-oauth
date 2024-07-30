@@ -23,6 +23,8 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -55,6 +57,12 @@ public class OAuthTokenReqMessageContext {
     private boolean isConsentedToken;
 
     private boolean isImpersonationRequest;
+
+    private boolean preIssueAccessTokenActionsExecuted;
+
+    private List<String> audiences;
+
+    private Map<String, Object> additionalAccessTokenClaims;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
@@ -96,11 +104,19 @@ public class OAuthTokenReqMessageContext {
         this.tenantID = tenantID;
     }
 
+    /**
+     * Get the validity period of the token.
+     * @return validity period of the token in milliseconds
+     */
     public long getValidityPeriod() {
 
         return validityPeriod;
     }
 
+    /**
+     * Set the validity period of the token.
+     * @param validityPeriod validity period of the token in milliseconds
+     */
     public void setValidityPeriod(long validityPeriod) {
 
         this.validityPeriod = validityPeriod;
@@ -157,10 +173,12 @@ public class OAuthTokenReqMessageContext {
     }
 
     public String[] getAuthorizedInternalScopes() {
+
         return authorizedInternalScopes;
     }
 
     public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
+
         this.authorizedInternalScopes = authorizedInternalScopes;
     }
 
@@ -182,5 +200,35 @@ public class OAuthTokenReqMessageContext {
     public void setImpersonationRequest(boolean impersonationRequest) {
 
         isImpersonationRequest = impersonationRequest;
+    }
+
+    public boolean isPreIssueAccessTokenActionsExecuted() {
+
+        return preIssueAccessTokenActionsExecuted;
+    }
+
+    public void setPreIssueAccessTokenActionsExecuted(boolean preIssueAccessTokenActionsExecuted) {
+
+        this.preIssueAccessTokenActionsExecuted = preIssueAccessTokenActionsExecuted;
+    }
+
+    public List<String> getAudiences() {
+
+        return audiences;
+    }
+
+    public void setAudiences(List<String> audiences) {
+
+        this.audiences = audiences;
+    }
+
+    public Map<String, Object> getAdditionalAccessTokenClaims() {
+
+        return additionalAccessTokenClaims;
+    }
+
+    public void setAdditionalAccessTokenClaims(Map<String, Object> additionalAccessTokenClaims) {
+
+        this.additionalAccessTokenClaims = additionalAccessTokenClaims;
     }
 }
