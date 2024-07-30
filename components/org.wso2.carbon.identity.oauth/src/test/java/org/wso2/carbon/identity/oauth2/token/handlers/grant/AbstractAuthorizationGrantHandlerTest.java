@@ -224,7 +224,7 @@ public class AbstractAuthorizationGrantHandlerTest {
                 {true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString() + " " + PASSWORD_GRANT,
                         PASSWORD_GRANT, true},
                 {true, GrantType.SAML20_BEARER.toString() + " " + GrantType.IWA_NTLM.toString(), PASSWORD_GRANT,
-                        false}, {true, null, PASSWORD_GRANT, false}, {false, null, PASSWORD_GRANT, false},};
+                        false}, {true, null, PASSWORD_GRANT, false}, {false, null, PASSWORD_GRANT, false}};
     }
 
     @Test(dataProvider = "IsAuthorizedClientDataProvider")

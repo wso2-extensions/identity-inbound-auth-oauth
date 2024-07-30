@@ -720,7 +720,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Allow if refresh token is issued for token requests from following grant types and,
         // for JWT access tokens only.
         return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
-                OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) && JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
+                OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) &&
+                JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
     private void setCustomizedAccessTokenAttributesToMessageContext(RefreshTokenValidationDataDO refreshTokenData,

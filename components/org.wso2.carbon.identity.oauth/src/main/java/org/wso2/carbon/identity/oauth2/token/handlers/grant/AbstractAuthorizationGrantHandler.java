@@ -500,7 +500,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
                 OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
                 OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) && JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
+                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
+                JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
     private boolean isExistingTokenValid(AccessTokenDO existingTokenBean, long expireTime) {

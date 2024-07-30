@@ -23,7 +23,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -174,10 +173,12 @@ public class OAuthTokenReqMessageContext {
     }
 
     public String[] getAuthorizedInternalScopes() {
+
         return authorizedInternalScopes;
     }
 
     public void setAuthorizedInternalScopes(String[] authorizedInternalScopes) {
+
         this.authorizedInternalScopes = authorizedInternalScopes;
     }
 
