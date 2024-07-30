@@ -96,6 +96,8 @@ import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
@@ -506,8 +508,16 @@ public class AccessTokenIssuer {
                     .inputParam(OAuthConstants.LogConstants.InputKeys.GRANT_TYPE, grantType)
                     .inputParam("token expiry time (s)", tokenRespDTO.getExpiresIn())
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .resultMessage("Access token issued for the application.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+            if (tokReqMsgCtx.isImpersonationRequest()) {
+                if (tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR) != null) {
+                    String impersonatorId = tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString();
+                    diagnosticLogBuilder.inputParam(IMPERSONATOR, impersonatorId);
+                }
+                diagnosticLogBuilder.resultMessage("Impersonated Access token issued for the application.");
+            } else {
+                diagnosticLogBuilder.resultMessage("Access token issued for the application.");
+            }
             if (tokReqMsgCtx.getAuthorizedUser() != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.USER_ID,
                         tokReqMsgCtx.getAuthorizedUser().getUserId());

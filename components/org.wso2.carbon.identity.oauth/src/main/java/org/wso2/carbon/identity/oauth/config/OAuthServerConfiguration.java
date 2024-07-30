@@ -169,7 +169,6 @@ public class OAuthServerConfiguration {
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
     private boolean useLegacyPermissionAccessForUserBasedAuth = false;
-    private boolean authorizeAllScopes = false;
     private String accessTokenPartitioningDomains = null;
     private TokenPersistenceProcessor persistenceProcessor = null;
     private Set<OAuthCallbackHandlerMetaData> callbackHandlerMetaData = new HashSet<>();
@@ -535,9 +534,6 @@ public class OAuthServerConfiguration {
 
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
-
-        // Read config for allow all scopes for an application
-        parseAuthorizeAllScopes(oauthElem);
     }
 
     /**
@@ -3671,31 +3667,6 @@ public class OAuthServerConfiguration {
         return useLegacyPermissionAccessForUserBasedAuth;
     }
 
-    /**
-     * Parse the AuthorizeAllScopes configuration that authorize all scopes for all applications.
-     *
-     * @param oauthConfigElem oauthConfigElem.
-     */
-    private void parseAuthorizeAllScopes(OMElement oauthConfigElem) {
-
-        OMElement authorizeAllScopesElem = oauthConfigElem.getFirstChildWithName(
-                getQNameWithIdentityNS(ConfigElements.AUTHORIZE_ALL_SCOPES));
-        if (authorizeAllScopesElem != null) {
-            authorizeAllScopes = Boolean.parseBoolean(authorizeAllScopesElem.getText());
-        }
-    }
-
-    /**
-     * This method returns the value of the property AuthorizeAllScopes for the OAuth
-     * configuration in identity.xml.
-     *
-     * @return true if the AuthorizeAllScopes is enabled.
-     */
-    public boolean isAuthorizeAllScopes() {
-
-        return authorizeAllScopes;
-    }
-
     private static void setOAuthResponseJspPageAvailable() {
 
         java.nio.file.Path path = Paths.get(CarbonUtils.getCarbonHome(), "repository", "deployment",
@@ -4070,7 +4041,6 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
-        private static final String AUTHORIZE_ALL_SCOPES = "AuthorizeAllScopes";
     }
 
 }
