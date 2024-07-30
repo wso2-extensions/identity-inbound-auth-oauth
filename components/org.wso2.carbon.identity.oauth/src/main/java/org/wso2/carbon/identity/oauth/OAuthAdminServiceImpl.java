@@ -2357,7 +2357,8 @@ public class OAuthAdminServiceImpl {
                 .getApplicationMgtService();
         try {
             List<String> jwtAccessTokenClaims = new ArrayList<>();
-            ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getId());
+            ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getApplicationName(),
+                    tenantDomain);
             if (serviceProvider != null) {
                 ClaimMapping[] claimMappings = serviceProvider.getClaimConfig().getClaimMappings();
                 if (claimMappings != null && claimMappings.length > 0) {
