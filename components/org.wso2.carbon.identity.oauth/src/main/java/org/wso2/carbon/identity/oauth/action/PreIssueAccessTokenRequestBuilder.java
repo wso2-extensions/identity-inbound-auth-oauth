@@ -126,6 +126,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             eventBuilder.user(new User(user.getUserId()));
         } catch (UserIdNotFoundException e) {
             if (LOG.isDebugEnabled()) {
+                // todo: fall back to a different identifier like username.
+                //  Verify based on when this exception is thrown.
                 LOG.debug(String.format(
                         "Error occurred while retrieving user id of the authorized user for application: " + clientID +
                                 "for grantType: " + grantType), e);

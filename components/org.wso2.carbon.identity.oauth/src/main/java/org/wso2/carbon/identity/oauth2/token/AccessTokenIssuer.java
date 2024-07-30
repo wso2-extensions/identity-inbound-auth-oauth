@@ -1272,12 +1272,9 @@ public class AccessTokenIssuer {
                     TimeUnit.MILLISECONDS.toNanos(tokReqMsgCtx.getRefreshTokenvalidityPeriod()));
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
 
-            if (log.isDebugEnabled()) {
-                log.debug(
-                        "Customized audience list and access token attributes from pre issue access token actions " +
-                                "are persisted in the AuthorizationGrantCache against the token id: " +
-                                tokenRespDTO.getTokenId());
-            }
+            log.debug("Customized audience list and access token attributes from pre issue access token actions " +
+                            "are persisted in the AuthorizationGrantCache against the token id: " +
+                            tokenRespDTO.getTokenId());
         }
     }
 

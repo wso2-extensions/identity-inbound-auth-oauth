@@ -735,10 +735,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenRequestContext.setPreIssueAccessTokenActionsExecuted(true);
             tokenRequestContext.setAdditionalAccessTokenClaims(grantCacheEntry.getCustomClaims());
             tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
-            if (log.isDebugEnabled()) {
-                log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
-                        " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
-            }
+            log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
+                    " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
 
             AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
         }

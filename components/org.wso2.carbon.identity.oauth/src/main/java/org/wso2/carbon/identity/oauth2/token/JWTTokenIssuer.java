@@ -806,10 +806,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         if (tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
             lifetimeInMillis = tokenReqMessageContext.getValidityPeriod();
-            if (log.isDebugEnabled()) {
-                log.debug("Access token life time is set from OAuthTokenReqMessageContext. Token Lifetime : " +
-                        lifetimeInMillis + "ms.");
-            }
+            log.debug("Access token life time is set from OAuthTokenReqMessageContext. Token Lifetime : " +
+                    lifetimeInMillis + "ms.");
 
             return lifetimeInMillis;
         }
