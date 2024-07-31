@@ -41,6 +41,8 @@ public class OIDCSessionManagementConfiguration {
 
     private String oidcLogoutConsentPageUrl = null;
     private String oidcLogoutPageUrl = null;
+    private String oidcLogoutConsentPageUrlV2 = null;
+    private String oidcLogoutPageUrlV2 = null;
     private boolean handleAlreadyLoggedOutSessionsGracefully = false;
 
     private static final String CONFIG_ELEM_OAUTH = "OAuth";
@@ -79,6 +81,16 @@ public class OIDCSessionManagementConfiguration {
     }
 
     /**
+     * Returns configured OIDC Logout Consent page V2 URL.
+     *
+     * @return OIDC Logout Consent page URL
+     */
+    public String getOIDCLogoutConsentPageUrlV2() {
+
+        return oidcLogoutConsentPageUrlV2;
+    }
+
+    /**
      * Returns configured OIDC Logout page URL.
      *
      * @return OIDC Logout page URL
@@ -86,6 +98,16 @@ public class OIDCSessionManagementConfiguration {
     public String getOIDCLogoutPageUrl() {
 
         return oidcLogoutPageUrl;
+    }
+
+    /**
+     * Returns configured OIDC Logout page V2 URL.
+     *
+     * @return OIDC Logout page URL
+     */
+    public String getOIDCLogoutPageUrlV2() {
+
+        return oidcLogoutPageUrlV2;
     }
 
     private void buildConfiguration() {
@@ -119,11 +141,39 @@ public class OIDCSessionManagementConfiguration {
         if (element != null) {
             handleAlreadyLoggedOutSessionsGracefully = Boolean.parseBoolean(element.getText());
         }
+
+        buildConfigurationsV2(oauthConfigElement);
     }
 
     private QName getQNameWithIdentityNS(String localPart) {
 
         return new QName(IdentityCoreConstants.IDENTITY_DEFAULT_NAMESPACE, localPart);
+    }
+
+    private void buildConfigurationsV2(OMElement oauthConfigElement) {
+
+        OMElement oauthConfigElementV2 = oauthConfigElement.getFirstChildWithName(getQNameWithIdentityNS(
+                OIDCSessionConstants.OIDCConfigElements.V2));
+
+        if (oauthConfigElementV2 == null) {
+            return;
+        }
+
+        OMElement element = oauthConfigElementV2.getFirstChildWithName(
+                getQNameWithIdentityNS(OIDCSessionConstants.OIDCConfigElements.OIDC_LOGOUT_CONSENT_PAGE_URL));
+        if (element != null) {
+            if (StringUtils.isNotBlank(element.getText())) {
+                oidcLogoutConsentPageUrlV2 = IdentityUtil.fillURLPlaceholders(element.getText());
+            }
+        }
+
+        element = oauthConfigElementV2.getFirstChildWithName(
+                getQNameWithIdentityNS(OIDCSessionConstants.OIDCConfigElements.OIDC_LOGOUT_PAGE_URL));
+        if (element != null) {
+            if (StringUtils.isNotBlank(element.getText())) {
+                oidcLogoutPageUrlV2 = IdentityUtil.fillURLPlaceholders(element.getText());
+            }
+        }
     }
 
     /**
