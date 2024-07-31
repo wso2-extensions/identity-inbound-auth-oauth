@@ -506,7 +506,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                                                             String tenantDomain) throws IdentityOAuth2Exception {
 
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
-        appInfoCache.clearCacheEntry(consumerKey);
+        appInfoCache.clearCacheEntry(consumerKey, tenantDomain);
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         if (isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
@@ -517,7 +517,10 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessTokenDo.getAccessToken());
                 CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
                 if (oauthCacheEntry != null) {
+                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
                     OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
+                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenDo.getAuthzUser()
+                            .getTenantDomain());
                 }
                 String tokenBindingReference = "NONE";
                 if (accessTokenDo.getTokenBinding() != null && StringUtils

@@ -78,6 +78,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfi
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonatorPermissionValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
@@ -402,6 +403,7 @@ public class OAuth2ServiceComponent {
 
             OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(new ImpersonationMgtServiceImpl());
             bundleContext.registerService(ImpersonationValidator.class, new SubjectScopeValidator(), null);
+            bundleContext.registerService(ImpersonationValidator.class, new ImpersonatorPermissionValidator(), null);
             bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
 

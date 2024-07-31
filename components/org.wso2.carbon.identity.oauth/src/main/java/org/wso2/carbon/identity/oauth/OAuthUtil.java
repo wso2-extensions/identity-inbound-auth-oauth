@@ -37,6 +37,11 @@ import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.configuration.mgt.core.exception.ConfigurationManagementException;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Attribute;
+import org.wso2.carbon.identity.configuration.mgt.core.model.Resource;
+import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
+import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -77,6 +82,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -89,6 +95,12 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.CURRENT_TOKEN_IDENTIFIER;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.Config.PRESERVE_LOGGED_IN_SESSION_AT_PASSWORD_UPDATE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_HOME_REALM_IDENTIFIER;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ENABLE_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.JWT_CONFIGURATION_RESOURCE_TYPE_NAME;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PREVENT_TOKEN_REUSE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UserType.FEDERATED_USER_DOMAIN_PREFIX;
 
@@ -536,6 +548,7 @@ public final class OAuthUtil {
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
         dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
+        dto.setTokenEndpointAllowReusePvtKeyJwt(appDO.isTokenEndpointAllowReusePvtKeyJwt());
         dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
         dto.setSectorIdentifierURI(appDO.getSectorIdentifierURI());
         dto.setIdTokenSignatureAlgorithm(appDO.getIdTokenSignatureAlgorithm());
@@ -1158,6 +1171,31 @@ public final class OAuthUtil {
         return user;
     }
 
+    /**
+     * Get user from tenant by user id.
+     *
+     * @param userId   The user id.
+     * @param tenantId The tenant id where user resides.
+     * @return User object from tenant userStoreManager.
+     * @throws IdentityOAuth2Exception Error when user cannot be resolved.
+     */
+    public static User getUserFromTenant(String userId, int tenantId)
+            throws IdentityOAuth2Exception {
+
+        User user = null;
+        try {
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance()
+                            .getRealmService().getTenantUserRealm(tenantId).getUserStoreManager();
+            if (StringUtils.isNotEmpty(userId) && userStoreManager.isExistingUserWithID(userId)) {
+                user = getApplicationUser(userStoreManager.getUser(userId, null));
+            }
+            return user;
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error finding user in tenant.", e);
+        }
+    }
+
     private static User getApplicationUser(org.wso2.carbon.user.core.common.User coreUser) {
 
         User user = new User();
@@ -1196,5 +1234,74 @@ public final class OAuthUtil {
         if (orgSsoIdp != null) {
             authenticatedUser.setFederatedIdPName(orgSsoIdp.getIdentityProviderName());
         }
+    }
+
+    /**
+     * Get the value of the Tenant configuration of Reuse Private key JWT from the tenant configuration.
+     *
+     * @param tokenEPAllowReusePvtKeyJwtValue   Value of the tokenEPAllowReusePvtKeyJwt configuration.
+     * @param tokenAuthMethod                   Token authentication method.
+     * @return Value of the tokenEPAllowReusePvtKeyJwt configuration.
+     * @throws IdentityOAuth2ServerException IdentityOAuth2ServerException exception.
+     */
+    public static String getValueOfTokenEPAllowReusePvtKeyJwt(String tokenEPAllowReusePvtKeyJwtValue,
+                                                              String tokenAuthMethod)
+            throws IdentityOAuth2ServerException {
+
+        if (tokenEPAllowReusePvtKeyJwtValue == null && StringUtils.isNotBlank(tokenAuthMethod)
+                && OAuthConstants.PRIVATE_KEY_JWT.equals(tokenAuthMethod)) {
+            try {
+                tokenEPAllowReusePvtKeyJwtValue = readTenantConfigurationPvtKeyJWTReuse();
+            } catch (ConfigurationManagementException e) {
+                throw new IdentityOAuth2ServerException("Unable to retrieve JWT Authenticator tenant configuration.",
+                        e);
+            }
+            if (tokenEPAllowReusePvtKeyJwtValue == null) {
+                tokenEPAllowReusePvtKeyJwtValue = readServerConfigurationPvtKeyJWTReuse();
+                if (tokenEPAllowReusePvtKeyJwtValue == null) {
+                    tokenEPAllowReusePvtKeyJwtValue = String.valueOf(DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE);
+                }
+            }
+        }
+        return tokenEPAllowReusePvtKeyJwtValue;
+    }
+
+    private static String readTenantConfigurationPvtKeyJWTReuse() throws ConfigurationManagementException {
+
+        String tokenEPAllowReusePvtKeyJwtTenantConfig = null;
+        Resource resource = OAuthComponentServiceHolder.getInstance().getConfigurationManager()
+                .getResource(JWT_CONFIGURATION_RESOURCE_TYPE_NAME, JWT_CONFIGURATION_RESOURCE_NAME);
+
+        if (resource != null) {
+            tokenEPAllowReusePvtKeyJwtTenantConfig = resource.getAttributes().stream()
+                    .filter(attribute -> ENABLE_TOKEN_REUSE.equals(attribute.getKey()))
+                    .map(Attribute::getValue)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return tokenEPAllowReusePvtKeyJwtTenantConfig;
+    }
+
+    private static String readServerConfigurationPvtKeyJWTReuse() {
+
+        String tokenEPAllowReusePvtKeyJwtTenantConfig = null;
+        IdentityEventListenerConfig identityEventListenerConfig = IdentityUtil.readEventListenerProperty(
+                AbstractIdentityHandler.class.getName(), PVT_KEY_JWT_CLIENT_AUTHENTICATOR_CLASS_NAME);
+
+        if (identityEventListenerConfig != null
+                && Boolean.parseBoolean(identityEventListenerConfig.getEnable())) {
+            if (identityEventListenerConfig.getProperties() != null) {
+                for (Map.Entry<Object, Object> property : identityEventListenerConfig.getProperties().entrySet()) {
+                    String key = (String) property.getKey();
+                    String value = (String) property.getValue();
+                    if (Objects.equals(key, PREVENT_TOKEN_REUSE)) {
+                        boolean preventTokenReuse = Boolean.parseBoolean(value);
+                        tokenEPAllowReusePvtKeyJwtTenantConfig = String.valueOf(!preventTokenReuse);
+                        break;
+                    }
+                }
+            }
+        }
+        return tokenEPAllowReusePvtKeyJwtTenantConfig;
     }
 }

@@ -24,6 +24,7 @@ package org.wso2.carbon.identity.oauth2.impersonation.utils;
  */
 public class Constants {
 
+    public static final String IMPERSONATION_SCOPE_NAME = "internal_user_impersonate";
     public static final String OAUTH_2 = "oauth2";
     public static final String ENABLE_EMAIL_NOTIFICATION = "EnableEmailNotification";
     public static final String IMPERSONATION_RESOURCE_TYPE_NAME = "IMPERSONATION_CONFIGURATION";

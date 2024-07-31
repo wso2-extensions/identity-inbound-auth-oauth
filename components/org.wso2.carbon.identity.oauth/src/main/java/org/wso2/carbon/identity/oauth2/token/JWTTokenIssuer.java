@@ -167,7 +167,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(oauthAuthzMsgCtx, null);
-        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
+        String sub = authenticatedUser.getAuthenticatedSubjectIdentifier();
 
         String subject = oauthAuthzMsgCtx.getAuthorizationReqDTO().getRequestedSubjectId();
 
@@ -244,8 +244,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         try {
             JWT parsedJwtToken = JWTParser.parse(accessToken);
+            // JWT ClaimsSet can be null if the ID token is encrypted.
+            if (parsedJwtToken.getJWTClaimsSet() == null) {
+                throw new OAuthSystemException("JWT claims set is null in the JWT token.");
+            }
             String jwtId = parsedJwtToken.getJWTClaimsSet().getJWTID();
-            if (jwtId == null) {
+            if (StringUtils.isBlank(jwtId)) {
                 throw new OAuthSystemException("JTI could not be retrieved from the JWT token.");
             }
             return jwtId;
@@ -289,6 +293,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         jwtClaimsSet = jwtClaimsSetBuilder.build();
+
         if (JWSAlgorithm.NONE.getName().equals(signatureAlgorithm.getName())) {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
@@ -587,8 +592,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         AuthenticatedUser authenticatedUser = getAuthenticatedUser(authAuthzReqMessageContext, tokenReqMessageContext);
-        String sub = getSubjectClaim(consumerKey, spTenantDomain, authenticatedUser);
-        if (checkPairwiseSubEnabledForAccessTokens()) {
+        String sub = authenticatedUser.getAuthenticatedSubjectIdentifier();
+        if (OAuth2Util.isPairwiseSubEnabledForAccessTokens()) {
             // pairwise sub claim is returned only if pairwise subject identifier for access tokens is enabled.
             sub = OIDCClaimUtil.getSubjectClaim(sub, oAuthAppDO);
         }
@@ -611,14 +616,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
                 getAuthorizedUserType(authAuthzReqMessageContext, tokenReqMessageContext));
-
         jwtClaimsSetBuilder.expirationTime(calculateAccessTokenExpiryTime(accessTokenLifeTimeInMillis,
                 curTimeInMillis));
 
-        // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens. But we are keeping this in JWT
-        // as well.
-        List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
-        jwtClaimsSetBuilder.audience(audience);
+        // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens.
+        // But we are keeping this in JWT as well.
+        jwtClaimsSetBuilder.audience(tokenReqMessageContext != null ? tokenReqMessageContext.getAudiences() :
+                OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
+
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
@@ -628,6 +633,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
+        // todo: deprecate when pre issue access token action is ready
         if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
                 tokenReqMessageContext.getOauth2AccessTokenReqDTO().getAccessTokenExtendedAttributes() != null) {
             Map<String, String> customClaims =
@@ -639,6 +645,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 }
             }
         }
+
         // Include token binding.
         jwtClaimsSet = handleTokenBinding(jwtClaimsSetBuilder, tokenReqMessageContext);
 
@@ -701,12 +708,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         jwtClaimsSetBuilder.claim(CNF, tokReqMsgCtx.getProperty(CNF));
         return jwtClaimsSetBuilder.build();
-    }
-
-    private String getSubjectClaim(String clientId, String spTenantDomain, AuthenticatedUser authorizedUser)
-            throws IdentityOAuth2Exception {
-
-        return authorizedUser.getAuthenticatedSubjectIdentifier();
     }
 
     /**
@@ -800,7 +801,17 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected long getAccessTokenLifeTimeInMillis(OAuthTokenReqMessageContext tokenReqMessageContext,
                                                   OAuthAppDO oAuthAppDO,
                                                   String consumerKey) throws IdentityOAuth2Exception {
+
         long lifetimeInMillis;
+
+        if (tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
+            lifetimeInMillis = tokenReqMessageContext.getValidityPeriod();
+            log.debug("Access token life time is set from OAuthTokenReqMessageContext. Token Lifetime : " +
+                    lifetimeInMillis + "ms.");
+
+            return lifetimeInMillis;
+        }
+
         boolean isUserAccessTokenType =
                 isUserAccessTokenType(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
                         tokenReqMessageContext);
@@ -852,6 +863,22 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     protected JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
                                               OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
+
+        if (tokenReqMessageContext != null && tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
+            Map<String, Object> customClaims = tokenReqMessageContext.getAdditionalAccessTokenClaims();
+
+            if (customClaims != null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Pre issue access token actions are executed. " +
+                                    "Returning the customized claim set from actions. Claims: " +
+                                    customClaims.keySet());
+                }
+
+                customClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+
+            return jwtClaimsSetBuilder.build();
+        }
 
         if (tokenReqMessageContext != null &&
                 tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
@@ -968,16 +995,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             jwtClaimsSet = jwtClaimsSetBuilder.build();
         }
         return jwtClaimsSet;
-    }
-
-    /**
-     * Check whether pairwise subject identifier is enabled for access token response.
-     *
-     * @return true if pairwise subject identifier is enabled for access token response.
-     */
-    private boolean checkPairwiseSubEnabledForAccessTokens() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }
 
     /**

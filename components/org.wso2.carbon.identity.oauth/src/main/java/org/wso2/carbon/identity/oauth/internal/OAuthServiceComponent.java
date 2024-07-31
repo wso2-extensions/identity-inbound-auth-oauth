@@ -26,15 +26,21 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.identity.action.execution.ActionExecutionRequestBuilder;
+import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
+import org.wso2.carbon.identity.action.execution.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.inbound.protocol.ApplicationInboundAuthConfigHandler;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
+import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenRequestBuilder;
+import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenResponseProcessor;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -69,6 +75,7 @@ public class OAuthServiceComponent {
     private ServiceRegistration serviceRegistration = null;
 
     protected void activate(ComponentContext context) {
+
         try {
             // initialize the OAuth Server configuration
             OAuthServerConfiguration oauthServerConfig = OAuthServerConfiguration.getInstance();
@@ -109,6 +116,8 @@ public class OAuthServiceComponent {
                     authProtocolApplicationService);
             context.getBundleContext().registerService(ApplicationInboundAuthConfigHandler.class,
                     authProtocolApplicationService, null);
+
+            registerActionRequestBuilderAndResponseProcessor(context);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -120,6 +129,15 @@ public class OAuthServiceComponent {
             log.error(errMsg, e);
             throw new RuntimeException(errMsg, e);
         }
+    }
+
+    private void registerActionRequestBuilderAndResponseProcessor(ComponentContext context) {
+
+        context.getBundleContext()
+                .registerService(ActionExecutionRequestBuilder.class, new PreIssueAccessTokenRequestBuilder(), null);
+        context.getBundleContext()
+                .registerService(ActionExecutionResponseProcessor.class, new PreIssueAccessTokenResponseProcessor(),
+                        null);
     }
 
     protected void deactivate(ComponentContext context) {
@@ -263,10 +281,10 @@ public class OAuthServiceComponent {
     }
 
     @Reference(name = "token.binding.service",
-               service = TokenBinderInfo.class,
-               cardinality = ReferenceCardinality.MULTIPLE,
-               policy = ReferencePolicy.DYNAMIC,
-               unbind = "unsetTokenBinderInfo")
+            service = TokenBinderInfo.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetTokenBinderInfo")
     protected void setTokenBinderInfo(TokenBinderInfo tokenBinderInfo) {
 
         if (log.isDebugEnabled()) {
@@ -284,10 +302,10 @@ public class OAuthServiceComponent {
     }
 
     @Reference(name = "oauth.application.mgt.listener",
-               service = OAuthApplicationMgtListener.class,
-               cardinality = ReferenceCardinality.MULTIPLE,
-               policy = ReferencePolicy.DYNAMIC,
-               unbind = "unsetOAuthApplicationMgtListener")
+            service = OAuthApplicationMgtListener.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOAuthApplicationMgtListener")
     protected void setOAuthApplicationMgtListener(OAuthApplicationMgtListener oAuthApplicationMgtListener) {
 
         if (log.isDebugEnabled()) {
@@ -520,5 +538,57 @@ public class OAuthServiceComponent {
             log.debug("Unset organization user sharing service.");
         }
         OAuthComponentServiceHolder.getInstance().setOrganizationUserSharingService(null);
+    }
+
+    /**
+     * Set the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    @Reference(
+            name = "resource.configuration.manager",
+            service = ConfigurationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterConfigurationManager"
+    )
+    protected void registerConfigurationManager(ConfigurationManager configurationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the ConfigurationManager in JWT Client Authenticator ManagementService.");
+        }
+        OAuthComponentServiceHolder.getInstance().setConfigurationManager(configurationManager);
+    }
+
+    /**
+     * Unset the ConfigurationManager.
+     *
+     * @param configurationManager The {@code ConfigurationManager} instance.
+     */
+    protected void unregisterConfigurationManager(ConfigurationManager configurationManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
+        }
+        OAuthComponentServiceHolder.getInstance().setConfigurationManager(null);
+    }
+
+    @Reference(
+            name = "action.execution.service",
+            service = ActionExecutorService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterActionExecutorService"
+    )
+    protected void registerActionExecutionService(ActionExecutorService actionExecutorService) {
+
+        log.debug("Registering the ActionExecutorService in OAuthServiceComponent.");
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(actionExecutorService);
+    }
+
+    protected void unregisterActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(null);
     }
 }

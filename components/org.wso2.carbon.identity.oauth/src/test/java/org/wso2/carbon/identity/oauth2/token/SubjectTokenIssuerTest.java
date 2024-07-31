@@ -27,7 +27,9 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -63,9 +65,11 @@ public class SubjectTokenIssuerTest {
     @Mock
     private JWTTokenIssuer jwtTokenIssuer;
     private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
+    private static final String OAUTH_APP_DO = "OAuthAppDO";
     private ImpersonationMgtServiceImpl impersonationMgtService = new ImpersonationMgtServiceImpl();
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -86,6 +90,8 @@ public class SubjectTokenIssuerTest {
         Map<String, OauthTokenIssuer> oauthTokenIssuerMap = new HashMap<>();
         oauthTokenIssuerMap.put(JWT_TOKEN_TYPE, jwtTokenIssuer);
         lenient().when(mockOAuthServerConfiguration.getOauthTokenIssuerMap()).thenReturn(oauthTokenIssuerMap);
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
     }
 
     @AfterMethod
@@ -94,12 +100,14 @@ public class SubjectTokenIssuerTest {
         OAuth2ServiceComponentHolder.getInstance()
                 .removeImpersonationValidator(new DummyErrornusImpersonationValidator());
         oAuthServerConfiguration.close();
+        loggerUtils.close();
     }
 
     @Test
     public void testIssue() throws IdentityException {
 
         when(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
+        when(oAuthAuthzReqMessageContext.getProperty(OAUTH_APP_DO)).thenReturn(new OAuthAppDO());
         OAuth2ServiceComponentHolder.getInstance().addImpersonationValidator(
                 new DummyImpersonationValidator());
 
