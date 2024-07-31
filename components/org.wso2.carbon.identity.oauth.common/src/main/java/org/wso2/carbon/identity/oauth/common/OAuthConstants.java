@@ -128,6 +128,7 @@ public final class OAuthConstants {
     public static final String ENABLE_TLS_CERT_BOUND_ACCESS_TOKENS_VIA_BINDING_TYPE = "OAuth.OpenIDConnect." +
             "EnableTLSCertificateBoundAccessTokensViaBindingType";
     public static final String IS_API_BASED_LOGOUT_WITHOUT_COOKIES = "isAPIBasedLogoutWithoutCookies";
+    public static final String ENABLE_HYBRID_FLOW_VALIDATION = "OAuth.OpenIDConnect.EnableHybridFlowValidation";
 
     /**
      * Enum for OIDC supported subject types.

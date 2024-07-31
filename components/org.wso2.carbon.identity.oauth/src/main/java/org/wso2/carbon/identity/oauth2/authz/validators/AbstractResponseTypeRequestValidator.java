@@ -25,6 +25,7 @@ import org.owasp.encoder.Encode;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -153,7 +154,9 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 throw new InvalidOAuthClientException("Oauth application is not in active state.");
             }
 
-            validateHybridFlowRequest(request, appDO);
+            if (isValidateHybridFlowRequest()) {
+                validateHybridFlowRequest(request, appDO);
+            }
 
             return validateCallBack(clientId, callbackURI, appDO);
         } catch (InvalidOAuthClientException e) {
@@ -191,6 +194,11 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             validationResponseDTO.setErrorMsg("Error when processing the authorization request.");
             return validationResponseDTO;
         }
+    }
+
+    private boolean isValidateHybridFlowRequest() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_HYBRID_FLOW_VALIDATION));
     }
 
     private void validateHybridFlowRequest(HttpServletRequest request, OAuthAppDO appDO)
