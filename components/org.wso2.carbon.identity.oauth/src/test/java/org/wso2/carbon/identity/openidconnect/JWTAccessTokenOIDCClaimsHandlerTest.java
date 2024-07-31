@@ -265,7 +265,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                         anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
                 OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
                 mockApplicationManagementService();
-                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn( new ArrayList<>());
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
                 UserRealm userRealm = getUserRealmWithUserClaims(new HashMap<>());
                 mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
                 JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -300,7 +300,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                         anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
                 OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
                 mockApplicationManagementService();
-                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn( new ArrayList<>());
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
                 UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
                 mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
                 JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
@@ -345,7 +345,8 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                 applicationRoles.add(new RoleV2("role-2-id", "Internal/role2"));
                 when(applicationManagementService.getAssociatedRolesOfApplication(anyString(), anyString()))
                         .thenReturn(applicationRoles);
-                when(applicationManagementService.getApplicationResourceIDByInboundKey(anyString(), anyString(), anyString()))
+                when(applicationManagementService.getApplicationResourceIDByInboundKey(anyString(), anyString(),
+                        anyString()))
                         .thenReturn(SERVICE_PROVIDER_RESOURCE_ID);
                 UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
                 mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
