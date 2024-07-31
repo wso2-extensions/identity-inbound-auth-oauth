@@ -524,7 +524,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                 OAuthUtil.clearOAuthCache(accessTokenDo);
             }
 
-            Set <String> accessTokens = OAuthTokenPersistenceFactory.getInstance()
+            Set<String> accessTokens = OAuthTokenPersistenceFactory.getInstance()
                     .getAccessTokenDAO().getActiveTokensByConsumerKey(consumerKey);
             for (String accessToken : accessTokens) {
                 // Remove access token from AuthorizationGrantCache
