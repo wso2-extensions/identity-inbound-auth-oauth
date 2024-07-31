@@ -223,6 +223,8 @@ public final class OAuthConstants {
 
     public static final String RESTRICT_UNASSIGNED_SCOPES = "restrict.unassigned.scopes";
 
+    public static final String RESTRICT_APIM_REST_API_SCOPES = "restrict.apim.restapi.scopes";
+
     public static final String TENANT_NAME_FROM_CONTEXT = "TenantNameFromContext";
 
     //Oauth2 sp expire time configuration.
