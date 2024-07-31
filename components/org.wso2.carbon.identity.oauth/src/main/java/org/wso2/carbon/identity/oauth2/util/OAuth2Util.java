@@ -335,6 +335,8 @@ public class OAuth2Util {
      */
     public static final String FIDP_ROLE_BASED_AUTHZ_APP_CONFIG = "FIdPRoleBasedAuthzApplications.AppName";
 
+    private static final String ENABLE_PPID_FOR_ACCESS_TOKENS = "OAuth.OpenIDConnect.EnablePairwiseSubForAccessToken";
+
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
     private static final Log log = LogFactory.getLog(OAuth2Util.class);
     private static final Log diagnosticLog = LogFactory.getLog("diagnostics");
@@ -4743,6 +4745,12 @@ public class OAuth2Util {
             return true;
         }
 
+        /* The request token binding type can't be validated, as it is an auto generated UUID to issue unique JWT tokens
+            by avoiding revocation of already issued JWT tokens. */
+        if (OAuthConstants.REQUEST_BINDING_TYPE.equals(tokenBinding.getBindingType())) {
+            return true;
+        }
+
         Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
                 .getTokenBinder(tokenBinding.getBindingType());
         if (!tokenBinderOptional.isPresent()) {
@@ -5523,9 +5531,13 @@ public class OAuth2Util {
         authenticatedUser.setTenantDomain(appTenantDomain);
     }
 
-
     public static boolean isJWTAccessTokenOIDCClaimsSeparationEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN));
+    }
+  
+    public static boolean isPairwiseSubEnabledForAccessTokens() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
     }
 }

@@ -26,9 +26,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -36,8 +38,9 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -67,23 +70,27 @@ public class SubjectScopeValidatorTest {
     @Mock
     private ApplicationManagementService applicationManagementService;
     @Mock
-    private AuthenticatedUser endUser;
+    private OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
     @Mock
-    private OAuthServerConfiguration mockOAuthServerConfiguration;
-
+    private RealmService mockRealmService;
+    @Mock
+    private TenantManager mockTenantManager;
     private ImpersonationRequestDTO impersonationRequestDTO;
     private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
-
-    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
-    private MockedStatic<OAuth2Util> oAuth2Util;
+    private MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder;
+    private MockedStatic<OAuthUtil> oAuthUtil;
     private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder;
 
     @BeforeMethod
     public void setUp() throws Exception {
 
-        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
-        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
-        oAuth2Util = mockStatic(OAuth2Util.class);
+        oAuthComponentServiceHolder = mockStatic(OAuthComponentServiceHolder.class);
+        oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                .thenReturn(mockOAuthComponentServiceHolder);
+        when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(mockRealmService);
+        when(mockRealmService.getTenantManager()).thenReturn(mockTenantManager);
+        when(mockTenantManager.getTenantId("carbon.super")).thenReturn(-1234);
+        oAuthUtil = mockStatic(OAuthUtil.class);
         oAuth2ServiceComponentHolder = mockStatic(OAuth2ServiceComponentHolder.class);
         oAuth2ServiceComponentHolder.when(
                 OAuth2ServiceComponentHolder::getApplicationMgtService).thenReturn(applicationManagementService);
@@ -100,16 +107,24 @@ public class SubjectScopeValidatorTest {
         impersonationRequestDTO = new ImpersonationRequestDTO();
         impersonationRequestDTO.setoAuthAuthzReqMessageContext(oAuthAuthzReqMessageContext);
 
-        oAuth2Util.when(() -> OAuth2Util.resolveUsernameFromUserId("carbon.super", "dummySubjectId"))
-                .thenReturn("dummyUserName");
-        oAuth2Util.when(() -> OAuth2Util.getUserFromUserName("dummyUserName")).thenReturn(endUser);
+        oAuthUtil.when(() -> OAuthUtil.getUserFromTenant("dummySubjectId", -1234))
+                .thenReturn(getDummyUser());
+    }
+
+    private User getDummyUser() {
+
+        User user = new User();
+        user.setUserName("dummmyUserName");
+        user.setUserStoreDomain("dummyUserStore");
+        user.setTenantDomain("carbon.super");
+        return user;
     }
 
     @AfterMethod
     public void tearDown() {
-        oAuthServerConfiguration.close();
-        oAuth2Util.close();
+        oAuthUtil.close();
         oAuth2ServiceComponentHolder.close();
+        oAuthComponentServiceHolder.close();;
     }
 
     @Test

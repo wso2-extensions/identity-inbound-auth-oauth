@@ -20,8 +20,10 @@ package org.wso2.carbon.identity.oauth.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.action.execution.ActionExecutorService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
+import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
@@ -55,11 +57,11 @@ import java.util.TreeMap;
  */
 public class OAuthComponentServiceHolder {
 
+    private static final Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
     private static OAuthComponentServiceHolder instance = new OAuthComponentServiceHolder();
     private RealmService realmService;
     private OAuthEventInterceptor oAuthEventInterceptorHandlerProxy;
     private OAuth2Service oauth2Service;
-    private static final Log log = LogFactory.getLog(OAuthComponentServiceHolder.class);
     private OAuth2ScopeService oauth2ScopeService;
     private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
     private OAuthAdminServiceImpl oAuthAdminService;
@@ -80,6 +82,18 @@ public class OAuthComponentServiceHolder {
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private IdpManager idpManager;
     private OrganizationUserSharingService organizationUserSharingService;
+    private ConfigurationManager configurationManager;
+
+    private ActionExecutorService actionExecutorService;
+
+    private OAuthComponentServiceHolder() {
+
+    }
+
+    public static OAuthComponentServiceHolder getInstance() {
+
+        return instance;
+    }
 
     /**
      * Get the list of scope validator implementations available.
@@ -89,6 +103,16 @@ public class OAuthComponentServiceHolder {
     public List<ScopeValidator> getScopeValidators() {
 
         return scopeValidators;
+    }
+
+    /**
+     * Set a list of scope validator implementations.
+     *
+     * @param scopeValidators List of Scope validator implementation.
+     */
+    public void setScopeValidators(List<ScopeValidator> scopeValidators) {
+
+        this.scopeValidators = scopeValidators;
     }
 
     /**
@@ -109,16 +133,6 @@ public class OAuthComponentServiceHolder {
     public void removeScopeValidator(ScopeValidator scopeValidator) {
 
         scopeValidators.remove(scopeValidator);
-    }
-
-    /**
-     * Set a list of scope validator implementations.
-     *
-     * @param scopeValidators List of Scope validator implementation.
-     */
-    public void setScopeValidators(List<ScopeValidator> scopeValidators) {
-
-        this.scopeValidators = scopeValidators;
     }
 
     /**
@@ -161,15 +175,6 @@ public class OAuthComponentServiceHolder {
         this.scopeValidationHandlers = scopeValidationHandlers;
     }
 
-    private OAuthComponentServiceHolder() {
-
-    }
-
-    public static OAuthComponentServiceHolder getInstance() {
-
-        return instance;
-    }
-
     public RealmService getRealmService() {
 
         return realmService;
@@ -181,18 +186,22 @@ public class OAuthComponentServiceHolder {
     }
 
     public void addOauthEventInterceptorProxy(OAuthEventInterceptor oAuthEventInterceptorHandlerProxy) {
+
         this.oAuthEventInterceptorHandlerProxy = oAuthEventInterceptorHandlerProxy;
     }
 
     public OAuthEventInterceptor getOAuthEventInterceptorProxy() {
+
         return this.oAuthEventInterceptorHandlerProxy;
     }
 
     public OAuth2Service getOauth2Service() {
+
         return oauth2Service;
     }
 
     public void setOauth2Service(OAuth2Service oauth2Service) {
+
         this.oauth2Service = oauth2Service;
     }
 
@@ -255,16 +264,6 @@ public class OAuthComponentServiceHolder {
     }
 
     /**
-     * Set RoleManagementService instance.
-     *
-     * @param roleManagementService RoleManagementService instance.
-     */
-    public void setRoleManagementService(RoleManagementService roleManagementService) {
-
-        this.roleManagementService = roleManagementService;
-    }
-
-    /**
      * Get RoleManagementService instance.
      *
      * @return RoleManagementService instance.
@@ -279,10 +278,9 @@ public class OAuthComponentServiceHolder {
      *
      * @param roleManagementService RoleManagementService instance.
      */
-    public void setRoleV2ManagementService(
-            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+    public void setRoleManagementService(RoleManagementService roleManagementService) {
 
-        this.roleV2ManagementService = roleManagementService;
+        this.roleManagementService = roleManagementService;
     }
 
     /**
@@ -293,6 +291,17 @@ public class OAuthComponentServiceHolder {
     public org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService getRoleV2ManagementService() {
 
         return roleV2ManagementService;
+    }
+
+    /**
+     * Set RoleManagementService instance.
+     *
+     * @param roleManagementService RoleManagementService instance.
+     */
+    public void setRoleV2ManagementService(
+            org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleManagementService) {
+
+        this.roleV2ManagementService = roleManagementService;
     }
 
     /**
@@ -389,7 +398,7 @@ public class OAuthComponentServiceHolder {
     /**
      * Get TokenManagementDAO instance.
      *
-     * @return  TokenManagementDAO  {@link TokenManagementDAO} instance.
+     * @return TokenManagementDAO  {@link TokenManagementDAO} instance.
      */
     public TokenManagementDAO getTokenManagementDAOService() {
 
@@ -408,6 +417,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Get ApplicationManagementService instance.
+     *
      * @return ApplicationManagementService instance.
      */
     public ApplicationManagementService getApplicationManagementService() {
@@ -417,6 +427,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Set ApplicationManagementService instance.
+     *
      * @param applicationManagementService ApplicationManagementService instance.
      */
     public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
@@ -426,6 +437,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Get OAuthProtocolApplicationService instance.
+     *
      * @return OAuthProtocolApplicationService instance.
      */
     public OauthInboundAuthConfigHandler getOAuthInboundConfigHandler() {
@@ -435,6 +447,7 @@ public class OAuthComponentServiceHolder {
 
     /**
      * Set OAuthProtocolApplicationService instance.
+     *
      * @param oauthInboundAuthConfigHandler OAuthProtocolApplicationService instance.
      */
     public void setOAuthInboundConfigHandler(OauthInboundAuthConfigHandler oauthInboundAuthConfigHandler) {
@@ -510,5 +523,35 @@ public class OAuthComponentServiceHolder {
     public void setOrganizationUserSharingService(OrganizationUserSharingService organizationUserSharingService) {
 
         this.organizationUserSharingService = organizationUserSharingService;
+    }
+
+    public ActionExecutorService getActionExecutorService() {
+
+        return actionExecutorService;
+    }
+
+    public void setActionExecutorService(ActionExecutorService actionExecutorService) {
+
+        this.actionExecutorService = actionExecutorService;
+    }
+
+    /**
+     * Get the ConfigurationManager instance.
+     *
+     * @return ConfigurationManager The ConfigurationManager instance.
+     */
+    public ConfigurationManager getConfigurationManager() {
+
+        return configurationManager;
+    }
+
+    /**
+     * Set the ConfigurationManager instance.
+     *
+     * @param configurationManager ConfigurationManager The ConfigurationManager instance.
+     */
+    public void setConfigurationManager(ConfigurationManager configurationManager) {
+
+        this.configurationManager = configurationManager;
     }
 }

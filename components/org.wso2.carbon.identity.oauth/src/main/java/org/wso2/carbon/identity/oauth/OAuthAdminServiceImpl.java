@@ -112,6 +112,7 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionT
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildScopeString;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getTenantId;
@@ -435,6 +436,13 @@ public class OAuthAdminServiceImpl {
                             }
                             app.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
                         }
+                        Boolean tokenEndpointAllowReusePvtKeyJwt = application.isTokenEndpointAllowReusePvtKeyJwt();
+                        if (isInvalidTokenEPReusePvtKeyJwtRequest(tokenEndpointAuthMethod,
+                                tokenEndpointAllowReusePvtKeyJwt)) {
+                            throw handleClientError(INVALID_REQUEST, "Requested client authentication method " +
+                                    "incompatible with the Private Key JWT Reuse config value.");
+                        }
+                        app.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointAllowReusePvtKeyJwt);
                         String tokenEndpointAuthSigningAlgorithm = application.getTokenEndpointAuthSignatureAlgorithm();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthSigningAlgorithm)) {
                             if (isFAPIConformanceEnabled) {
@@ -866,6 +874,13 @@ public class OAuthAdminServiceImpl {
                 }
             }
             oAuthAppDO.setTokenEndpointAuthMethod(tokenEndpointAuthMethod);
+
+            Boolean tokenEndpointAllowReusePvtKeyJwt = consumerAppDTO.isTokenEndpointAllowReusePvtKeyJwt();
+            if (isInvalidTokenEPReusePvtKeyJwtRequest(tokenEndpointAuthMethod, tokenEndpointAllowReusePvtKeyJwt)) {
+                throw handleClientError(INVALID_REQUEST, "Requested client authentication method " +
+                        "incompatible with the Private Key JWT Reuse config value.");
+            }
+            oAuthAppDO.setTokenEndpointAllowReusePvtKeyJwt(tokenEndpointAllowReusePvtKeyJwt);
 
             String tokenEndpointAuthSignatureAlgorithm = consumerAppDTO.getTokenEndpointAuthSignatureAlgorithm();
             if (StringUtils.isNotEmpty(tokenEndpointAuthSignatureAlgorithm)) {
@@ -2544,6 +2559,24 @@ public class OAuthAdminServiceImpl {
                 LOG.debug("OAuthApplicationMgtListener is triggered after revoking the OAuth secret.");
             }
         }
+    }
+
+    /**
+     * Return whether the request of updating the tokenEndpointAllowReusePvtKeyJwt is valid.
+     *
+     * @param tokenEndpointAuthMethod     token endpoint client authentication method.
+     * @param tokenEndpointAllowReusePvtKeyJwt During client authentication whether to reuse private key JWT.
+     * @return True if tokenEndpointAuthMethod and tokenEndpointAllowReusePvtKeyJwt is NOT in the correct format.
+     */
+    private boolean isInvalidTokenEPReusePvtKeyJwtRequest(String tokenEndpointAuthMethod,
+                                                          Boolean tokenEndpointAllowReusePvtKeyJwt) {
+
+        if (StringUtils.isNotBlank(tokenEndpointAuthMethod)) {
+            if (tokenEndpointAuthMethod.equals(PRIVATE_KEY_JWT)) {
+                return tokenEndpointAllowReusePvtKeyJwt == null;
+            }
+        }
+        return tokenEndpointAllowReusePvtKeyJwt != null;
     }
 
     /**
