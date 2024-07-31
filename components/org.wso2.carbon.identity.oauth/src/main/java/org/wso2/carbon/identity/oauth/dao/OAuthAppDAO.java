@@ -1569,39 +1569,6 @@ public class OAuthAppDAO {
         addJwtAccessTokenClaims(connection, oauthAppDO);
     }
 
-    public void updateJwtAccessTokenClaims(OAuthAppDO oauthAppDO) throws IdentityOAuth2Exception {
-
-        try (Connection connection = IdentityDatabaseUtil.getDBConnection(true)) {
-            String consumerKey = oauthAppDO.getOauthConsumerKey();
-            int tenantId = CarbonContext.getThreadLocalCarbonContext().getTenantId();
-            try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                    .REMOVE_JWT_ACCESS_TOKEN_CLAIMS)) {
-                stmt.setString(1, consumerKey);
-                stmt.setInt(2, tenantId);
-                stmt.execute();
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                String msg = "Error while removing JWT access token claims for OAuth consumer key " + consumerKey;
-                throw new IdentityOAuth2Exception(msg, e);
-            }
-            try {
-                addJwtAccessTokenClaims(connection, oauthAppDO);
-            } catch (SQLException e) {
-                IdentityDatabaseUtil.rollbackTransaction(connection);
-                String msg = "Error while adding JWT access token claims for OAuth consumer key " + consumerKey;
-                throw new IdentityOAuth2Exception(msg, e);
-            }
-            IdentityDatabaseUtil.commitTransaction(connection);
-        } catch (SQLException e) {
-            String msg = "Error while updating JWT access token claims for OAuth consumer key " + oauthAppDO
-                    .getOauthConsumerKey();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(msg, e);
-            }
-            throw new IdentityOAuth2Exception(msg, e);
-        }
-    }
-
     /**
      * Add JWT access token claims for consumerApp using connection.
      *

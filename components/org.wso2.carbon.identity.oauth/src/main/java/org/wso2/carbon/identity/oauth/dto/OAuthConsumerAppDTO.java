@@ -81,6 +81,7 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] jwtAccessTokenClaims;
+    private boolean jwtAccessTokenClaimsEnabled;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -538,6 +539,16 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setJwtAccessTokenClaims(String[] jwtAccessTokenClaims) {
 
         this.jwtAccessTokenClaims = jwtAccessTokenClaims;
+    }
+
+    public boolean isJwtAccessTokenClaimsEnabled() {
+
+        return jwtAccessTokenClaimsEnabled;
+    }
+
+    public void setJwtAccessTokenClaimsEnabled(boolean jwtAccessTokenClaimsEnabled) {
+
+        this.jwtAccessTokenClaimsEnabled = jwtAccessTokenClaimsEnabled;
     }
 }
 

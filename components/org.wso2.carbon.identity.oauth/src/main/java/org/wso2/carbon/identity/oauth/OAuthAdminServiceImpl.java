@@ -968,12 +968,30 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
-            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
+            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
+                    oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
                 validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
                 oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenClaims());
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
+        // We only update the flag if it is not already enabled. This is to avoid overriding the flag if it is.
+        // Also, we only update the flag if the new value is true because we do not want to revert the feature.
+        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
+                !oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled() &&
+                consumerAppDTO.isJwtAccessTokenClaimsEnabled()) {
+            oAuthAppDO.setIsJwtAccessTokenOIDCClaimSeparationEnabled(consumerAppDTO.isJwtAccessTokenClaimsEnabled());
+            // Add requested claims as jwt access token claims if the app is not in the new jwt access token claims
+            // feature.
+            try {
+                addJwtAccessTokenClaims(oAuthAppDO, tenantDomain);
+                dao.updateConsumerApplication(oAuthAppDO);
+            } catch (IdentityOAuth2Exception e) {
+                throw new IdentityOAuthAdminException("Error while updating existing OAuth application to the new" +
+                        "JWT access token OIDC claims separation model. Application : " +
+                        oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
+            }
+        }
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
@@ -2353,9 +2371,11 @@ public class OAuthAdminServiceImpl {
         int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
         oauthApp = dao.getAppInformation(consumerKey, tenantID);
         if (oauthApp != null) {
-            if (!oauthApp.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
-                //migrate the existing apps to the new model
-                addJwtAccessTokenClaims(oauthApp, tenantDomain, dao);
+            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
+                    !oauthApp.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+                // Add requested claims as jwt access token claims if the app is not  in the new jwt access token claims
+                // feature.
+                addJwtAccessTokenClaims(oauthApp, tenantDomain);
             }
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
@@ -2365,7 +2385,7 @@ public class OAuthAdminServiceImpl {
         return oauthApp;
     }
 
-    private void addJwtAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain, OAuthAppDAO dao) throws
+    private void addJwtAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain) throws
             IdentityOAuth2Exception {
 
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
@@ -2391,11 +2411,11 @@ public class OAuthAdminServiceImpl {
             }
             if (!jwtAccessTokenClaims.isEmpty()) {
                 oauthApp.setJwtAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
-                dao.updateJwtAccessTokenClaims(oauthApp);
             }
-        } catch (IdentityApplicationManagementException | IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception("Error while updating JWT access token claims for application " +
-                    oauthApp.getApplicationName(), e);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while updating existing OAuth application to the new" +
+                    "JWT access token OIDC claims separation model. Application : " + oauthApp.getApplicationName()
+                    + " Tenant : " + tenantDomain, e);
         }
     }
 
