@@ -29,7 +29,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
+
+import static org.wso2.carbon.identity.oauth2.dao.AbstractOAuthDAO.UTC;
 
 /**
  * This is DAO class for cleaning old Tokens. When new tokens is generated ,refreshed or revoked old access token
@@ -52,7 +56,8 @@ public class OldTokensCleanDAO {
                     sql = SQLQueries.RETRIEVE_AND_STORE_IN_AUDIT;
                 }
                 PreparedStatement prepStmt = connection.prepareStatement(sql);
-                prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+                prepStmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()),
+                        Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 prepStmt.setString(2, tokenId);
                 prepStmt.executeUpdate();
             }
@@ -137,7 +142,8 @@ public class OldTokensCleanDAO {
         insertintoaudittable.setString(17, oldAccessTokenDAO.getSubjectIdentifier());
         insertintoaudittable.setString(18, oldAccessTokenDAO.getAccessTokenHash());
         insertintoaudittable.setString(19, oldAccessTokenDAO.getRefreshTokenHash());
-        insertintoaudittable.setTimestamp(20, new Timestamp(System.currentTimeMillis()));
+        insertintoaudittable.setTimestamp(20, new Timestamp(System.currentTimeMillis()),
+                Calendar.getInstance(TimeZone.getTimeZone(UTC)));
         if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
             insertintoaudittable.setInt(21, oldAccessTokenDAO.getIdpId());
         }
