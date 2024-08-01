@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
@@ -59,11 +58,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -156,7 +153,8 @@ public class JwksEndpointTest {
 
             // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolver = mockStatic(IdentityKeyStoreResolver.class);) {
+                 MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolver =
+                         mockStatic(IdentityKeyStoreResolver.class);) {
 
                 ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
                     protected Map<String, Object> initialValue() {
@@ -211,7 +209,8 @@ public class JwksEndpointTest {
                         .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
                                 "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
 
-                identityKeyStoreResolver.when(() -> IdentityKeyStoreResolver.getInstance()).thenReturn(mockIdentityKeyStoreResolver);
+                identityKeyStoreResolver.when(() -> IdentityKeyStoreResolver.getInstance())
+                        .thenReturn(mockIdentityKeyStoreResolver);
 
                 lenient().when(mockIdentityKeyStoreResolver
                                 .getKeyStore("carbon.super", IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH))
