@@ -43,7 +43,7 @@ import static org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUt
  */
 public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
-    private static final String RANDOM_ALG_SHA1 = "SHA1PRNG";
+    private static final String RANDOM_ALG_DRBG = "DRBG";
     private static final String DIGEST_ALG_SHA256 = "SHA-256";
 
     private static final Log log = LogFactory.getLog(OIDCSessionStateManager.class);
@@ -164,7 +164,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
     private static String generateSaltValue() throws NoSuchAlgorithmException {
 
         byte[] bytes = new byte[16];
-        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_SHA1);
+        SecureRandom secureRandom = SecureRandom.getInstance(RANDOM_ALG_DRBG);
         secureRandom.nextBytes(bytes);
         return Base64.encodeBase64URLSafeString(bytes);
     }

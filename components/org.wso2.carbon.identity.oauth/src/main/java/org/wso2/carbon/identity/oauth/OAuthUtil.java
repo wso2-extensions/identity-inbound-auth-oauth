@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.User;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -78,7 +79,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings
 public final class OAuthUtil {
 
     public static final Log LOG = LogFactory.getLog(OAuthUtil.class);
-    private static final String ALGORITHM = "HmacSHA1";
+    private static final String ALGORITHM_SHA1 = "HmacSHA1";
+    private static final String ALGORITHM_SHA256 = "HmacSHA256";
 
     private OAuthUtil() {
 
@@ -94,9 +96,40 @@ public final class OAuthUtil {
         try {
             String secretKey = UUIDGenerator.generateUUID();
             String baseString = UUIDGenerator.generateUUID();
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM_SHA1);
+            Mac mac = Mac.getInstance(ALGORITHM_SHA1);
+            mac.init(key);
+            byte[] rawHmac = mac.doFinal(baseString.getBytes(Charsets.UTF_8));
+            String random = Base64.encode(rawHmac);
+            // Registry doesn't have support for these character.
+            random = random.replace("/", "_");
+            random = random.replace("=", "a");
+            random = random.replace("+", "f");
+            return random;
+        } catch (Exception e) {
+            throw new IdentityOAuthAdminException("Error when generating a random number.", e);
+        }
+    }
 
-            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), ALGORITHM);
-            Mac mac = Mac.getInstance(ALGORITHM);
+    /**
+     * Generates a securer random number using two UUIDs and HMAC-SHA256
+     *
+     * @return generated secure random number
+     * @throws IdentityOAuthAdminException Invalid Algorithm or Invalid Key
+     */
+    public static String getRandomNumberSecure() throws IdentityOAuthAdminException {
+        try {
+            String secretKey = UUIDGenerator.generateUUID();
+            String baseString = UUIDGenerator.generateUUID();
+
+            String hmacAlgorithm;
+            if (Boolean.parseBoolean(IdentityUtil.getProperty(IdentityConstants.OAuth.ENABLE_SHA256_PARAMS))) {
+                hmacAlgorithm = ALGORITHM_SHA256;
+            } else {
+                hmacAlgorithm = ALGORITHM_SHA1;
+            }
+            SecretKeySpec key = new SecretKeySpec(secretKey.getBytes(Charsets.UTF_8), hmacAlgorithm);
+            Mac mac = Mac.getInstance(hmacAlgorithm);
             mac.init(key);
             byte[] rawHmac = mac.doFinal(baseString.getBytes(Charsets.UTF_8));
             String random = Base64.encode(rawHmac);
