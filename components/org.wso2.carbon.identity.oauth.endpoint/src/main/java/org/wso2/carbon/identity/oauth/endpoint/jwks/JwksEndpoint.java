@@ -30,14 +30,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.utils.CarbonUtils;
 
 import java.security.KeyStore;
 import java.security.cert.Certificate;
@@ -77,8 +78,22 @@ public class JwksEndpoint {
         String tenantDomain = getTenantDomain();
 
         try {
-            final KeyStore keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(
-                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+            final KeyStore keystore;
+
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
+                keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(
+                        tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+            } else {
+                try {
+                    int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                    IdentityTenantUtil.initializeRegistry(tenantId);
+                    FrameworkUtils.startTenantFlow(tenantDomain);
+                    keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(
+                            tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+                } finally {
+                    FrameworkUtils.endTenantFlow();
+                }
+            }
             List<CertificateInfo> certificateInfoList = new ArrayList<>();
             Enumeration enumeration = keystore.aliases();
             while (enumeration.hasMoreElements()) {
