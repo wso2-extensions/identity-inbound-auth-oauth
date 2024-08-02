@@ -154,7 +154,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 throw new InvalidOAuthClientException("Oauth application is not in active state.");
             }
 
-            if (isValidateHybridFlowRequest()) {
+            if (isApplicationLevelHybridFlowValidationEnabled()) {
                 validateHybridFlowRequest(request, appDO);
             }
 
@@ -196,9 +196,10 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
     }
 
-    private boolean isValidateHybridFlowRequest() {
+    private boolean isApplicationLevelHybridFlowValidationEnabled() {
 
-        return Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_HYBRID_FLOW_VALIDATION));
+        return Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants
+                .ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION));
     }
 
     private void validateHybridFlowRequest(HttpServletRequest request, OAuthAppDO appDO)
