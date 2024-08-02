@@ -529,8 +529,8 @@ public class OAuthAdminServiceImpl {
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
                         if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
                             validateJwtAccessTokenClaims(application, tenantDomain);
-                            app.setJwtAccessTokenClaims(application.getJwtAccessTokenClaims());
-                            app.setIsJwtAccessTokenOIDCClaimSeparationEnabled(
+                            app.setJwtAccessTokenClaims(application.getJwtAccessTokenOIDCClaims());
+                            app.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(
                                     IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
                         }
                     }
@@ -969,20 +969,22 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
             if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                    oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+                    oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
                 validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
-                oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenClaims());
+                oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenOIDCClaims());
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
-        // We only update the flag if it is not already enabled. This is to avoid overriding the flag if it is.
-        // Also, we only update the flag if the new value is true because we do not want to revert the feature.
+        // We only trigger the jwt access token claims migration if the following conditions are met.
+        // 1. The new feature is enabled.
+        // 2. The app is not already in the new feature.
+        // 3. User update the app to enable the new feature.
         if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                !oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled() &&
-                consumerAppDTO.isJwtAccessTokenClaimsEnabled()) {
-            oAuthAppDO.setIsJwtAccessTokenOIDCClaimSeparationEnabled(consumerAppDTO.isJwtAccessTokenClaimsEnabled());
-            // Add requested claims as jwt access token claims if the app is not in the new jwt access token claims
-            // feature.
+                !oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled() &&
+                consumerAppDTO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
+            oAuthAppDO.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(consumerAppDTO
+                    .isJwtAccessTokenOIDCClaimsSeparationEnabled());
+            // Add requested claims as jwt access token claims.
             try {
                 addJwtAccessTokenClaims(oAuthAppDO, tenantDomain);
                 dao.updateConsumerApplication(oAuthAppDO);
@@ -2372,7 +2374,7 @@ public class OAuthAdminServiceImpl {
         oauthApp = dao.getAppInformation(consumerKey, tenantID);
         if (oauthApp != null) {
             if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                    !oauthApp.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+                    !oauthApp.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
                 // Add requested claims as jwt access token claims if the app is not  in the new jwt access token claims
                 // feature.
                 addJwtAccessTokenClaims(oauthApp, tenantDomain);
@@ -2821,11 +2823,11 @@ public class OAuthAdminServiceImpl {
     private void validateJwtAccessTokenClaims(OAuthConsumerAppDTO consumerAppDTO, String tenantDomain)
             throws IdentityOAuthAdminException {
 
-        if (consumerAppDTO.getJwtAccessTokenClaims() != null) {
+        if (consumerAppDTO.getJwtAccessTokenOIDCClaims() != null) {
             Map<String, String> oidcToLocalClaimMappings;
             try {
                 oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
-                for (String claimURI : consumerAppDTO.getJwtAccessTokenClaims()) {
+                for (String claimURI : consumerAppDTO.getJwtAccessTokenOIDCClaims()) {
                     if (!oidcToLocalClaimMappings.containsKey(claimURI)) {
                         throw handleClientError(INVALID_REQUEST, "Invalid JWT access token claim URI: "
                                 + claimURI);

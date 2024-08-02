@@ -561,8 +561,8 @@ public final class OAuthUtil {
         dto.setFapiConformanceEnabled(appDO.isFapiConformanceEnabled());
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
-        dto.setJwtAccessTokenClaims(appDO.getJwtAccessTokenClaims());
-        dto.setJwtAccessTokenClaimsEnabled(appDO.isJwtAccessTokenOIDCClaimSeparationEnabled());
+        dto.setJwtAccessTokenOIDCClaims(appDO.getJwtAccessTokenClaims());
+        dto.setJwtAccessTokenOIDCClaimsSeparationEnabled(appDO.isJwtAccessTokenOIDCClaimsSeparationEnabled());
         return dto;
     }
 

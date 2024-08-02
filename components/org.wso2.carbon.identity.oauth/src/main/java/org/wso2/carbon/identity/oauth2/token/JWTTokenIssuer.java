@@ -908,14 +908,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return jwtClaimsSetBuilder.build();
         }
 
-        CustomClaimsCallbackHandler claimsCallBackHandler;
-        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
-            claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
-        } else {
-            claimsCallBackHandler = OAuthServerConfiguration.getInstance()
-                    .getOpenIDConnectCustomClaimsCallbackHandler();
-        }
+        CustomClaimsCallbackHandler claimsCallBackHandler = getCustomClaimsCallbackHandler(oAuthAppDO);
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
@@ -936,19 +929,26 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     private JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
-                                            OAuthAuthzReqMessageContext authzReqMessageContext,
-                                            OAuthAppDO oAuthAppDO)
+                                            OAuthAuthzReqMessageContext authzReqMessageContext, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
+        CustomClaimsCallbackHandler claimsCallBackHandler = getCustomClaimsCallbackHandler(oAuthAppDO);
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
+    }
+
+    private CustomClaimsCallbackHandler getCustomClaimsCallbackHandler(OAuthAppDO oAuthAppDO) {
+
         CustomClaimsCallbackHandler claimsCallBackHandler;
+        // If JWT access token OIDC claims separation is enabled and the application is configured to separate OIDC
+        // claims, use the JWTAccessTokenOIDCClaimsHandler to handle custom claims.
         if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                oAuthAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()) {
+                oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
             claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
         } else {
             claimsCallBackHandler = OAuthServerConfiguration.getInstance()
                     .getOpenIDConnectCustomClaimsCallbackHandler();
         }
-        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
+        return claimsCallBackHandler;
     }
 
     private boolean isUserAccessTokenType(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)

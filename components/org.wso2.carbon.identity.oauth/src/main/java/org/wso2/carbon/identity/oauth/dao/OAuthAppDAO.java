@@ -1043,6 +1043,13 @@ public class OAuthAppDAO {
                 SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED,
+                    String.valueOf(oauthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
@@ -1781,7 +1788,7 @@ public class OAuthAppDAO {
             if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
                 addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                         IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED,
-                        String.valueOf(consumerAppDO.isJwtAccessTokenOIDCClaimSeparationEnabled()));
+                        String.valueOf(consumerAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()));
             }
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
@@ -1967,7 +1974,7 @@ public class OAuthAppDAO {
         String isJwtAccessTokenOIDCClaimsSeparationEnabled = getFirstPropertyValue(spOIDCProperties,
                 IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED);
         if (isJwtAccessTokenOIDCClaimsSeparationEnabled != null) {
-            oauthApp.setIsJwtAccessTokenOIDCClaimSeparationEnabled(
+            oauthApp.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(
                     Boolean.parseBoolean(isJwtAccessTokenOIDCClaimsSeparationEnabled));
         }
 

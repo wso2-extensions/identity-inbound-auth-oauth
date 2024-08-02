@@ -96,7 +96,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
     private String[] jwtAccessTokenClaims;
-    private boolean isJwtAccessTokenOIDCClaimSeparationEnabled;
+    private boolean isJwtAccessTokenOIDCClaimsSeparationEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -536,13 +536,13 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         this.jwtAccessTokenClaims = jwtAccessTokenClaims;
     }
 
-    public boolean isJwtAccessTokenOIDCClaimSeparationEnabled() {
+    public boolean isJwtAccessTokenOIDCClaimsSeparationEnabled() {
 
-        return isJwtAccessTokenOIDCClaimSeparationEnabled;
+        return isJwtAccessTokenOIDCClaimsSeparationEnabled;
     }
 
-    public void setIsJwtAccessTokenOIDCClaimSeparationEnabled(boolean isJwtAccessTokenOIDCClaimSeparationEnabled) {
+    public void setIsJwtAccessTokenOIDCClaimsSeparationEnabled(boolean isJwtAccessTokenOIDCClaimSeparationEnabled) {
 
-        this.isJwtAccessTokenOIDCClaimSeparationEnabled = isJwtAccessTokenOIDCClaimSeparationEnabled;
+        this.isJwtAccessTokenOIDCClaimsSeparationEnabled = isJwtAccessTokenOIDCClaimSeparationEnabled;
     }
 }
