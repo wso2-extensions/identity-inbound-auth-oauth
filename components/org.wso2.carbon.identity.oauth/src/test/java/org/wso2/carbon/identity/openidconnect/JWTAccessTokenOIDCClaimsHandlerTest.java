@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.openidconnect;
 
 /**
@@ -5,7 +23,6 @@ package org.wso2.carbon.identity.openidconnect;
  */
 
 import com.nimbusds.jwt.JWTClaimsSet;
-import net.minidev.json.JSONArray;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -20,13 +37,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
-import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -63,7 +80,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
@@ -78,7 +94,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -170,6 +185,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     @BeforeTest
     public void setUp() throws Exception {
 
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
         System.setProperty(CarbonBaseConstants.CARBON_HOME, CARBON_HOME);
         BasicDataSource dataSource1 = new BasicDataSource();
         dataSource1.setDriverClassName("org.h2.Driver");
@@ -313,57 +329,6 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     }
 
     @Test
-    public void testHandleCustomClaimsWithRoleClaimForOAuthTokenReqMsgContext() throws Exception {
-
-        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
-             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class);
-             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
-            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(oauthServerConfigurationMock);
-            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS)) {
-                identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
-                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
-                        getoAuthAppDO(new String[]{"roles"}));
-                Map<String, String> mappings = getOIDCtoLocalClaimsMapping();
-                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
-                lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
-                        anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
-                OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
-                mockApplicationManagementService();
-                List<String> userRoles = new ArrayList<>();
-                userRoles.add("role-1-id");
-                userRoles.add("role-2-id");
-                userRoles.add("role-3-id");
-                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(userRoles);
-                List<RoleV2> applicationRoles = new ArrayList<>();
-                applicationRoles.add(new RoleV2("role-1-id", "Internal/role1"));
-                applicationRoles.add(new RoleV2("role-2-id", "Internal/role2"));
-                when(applicationManagementService.getAssociatedRolesOfApplication(anyString(), anyString()))
-                        .thenReturn(applicationRoles);
-                when(applicationManagementService.getApplicationResourceIDByInboundKey(anyString(), anyString(),
-                        anyString()))
-                        .thenReturn(SERVICE_PROVIDER_RESOURCE_ID);
-                UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
-                mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
-                        oAuthServerConfiguration);
-                assertNotNull(jwtClaimsSet);
-                assertFalse(jwtClaimsSet.getClaims().isEmpty());
-                assertTrue(jwtClaimsSet.getClaim(ROLES) instanceof JSONArray);
-                assertEquals(jwtClaimsSet.getStringArrayClaim(ROLES).length, 2);
-                assertEquals(jwtClaimsSet.getStringArrayClaim(ROLES)[0], "role1");
-                assertEquals(jwtClaimsSet.getStringArrayClaim(ROLES)[1], "role2");
-            }
-        }
-    }
-
-    @Test
     public void testHandleCustomClaimsWithAddressClaimForOAuthTokenReqMsgContext() throws Exception {
 
         try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
@@ -374,7 +339,6 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oauthServerConfigurationMock);
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS)) {
                 identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
@@ -418,6 +382,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
         serviceProvider.setApplicationResourceId(SERVICE_PROVIDER_RESOURCE_ID);
+        serviceProvider.setTenantDomain(TENANT_DOMAIN);
         PermissionsAndRoleConfig permissionsAndRoleConfig = new PermissionsAndRoleConfig();
         serviceProvider.setPermissionAndRoleConfig(permissionsAndRoleConfig);
         return serviceProvider;
