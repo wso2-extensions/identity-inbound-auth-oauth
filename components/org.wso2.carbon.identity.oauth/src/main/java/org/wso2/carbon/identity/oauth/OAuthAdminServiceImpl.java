@@ -1002,17 +1002,6 @@ public class OAuthAdminServiceImpl {
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
-        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                !oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-            // Add requested claims as jwt access token claims.
-            try {
-                addJwtAccessTokenClaims(oAuthAppDO, tenantDomain);
-            } catch (IdentityOAuth2Exception e) {
-                throw new IdentityOAuthAdminException("Error while updating existing OAuth application to the new" +
-                        "JWT access token OIDC claims separation model. Application : " +
-                        oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
-            }
-        }
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
         if (LOG.isDebugEnabled()) {
             LOG.debug("Oauth Application update success : " + consumerAppDTO.getApplicationName() + " in " +
