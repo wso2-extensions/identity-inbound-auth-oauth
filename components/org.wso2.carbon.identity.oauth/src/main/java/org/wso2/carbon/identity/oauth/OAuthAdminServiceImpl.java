@@ -128,13 +128,13 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static final String BINDING_TYPE_NONE = "None";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
 
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -231,6 +231,12 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthAppDO app = getOAuthApp(consumerKey, tenantDomain);
             if (app != null) {
+                if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
+                        !app.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
+                    // Add requested claims as jwt access token claims if the app is not  in the new jwt access token
+                    // claims feature.
+                    addJwtAccessTokenClaims(app, tenantDomain);
+                }
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -968,26 +974,39 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
-            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                    oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-                validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
-                oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenOIDCClaims());
+
+            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
+                // We check if the JWT AT OIDC claims separation enabled at server level and
+                // the app level. If both are enabled, we validate the claims and update the app.
+                if (oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
+                    validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
+                    oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenOIDCClaims());
+                }
+                // We only trigger the jwt access token claims migration if the following conditions are met.
+                // 1. The JWT AT OIDC claims separation is enabled at server level.
+                // 2. TheJWT AT OIDC claims separation is not enabled at app level.
+                // 3. User tries to enable JWT AT OIDC claims separation at app level with update app.
+                if (!oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled() &&
+                        consumerAppDTO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
+                    // Add requested claims as jwt access token claims.
+                    try {
+                        addJwtAccessTokenClaims(oAuthAppDO, tenantDomain);
+                    } catch (IdentityOAuth2Exception e) {
+                        throw new IdentityOAuthAdminException("Error while updating existing OAuth application to " +
+                                "the new JWT access token OIDC claims separation model. Application : " +
+                                oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
+                    }
+                }
+                oAuthAppDO.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(consumerAppDTO
+                        .isJwtAccessTokenOIDCClaimsSeparationEnabled());
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
-        // We only trigger the jwt access token claims migration if the following conditions are met.
-        // 1. The new feature is enabled.
-        // 2. The app is not already in the new feature.
-        // 3. User update the app to enable the new feature.
         if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                !oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled() &&
-                consumerAppDTO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-            oAuthAppDO.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(consumerAppDTO
-                    .isJwtAccessTokenOIDCClaimsSeparationEnabled());
+                !oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
             // Add requested claims as jwt access token claims.
             try {
                 addJwtAccessTokenClaims(oAuthAppDO, tenantDomain);
-                dao.updateConsumerApplication(oAuthAppDO);
             } catch (IdentityOAuth2Exception e) {
                 throw new IdentityOAuthAdminException("Error while updating existing OAuth application to the new" +
                         "JWT access token OIDC claims separation model. Application : " +
@@ -2373,52 +2392,12 @@ public class OAuthAdminServiceImpl {
         int tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
         oauthApp = dao.getAppInformation(consumerKey, tenantID);
         if (oauthApp != null) {
-            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                    !oauthApp.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-                // Add requested claims as jwt access token claims if the app is not  in the new jwt access token claims
-                // feature.
-                addJwtAccessTokenClaims(oauthApp, tenantDomain);
-            }
             if (LOG.isDebugEnabled()) {
                 LOG.debug("OAuth app with consumerKey: " + consumerKey + " retrieved from database.");
             }
             AppInfoCache.getInstance().addToCache(consumerKey, oauthApp, tenantDomain);
         }
         return oauthApp;
-    }
-
-    private void addJwtAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain) throws
-            IdentityOAuth2Exception {
-
-        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
-                .getApplicationMgtService();
-        try {
-            List<String> jwtAccessTokenClaims = new ArrayList<>();
-            ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getApplicationName(),
-                    tenantDomain);
-            if (serviceProvider != null) {
-                ClaimMapping[] claimMappings = serviceProvider.getClaimConfig().getClaimMappings();
-                if (claimMappings != null && claimMappings.length > 0) {
-                    Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
-                    for (ClaimMapping claimMapping : claimMappings) {
-                        if (claimMapping.isRequested()) {
-                            for (Map.Entry<String, String> entry : oidcToLocalClaimMappings.entrySet()) {
-                                if (entry.getValue().equals(claimMapping.getLocalClaim().getClaimUri())) {
-                                    jwtAccessTokenClaims.add(entry.getKey());
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            if (!jwtAccessTokenClaims.isEmpty()) {
-                oauthApp.setJwtAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
-            }
-        } catch (IdentityApplicationManagementException e) {
-            throw new IdentityOAuth2Exception("Error while updating existing OAuth application to the new" +
-                    "JWT access token OIDC claims separation model. Application : " + oauthApp.getApplicationName()
-                    + " Tenant : " + tenantDomain, e);
-        }
     }
 
     /**
@@ -2840,6 +2819,40 @@ public class OAuthAdminServiceImpl {
         }
     }
 
+    public void addJwtAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain) throws
+            IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
+                .getApplicationMgtService();
+        try {
+            List<String> jwtAccessTokenClaims = new ArrayList<>();
+            ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getApplicationName(),
+                    tenantDomain);
+            if (serviceProvider != null) {
+                ClaimMapping[] claimMappings = serviceProvider.getClaimConfig().getClaimMappings();
+                if (claimMappings != null && claimMappings.length > 0) {
+                    Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
+                    for (ClaimMapping claimMapping : claimMappings) {
+                        if (claimMapping.isRequested()) {
+                            for (Map.Entry<String, String> entry : oidcToLocalClaimMappings.entrySet()) {
+                                if (entry.getValue().equals(claimMapping.getLocalClaim().getClaimUri())) {
+                                    jwtAccessTokenClaims.add(entry.getKey());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (!jwtAccessTokenClaims.isEmpty()) {
+                oauthApp.setJwtAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while updating existing OAuth application to the new" +
+                    "JWT access token OIDC claims separation model. Application : " + oauthApp.getApplicationName()
+                    + " Tenant : " + tenantDomain, e);
+        }
+    }
+
     /**
      * Get OIDC to Local claim mappings.
      *
@@ -2847,7 +2860,7 @@ public class OAuthAdminServiceImpl {
      * @return OIDC to Local claim mappings
      * @throws IdentityOAuth2Exception if an error occurs while retrieving OIDC to Local claim mappings
      */
-    private Map<String, String> getOIDCToLocalClaimMappings(String tenantDomain) throws IdentityOAuth2Exception {
+    public Map<String, String> getOIDCToLocalClaimMappings(String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             return ClaimMetadataHandler.getInstance()
