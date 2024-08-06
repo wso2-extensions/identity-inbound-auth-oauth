@@ -122,21 +122,37 @@ public class OAuthServerConfiguration {
     private static final Log log = LogFactory.getLog(OAuthServerConfiguration.class);
     private static OAuthServerConfiguration instance;
     private static String oauth1RequestTokenUrl = null;
+    private static String oauth1RequestTokenUrlV2 = null;
     private static String oauth1AuthorizeUrl = null;
+    private static String oauth1AuthorizeUrlV2 = null;
     private static String oauth1AccessTokenUrl = null;
+    private static String oauth1AccessTokenUrlV2 = null;
     private static String oauth2AuthzEPUrl = null;
+    private static String oauth2AuthzEPUrlV2 = null;
     private static String oauth2ParEPUrl = null;
+    private static String oauth2ParEPUrlV2 = null;
     private static String oauth2TokenEPUrl = null;
+    private static String oauth2TokenEPUrlV2 = null;
     private static String oauth2UserInfoEPUrl = null;
+    private static String oauth2UserInfoEPUrlV2 = null;
     private static String oauth2RevocationEPUrl = null;
+    private static String oauth2RevocationEPUrlV2 = null;
     private static String oauth2IntrospectionEPUrl = null;
+    private static String oauth2IntrospectionEPUrlV2 = null;
     private static String oidcConsentPageUrl = null;
+    private static String oidcConsentPageUrlV2 = null;
     private static String oauth2DCREPUrl = null;
+    private static String oauth2DCREPUrlV2 = null;
     private static String oauth2JWKSPageUrl = null;
+    private static String oauth2JWKSPageUrlV2 = null;
     private static String oidcWebFingerEPUrl = null;
+    private static String oidcWebFingerEPUrlV2 = null;
     private static String oidcDiscoveryUrl = null;
+    private static String oidcDiscoveryUrlV2 = null;
     private static String oauth2ConsentPageUrl = null;
+    private static String oauth2ConsentPageUrlV2 = null;
     private static String oauth2ErrorPageUrl = null;
+    private static String oauth2ErrorPageUrlV2 = null;
     private static boolean isOAuthResponseJspPageAvailable = false;
     private long authorizationCodeValidityPeriodInSeconds = 300;
     private long userAccessTokenValidityPeriodInSeconds = 3600;
@@ -318,6 +334,7 @@ public class OAuthServerConfiguration {
     private int deviceCodePollingInterval = 5000;
     private String deviceCodeKeySet = "BCDFGHJKLMNPQRSTVWXYZbcdfghjklmnpqrstvwxyz23456789";
     private String deviceAuthzEPUrl = null;
+    private String deviceAuthzEPUrlV2 = null;
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
@@ -751,6 +768,76 @@ public class OAuthServerConfiguration {
         return deviceAuthzEPUrl;
     }
 
+    public String getOAuth1RequestTokenUrlV2() {
+
+        return oauth1RequestTokenUrlV2;
+    }
+
+    public String getOauth1AuthorizeUrlV2() {
+
+        return oauth1AuthorizeUrlV2;
+    }
+
+    public String getOauth1AccessTokenUrlV2() {
+
+        return oauth1AccessTokenUrlV2;
+    }
+
+    public String getOauth2AuthzEPUrlV2() {
+
+        return oauth2AuthzEPUrlV2;
+    }
+
+    public String getOauth2ParEPUrlV2() {
+
+        return oauth2ParEPUrlV2;
+    }
+
+    public String getOauth2TokenEPUrlV2() {
+
+        return oauth2TokenEPUrlV2;
+    }
+
+    public String getOauth2DCREPUrlV2() {
+
+        return oauth2DCREPUrlV2;
+    }
+
+    public String getOauth2JWKSPageUrlV2() {
+
+        return oauth2JWKSPageUrlV2;
+    }
+
+    public String getOidcDiscoveryUrlV2() {
+
+        return oidcDiscoveryUrlV2;
+    }
+
+    public String getOidcWebFingerEPUrlV2() {
+
+        return oidcWebFingerEPUrlV2;
+    }
+
+    public String getOauth2UserInfoEPUrlV2() {
+
+        return oauth2UserInfoEPUrlV2;
+    }
+
+    public String getOauth2RevocationEPUrlV2() {
+
+        return oauth2RevocationEPUrlV2;
+    }
+
+    public String getOauth2IntrospectionEPUrlV2() {
+
+        return oauth2IntrospectionEPUrlV2;
+    }
+
+    public String getDeviceAuthzEPUrlV2() {
+
+        return deviceAuthzEPUrlV2;
+    }
+
     public boolean isRoleBasedScopeIssuerEnabled() {
 
         return roleBasedScopeIssuerEnabledConfig;
@@ -884,12 +971,27 @@ public class OAuthServerConfiguration {
         return oidcConsentPageUrl;
     }
 
+    public String getOIDCConsentPageUrlV2() {
+
+        return oidcConsentPageUrlV2;
+    }
+
     public String getOauth2ConsentPageUrl() {
         return oauth2ConsentPageUrl;
     }
 
+    public String getOauth2ConsentPageUrlV2() {
+
+        return oauth2ConsentPageUrlV2;
+    }
+
     public String getOauth2ErrorPageUrl() {
         return oauth2ErrorPageUrl;
+    }
+
+    public String getOauth2ErrorPageUrlV2() {
+
+        return oauth2ErrorPageUrlV2;
     }
 
     public boolean isPasswordFlowEnhancementsEnabled() {
@@ -2203,6 +2305,111 @@ public class OAuthServerConfiguration {
         if (elem != null) {
             if (StringUtils.isNotBlank(elem.getText())) {
                 deviceAuthzEPUrl = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.OAUTH1_REQUEST_TOKEN_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth1RequestTokenUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH1_AUTHORIZE_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth1AuthorizeUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH1_ACCESS_TOKEN_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth1AccessTokenUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_AUTHZ_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2AuthzEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_PAR_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ParEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_TOKEN_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2TokenEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_USERINFO_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2UserInfoEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.OAUTH2_REVOCATION_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2RevocationEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.OAUTH2_INTROSPECTION_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2IntrospectionEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_CONSENT_PAGE_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ConsentPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_DCR_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2DCREPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_JWKS_PAGE_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2JWKSPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_DISCOVERY_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oidcDiscoveryUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_WEB_FINGER_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oidcWebFingerEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OIDC_CONSENT_PAGE_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oidcConsentPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.OAUTH2_ERROR_PAGE_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                oauth2ErrorPageUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
+            }
+        }
+        elem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.DEVICE_AUTHZ_EP_URL_V2));
+        if (elem != null) {
+            if (StringUtils.isNotBlank(elem.getText())) {
+                deviceAuthzEPUrlV2 = IdentityUtil.fillURLPlaceholders(elem.getText());
             }
         }
     }
@@ -3797,6 +4004,25 @@ public class OAuthServerConfiguration {
         public static final String OAUTH2_ERROR_PAGE_URL = "OAuth2ErrorPage";
         public static final String OIDC_CONSENT_PAGE_URL = "OIDCConsentPage";
         public static final String DEVICE_AUTHZ_EP_URL = "OAuth2DeviceAuthzEPUrl";
+
+        // Oauth endpoint V2 configs
+        public static final String OAUTH1_REQUEST_TOKEN_URL_V2 = "OAuth1RequestTokenUrlV2";
+        public static final String OAUTH1_AUTHORIZE_URL_V2 = "OAuth1AuthorizeUrlV2";
+        public static final String OAUTH1_ACCESS_TOKEN_URL_V2 = "OAuth1AccessTokenUrlV2";
+        public static final String OAUTH2_AUTHZ_EP_URL_V2 = "OAuth2AuthzEPUrlV2";
+        public static final String OAUTH2_PAR_EP_URL_V2 = "OAuth2ParEPUrlV2";
+        public static final String OAUTH2_TOKEN_EP_URL_V2 = "OAuth2TokenEPUrlV2";
+        public static final String OAUTH2_USERINFO_EP_URL_V2 = "OAuth2UserInfoEPUrlV2";
+        public static final String OAUTH2_REVOCATION_EP_URL_V2 = "OAuth2RevokeEPUrlV2";
+        public static final String OAUTH2_INTROSPECTION_EP_URL_V2 = "OAuth2IntrospectEPUrlV2";
+        public static final String OAUTH2_CONSENT_PAGE_URL_V2 = "OAuth2ConsentPageV2";
+        public static final String OAUTH2_DCR_EP_URL_V2 = "OAuth2DCREPUrlV2";
+        public static final String OAUTH2_JWKS_PAGE_URL_V2 = "OAuth2JWKSPageV2";
+        public static final String OIDC_WEB_FINGER_EP_URL_V2 = "OIDCWebFingerEPUrlV2";
+        public static final String OIDC_DISCOVERY_EP_URL_V2 = "OIDCDiscoveryEPUrlV2";
+        public static final String OAUTH2_ERROR_PAGE_URL_V2 = "OAuth2ErrorPageV2";
+        public static final String OIDC_CONSENT_PAGE_URL_V2 = "OIDCConsentPageV2";
+        public static final String DEVICE_AUTHZ_EP_URL_V2 = "OAuth2DeviceAuthzEPUrlV2";
 
         // JWT Generator
         public static final String AUTHORIZATION_CONTEXT_TOKEN_GENERATION = "AuthorizationContextTokenGeneration";

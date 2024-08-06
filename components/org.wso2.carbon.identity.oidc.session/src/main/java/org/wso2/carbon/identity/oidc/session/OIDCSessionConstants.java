@@ -51,6 +51,8 @@ public class OIDCSessionConstants {
 
         public static final String OIDC_LOGOUT_CONSENT_PAGE_URL = "OIDCLogoutConsentPage";
         public static final String OIDC_LOGOUT_PAGE_URL = "OIDCLogoutPage";
+        public static final String OIDC_LOGOUT_CONSENT_PAGE_URL_V2 = "OIDCLogoutConsentPageV2";
+        public static final String OIDC_LOGOUT_PAGE_URL_V2 = "OIDCLogoutPageV2";
         public static final String HANDLE_ALREADY_LOGGED_OUT_SESSIONS_GRACEFULLY =
                 "HandleAlreadyLoggedOutSessionsGracefully";
     }

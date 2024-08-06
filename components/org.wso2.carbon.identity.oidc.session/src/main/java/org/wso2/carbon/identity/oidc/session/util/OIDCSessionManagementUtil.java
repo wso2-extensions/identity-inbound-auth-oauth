@@ -327,7 +327,8 @@ public class OIDCSessionManagementUtil {
     public static String getOIDCLogoutConsentURL() {
 
         return OAuth2Util.buildServiceUrl(OAuthConstants.OAuth20Endpoints.OIDC_LOGOUT_CONSENT_EP_URL,
-                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutConsentPageUrl());
+                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutConsentPageUrl(),
+                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutConsentPageUrlV2());
     }
 
     /**
@@ -338,7 +339,8 @@ public class OIDCSessionManagementUtil {
     public static String getOIDCLogoutURL() {
 
         return OAuth2Util.buildServiceUrl(OAuthConstants.OAuth20Endpoints.OIDC_DEFAULT_LOGOUT_RESPONSE_URL,
-                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrl());
+                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrl(),
+                OIDCSessionManagementConfiguration.getInstance().getOIDCLogoutPageUrlV2());
     }
 
     /**

@@ -1481,29 +1481,35 @@ public class OAuth2Util {
 
         public static String getOAuth2AuthzEPUrl() {
 
-            return buildUrl(OAUTH2_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl);
+            return buildUrl(OAUTH2_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2AuthzEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2AuthzEPUrlV2);
         }
 
         public static String getOAuth2ParEPUrl() {
 
-            return buildUrl(OAUTH2_PAR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2ParEPUrl);
+            return buildUrl(OAUTH2_PAR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2ParEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2ParEPUrlV2);
         }
 
         public static String getOAuth2TokenEPUrl() {
 
-            return buildUrl(OAUTH2_TOKEN_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl);
+            return buildUrl(OAUTH2_TOKEN_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2TokenEPUrlV2);
         }
 
         public static String getOAuth2MTLSParEPUrl() {
 
             return buildUrlWithHostname(OAUTH2_PAR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2ParEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2ParEPUrlV2,
                     IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
         }
 
         public static String getOAuth2MTLSTokenEPUrl() {
 
-            return buildUrlWithHostname(OAUTH2_TOKEN_EP_URL, OAuthServerConfiguration.getInstance()::
-                    getOAuth2TokenEPUrl, IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
+            return buildUrlWithHostname(OAUTH2_TOKEN_EP_URL,
+                    OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2TokenEPUrlV2,
+                    IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
         }
 
         /**
@@ -1516,7 +1522,8 @@ public class OAuth2Util {
         public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
 
             String oauth2TokenEPUrl =
-                    buildUrl(OAUTH2_DCR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl);
+                    buildUrl(OAUTH2_DCR_EP_URL, OAuthServerConfiguration.getInstance()::getOAuth2DCREPUrl,
+                            OAuthServerConfiguration.getInstance()::getOauth2DCREPUrlV2);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
                 //Append tenant domain to path when the tenant-qualified url mode is disabled.
@@ -1535,7 +1542,8 @@ public class OAuth2Util {
         public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
 
             String auth2JWKSPageUrl = buildUrl(OAUTH2_JWKS_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl);
+                    OAuthServerConfiguration.getInstance()::getOAuth2JWKSPageUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2JWKSPageUrlV2);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
                 //Append tenant domain to path when the tenant-qualified url mode is disabled.
@@ -1546,13 +1554,15 @@ public class OAuth2Util {
 
         public static String getOidcWebFingerEPUrl() {
 
-            return buildUrl(OIDC_WEB_FINGER_EP_URL, OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl);
+            return buildUrl(OIDC_WEB_FINGER_EP_URL, OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOidcWebFingerEPUrlV2);
         }
 
         public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
 
             String oidcDiscoveryEPUrl = buildUrl(OAUTH2_DISCOVERY_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrl);
+                    OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrl,
+                    OAuthServerConfiguration.getInstance()::getOidcDiscoveryUrlV2);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
                 //Append tenant domain to path when the tenant-qualified url mode is disabled.
@@ -1563,7 +1573,8 @@ public class OAuth2Util {
 
         public static String getOAuth2UserInfoEPUrl() {
 
-            return buildUrl(OAUTH2_USER_INFO_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl);
+            return buildUrl(OAUTH2_USER_INFO_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2UserInfoEPUrlV2);
         }
 
         /**
@@ -1573,7 +1584,8 @@ public class OAuth2Util {
          */
         public static String getOAuth2RevocationEPUrl() {
 
-            return buildUrl(OAUTH2_REVOKE_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl);
+            return buildUrl(OAUTH2_REVOKE_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2RevocationEPUrlV2);
         }
 
         /**
@@ -1584,7 +1596,8 @@ public class OAuth2Util {
         public static String getOAuth2IntrospectionEPUrl() {
 
             return buildUrl(OAUTH2_INTROSPECT_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl);
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrlV2);
         }
 
         /**
@@ -1597,7 +1610,8 @@ public class OAuth2Util {
         public static String getOAuth2IntrospectionEPUrl(String tenantDomain) throws URISyntaxException {
 
             String getOAuth2IntrospectionEPUrl = buildUrl(OAUTH2_INTROSPECT_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl);
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2IntrospectionEPUrlV2);
 
             if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
                 // Append tenant domain to path when the tenant-qualified url mode is disabled.
@@ -1609,17 +1623,20 @@ public class OAuth2Util {
 
         public static String getOIDCConsentPageUrl() {
 
-            return buildUrl(OIDC_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOIDCConsentPageUrl);
+            return buildUrl(OIDC_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOIDCConsentPageUrl,
+                    OAuthServerConfiguration.getInstance()::getOIDCConsentPageUrlV2);
         }
 
         public static String getOAuth2ConsentPageUrl() {
 
-            return buildUrl(OAUTH2_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2ConsentPageUrl);
+            return buildUrl(OAUTH2_CONSENT_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2ConsentPageUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2ConsentPageUrlV2);
         }
 
         public static String getOAuth2ErrorPageUrl() {
 
-            return buildUrl(OAUTH2_ERROR_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2ErrorPageUrl);
+            return buildUrl(OAUTH2_ERROR_EP_URL, OAuthServerConfiguration.getInstance()::getOauth2ErrorPageUrl,
+                    OAuthServerConfiguration.getInstance()::getOauth2ErrorPageUrlV2);
         }
 
         private static String appendTenantDomainAsPathParamInLegacyMode(String url, String tenantDomain)
@@ -1633,7 +1650,8 @@ public class OAuth2Util {
 
         public static String getDeviceAuthzEPUrl() {
 
-            return buildUrl(DEVICE_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrl);
+            return buildUrl(DEVICE_AUTHZ_EP_URL, OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrl,
+                    OAuthServerConfiguration.getInstance()::getDeviceAuthzEPUrlV2);
         }
     }
 
@@ -1669,17 +1687,59 @@ public class OAuth2Util {
      * precedence to the file configurations in the legacy mode and returns the absolute url build from file
      * configuration context.
      *
+     * @Deprecated use @link #buildUrl(String, Supplier, Supplier) instead.
      * @param defaultContext              Default URL context.
      * @param getValueFromFileBasedConfig File-based Configuration.
      * @return Absolute URL.
      */
+    @Deprecated
     private static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig) {
 
+        return buildUrl(defaultContext, getValueFromFileBasedConfig, null);
+    }
+
+    /**
+     * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode.
+     * Returns the absolute URL build from the default context in the tenant-qualified url supported mode. Gives
+     * precedence to the file configurations in the legacy mode and returns the absolute url build from file
+     * configuration context.
+     *
+     * @param defaultContext              Default URL context.
+     * @param getValueFromFileBasedConfig File-based Configuration.
+     * @param getValueFromFileBasedConfigV2 File-based Configuration V2.
+     * @return Absolute URL.
+     */
+    private static String buildUrl(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
+                                   Supplier<String> getValueFromFileBasedConfigV2) {
+
         String oauth2EndpointURLInFile = null;
+        String oauth2EndpointURLV2InFile = null;
         if (getValueFromFileBasedConfig != null) {
             oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
         }
-        return buildServiceUrl(defaultContext, oauth2EndpointURLInFile);
+        if (getValueFromFileBasedConfigV2 != null) {
+            oauth2EndpointURLV2InFile = getValueFromFileBasedConfigV2.get();
+        }
+        return buildServiceUrl(defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLV2InFile);
+    }
+
+    /**
+     * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode.
+     * Returns the absolute URL build from the default context in the tenant-qualified url supported mode. Gives
+     * precedence to the file configurations in the legacy mode and returns the absolute url build from file
+     * configuration context.
+     *
+     * @Deprecated use @link #buildUrlWithHostname(String, Supplier, Supplier, String) instead.
+     * @param defaultContext              Default URL context.
+     * @param getValueFromFileBasedConfig File-based Configuration.
+     * @param hostname                    hostname of the service
+     * @return Absolute URL.
+     */
+    @Deprecated
+    private static String buildUrlWithHostname(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
+                                               String hostname) {
+
+        return buildUrlWithHostname(defaultContext, getValueFromFileBasedConfig, null, hostname);
     }
 
     /**
@@ -1694,28 +1754,53 @@ public class OAuth2Util {
      * @return Absolute URL.
      */
     private static String buildUrlWithHostname(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
-                                               String hostname) {
+                                               Supplier<String> getValueFromFileBasedConfigV2, String hostname) {
 
         String oauth2EndpointURLInFile = null;
+        String oauth2EndpointURLV2InFile = null;
         if (getValueFromFileBasedConfig != null) {
             oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
         }
-        return hostname != null ? buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile, hostname) :
-                buildServiceUrl(defaultContext, oauth2EndpointURLInFile);
+        if (getValueFromFileBasedConfigV2 != null) {
+            oauth2EndpointURLV2InFile = getValueFromFileBasedConfigV2.get();
+        }
+        return hostname != null ?
+                buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLV2InFile,
+                        hostname) : buildServiceUrl(defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLV2InFile);
     }
 
     /**
      * Returns the public service url given the default context and the url picked from the configuration based on
      * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
      *
+     * @Deprecated use @link #buildServiceUrl(String, String, String) instead.
      * @param defaultContext default url context path
      * @param oauth2EndpointURLInFile  url picked from the file configuration
      * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
      * from the file config
      */
+    @Deprecated
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile) {
 
+        return buildServiceUrl(defaultContext, oauth2EndpointURLInFile, null);
+    }
+
+    /**
+     * Returns the public service url given the default context and the url picked from the configuration based on
+     * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
+     *
+     * @param defaultContext          default url context path
+     * @param oauth2EndpointURLInFile url picked from the file configuration
+     * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
+     * from the file config
+     */
+    public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile,
+                                         String oauth2EndpointURLV2InFile) {
+
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            if (StringUtils.isNotBlank(oauth2EndpointURLV2InFile)) {
+                return oauth2EndpointURLV2InFile;
+            }
             try {
                 String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
                 return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId).build()
@@ -1739,6 +1824,24 @@ public class OAuth2Util {
      * Returns the public service url given the default context and the url picked from the configuration based on
      * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
      *
+     * @Deprecated use @link #buildServiceUrlWithHostname(String, String, String, String) instead.
+     * @param defaultContext          default url context path
+     * @param oauth2EndpointURLInFile url picked from the file configuration
+     * @param hostname                hostname of the service
+     * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
+     * from the file config
+     */
+    @Deprecated
+    public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
+                                                     String hostname) {
+
+        return buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile, null, hostname);
+    }
+
+    /**
+     * Returns the public service url given the default context and the url picked from the configuration based on
+     * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
+     *
      * @param defaultContext          default url context path
      * @param oauth2EndpointURLInFile url picked from the file configuration
      * @param hostname                hostname of the service
@@ -1746,9 +1849,12 @@ public class OAuth2Util {
      * from the file config
      */
     public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
-                                                     String hostname) {
+                                                     String oauth2EndpointURLInFileV2, String hostname) {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            if (StringUtils.isNotBlank(oauth2EndpointURLInFileV2)) {
+                return oauth2EndpointURLInFileV2;
+            }
             try {
                 String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
                 return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId)
