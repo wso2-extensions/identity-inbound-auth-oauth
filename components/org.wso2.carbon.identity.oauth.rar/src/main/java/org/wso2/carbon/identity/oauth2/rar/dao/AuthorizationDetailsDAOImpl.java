@@ -100,19 +100,22 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
     public int[] updateUserConsentedAuthorizationDetails(
             final List<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs) throws SQLException {
 
-        try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-             final PreparedStatement ps =
-                     connection.prepareStatement(SQLQueries.UPDATE_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
+//         todo: This won't update the expected element. Hence, need to revisit the update logic
+        return null;
 
-            for (AuthorizationDetailsConsentDTO consentDTO : authorizationDetailsConsentDTOs) {
-                ps.setString(1, consentDTO.getAuthorizationDetail().toJsonString());
-                ps.setBoolean(2, consentDTO.isConsentActive());
-                ps.setString(3, consentDTO.getConsentId());
-                ps.setInt(4, consentDTO.getTenantId());
-                ps.addBatch();
-            }
-            return ps.executeBatch();
-        }
+//        try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+//             final PreparedStatement ps =
+//                     connection.prepareStatement(SQLQueries.UPDATE_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
+//
+//            for (AuthorizationDetailsConsentDTO consentDTO : authorizationDetailsConsentDTOs) {
+//                ps.setString(1, consentDTO.getAuthorizationDetail().toJsonString());
+//                ps.setBoolean(2, consentDTO.isConsentActive());
+//                ps.setString(3, consentDTO.getConsentId());
+//                ps.setInt(4, consentDTO.getTenantId());
+//                ps.addBatch();
+//            }
+//            return ps.executeBatch();
+//        }
     }
 
     /**
