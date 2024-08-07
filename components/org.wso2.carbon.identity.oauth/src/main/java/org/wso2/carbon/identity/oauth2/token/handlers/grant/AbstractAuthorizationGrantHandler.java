@@ -506,11 +506,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthAppDO oAuthAppBean = getoAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
 
-        // Allow for following grant types and for JWT access tokens only.
-        return (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
-                OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
-                OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
-                OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
+        // Allow for following grant types and for JWT access tokens if,
+        // pre issue access token action invocation is enabled at server level.
+        return OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                .isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN) &&
+                (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
+                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) ||
+                        OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
+                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 

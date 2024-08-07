@@ -390,6 +390,8 @@ public class ResponseTypeHandlerUtil {
      * This access token details are not necessary for respDTO when issuing the id_token.
      * So a new OAuth2AuthorizeRespDTO object is created and set all the relevant details that are needed in
      * DefaultIDTokenBuilder class. After the id_token is issued, set the id_token value to respDTO object and return.
+     * In Impersonation flow, if the response type is `id_token subject_token`,
+     * Authorization Server (AS) should issue an ID token regardless of the presence of the openid scope.
      * @param respDTO
      * @param accessTokenDO
      * @param oauthAuthzMsgCtx
@@ -400,7 +402,8 @@ public class ResponseTypeHandlerUtil {
                                                                  AccessTokenDO accessTokenDO,
                                                                  OAuthAuthzReqMessageContext oauthAuthzMsgCtx)
             throws IdentityOAuth2Exception {
-        if (isOIDCRequest(oauthAuthzMsgCtx)) {
+        if (isOIDCRequest(oauthAuthzMsgCtx) || isImpersonationIdTokenResponseType(oauthAuthzMsgCtx
+                .getAuthorizationReqDTO().getResponseType())) {
             OAuth2AuthorizeRespDTO newRespDTO = new OAuth2AuthorizeRespDTO();
             if (accessTokenDO != null) {
                 newRespDTO.setAccessToken(accessTokenDO.getAccessToken());
@@ -411,6 +414,17 @@ public class ResponseTypeHandlerUtil {
             respDTO.setOidcSessionId(newRespDTO.getOidcSessionId());
         }
         return  respDTO;
+    }
+
+    /**
+     * Checks if the given response type is for an impersonation flow with ID token.
+     *
+     * @param responseType The response type to check.
+     * @return true if the response type matches id_token subject_token
+     */
+    private static boolean isImpersonationIdTokenResponseType(String responseType) {
+
+        return StringUtils.equals(responseType, OAuthConstants.ID_TOKEN_SUBJECT_TOKEN);
     }
 
     private static boolean isOIDCRequest (OAuthAuthzReqMessageContext msgCtx) {

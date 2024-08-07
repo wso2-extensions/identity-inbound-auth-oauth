@@ -1248,7 +1248,8 @@ public final class OAuthUtil {
                                                               String tokenAuthMethod)
             throws IdentityOAuth2ServerException {
 
-        if (tokenEPAllowReusePvtKeyJwtValue == null && StringUtils.isNotBlank(tokenAuthMethod)
+        if ((tokenEPAllowReusePvtKeyJwtValue == null ||
+                tokenEPAllowReusePvtKeyJwtValue.equals("null")) && StringUtils.isNotBlank(tokenAuthMethod)
                 && OAuthConstants.PRIVATE_KEY_JWT.equals(tokenAuthMethod)) {
             try {
                 tokenEPAllowReusePvtKeyJwtValue = readTenantConfigurationPvtKeyJWTReuse();
