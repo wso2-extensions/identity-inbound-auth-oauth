@@ -510,18 +510,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
         OAuthCache.getInstance().clearCacheEntry(new OAuthCacheKey(consumerKey));
         if (isNotEmpty(accessTokenDOSet)) {
             for (AccessTokenDO accessTokenDo : accessTokenDOSet) {
-                // Remove access token from AuthorizationGrantCache
-                AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(
-                        accessTokenDo.getAccessToken());
-                AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
-                OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessTokenDo.getAccessToken());
-                CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
-                if (oauthCacheEntry != null) {
-                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
-                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
-                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, accessTokenDo.getAuthzUser()
-                            .getTenantDomain());
-                }
                 String tokenBindingReference = "NONE";
                 if (accessTokenDo.getTokenBinding() != null && StringUtils
                         .isNotBlank(accessTokenDo.getTokenBinding().getBindingReference())) {
@@ -534,6 +522,20 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         OAuth2Util.buildScopeString(accessTokenDo.getScope()));
                 OAuthUtil.clearOAuthCache(accessTokenDo.getConsumerKey(), accessTokenDo.getAuthzUser());
                 OAuthUtil.clearOAuthCache(accessTokenDo);
+            }
+
+            Set<String> accessTokens = OAuthTokenPersistenceFactory.getInstance()
+                    .getAccessTokenDAO().getActiveTokensByConsumerKey(consumerKey);
+            for (String accessToken : accessTokens) {
+                // Remove access token from AuthorizationGrantCache
+                AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessToken);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
+                OAuthCacheKey oauthCacheKey = new OAuthCacheKey(accessToken);
+                CacheEntry oauthCacheEntry = OAuthCache.getInstance().getValueFromCache(oauthCacheKey);
+                if (oauthCacheEntry != null) {
+                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey);
+                    OAuthCache.getInstance().clearCacheEntry(oauthCacheKey, tenantDomain);
+                }
             }
         }
     }

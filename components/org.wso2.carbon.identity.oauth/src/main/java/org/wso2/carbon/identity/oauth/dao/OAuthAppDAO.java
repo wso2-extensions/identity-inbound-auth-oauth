@@ -1903,7 +1903,7 @@ public class OAuthAppDAO {
         }
         String tokenEPAllowReusePvtKeyJwt = OAuthUtil.getValueOfTokenEPAllowReusePvtKeyJwt(
                 getFirstPropertyValue(spOIDCProperties, TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT), tokenAuthMethod);
-        if (tokenEPAllowReusePvtKeyJwt != null) {
+        if (tokenEPAllowReusePvtKeyJwt != null && !tokenEPAllowReusePvtKeyJwt.equals("null")) {
             oauthApp.setTokenEndpointAllowReusePvtKeyJwt(Boolean.parseBoolean(tokenEPAllowReusePvtKeyJwt));
         }
         String tokenSignatureAlgorithm = getFirstPropertyValue(spOIDCProperties, TOKEN_AUTH_SIGNATURE_ALGORITHM);
