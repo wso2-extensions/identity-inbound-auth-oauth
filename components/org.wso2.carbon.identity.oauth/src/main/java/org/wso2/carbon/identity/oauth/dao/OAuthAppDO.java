@@ -95,8 +95,8 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean fapiConformanceEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
-    private String[] jwtAccessTokenClaims;
-    private boolean isJwtAccessTokenOIDCClaimsSeparationEnabled;
+    private String[] accessTokenClaims;
+    private boolean accessTokenClaimsSeparationEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -526,23 +526,23 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
     }
 
-    public String[] getJwtAccessTokenClaims() {
+    public String[] getAccessTokenClaims() {
 
-        return jwtAccessTokenClaims;
+        return accessTokenClaims;
     }
 
-    public void setJwtAccessTokenClaims(String[] jwtAccessTokenClaims) {
+    public void setAccessTokenClaims(String[] accessTokenClaims) {
 
-        this.jwtAccessTokenClaims = jwtAccessTokenClaims;
+        this.accessTokenClaims = accessTokenClaims;
     }
 
-    public boolean isJwtAccessTokenOIDCClaimsSeparationEnabled() {
+    public boolean isAccessTokenClaimsSeparationEnabled() {
 
-        return isJwtAccessTokenOIDCClaimsSeparationEnabled;
+        return accessTokenClaimsSeparationEnabled;
     }
 
-    public void setIsJwtAccessTokenOIDCClaimsSeparationEnabled(boolean isJwtAccessTokenOIDCClaimSeparationEnabled) {
+    public void setAccessTokenClaimsSeparationEnabled(boolean accessTokenClaimsSeparationEnabled) {
 
-        this.isJwtAccessTokenOIDCClaimsSeparationEnabled = isJwtAccessTokenOIDCClaimSeparationEnabled;
+        this.accessTokenClaimsSeparationEnabled = accessTokenClaimsSeparationEnabled;
     }
 }

@@ -73,7 +73,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         String spTenantDomain = getServiceProviderTenantDomain(request);
         AuthenticatedUser authenticatedUser = request.getAuthorizedUser();
 
-        Map<String, Object> claims = getJWTAccessTokenUserClaims(authenticatedUser, clientId, spTenantDomain);
+        Map<String, Object> claims = getAccessTokenUserClaims(authenticatedUser, clientId, spTenantDomain);
         if (claims == null || claims.isEmpty()) {
             return builder.build();
         }
@@ -86,15 +86,16 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             throws IdentityOAuth2Exception {
 
         // TODO : Handle claims for consent
+        // TODO : Evalute for hybrid flow
         return builder.build();
     }
 
-    private Map<String, Object> getJWTAccessTokenUserClaims(AuthenticatedUser authenticatedUser, String clientId,
+    private Map<String, Object> getAccessTokenUserClaims(AuthenticatedUser authenticatedUser, String clientId,
                                                            String spTenantDomain)
             throws IdentityOAuth2Exception {
 
-        // Get allowed JWT access token claims.
-        List<String> allowedClaims = getJWTAccessTokenClaims(clientId, spTenantDomain);
+        // Get allowed access token claims.
+        List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
         if (allowedClaims.isEmpty()) {
             return new HashMap<>();
         }
@@ -220,18 +221,18 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     }
 
     /**
-     * Get JWT access token claims.
+     * Get access token claims.
      *
      * @param clientId Client Id.
      * @param tenantDomain Tenant Domain.
      * @return List of JWT access token claims.
      * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
      */
-    private List<String> getJWTAccessTokenClaims(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
+    private List<String> getAccessTokenClaims(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
         OAuthAppDO oAuthAppDO;
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
-            String[] claimsArray = oAuthAppDO.getJwtAccessTokenClaims();
+            String[] claimsArray = oAuthAppDO.getAccessTokenClaims();
             if (claimsArray == null) {
                 return new ArrayList<>();
             }

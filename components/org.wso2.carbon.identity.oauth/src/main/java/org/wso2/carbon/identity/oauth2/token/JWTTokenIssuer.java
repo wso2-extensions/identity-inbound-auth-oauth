@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
@@ -941,8 +942,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         CustomClaimsCallbackHandler claimsCallBackHandler;
         // If JWT access token OIDC claims separation is enabled and the application is configured to separate OIDC
         // claims, use the JWTAccessTokenOIDCClaimsHandler to handle custom claims.
-        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
+        if (isAccessTokenClaimsSeparationFeatureEnabled() &&
+                oAuthAppDO.isAccessTokenClaimsSeparationEnabled()) {
             claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
         } else {
             claimsCallBackHandler = OAuthServerConfiguration.getInstance()
@@ -1084,5 +1085,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
             jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
         }
+    }
+
+    private boolean isAccessTokenClaimsSeparationFeatureEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
     }
 }

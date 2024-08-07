@@ -462,7 +462,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     private OAuthAppDO getoAuthAppDO(String[] jwtAccessTokenClaims) {
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setJwtAccessTokenClaims(jwtAccessTokenClaims);
+        oAuthAppDO.setAccessTokenClaims(jwtAccessTokenClaims);
         return oAuthAppDO;
     }
 

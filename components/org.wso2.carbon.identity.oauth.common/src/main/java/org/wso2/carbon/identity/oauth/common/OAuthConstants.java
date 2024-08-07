@@ -282,8 +282,8 @@ public final class OAuthConstants {
     public static final String TLS_CLIENT_AUTH = "tls_client_auth";
     public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
     public static final String ADDITIONAL_ATTRIBUTE_FILTER = "OAuth.DCRM.AdditionalAttributeFilter";
-    public static final String ENABLE_OIDC_CLAIMS_SEPARATION_FOR_JWT_ACCESS_TOKEN =
-            "OAuth.OpenIDConnect.EnableOIDCClaimsSeparationForJWTAccessToken";
+    public static final String ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN =
+            "OAuth.OpenIDConnect.EnableClaimsSeparationForAccessToken";
 
     private OAuthConstants() {
 
@@ -639,9 +639,9 @@ public final class OAuthConstants {
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
-        public static final String IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED =
-                "isJWTAccessTokenOIDCClaimsSeparationEnabled";
-        public static final boolean IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE = true;
+        public static final String IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED =
+                "isAccessTokenClaimsSeparationEnabled";
+        public static final boolean IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE = true;
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.

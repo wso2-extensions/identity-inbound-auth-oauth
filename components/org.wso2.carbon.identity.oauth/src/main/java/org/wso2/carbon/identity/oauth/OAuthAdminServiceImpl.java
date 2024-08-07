@@ -109,7 +109,8 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
@@ -231,11 +232,11 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthAppDO app = getOAuthApp(consumerKey, tenantDomain);
             if (app != null) {
-                if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled() &&
-                        !app.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-                    // Add requested claims as jwt access token claims if the app is not  in the new jwt access token
+                if (isAccessTokenClaimsSeparationFeatureEnabled() &&
+                        !app.isAccessTokenClaimsSeparationEnabled()) {
+                    // Add requested claims as access token claims if the app is not  in the new jwt access token
                     // claims feature.
-                    addJwtAccessTokenClaims(app, tenantDomain);
+                    addAccessTokenClaims(app, tenantDomain);
                 }
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
@@ -533,11 +534,11 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
-                        if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
-                            validateJwtAccessTokenClaims(application, tenantDomain);
-                            app.setJwtAccessTokenClaims(application.getJwtAccessTokenOIDCClaims());
-                            app.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(
-                                    IS_JWT_ACCESS_TOKEN_OIDC_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
+                        if (isAccessTokenClaimsSeparationFeatureEnabled()) {
+                            validateAccessTokenClaims(application, tenantDomain);
+                            app.setAccessTokenClaims(application.getAccessTokenClaims());
+                            app.setAccessTokenClaimsSeparationEnabled(
+                                    IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
                         }
                     }
                     dao.addOAuthApplication(app);
@@ -975,30 +976,30 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
             oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
 
-            if (OAuth2Util.isJWTAccessTokenOIDCClaimsSeparationEnabled()) {
-                // We check if the JWT AT OIDC claims separation enabled at server level and
+            if (isAccessTokenClaimsSeparationFeatureEnabled()) {
+                // We check if the AT claims separation enabled at server level and
                 // the app level. If both are enabled, we validate the claims and update the app.
-                if (oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-                    validateJwtAccessTokenClaims(consumerAppDTO, tenantDomain);
-                    oAuthAppDO.setJwtAccessTokenClaims(consumerAppDTO.getJwtAccessTokenOIDCClaims());
+                if (oAuthAppDO.isAccessTokenClaimsSeparationEnabled()) {
+                    validateAccessTokenClaims(consumerAppDTO, tenantDomain);
+                    oAuthAppDO.setAccessTokenClaims(consumerAppDTO.getAccessTokenClaims());
                 }
-                // We only trigger the jwt access token claims migration if the following conditions are met.
-                // 1. The JWT AT OIDC claims separation is enabled at server level.
-                // 2. TheJWT AT OIDC claims separation is not enabled at app level.
-                // 3. User tries to enable JWT AT OIDC claims separation at app level with update app.
-                if (!oAuthAppDO.isJwtAccessTokenOIDCClaimsSeparationEnabled() &&
-                        consumerAppDTO.isJwtAccessTokenOIDCClaimsSeparationEnabled()) {
-                    // Add requested claims as jwt access token claims.
+                // We only trigger the access token claims migration if the following conditions are met.
+                // 1. The AT claims separation is enabled at server level.
+                // 2. The AT claims separation is not enabled at app level.
+                // 3. User tries to enable AT claims separation at app level with update app.
+                if (!oAuthAppDO.isAccessTokenClaimsSeparationEnabled() &&
+                        consumerAppDTO.isAccessTokenClaimsSeparationEnabled()) {
+                    // Add requested claims as access token claims.
                     try {
-                        addJwtAccessTokenClaims(oAuthAppDO, tenantDomain);
+                        addAccessTokenClaims(oAuthAppDO, tenantDomain);
                     } catch (IdentityOAuth2Exception e) {
                         throw new IdentityOAuthAdminException("Error while updating existing OAuth application to " +
                                 "the new JWT access token OIDC claims separation model. Application : " +
                                 oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
                     }
                 }
-                oAuthAppDO.setIsJwtAccessTokenOIDCClaimsSeparationEnabled(consumerAppDTO
-                        .isJwtAccessTokenOIDCClaimsSeparationEnabled());
+                oAuthAppDO.setAccessTokenClaimsSeparationEnabled(consumerAppDTO
+                        .isAccessTokenClaimsSeparationEnabled());
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
@@ -2782,33 +2783,40 @@ public class OAuthAdminServiceImpl {
     }
 
     /**
-     * validate JWT access token claims.
+     * validate access token claims.
      *
      * @param consumerAppDTO OAuthConsumerAppDTO
      * @param tenantDomain   tenant domain
      * @throws IdentityOAuthAdminException if the claim is invalid
      */
-    private void validateJwtAccessTokenClaims(OAuthConsumerAppDTO consumerAppDTO, String tenantDomain)
+    private void validateAccessTokenClaims(OAuthConsumerAppDTO consumerAppDTO, String tenantDomain)
             throws IdentityOAuthAdminException {
 
-        if (consumerAppDTO.getJwtAccessTokenOIDCClaims() != null) {
+        if (consumerAppDTO.getAccessTokenClaims() != null) {
             Map<String, String> oidcToLocalClaimMappings;
             try {
                 oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
-                for (String claimURI : consumerAppDTO.getJwtAccessTokenOIDCClaims()) {
+                for (String claimURI : consumerAppDTO.getAccessTokenClaims()) {
                     if (!oidcToLocalClaimMappings.containsKey(claimURI)) {
-                        throw handleClientError(INVALID_REQUEST, "Invalid JWT access token claim URI: "
+                        throw handleClientError(INVALID_REQUEST, "Invalid access token claim URI: "
                                 + claimURI);
                     }
                 }
             } catch (IdentityOAuth2Exception e) {
                 throw handleError("Error while retrieving OIDC to Local claim mappings for " +
-                        "JWT access token claims validation.", e);
+                        "access token claims validation.", e);
             }
         }
     }
 
-    public void addJwtAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain) throws
+    /**
+     * Adding requested claims in service provider as access token claims to the OAuthAppDO.
+     *
+     * @param oauthApp     OAuthAppDO
+     * @param tenantDomain tenant domain
+     * @throws IdentityOAuth2Exception if an error occurs while adding access token claims
+     */
+    private void addAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain) throws
             IdentityOAuth2Exception {
 
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
@@ -2833,7 +2841,7 @@ public class OAuthAdminServiceImpl {
                 }
             }
             if (!jwtAccessTokenClaims.isEmpty()) {
-                oauthApp.setJwtAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
+                oauthApp.setAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
             }
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while updating existing OAuth application to the new" +
@@ -2857,5 +2865,10 @@ public class OAuthAdminServiceImpl {
         } catch (ClaimMetadataException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving OIDC to Local claim mappings.", e);
         }
+    }
+
+    private boolean isAccessTokenClaimsSeparationFeatureEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
     }
 }

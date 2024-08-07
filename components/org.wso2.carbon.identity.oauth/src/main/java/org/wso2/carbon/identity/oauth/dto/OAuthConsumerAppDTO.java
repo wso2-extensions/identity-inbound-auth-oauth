@@ -80,8 +80,8 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private boolean fapiConformanceEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
-    private String[] jwtAccessTokenOIDCClaims;
-    private boolean jwtAccessTokenOIDCClaimsSeparationEnabled;
+    private String[] accessTokenClaims;
+    private boolean accessTokenClaimsSeparationEnabled;
 
     // CORS origin related properties. This will be used by the CORS management service
     @IgnoreNullElement
@@ -531,24 +531,24 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
     }
 
-    public String[] getJwtAccessTokenOIDCClaims() {
+    public String[] getAccessTokenClaims() {
 
-        return jwtAccessTokenOIDCClaims;
+        return accessTokenClaims;
     }
 
-    public void setJwtAccessTokenOIDCClaims(String[] jwtAccessTokenOIDCClaims) {
+    public void setAccessTokenClaims(String[] accessTokenClaims) {
 
-        this.jwtAccessTokenOIDCClaims = jwtAccessTokenOIDCClaims;
+        this.accessTokenClaims = accessTokenClaims;
     }
 
-    public boolean isJwtAccessTokenOIDCClaimsSeparationEnabled() {
+    public boolean isAccessTokenClaimsSeparationEnabled() {
 
-        return jwtAccessTokenOIDCClaimsSeparationEnabled;
+        return accessTokenClaimsSeparationEnabled;
     }
 
-    public void setJwtAccessTokenOIDCClaimsSeparationEnabled(boolean jwtAccessTokenOIDCClaimsSeparationEnabled) {
+    public void setAccessTokenClaimsSeparationEnabled(boolean accessTokenClaimsSeparationEnabled) {
 
-        this.jwtAccessTokenOIDCClaimsSeparationEnabled = jwtAccessTokenOIDCClaimsSeparationEnabled;
+        this.accessTokenClaimsSeparationEnabled = accessTokenClaimsSeparationEnabled;
     }
 }
 
