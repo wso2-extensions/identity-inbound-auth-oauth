@@ -67,6 +67,7 @@
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.ui.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.dcr.server.feature</module>
+        <module>components/org.wso2.carbon.identity.oauth.rar</module>
     </modules>
 
     <dependencyManagement>
@@ -407,6 +408,11 @@
                 <artifactId>gson</artifactId>
                 <version>${com.google.code.gson.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.google.auto.service</groupId>
+                <artifactId>auto-service</artifactId>
+                <version>${com.google.auto.service.version}</version>
+            </dependency>
 
             <!-- Carbon Identity Inbound Authentication OAuth dependency -->
             <dependency>
@@ -550,6 +556,11 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.extension</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+                <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -999,6 +1010,7 @@
         <net.minidev.accessors-smart.version>2.4.7</net.minidev.accessors-smart.version>
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
+        <com.google.auto.service.version>1.1.1</com.google.auto.service.version>
 
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>

@@ -112,6 +112,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
@@ -283,6 +284,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
+
+    @Mock
+    private AuthorizationDetailsService authorizationDetailsService;
 
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
@@ -802,6 +806,10 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 when(oAuth2Service.handleAuthenticationFailure(oAuth2Params)).thenReturn(oAuthErrorDTO);
                 when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
                         anyString(), isNull(), anyInt(), anyList())).thenReturn(true);
+
+                when(authorizationDetailsService.isUserAlreadyConsentedForAuthorizationDetails(
+                        any(AuthenticatedUser.class), any(OAuth2Parameters.class))).thenReturn(true);
+                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsService);
 
                 mockServiceURLBuilder(serviceURLBuilder);
                 setSupportedResponseModes();
@@ -1643,6 +1651,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
                 OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
                 when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
+
+                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsService);
 
                 Response response;
                 try {
