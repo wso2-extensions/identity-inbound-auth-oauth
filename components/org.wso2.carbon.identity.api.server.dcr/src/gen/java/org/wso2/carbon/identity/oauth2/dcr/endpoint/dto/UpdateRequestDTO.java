@@ -52,6 +52,7 @@ public class UpdateRequestDTO {
     private String requestObjectEncryptionMethod = null;
     private String softwareStatement = null;
     private final Map<String, Object> additionalAttributes = new HashMap<>();
+    private String extAllowedAudience;
 
     @ApiModelProperty(value = "")
     @JsonProperty("redirect_uris")
@@ -412,6 +413,15 @@ public class UpdateRequestDTO {
         return additionalAttributes;
     }
 
+    @ApiModelProperty(value = "")
+    @JsonProperty("ext_allowed_audience")
+    public String getExtAllowedAudience() {
+        return extAllowedAudience;
+    }
+    public void setExtAllowedAudience(String extAllowedAudience) {
+        this.extAllowedAudience = extAllowedAudience;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -443,6 +453,7 @@ public class UpdateRequestDTO {
         sb.append("  request_object_signing_alg: ").append(requestObjectSigningAlg).append("\n");
         sb.append("  tls_client_auth_subject_dn: ").append(tlsClientAuthSubjectDn).append("\n");
         sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
+        sb.append("  extAllowedAudience: ").append(extAllowedAudience).append("\n");
         sb.append("}\n");
         return sb.toString();
     }
