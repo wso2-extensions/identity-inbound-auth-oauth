@@ -364,6 +364,8 @@ definitions:
         type: string
       request_object_encryption_enc:
         type: string
+      ext_allowed_audience:
+        type: string
 #-----------------------------------------------------
 # The Application Update Request Object
 #-----------------------------------------------------
@@ -443,6 +445,8 @@ definitions:
       request_object_encryption_alg:
         type: string
       request_object_encryption_enc:
+        type: string
+      ext_allowed_audience:
         type: string
 #-----------------------------------------------------
 # The OAuth2 Application Object
@@ -524,6 +528,8 @@ definitions:
       request_object_encryption_method:
         type: string
       software_statement:
+        type: string
+      ext_allowed_audience:
         type: string
 
 #-----------------------------------------------------

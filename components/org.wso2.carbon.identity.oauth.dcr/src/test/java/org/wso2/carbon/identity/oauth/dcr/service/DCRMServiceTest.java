@@ -24,7 +24,9 @@ import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -32,6 +34,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
@@ -153,12 +156,30 @@ public class DCRMServiceTest {
         oAuth2Util.close();
     }
 
+    @BeforeClass
+    public void beforeClass() {
+        startTenantFlow();
+    }
+
+    @AfterClass
+    public void afterClass() {
+        PrivilegedCarbonContext.endTenantFlow();
+    }
+
     @DataProvider(name = "DTOProvider")
     public Object[][] getDTOStatus() {
 
         return new String[][]{
                 {null},
                 {""}
+        };
+    }
+
+    @DataProvider(name = "RoleAudience")
+    public Object[][] getRoleAudience() throws Exception {
+        return new Object[][]{
+                {DCRConstants.APP_ROLE_AUDIENCE},
+                {DCRConstants.ORG_ROLE_AUDIENCE}
         };
     }
 
@@ -234,13 +255,11 @@ public class DCRMServiceTest {
     @Test
     public void getApplicationDTOTestUserUnauthorized() throws Exception {
 
-        startTenantFlow();
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(false);
@@ -248,8 +267,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by getApplication method");
     }
@@ -258,13 +275,11 @@ public class DCRMServiceTest {
     public void isUserAuthorizedTestWithIAMException() throws IdentityOAuthAdminException,
             UserStoreException, NoSuchFieldException, IllegalAccessException {
 
-        startTenantFlow();
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenThrow
@@ -273,16 +288,13 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_APPLICATION_BY_ID.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by getApplication method");
     }
 
-    @Test
-    public void getApplicationDTOTest() throws Exception {
+    @Test(dataProvider = "RoleAudience")
+    public void getApplicationDTOTest(String roleAudience) throws Exception {
 
-        startTenantFlow();
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
         String dummyConsumerSecret = "dummyConsumerSecret";
@@ -294,26 +306,22 @@ public class DCRMServiceTest {
 
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
-            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-            when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
-            ServiceProvider serviceProvider = new ServiceProvider();
-            serviceProvider.setJwksUri("dummyJwksUri");
-            when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
-                    .thenReturn(serviceProvider);
-            when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
-                    .thenReturn(new ServiceProvider());
-            Application application = dcrmService.getApplication(dummyConsumerKey);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        serviceProvider.setJwksUri("dummyJwksUri");
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
+                .thenReturn(serviceProvider);
+        Application application = dcrmService.getApplication(dummyConsumerKey);
 
-            assertEquals(application.getClientId(), dummyConsumerKey);
-            assertEquals(application.getClientName(), dummyClientName);
-            assertEquals(application.getClientSecret(), dummyConsumerSecret);
-            assertEquals(application.getRedirectUris().get(0), dummyCallbackUrl);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getClientSecret(), dummyConsumerSecret);
+        assertEquals(application.getRedirectUris().get(0), dummyCallbackUrl);
     }
 
     @Test
@@ -346,10 +354,9 @@ public class DCRMServiceTest {
         fail("Expected DCRMException was not thrown by getApplication method");
     }
 
-    @Test
-    public void getApplicationByNameTest() throws Exception {
+    @Test(dataProvider = "RoleAudience")
+    public void getApplicationByNameTest(String roleAudience) throws Exception {
 
-        startTenantFlow();
         OAuthConsumerAppDTO oAuthConsumerApp = new OAuthConsumerAppDTO();
         oAuthConsumerApp.setApplicationName(dummyClientName);
         String dummyConsumerSecret = "dummyConsumerSecret";
@@ -359,8 +366,12 @@ public class DCRMServiceTest {
         oAuthConsumerApp.setCallbackUrl(dummyCallbackUrl);
         oAuthConsumerApp.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
+        ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
         when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
-                .thenReturn(new ServiceProvider());
+                .thenReturn(serviceProvider);
         when(mockApplicationManagementService.
                         getServiceProviderNameByClientId(oAuthConsumerApp.getOauthConsumerKey(),
                                 DCRMConstants.OAUTH2, dummyTenantDomain))
@@ -369,21 +380,16 @@ public class DCRMServiceTest {
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
-            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-            when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
 
-            Application application = dcrmService.getApplicationByName(dummyClientName);
+        Application application = dcrmService.getApplicationByName(dummyClientName);
 
-            assertEquals(application.getClientId(), dummyConsumerKey);
-            assertEquals(application.getClientName(), dummyClientName);
-            assertEquals(application.getClientSecret(), dummyConsumerSecret);
-            assertEquals(application.getRedirectUris().get(0), dummyCallbackUrl);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getClientSecret(), dummyConsumerSecret);
+        assertEquals(application.getRedirectUris().get(0), dummyCallbackUrl);
     }
 
     @Test
@@ -401,7 +407,6 @@ public class DCRMServiceTest {
     @Test
     public void getApplicationNullNameTest() throws Exception {
 
-        startTenantFlow();
         try {
             dcrmService.getApplicationByName(dummyClientName);
         } catch (IdentityException ex) {
@@ -414,7 +419,6 @@ public class DCRMServiceTest {
     @Test
     public void getApplicationNameWithInvalidOAuthClientExceptionTest() throws Exception {
 
-        startTenantFlow();
         doThrow(new IdentityOAuthAdminException(INVALID_OAUTH_CLIENT.getErrorCode(),
                 "Cannot find a valid OAuth client"))
                 .when(mockOAuthAdminService)
@@ -435,14 +439,12 @@ public class DCRMServiceTest {
     @Test
     public void getApplicationByNameUserUnauthorizedTest() throws Exception {
 
-        startTenantFlow();
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         when(mockApplicationManagementService.getServiceProvider(anyString(), anyString()))
                 .thenReturn(new ServiceProvider());
         when(mockOAuthAdminService.getOAuthApplicationDataByAppName(dummyClientName))
                 .thenReturn(new OAuthConsumerAppDTO());
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(false);
@@ -450,8 +452,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by getApplicationByName method");
     }
@@ -464,7 +464,6 @@ public class DCRMServiceTest {
         dummyGrantTypes.add("dummy2");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        startTenantFlow();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
@@ -489,7 +488,6 @@ public class DCRMServiceTest {
 
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        startTenantFlow();
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
@@ -514,7 +512,6 @@ public class DCRMServiceTest {
         dummyGrantTypes.add("dummy2");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
-        startTenantFlow();
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
@@ -537,7 +534,6 @@ public class DCRMServiceTest {
 
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
         applicationRegistrationRequest.setConsumerKey(dummyConsumerKey);
-        startTenantFlow();
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey))
                 .thenReturn(dto);
@@ -569,7 +565,6 @@ public class DCRMServiceTest {
 
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        startTenantFlow();
 
         dummyGrantTypes.add(grantTypeVal);
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -615,14 +610,29 @@ public class DCRMServiceTest {
         };
     }
 
-    @Test(dataProvider = "redirectUriProvider")
-    public void registerApplicationTestWithSP(List<String> redirectUri) throws Exception {
+    @DataProvider(name = "redirectUriAndRoleAudienceProvider")
+    public Object[][] getRedirectUriAndRoleAudienceProvider() {
+
+        List<String> redirectUri1 = new ArrayList<>();
+        redirectUri1.add("redirectUri1");
+        List<String> redirectUri2 = new ArrayList<>();
+        redirectUri2.add("redirectUri1");
+        redirectUri2.add("redirectUri1");
+        return new Object[][]{
+                {redirectUri1, DCRConstants.APP_ROLE_AUDIENCE},
+                {redirectUri1, DCRConstants.ORG_ROLE_AUDIENCE},
+                {redirectUri2, DCRConstants.APP_ROLE_AUDIENCE},
+                {redirectUri2, DCRConstants.ORG_ROLE_AUDIENCE}
+        };
+    }
+
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void registerApplicationTestWithSP(List<String> redirectUri, String roleAudience) throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -634,6 +644,9 @@ public class DCRMServiceTest {
         String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
 
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
@@ -679,7 +692,6 @@ public class DCRMServiceTest {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        startTenantFlow();
 
         List<String> redirectUri = new ArrayList<>();
         redirectUri.add("redirectUri1");
@@ -710,7 +722,6 @@ public class DCRMServiceTest {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -725,13 +736,13 @@ public class DCRMServiceTest {
         fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
-    @Test(dataProvider = "redirectUriProvider")
-    public void registerApplicationTestWithDeleteCreatedSP(List<String> redirectUri) throws Exception {
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void registerApplicationTestWithDeleteCreatedSP(List<String> redirectUri, String roleAudience)
+            throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -739,6 +750,9 @@ public class DCRMServiceTest {
         String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
 
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
@@ -765,13 +779,13 @@ public class DCRMServiceTest {
         }
     }
 
-    @Test(dataProvider = "redirectUriProvider")
-    public void registerApplicationTestWithFailedToDeleteCreatedSP(List<String> redirectUri) throws Exception {
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void registerApplicationTestWithFailedToDeleteCreatedSP(List<String> redirectUri, String roleAudience)
+            throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        startTenantFlow();
 
         dummyGrantTypes.add(DCRConstants.GrantTypes.IMPLICIT);
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -779,6 +793,9 @@ public class DCRMServiceTest {
         String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
 
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
@@ -822,7 +839,6 @@ public class DCRMServiceTest {
         applicationRegistrationRequest.setRedirectUris(redirectUri);
 
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
@@ -830,8 +846,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_SP.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by registerApplication method");
     }
@@ -854,17 +868,20 @@ public class DCRMServiceTest {
         fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
-    @Test(dataProvider = "redirectUriProvider")
-    public void registerApplicationTestWithErrorCreataingSPTenantTest(List<String> redirectUri) throws Exception {
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void registerApplicationTestWithErrorCreataingSPTenantTest(List<String> redirectUri, String roleAudience)
+            throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
 
         ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);
         when(mockApplicationManagementService.getServiceProvider(dummyClientName, dummyTenantDomain))
@@ -917,7 +934,6 @@ public class DCRMServiceTest {
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService)
                 .removeOAuthApplicationData(oAuthConsumerApp.getOauthConsumerKey());
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
@@ -927,8 +943,6 @@ public class DCRMServiceTest {
             assertEquals(ex.getMessage(), "Error while deleting the OAuth application with consumer key: " +
                     oAuthConsumerApp.getOauthConsumerKey());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by registerApplication method");
     }
@@ -938,7 +952,6 @@ public class DCRMServiceTest {
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -976,24 +989,21 @@ public class DCRMServiceTest {
         return oAuthConsumerApp;
     }
 
-    @Test(dataProvider = "redirectUriProvider")
-    public void updateApplicationTest(List<String> redirectUri1) throws Exception {
+    @Test(dataProvider = "redirectUriAndRoleAudienceProvider")
+    public void updateApplicationTest(List<String> redirectUri1, String roleAudience) throws Exception {
 
         updateApplication();
         applicationUpdateRequest.setRedirectUris(redirectUri1);
-        try {
-            startTenantFlow();
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
-            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
-            when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
-            Application application = dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+        applicationUpdateRequest.setExtAllowedAudience(roleAudience);
 
-            assertEquals(application.getClientId(), dummyConsumerKey);
-            assertEquals(application.getClientName(), dummyClientName);
-            assertEquals(application.getClientSecret(), dummyConsumerSecret);
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
-        }
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
+        when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+        when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
+        Application application = dcrmService.updateApplication(applicationUpdateRequest, dummyConsumerKey);
+
+        assertEquals(application.getClientId(), dummyConsumerKey);
+        assertEquals(application.getClientName(), dummyClientName);
+        assertEquals(application.getClientSecret(), dummyConsumerSecret);
     }
 
     @Test
@@ -1004,7 +1014,6 @@ public class DCRMServiceTest {
                 .thenReturn(null);
 
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
@@ -1012,8 +1021,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_GET_SP.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException not thrown by updateApplication method");
     }
@@ -1026,7 +1033,6 @@ public class DCRMServiceTest {
         applicationUpdateRequest.setClientName(dummyInvalidClientName);
 
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
@@ -1034,8 +1040,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by updateApplication method");
     }
@@ -1043,7 +1047,6 @@ public class DCRMServiceTest {
     @Test
     public void updateApplicationTestWithSPAlreadyExist() throws Exception {
 
-        startTenantFlow();
         updateApplication();
         applicationUpdateRequest.setClientName("dummynewClientName");
 
@@ -1056,7 +1059,6 @@ public class DCRMServiceTest {
                 .thenReturn(serviceProvider);
 
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
@@ -1064,8 +1066,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.CONFLICT_EXISTING_APPLICATION.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by updateApplication method");
     }
@@ -1077,7 +1077,6 @@ public class DCRMServiceTest {
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService)
                 .updateConsumerApplication(dto);
         try {
-            startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
             when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
             when(mockedUserStoreManager.isUserInRole(anyString(), anyString())).thenReturn(true);
@@ -1085,8 +1084,6 @@ public class DCRMServiceTest {
         } catch (IdentityException ex) {
             assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION.toString());
             return;
-        } finally {
-            PrivilegedCarbonContext.endTenantFlow();
         }
         fail("Expected IdentityException was not thrown by updateApplication method");
     }
@@ -1095,7 +1092,6 @@ public class DCRMServiceTest {
             throws IdentityOAuthAdminException, IdentityApplicationManagementException, NoSuchFieldException,
             IllegalAccessException {
 
-        startTenantFlow();
         dummyGrantTypes.add("dummy1");
         dummyGrantTypes.add("dummy2");
         applicationUpdateRequest = new ApplicationUpdateRequest();
@@ -1148,19 +1144,20 @@ public class DCRMServiceTest {
         invalidCallbackList.add("https://wso2.com/?dummy1");
         invalidCallbackList.add("https://wso2.com/?dummy1=1&dummy=2");
         return new Object[][]{
-                {redirectUriList, validCallbackList, invalidCallbackList}
+                {redirectUriList, validCallbackList, invalidCallbackList, DCRConstants.APP_ROLE_AUDIENCE},
+                {redirectUriList, validCallbackList, invalidCallbackList, DCRConstants.ORG_ROLE_AUDIENCE}
         };
     }
 
     @Test(dataProvider = "redirectUriWithQueryParamsProvider")
     public void registerApplicationTestWithRedirectURls(List<String> redirectUri, List<String> validCallbackList,
-                                                        List<String> invalidCallbackList) throws Exception {
+                                                        List<String> invalidCallbackList, String roleAudience)
+            throws Exception {
 
         mockApplicationManagementService = mock(ApplicationManagementService.class);
 
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
-        startTenantFlow();
 
         dummyGrantTypes.add("implicit");
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
@@ -1168,6 +1165,9 @@ public class DCRMServiceTest {
         String grantType = StringUtils.join(applicationRegistrationRequest.getGrantTypes(), " ");
 
         ServiceProvider serviceProvider = new ServiceProvider();
+        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+        associatedRolesConfig.setAllowedAudience(roleAudience);
+        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
 
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
         dcrDataHolder.setApplicationManagementService(mockApplicationManagementService);

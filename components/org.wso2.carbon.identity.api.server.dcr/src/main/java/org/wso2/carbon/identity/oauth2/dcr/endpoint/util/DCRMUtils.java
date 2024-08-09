@@ -103,6 +103,7 @@ public class DCRMUtils {
         appRegistrationRequest.setSubjectType(registrationRequestDTO.getSubjectType());
         appRegistrationRequest.setSoftwareStatement(registrationRequestDTO.getSoftwareStatement());
         appRegistrationRequest.setAdditionalAttributes(registrationRequestDTO.getAdditionalAttributes());
+        appRegistrationRequest.setExtAllowedAudience(registrationRequestDTO.getExtAllowedAudience());
         return appRegistrationRequest;
 
     }
@@ -148,6 +149,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setSubjectType(updateRequestDTO.getSubjectType());
         applicationUpdateRequest.setSoftwareStatement(updateRequestDTO.getSoftwareStatement());
         applicationUpdateRequest.setAdditionalAttributes(updateRequestDTO.getAdditionalAttributes());
+        applicationUpdateRequest.setExtAllowedAudience(updateRequestDTO.getExtAllowedAudience());
         return applicationUpdateRequest;
     }
 
@@ -255,6 +257,7 @@ public class DCRMUtils {
         applicationDTO.setTlsClientCertificateBoundAccessToken(application.isTlsClientCertificateBoundAccessTokens());
         applicationDTO.setSoftwareStatement(application.getSoftwareStatement());
         applicationDTO.setAdditionalAttributes(application.getAdditionalAttributes());
+        applicationDTO.setExtAllowedAudience(application.getExtAllowedAudience());
         return applicationDTO;
     }
 

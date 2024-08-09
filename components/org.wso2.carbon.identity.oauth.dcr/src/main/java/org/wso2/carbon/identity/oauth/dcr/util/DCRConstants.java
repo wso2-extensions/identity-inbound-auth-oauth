@@ -36,6 +36,8 @@ public final class DCRConstants {
     // Regex for validating application name.
     public static final String APP_NAME_VALIDATING_REGEX = "^[a-zA-Z0-9._-]*$";
     public static final String UNSUPPORTED_CHARACTERS_IN_REGISTRY = "[\\\\/:*?\"`,~!@#$&;%^*()+=<{}>'|]";
+    public static final String ORG_ROLE_AUDIENCE = "organization";
+    public static final String APP_ROLE_AUDIENCE = "application";
 
     /**
      * Contains the constants related to DCR operations.
