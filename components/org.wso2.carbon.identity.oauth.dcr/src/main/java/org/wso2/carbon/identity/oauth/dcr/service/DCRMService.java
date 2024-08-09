@@ -710,7 +710,6 @@ public class DCRMService {
         if (OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER.equals(createdApp.getTokenBindingType())) {
             application.setTlsClientCertificateBoundAccessTokens(true);
         }
-//        application.setExtAllowedAudience(serviceProvider.getAssociatedRolesConfig().getAllowedAudience());
         return application;
     }
 
