@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.concurrent.TimeUnit;
@@ -236,7 +237,7 @@ public class AuthorizationGrantCache extends
      */
     private String replaceFromTokenId(String keyValue) {
         try {
-            return OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().getTokenIdByAccessToken(keyValue);
+            return OAuth2Util.findAccessToken(keyValue, false).getTokenId();
         } catch (IdentityOAuth2Exception e) {
             log.error("Failed to retrieve token id by token from store for - ." + keyValue, e);
         }
