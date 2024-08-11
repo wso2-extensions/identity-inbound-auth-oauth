@@ -83,6 +83,7 @@ public class ApplicationRegistrationRequest implements Serializable {
 
         return extAllowedAudience;
     }
+
     public void setExtAllowedAudience(String extAllowedAudience) {
 
         this.extAllowedAudience = extAllowedAudience;

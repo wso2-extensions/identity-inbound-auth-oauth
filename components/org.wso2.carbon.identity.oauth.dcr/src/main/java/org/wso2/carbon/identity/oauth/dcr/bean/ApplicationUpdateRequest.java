@@ -79,6 +79,7 @@ public class ApplicationUpdateRequest implements Serializable {
 
         return extAllowedAudience;
     }
+
     public void setExtAllowedAudience(String extAllowedAudience) {
 
         this.extAllowedAudience = extAllowedAudience;
