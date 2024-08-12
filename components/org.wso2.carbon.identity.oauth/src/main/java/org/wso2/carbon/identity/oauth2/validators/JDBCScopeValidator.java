@@ -430,7 +430,6 @@ public class JDBCScopeValidator extends OAuth2ScopeValidator {
             }
             rolesOfScope.retainAll(userRolesLowercase);
         }
-        rolesOfScope.retainAll(Arrays.asList(userRoles));
 
         if (rolesOfScope.isEmpty()) {
             // when the role is an internal one, check if the user has valid role
