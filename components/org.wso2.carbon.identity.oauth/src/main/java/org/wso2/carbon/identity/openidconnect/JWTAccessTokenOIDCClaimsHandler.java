@@ -85,8 +85,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder builder, OAuthAuthzReqMessageContext request)
             throws IdentityOAuth2Exception {
 
-        // TODO : Handle claims for consent
-        // TODO : Evalute for hybrid flow
+        // TODO : Implement this method for implicit flow and hybrid flow.
         return builder.build();
     }
 

@@ -2840,9 +2840,7 @@ public class OAuthAdminServiceImpl {
                     }
                 }
             }
-            if (!jwtAccessTokenClaims.isEmpty()) {
-                oauthApp.setAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
-            }
+            oauthApp.setAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while updating existing OAuth application to the new" +
                     "JWT access token OIDC claims separation model. Application : " + oauthApp.getApplicationName()

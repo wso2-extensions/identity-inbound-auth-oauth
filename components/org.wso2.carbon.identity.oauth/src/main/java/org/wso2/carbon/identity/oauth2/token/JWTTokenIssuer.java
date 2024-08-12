@@ -939,17 +939,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private CustomClaimsCallbackHandler getCustomClaimsCallbackHandler(OAuthAppDO oAuthAppDO) {
 
-        CustomClaimsCallbackHandler claimsCallBackHandler;
         // If JWT access token OIDC claims separation is enabled and the application is configured to separate OIDC
         // claims, use the JWTAccessTokenOIDCClaimsHandler to handle custom claims.
         if (isAccessTokenClaimsSeparationFeatureEnabled() &&
                 oAuthAppDO.isAccessTokenClaimsSeparationEnabled()) {
-            claimsCallBackHandler = OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
-        } else {
-            claimsCallBackHandler = OAuthServerConfiguration.getInstance()
-                    .getOpenIDConnectCustomClaimsCallbackHandler();
+            return OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
         }
-        return claimsCallBackHandler;
+        return OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
     }
 
     private boolean isUserAccessTokenType(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
