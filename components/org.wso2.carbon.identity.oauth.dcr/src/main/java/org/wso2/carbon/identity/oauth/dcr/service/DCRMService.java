@@ -614,9 +614,9 @@ public class DCRMService {
 
         if (StringUtils.isNotEmpty(registrationRequest.getExtAllowedAudience()) &&
                 registrationRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)) {
-        AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
-        associatedRolesConfig.setAllowedAudience(registrationRequest.getExtAllowedAudience().toLowerCase());
-        serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+            AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+            associatedRolesConfig.setAllowedAudience(registrationRequest.getExtAllowedAudience().toLowerCase());
+            serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
         }
         OAuthConsumerAppDTO createdApp;
         try {
