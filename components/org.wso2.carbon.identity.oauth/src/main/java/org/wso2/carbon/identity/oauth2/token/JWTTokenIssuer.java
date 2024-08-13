@@ -621,8 +621,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens.
         // But we are keeping this in JWT as well.
-        jwtClaimsSetBuilder.audience(tokenReqMessageContext != null ? tokenReqMessageContext.getAudiences() :
-                OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
+        jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
+                tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
 
         JWTClaimsSet jwtClaimsSet;
 
