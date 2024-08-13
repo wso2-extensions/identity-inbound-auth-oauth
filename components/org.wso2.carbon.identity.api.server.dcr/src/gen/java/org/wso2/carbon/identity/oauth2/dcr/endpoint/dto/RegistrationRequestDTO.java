@@ -64,6 +64,7 @@ public class RegistrationRequestDTO  {
   private String requestObjectEncryptionMethod = null;
   private String softwareStatement = null;
   private final Map<String, Object> additionalAttributes = new HashMap<>();
+  private String extAllowedAudience;
 
   @ApiModelProperty(required = true)
   @JsonProperty("redirect_uris")
@@ -487,6 +488,15 @@ public class RegistrationRequestDTO  {
     return additionalAttributes;
   }
 
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_allowed_audience")
+  public String getExtAllowedAudience() {
+    return extAllowedAudience;
+  }
+  public void setExtAllowedAudience(String extAllowedAudience) {
+    this.extAllowedAudience = extAllowedAudience;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -534,6 +544,7 @@ public class RegistrationRequestDTO  {
     sb.append(" request_object_encryption_alg: ").append(requestObjectEncryptionAlgorithm).append("\n");
     sb.append(" request_object_encryption_enc").append(requestObjectEncryptionMethod).append("\n");
     sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
+    sb.append("  extAllowedAudience: ").append(extAllowedAudience).append("\n");
     sb.append("}\n");
     return sb.toString();
   }
