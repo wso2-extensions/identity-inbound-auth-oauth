@@ -105,6 +105,8 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
@@ -421,6 +423,23 @@ public class OAuthAdminServiceImpl {
                         app.setTokenBindingValidationEnabled(application.isTokenBindingValidationEnabled());
                         app.setTokenRevocationWithIDPSessionTerminationEnabled(
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
+                        /* If the value is not sent at the request, set the default value for new apps, this ensures
+                        for new apps, the USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS property is never null. */
+                        if (application.isUseClientIdAsSubClaimForAppTokens() != null) {
+                            app.setUseClientIdAsSubClaimForAppTokens(application.isUseClientIdAsSubClaimForAppTokens());
+                        } else {
+                            app.setUseClientIdAsSubClaimForAppTokens(
+                                    USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE);
+                        }
+                        /* If the value is not sent at the request, set the default value for new apps, this ensures
+                        for new apps, the OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN property is never null. */
+                        if (application.isOmitUsernameInIntrospectionRespForAppTokens() != null) {
+                            app.setOmitUsernameInIntrospectionRespForAppTokens(
+                                    application.isOmitUsernameInIntrospectionRespForAppTokens());
+                        } else {
+                            app.setOmitUsernameInIntrospectionRespForAppTokens(
+                                    OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE);
+                        }
                         String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
                             if (isFAPIConformanceEnabled) {
@@ -852,7 +871,9 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setTokenRevocationWithIDPSessionTerminationEnabled(consumerAppDTO
                     .isTokenRevocationWithIDPSessionTerminationEnabled());
             oAuthAppDO.setTokenBindingValidationEnabled(consumerAppDTO.isTokenBindingValidationEnabled());
-
+            oAuthAppDO.setUseClientIdAsSubClaimForAppTokens(consumerAppDTO.isUseClientIdAsSubClaimForAppTokens());
+            oAuthAppDO.setOmitUsernameInIntrospectionRespForAppTokens(
+                    consumerAppDTO.isOmitUsernameInIntrospectionRespForAppTokens());
             String tokenEndpointAuthMethod = consumerAppDTO.getTokenEndpointAuthMethod();
             if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
                 if (isFAPIConformanceEnabled) {

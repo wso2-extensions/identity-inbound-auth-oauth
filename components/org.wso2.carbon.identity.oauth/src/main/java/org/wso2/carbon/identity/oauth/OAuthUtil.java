@@ -547,6 +547,8 @@ public final class OAuthUtil {
         dto.setTokenRevocationWithIDPSessionTerminationEnabled(appDO
                 .isTokenRevocationWithIDPSessionTerminationEnabled());
         dto.setTokenBindingValidationEnabled(appDO.isTokenBindingValidationEnabled());
+        dto.setUseClientIdAsSubClaimForAppTokens(appDO.isUseClientIdAsSubClaimForAppTokens());
+        dto.setOmitUsernameInIntrospectionRespForAppTokens(appDO.isOmitUsernameInIntrospectionRespForAppTokens());
         dto.setTokenEndpointAuthMethod(appDO.getTokenEndpointAuthMethod());
         dto.setTokenEndpointAllowReusePvtKeyJwt(appDO.isTokenEndpointAllowReusePvtKeyJwt());
         dto.setTokenEndpointAuthSignatureAlgorithm(appDO.getTokenEndpointAuthSignatureAlgorithm());
