@@ -69,6 +69,7 @@ public class ApplicationRegistrationRequest implements Serializable {
     private Map<String, Object> additionalAttributes;
     private Boolean useClientIdAsSubClaimForAppTokens;
     private Boolean omitUsernameInIntrospectionRespForAppTokens;
+    private String extAllowedAudience;
 
     public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
 
@@ -78,6 +79,16 @@ public class ApplicationRegistrationRequest implements Serializable {
     public Map<String, Object> getAdditionalAttributes() {
 
         return additionalAttributes;
+    }
+
+    public String getExtAllowedAudience() {
+
+        return extAllowedAudience;
+    }
+
+    public void setExtAllowedAudience(String extAllowedAudience) {
+
+        this.extAllowedAudience = extAllowedAudience;
     }
 
     public String getJwksURI() {

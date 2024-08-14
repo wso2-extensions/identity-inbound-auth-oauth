@@ -83,6 +83,7 @@ public class ApplicationDTO  {
     private String requestObjectEncryptionMethod = null;
     private String softwareStatement = null;
     private  Map<String, Object> additionalAttributes;
+    private String extAllowedAudience;
 
   /**
    **/
@@ -473,6 +474,15 @@ public class ApplicationDTO  {
     return additionalAttributes;
   }
 
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_allowed_audience")
+  public String getExtAllowedAudience() {
+    return extAllowedAudience;
+  }
+  public void setExtAllowedAudience(String extAllowedAudience) {
+    this.extAllowedAudience = extAllowedAudience;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -512,6 +522,7 @@ public class ApplicationDTO  {
     sb.append("  requestObjectEncryptionMethod: ").append(requestObjectEncryptionMethod).append("\n");
     sb.append("  softwareStatement: ").append(softwareStatement).append("\n");
     sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
+    sb.append("  extAllowedAudience: ").append(extAllowedAudience).append("\n");
         
     sb.append("}\n");
     return sb.toString();
