@@ -64,6 +64,8 @@ public class ApplicationDTO  {
 
 
     private String jwksUri = null;
+    private Boolean useClientIdAsSubClaimForAppTokens;
+    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private String tokenEndpointAuthMethod = null;
     private Boolean tokenEndpointAllowReusePvtKeyJwt = null;
     private String tokenEndpointAuthSigningAlg = null;
@@ -285,6 +287,30 @@ public class ApplicationDTO  {
     }
 
   @ApiModelProperty(value = "")
+  @JsonProperty("use_client_id_as_sub_claim_for_app_tokens")
+  public Boolean isUseClientIdAsSubClaimForAppTokens() {
+
+    return useClientIdAsSubClaimForAppTokens;
+  }
+
+  public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
+
+    this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("omit_username_in_introspection_resp_for_app_tokens")
+  public Boolean isOmitUsernameInIntrospectionRespForAppTokens() {
+
+    return omitUsernameInIntrospectionRespForAppTokens;
+  }
+
+  public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
+
+    this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
+  }
+
+  @ApiModelProperty(value = "")
   @JsonProperty("token_endpoint_auth_method")
   public String getTokenEndpointAuthMethod() {
     return tokenEndpointAuthMethod;
@@ -467,6 +493,9 @@ public class ApplicationDTO  {
     sb.append("  extPkceSupportPlain: ").append(extPkceSupportPlain).append("\n");
     sb.append("  extPublicClient: ").append(extPublicClient).append("\n");
     sb.append("  jwksUri: ").append(jwksUri).append("\n");
+    sb.append("  useClientIdAsSubClaimForAppTokens: ").append(useClientIdAsSubClaimForAppTokens).append("\n");
+    sb.append("  omitUsernameInIntrospectionRespForAppTokens: ")
+            .append(omitUsernameInIntrospectionRespForAppTokens).append("\n");
     sb.append("  tokenEndpointAuthMethod: ").append(tokenEndpointAuthMethod).append("\n");
     sb.append("  tokenEndpointAuthSigningAlg: ").append(tokenEndpointAuthSigningAlg).append("\n");
     sb.append("  sectorIdentifierUri: ").append(sectorIdentifierUri).append("\n");
