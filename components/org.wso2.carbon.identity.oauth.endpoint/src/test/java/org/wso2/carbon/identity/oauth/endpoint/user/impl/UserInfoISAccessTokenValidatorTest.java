@@ -30,13 +30,16 @@ import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Scanner;
+import java.io.InputStream;
 
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -54,7 +57,6 @@ public class UserInfoISAccessTokenValidatorTest {
     private final String token = "ZWx1c3VhcmlvOnlsYWNsYXZl";
     private final String basicAuthHeader = "Bearer " + token;
     private static String contentTypeHeaderValue = "application/x-www-form-urlencoded";
-    private Scanner scanner;
 
     @BeforeClass
     public void setup() {
@@ -143,5 +145,44 @@ public class UserInfoISAccessTokenValidatorTest {
 
         when(httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(authorization);
         lenient().when(httpServletRequest.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn(contentType);
+    }
+
+    @DataProvider
+    public Object[][] requestBody() {
+
+        return new Object[][]{{contentTypeHeaderValue, "", null}, {contentTypeHeaderValue, null, null},
+                {contentTypeHeaderValue, "access_token=" + token, token},
+                {contentTypeHeaderValue, "access_token=" + token + "&someOtherParam=value", token},
+                {contentTypeHeaderValue, "otherParam=value2&access_token=" + token + "&someOtherParam=value", token}};
+    }
+
+    @Test(dataProvider = "requestBody")
+    public void testValidateTokenWithRequestBodySuccess(String contentType, String requestBody, String expected)
+            throws Exception {
+
+        String token = testValidateTokenWithRequestBody(contentType, requestBody, true);
+        assertEquals(token, expected, "Expected token did not receive");
+    }
+
+    private String testValidateTokenWithRequestBody(String contentType, String requestBody, boolean mockScanner)
+            throws Exception {
+
+        prepareHttpServletRequest(null, contentType);
+        if (mockScanner) {
+            ServletInputStream inputStream = new ServletInputStream() {
+                private InputStream stream =
+                        new ByteArrayInputStream(requestBody == null ? "".getBytes() : requestBody.getBytes());
+
+                @Override
+                public int read() throws IOException {
+
+                    return stream.read();
+                }
+            };
+            doReturn(inputStream).when(httpServletRequest).getInputStream();
+        } else {
+            when(httpServletRequest.getInputStream()).thenThrow(new IOException());
+        }
+        return userInforRequestDefaultValidator.validateRequest(httpServletRequest);
     }
 }
