@@ -95,6 +95,7 @@ public class ApplicationUpdateRequest implements Serializable {
     public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
 
         this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
+    }
 
     public String getExtAllowedAudience() {
 
