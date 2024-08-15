@@ -232,6 +232,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      */
     private List<String> getAccessTokenClaims(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
         OAuthAppDO oAuthAppDO;
+
         try {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
             String[] claimsArray = oAuthAppDO.getAccessTokenClaims();
