@@ -93,14 +93,4 @@ public interface OpenIDConnectClaimFilter {
      */
     Map<String, Object> getClaimsFilteredByEssentialClaims(Map<String, Object> userClaims,
                                                            List<RequestedClaim> requestParamClaims);
-
-    /**
-     * Handle special OIDC claims formatting
-     *
-     * @param userClaims   User claims
-     * @param tenantDomain tenant domain
-     */
-    default void handleClaimsFormatting(Map<String, Object> userClaims, String tenantDomain) {
-        // Default implementation is to do nothing.
-    }
 }

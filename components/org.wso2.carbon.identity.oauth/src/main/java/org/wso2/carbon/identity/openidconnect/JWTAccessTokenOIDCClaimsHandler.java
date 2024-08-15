@@ -32,10 +32,13 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -63,7 +66,6 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     private static final Log log = LogFactory.getLog(JWTAccessTokenOIDCClaimsHandler.class);
 
     private static final String OAUTH2 = "oauth2";
-    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     @Override
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder builder, OAuthTokenReqMessageContext request)
@@ -77,8 +79,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         if (claims == null || claims.isEmpty()) {
             return builder.build();
         }
-        handleClaimsFormat(claims, spTenantDomain);
-        return setClaimsToJwtClaimSet(builder, claims);
+        Map<String, Object> filteredClaims = handleClaimsFormat(claims, clientId, spTenantDomain);
+        return setClaimsToJwtClaimSet(builder, filteredClaims);
     }
 
     @Override
@@ -156,7 +158,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
 
         try {
             return ClaimMetadataHandler.getInstance()
-                    .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false);
+                    .getMappingsMapFromOtherDialectToCarbon(OAuthConstants.OIDC_DIALECT, null,
+                            tenantDomain, false);
         } catch (ClaimMetadataException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving OIDC to Local claim mappings.", e);
         }
@@ -248,10 +251,14 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      * @param userClaims   User claims.
      * @param tenantDomain Tenant Domain.
      */
-    private void handleClaimsFormat(Map<String, Object> userClaims, String tenantDomain) {
+    private Map<String, Object> handleClaimsFormat(Map<String, Object> userClaims, String clientId,
+                                                   String tenantDomain) throws IdentityOAuth2Exception {
 
-        OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityOpenIDConnectClaimFilter()
-                .handleClaimsFormatting(userClaims, tenantDomain);
+        List<String> registeredScopes = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO()
+                .getScopeNames(IdentityTenantUtil.getTenantId(tenantDomain));
+        return OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityOpenIDConnectClaimFilter()
+                .getClaimsFilteredByOIDCScopes(userClaims, registeredScopes.toArray(new String[0]),
+                        clientId, tenantDomain);
     }
 
     /**
@@ -264,6 +271,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      */
     private ServiceProvider getServiceProvider(String spTenantDomain,
                                                String clientId) throws IdentityApplicationManagementException {
+
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
         String spName = applicationMgtService.getServiceProviderNameByClientId(clientId, OAUTH2, spTenantDomain);
 
@@ -281,6 +289,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
      * @return Tenant domain of the service provider.
      */
     private String getServiceProviderTenantDomain(OAuthTokenReqMessageContext requestMsgCtx) {
+
         String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
         // There are certain flows where tenant domain is not added as a message context property.
         if (spTenantDomain == null) {

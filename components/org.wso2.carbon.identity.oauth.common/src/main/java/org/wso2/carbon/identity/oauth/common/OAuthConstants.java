@@ -287,6 +287,7 @@ public final class OAuthConstants {
     public static final String ADDITIONAL_ATTRIBUTE_FILTER = "OAuth.DCRM.AdditionalAttributeFilter";
     public static final String ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN =
             "OAuth.OpenIDConnect.EnableClaimsSeparationForAccessToken";
+    public static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private OAuthConstants() {
 
@@ -644,7 +645,6 @@ public final class OAuthConstants {
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
         public static final String IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED =
                 "isAccessTokenClaimsSeparationEnabled";
-        public static final boolean IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE = true;
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.

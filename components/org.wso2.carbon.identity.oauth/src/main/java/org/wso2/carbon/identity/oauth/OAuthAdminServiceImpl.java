@@ -110,7 +110,7 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
@@ -129,7 +129,6 @@ public class OAuthAdminServiceImpl {
     static final String RESPONSE_TYPE_ID_TOKEN = "id_token";
     static final String BINDING_TYPE_NONE = "None";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
-    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
     static List<String> allowedGrants = null;
     static String[] allowedScopeValidators = null;
 
@@ -234,7 +233,7 @@ public class OAuthAdminServiceImpl {
             if (app != null) {
                 if (isAccessTokenClaimsSeparationFeatureEnabled() &&
                         !app.isAccessTokenClaimsSeparationEnabled()) {
-                    // Add requested claims as access token claims if the app is not  in the new jwt access token
+                    // Add requested claims as access token claims if the app is not in the new access token
                     // claims feature.
                     addAccessTokenClaims(app, tenantDomain);
                 }
@@ -537,8 +536,7 @@ public class OAuthAdminServiceImpl {
                         if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                             validateAccessTokenClaims(application, tenantDomain);
                             app.setAccessTokenClaims(application.getAccessTokenClaims());
-                            app.setAccessTokenClaimsSeparationEnabled(
-                                    IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED_DEFAULT_VALUE);
+                            app.setAccessTokenClaimsSeparationEnabled(true);
                         }
                     }
                     dao.addOAuthApplication(app);
@@ -2855,7 +2853,7 @@ public class OAuthAdminServiceImpl {
      * @return OIDC to Local claim mappings
      * @throws IdentityOAuth2Exception if an error occurs while retrieving OIDC to Local claim mappings
      */
-    public Map<String, String> getOIDCToLocalClaimMappings(String tenantDomain) throws IdentityOAuth2Exception {
+    private Map<String, String> getOIDCToLocalClaimMappings(String tenantDomain) throws IdentityOAuth2Exception {
 
         try {
             return ClaimMetadataHandler.getInstance()

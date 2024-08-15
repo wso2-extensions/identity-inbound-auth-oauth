@@ -229,16 +229,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
         return userClaims;
     }
 
-    @Override
-    public void handleClaimsFormatting(Map<String, Object> userClaims, String tenantDomain) {
-
-        handleAddressClaim(userClaims, tenantDomain);
-        handleRolesClaim(userClaims);
-        handleUpdateAtClaim(userClaims);
-        handlePhoneNumberVerifiedClaim(userClaims);
-        handleEmailVerifiedClaim(userClaims);
-    }
-
     /**
      * Handles filtering the fields of address claim from the user consented claims.
      * https://openid.net/specs/openid-connect-core-1_0.html#AddressClaim
@@ -431,33 +421,6 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                 jsonObject.put(addressScopeClaimEntry.getKey(), addressScopeClaimEntry.getValue());
             }
             returnedClaims.put(ADDRESS, jsonObject);
-        }
-    }
-
-    private void handleAddressClaim(Map<String, Object> userClaims, String tenantDomain) {
-
-        Map<String, List<String>> scopeClaimsMap = getOIDCScopeClaimMap(tenantDomain);
-        List<String> addressScopeClaimUris = getAddressScopeClaimUris(scopeClaimsMap);
-        Map<String, Object> addressScopeClaims = new HashMap<>();
-        for (String scopeClaim : addressScopeClaimUris) {
-            String oidcClaimUri = removeAddressPrefix(scopeClaim);
-            // Check whether the user claims contain the permitted claim uri
-            if (userClaims.containsKey(oidcClaimUri)) {
-                Object claimValue = userClaims.get(oidcClaimUri);
-                userClaims.remove(oidcClaimUri);
-                addressScopeClaims.put(oidcClaimUri, claimValue);
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("No valid user claim value found for the claimUri:" + oidcClaimUri);
-                }
-            }
-        }
-        if (MapUtils.isNotEmpty(addressScopeClaims)) {
-            final JSONObject jsonObject = new JSONObject();
-            for (Map.Entry<String, Object> addressScopeClaimEntry : addressScopeClaims.entrySet()) {
-                jsonObject.put(addressScopeClaimEntry.getKey(), addressScopeClaimEntry.getValue());
-            }
-            userClaims.put(ADDRESS, jsonObject);
         }
     }
 
