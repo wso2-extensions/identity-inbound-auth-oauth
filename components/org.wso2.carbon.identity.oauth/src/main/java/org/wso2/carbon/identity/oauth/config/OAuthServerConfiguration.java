@@ -3793,7 +3793,7 @@ public class OAuthServerConfiguration {
                         jwtAccessTokenOIDCClaimsHandler =
                                 (CustomClaimsCallbackHandler) clazz.newInstance();
                     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-                        log.error("Error while instantiating the IDTokenBuilder ", e);
+                        log.error("Error while instantiating the JWTAccessTokenOIDCClaimsHandler ", e);
                     }
                 }
             }
