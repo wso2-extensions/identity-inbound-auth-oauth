@@ -26,7 +26,6 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfig;
 import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoJWTResponse;
 import org.wso2.carbon.identity.oauth.user.UserInfoAccessTokenValidator;
@@ -35,19 +34,14 @@ import org.wso2.carbon.identity.oauth.user.UserInfoRequestValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 
-import java.util.List;
-import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
@@ -68,7 +62,6 @@ public class OpenIDConnectUserEndpoint {
 
     @GET
     @Path("/")
-    @Consumes("application/x-www-form-urlencoded")
     public Response getUserClaims(@Context HttpServletRequest request) throws OAuthSystemException {
 
         String userInfoResponse;
@@ -107,12 +100,11 @@ public class OpenIDConnectUserEndpoint {
 
     @POST
     @Path("/")
-    @Consumes("application/x-www-form-urlencoded")
     @Produces("application/json")
-    public Response getUserClaimsPost(@Context HttpServletRequest request, MultivaluedMap<String, String> paramMap)
+    public Response getUserClaimsPost(@Context HttpServletRequest request)
             throws OAuthSystemException {
 
-        return getUserClaims(new OAuthRequestWrapper(request, (Map<String, List<String>>) paramMap));
+        return getUserClaims(request);
     }
 
     private ResponseBuilder getResponseBuilderWithCacheControlHeaders() {
