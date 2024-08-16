@@ -732,6 +732,11 @@
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -810,7 +815,26 @@
                                 <artifactId>findsecbugs-plugin</artifactId>
                                 <version>${findsecbugs-plugin.version}</version>
                             </plugin>
-                        </plugins>
+                            <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
                     </configuration>
                     <executions>
                         <execution>
@@ -818,6 +842,25 @@
                             <phase>compile</phase>
                             <goals>
                                 <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
                             </goals>
                         </execution>
                     </executions>
@@ -1049,6 +1092,8 @@
 
         <!--Identity Apps-->
         <authentication.portal.version>1.0.51</authentication.portal.version>
+    
+        <jacoco.version>0.8.12</jacoco.version>
     </properties>
 
 </project>
