@@ -27,9 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
-import org.wso2.carbon.identity.application.authentication.framework.handler.approles.ApplicationRolesResolver;
-import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -38,9 +35,6 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
-import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -48,7 +42,6 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -67,14 +60,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
-import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -83,8 +71,6 @@ import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.APP_ROLES_CLAIM;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.GROUPS_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
@@ -100,7 +86,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
     private static final Log log = LogFactory.getLog(DefaultOIDCClaimsCallbackHandler.class);
     private static final String OAUTH2 = "oauth2";
-    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     @Override
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder, OAuthTokenReqMessageContext
@@ -609,8 +594,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
         return claims;
     }
 
-    private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain,
-                                                           String clientId,
+    private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain, String clientId,
                                                            AuthenticatedUser authenticatedUser)
             throws IdentityApplicationManagementException, IdentityException, UserStoreException,
             OrganizationManagementException {
@@ -632,129 +616,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
             return userClaimsMappedToOIDCDialect;
         }
-        String fullQualifiedUsername = authenticatedUser.toFullQualifiedUsername();
-        String userTenantDomain = authenticatedUser.getTenantDomain();
-        String userResidentTenantDomain = userTenantDomain;
-        String userAccessingTenantDomain = userTenantDomain;
-        if (StringUtils.isNotEmpty(authenticatedUser.getUserResidentOrganization())) {
-            userResidentTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                    .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-        }
-        /* For B2B users, the resident organization is available to find the tenant where the user's identity is
-        managed. Hence, the correct tenant domain should be used to fetch user claims. */
-        if (!StringUtils.equals(userTenantDomain, userResidentTenantDomain)) {
-            String userId = authenticatedUser.getUserId();
-            if (authenticatedUser.isFederatedUser()) {
-                userId = resolveUserIdForOrganizationSsoUser(authenticatedUser);
-            }
-            AbstractUserStoreManager userStoreManager =
-                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
-                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(userResidentTenantDomain))
-                            .getUserStoreManager();
-            userTenantDomain = userResidentTenantDomain;
-            fullQualifiedUsername = userStoreManager.getUser(userId, null)
-                    .getFullQualifiedUsername();
-        }
-
-        UserRealm realm = IdentityTenantUtil.getRealm(userTenantDomain, fullQualifiedUsername);
-        if (realm == null) {
-            log.warn("Invalid tenant domain: " + userTenantDomain + " provided. Cannot get claims for user: "
-                    + fullQualifiedUsername);
-            return userClaimsMappedToOIDCDialect;
-        }
-
         List<String> requestedClaimUris = getRequestedClaimUris(requestClaimMappings);
         // Improve runtime claim value storage in cache through https://github.com/wso2/product-is/issues/15056
         requestedClaimUris.removeIf(claim -> claim.startsWith("http://wso2.org/claims/runtime/"));
-
-        boolean roleClaimRequested = false;
-        String rolesClaimURI = IdentityUtil.getLocalGroupsClaimURI();
-        if (requestedClaimUris.contains(rolesClaimURI) && !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
-            requestedClaimUris.remove(rolesClaimURI);
-            roleClaimRequested = true;
-        }
-        boolean appRoleClaimRequested = false;
-        if (requestedClaimUris.contains(APP_ROLES_CLAIM)) {
-            requestedClaimUris.remove(APP_ROLES_CLAIM);
-            appRoleClaimRequested = true;
-        }
-        Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, requestedClaimUris);
-
-        if (roleClaimRequested || appRoleClaimRequested) {
-            String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(authenticatedUser,
-                    serviceProvider.getApplicationResourceId());
-            if (roleClaimRequested) {
-                setRoleClaimInLocalDialect(userClaims, appAssocatedRolesOfUser);
-            }
-            if (appRoleClaimRequested) {
-                setAppRoleClaimInLocalDialect(userClaims, appAssocatedRolesOfUser);
-            }
-        }
-
-        /*
-        If the application requested for groups and a shared user is accessing a shared org of that user,
-        get the groups of the shared user from the shared organization.
-        */
-        if (!CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
-                requestedClaimUris.contains(GROUPS_CLAIM) &&
-                isSharedUserAccessingSharedOrg(authenticatedUser) &&
-                StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
-            addSharedUserGroupsFromSharedOrganization(authenticatedUser, userClaims);
-        }
-
-        if (isEmpty(userClaims)) {
-            // User claims can be empty if user does not exist in user stores. Probably a federated user.
-            if (log.isDebugEnabled()) {
-                log.debug("No claims found for " + fullQualifiedUsername + " from user store.");
-            }
-            return userClaimsMappedToOIDCDialect;
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Number of user claims retrieved for " + fullQualifiedUsername + " from user store: " +
-                        userClaims.size());
-            }
-            // Map the local roles to SP defined roles.
-            handleServiceProviderRoleMappings(serviceProvider, FrameworkUtils.getMultiAttributeSeparator(),
-                    userClaims);
-
-            // Get the user claims in oidc dialect to be returned in the id_token.
-            Map<String, Object> userClaimsInOIDCDialect = getUserClaimsInOIDCDialect(spTenantDomain, userClaims);
-            userClaimsMappedToOIDCDialect.putAll(userClaimsInOIDCDialect);
-        }
-
-        return userClaimsMappedToOIDCDialect;
-    }
-
-    private void addSharedUserGroupsFromSharedOrganization(AuthenticatedUser authenticatedUser,
-                                                           Map<String, String> userClaims) throws
-            OrganizationManagementException, UserStoreException, IdentityException {
-
-        String userAccessingTenantDomain;
-        List<String> requestedClaimForSharedUser = new ArrayList<>();
-        requestedClaimForSharedUser.add(GROUPS_CLAIM);
-        // Getting the accessing tenant domain to get the userstore manager of the shared organization.
-        userAccessingTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                .resolveTenantDomain(authenticatedUser.getAccessingOrganization());
-        AbstractUserStoreManager userStoreManager =
-                (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
-                        .getTenantUserRealm(IdentityTenantUtil.getTenantId(userAccessingTenantDomain))
-                        .getUserStoreManager();
-        String fullQualifiedSharedUsername = userStoreManager.getUser(authenticatedUser.getSharedUserId(), null)
-                .getFullQualifiedUsername();
-        UserRealm sharedUserRealm = IdentityTenantUtil.getRealm(userAccessingTenantDomain,
-                fullQualifiedSharedUsername);
-        // Getting the shared user's group claim from the shared organization.
-        Map<String, String> sharedUserGroupClaim = getUserClaimsInLocalDialect(fullQualifiedSharedUsername,
-                sharedUserRealm, requestedClaimForSharedUser);
-        userClaims.put(GROUPS_CLAIM, sharedUserGroupClaim.get(GROUPS_CLAIM));
-    }
-
-    private boolean isSharedUserAccessingSharedOrg(AuthenticatedUser authenticatedUser) {
-
-        return StringUtils.isNotEmpty(authenticatedUser.getUserSharedOrganizationId()) &&
-                StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization()) &&
-                StringUtils.equals(authenticatedUser.getUserSharedOrganizationId(),
-                        authenticatedUser.getAccessingOrganization());
+        return OIDCClaimUtil.getUserClaimsInOIDCDialect(serviceProvider, authenticatedUser, requestedClaimUris);
     }
 
     private ClaimMapping[] getRequestedClaimMappings(ServiceProvider serviceProvider) {
@@ -762,28 +627,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             return new ClaimMapping[0];
         }
         return serviceProvider.getClaimConfig().getClaimMappings();
-    }
-
-    private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain,
-                                                           Map<String, String> userClaims)
-            throws ClaimMetadataException {
-        // Retrieve OIDC to Local Claim Mappings.
-        Map<String, String> oidcToLocalClaimMappings = ClaimMetadataHandler.getInstance()
-                .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, spTenantDomain, false);
-        // Get user claims in OIDC dialect.
-        return getUserClaimsInOidcDialect(oidcToLocalClaimMappings, userClaims);
-    }
-
-    private Map<String, String> getUserClaimsInLocalDialect(String username,
-                                                            UserRealm realm,
-                                                            List<String> claimURIList)
-            throws UserStoreException {
-
-        return realm.getUserStoreManager()
-                .getUserClaimValues(
-                        MultitenantUtils.getTenantAwareUsername(username),
-                        claimURIList.toArray(new String[claimURIList.size()]),
-                        null);
     }
 
     /**
@@ -807,88 +650,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
 
         return StringUtils.equals(requestMsgCtx.getOauth2AccessTokenReqDTO().getGrantType(),
                 OAuthConstants.GrantTypes.ORGANIZATION_SWITCH);
-    }
-
-    /**
-     * Resolve the userId of the organization SSO user from username.
-     *
-     * @param authenticatedUser authorized user from the token request.
-     * @return the userId of the organization SSO user from username.
-     */
-    private String resolveUserIdForOrganizationSsoUser(AuthenticatedUser authenticatedUser) {
-
-        String userName = MultitenantUtils.getTenantAwareUsername(authenticatedUser.getUserName());
-        return UserCoreUtil.removeDomainFromName(userName);
-    }
-
-    /**
-     * Get app associated roles of the user.
-     *
-     * @param authenticatedUser Authenticated user.
-     * @param applicationId     Application id.
-     * @return App associated roles of the user.
-     * @throws ApplicationRolesException If an error occurred while getting app associated roles.
-     */
-    private String[] getAppAssociatedRolesOfUser(AuthenticatedUser authenticatedUser, String applicationId) throws
-            ApplicationRolesException {
-
-        ApplicationRolesResolver appRolesResolver =
-                OpenIDConnectServiceComponentHolder.getInstance().getHighestPriorityApplicationRolesResolver();
-        if (appRolesResolver == null) {
-            log.debug("No application roles resolver found. So not adding application roles claim to the id_token.");
-            return new String[0];
-        }
-        return appRolesResolver.getRoles(authenticatedUser, applicationId);
-    }
-
-    /**
-     * Set the roles claim for local user.
-     *
-     * @param userClaims         User claims in local dialect.
-     * @param appAssociatedRoles App associated roles of the user.
-     */
-    private void setRoleClaimInLocalDialect(Map<String, String> userClaims, String[] appAssociatedRoles) {
-
-        String rolesClaimURI = IdentityUtil.getLocalGroupsClaimURI();
-        if (ArrayUtils.isNotEmpty(appAssociatedRoles)) {
-            userClaims.put(rolesClaimURI,
-                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appAssociatedRoles));
-        }
-    }
-
-    /**
-     * Set the application roles claim for local user.
-     *
-     * @param userClaims         User claims in local dialect.
-     * @param appAssociatedRoles App associated roles of the user.
-     */
-    private void setAppRoleClaimInLocalDialect(Map<String, String> userClaims, String[] appAssociatedRoles) {
-
-        if (ArrayUtils.isNotEmpty(appAssociatedRoles)) {
-            userClaims.put(APP_ROLES_CLAIM,
-                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appAssociatedRoles));
-        }
-    }
-
-    private void handleServiceProviderRoleMappings(ServiceProvider serviceProvider, String claimSeparator,
-                                                   Map<String, String> userClaims) throws FrameworkException {
-        for (String roleGroupClaimURI : IdentityUtil.getRoleGroupClaims()) {
-            handleSPRoleMapping(serviceProvider, claimSeparator, userClaims, roleGroupClaimURI);
-        }
-    }
-
-    private void handleSPRoleMapping(ServiceProvider serviceProvider, String claimSeparator, Map<String, String>
-            userClaims, String roleGroupClaimURI) throws FrameworkException {
-
-        if (isNotEmpty(userClaims) && userClaims.containsKey(roleGroupClaimURI)) {
-            String roleClaim = userClaims.get(roleGroupClaimURI);
-            if (StringUtils.isNotBlank(roleClaim)) {
-                List<String> rolesList = Arrays.asList(roleClaim.split(Pattern.quote(claimSeparator)));
-                String spMappedRoleClaim =
-                        OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider, rolesList, claimSeparator);
-                userClaims.put(roleGroupClaimURI, spMappedRoleClaim);
-            }
-        }
     }
 
     private String getServiceProviderTenantDomain(OAuthTokenReqMessageContext requestMsgCtx) {
@@ -928,35 +689,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             log.debug("Retrieving service provider for clientId: " + clientId + " in tenantDomain: " + spTenantDomain);
         }
         return applicationMgtService.getApplicationExcludingFileBasedSPs(spName, spTenantDomain);
-    }
-
-    /**
-     * Get user claims in OIDC claim dialect.
-     *
-     * @param oidcToLocalClaimMappings OIDC dialect to Local dialect claim mappings
-     * @param userClaims               User claims in local dialect
-     * @return Map of user claim values in OIDC dialect.
-     */
-    private Map<String, Object> getUserClaimsInOidcDialect(Map<String, String> oidcToLocalClaimMappings,
-                                                           Map<String, String> userClaims) {
-
-        Map<String, Object> userClaimsInOidcDialect = new HashMap<>();
-        if (isNotEmpty(userClaims)) {
-            // Map<"email", "http://wso2.org/claims/emailaddress">
-            for (Map.Entry<String, String> claimMapping : oidcToLocalClaimMappings.entrySet()) {
-                String claimValue = userClaims.get(claimMapping.getValue());
-                if (claimValue != null) {
-                    String oidcClaimUri = claimMapping.getKey();
-                    userClaimsInOidcDialect.put(oidcClaimUri, claimValue);
-                    if (log.isDebugEnabled() &&
-                            IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
-                        log.debug("Mapped claim: key - " + oidcClaimUri + " value - " + claimValue);
-                    }
-                }
-            }
-        }
-
-        return userClaimsInOidcDialect;
     }
 
     /**

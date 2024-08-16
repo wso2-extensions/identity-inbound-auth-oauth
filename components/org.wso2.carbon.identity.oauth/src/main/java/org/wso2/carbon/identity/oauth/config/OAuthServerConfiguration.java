@@ -237,11 +237,14 @@ public class OAuthServerConfiguration {
     public static final String DEFAULT_OAUTH_AUTHZ_REQUEST_CLASSNAME = CarbonOAuthAuthzRequest.class.getName();
     private String openIDConnectIDTokenCustomClaimsHanlderClassName =
             "org.wso2.carbon.identity.openidconnect.SAMLAssertionClaimsCallback";
+    private String jwtAccessTokenOIDCClaimsHandlerClassName =
+            "org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler";
     private IDTokenBuilder openIDConnectIDTokenBuilder = null;
     private Map<String, String> requestObjectBuilderClassNames = new HashMap<>();
     private volatile RequestObjectValidator requestObjectValidator = null;
     private volatile RequestObjectValidator cibaRequestObjectValidator = null;
     private CustomClaimsCallbackHandler openidConnectIDTokenCustomClaimsCallbackHandler = null;
+    private CustomClaimsCallbackHandler jwtAccessTokenOIDCClaimsHandler = null;
     private String openIDConnectIDTokenIssuerIdentifier = null;
     private String openIDConnectIDTokenSubClaim = "http://wso2.org/claims/fullname";
     private Boolean openIDConnectSkipUserConsent = true;
@@ -3772,6 +3775,30 @@ public class OAuthServerConfiguration {
     public String getScopeMetadataExtensionImpl() {
 
         return scopeMetadataExtensionImpl;
+    }
+
+    /**
+     * Get JWTAccessTokenOIDCClaimsHandler
+     *
+     * @return JWTAccessTokenOIDCClaimsHandler
+     */
+    public CustomClaimsCallbackHandler getJWTAccessTokenOIDCClaimsHandler() {
+        if (jwtAccessTokenOIDCClaimsHandler == null) {
+            synchronized (CustomClaimsCallbackHandler.class) {
+                if (jwtAccessTokenOIDCClaimsHandler == null) {
+                    try {
+                        Class clazz =
+                                Thread.currentThread().getContextClassLoader()
+                                        .loadClass(jwtAccessTokenOIDCClaimsHandlerClassName);
+                        jwtAccessTokenOIDCClaimsHandler =
+                                (CustomClaimsCallbackHandler) clazz.newInstance();
+                    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                        log.error("Error while instantiating the JWTAccessTokenOIDCClaimsHandler ", e);
+                    }
+                }
+            }
+        }
+        return jwtAccessTokenOIDCClaimsHandler;
     }
 
     /**
