@@ -766,8 +766,6 @@ public class JWTTokenIssuerTest {
 
         when(mockOAuthServerConfiguration.getOpenIDConnectCustomClaimsCallbackHandler()).
                 thenReturn(claimsCallBackHandler);
-        when(mockOAuthServerConfiguration.getJWTAccessTokenOIDCClaimsHandler()).
-                thenReturn(claimsCallBackHandler);
 
     }
 

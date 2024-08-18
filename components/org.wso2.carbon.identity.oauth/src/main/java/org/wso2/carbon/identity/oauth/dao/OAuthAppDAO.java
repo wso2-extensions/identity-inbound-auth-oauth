@@ -75,7 +75,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
@@ -85,7 +84,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -214,7 +212,6 @@ public class OAuthAppDAO {
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
-                    addAccessTokenClaims(connection, appId, consumerAppDO.getAccessTokenClaims());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
                     addServiceProviderOIDCProperties(connection, consumerAppDO, processedClientId, spTenantId);
                     IdentityDatabaseUtil.commitTransaction(connection);
@@ -481,7 +478,6 @@ public class OAuthAppDAO {
                             String spTenantDomain = authenticatedUser.getTenantDomain();
                             handleSpOIDCProperties(connection, preprocessedClientId, spTenantDomain, oauthApp);
                             oauthApp.setScopeValidators(getScopeValidators(connection, oauthApp.getId()));
-                            oauthApp.setAccessTokenClaims(getAccessTokenClaims(connection, oauthApp.getId()));
                         }
                     }
 
@@ -780,7 +776,6 @@ public class OAuthAppDAO {
                 }
                 int count = prepStmt.executeUpdate();
                 updateScopeValidators(connection, oauthAppDO.getId(), oauthAppDO.getScopeValidators());
-                updateAccessTokenClaims(connection, oauthAppDO.getId(), oauthAppDO.getAccessTokenClaims());
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("No. of records updated for updating consumer application. : " + count);
                 }
@@ -1043,13 +1038,6 @@ public class OAuthAppDAO {
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-
-        if (isAccessTokenClaimsSeparationFeatureEnabled()) {
-            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                    IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED,
-                    String.valueOf(oauthAppDO.isAccessTokenClaimsSeparationEnabled()),
-                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-        }
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
@@ -1552,81 +1540,6 @@ public class OAuthAppDAO {
     }
 
     /**
-     * Update access token claims.
-     *
-     * @param connection Same db connection used in OAuth creation.
-     * @param appId             Consumer app id.
-     * @param accessTokenClaims List of JWT access token claims.
-     * @throws SQLException Sql error.
-     */
-    private void updateAccessTokenClaims(Connection connection, int appId, String[] accessTokenClaims)
-            throws SQLException {
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Removing access token claims for OAuth consumer appId %s", appId));
-        }
-        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                .REMOVE_ACCESS_TOKEN_CLAIMS)) {
-            stmt.setInt(1, appId);
-            stmt.execute();
-        }
-        addAccessTokenClaims(connection, appId, accessTokenClaims);
-    }
-
-    /**
-     * Add access token claims.
-     *
-     * @param connection        Same db connection used in OAuth creation.
-     * @param appId             Consumer app id.
-     * @param accessTokenClaims List of JWT access token claims.
-     * @throws SQLException Sql error.
-     */
-    private void addAccessTokenClaims(Connection connection, int appId, String[] accessTokenClaims)
-            throws SQLException {
-
-        if (accessTokenClaims != null && accessTokenClaims.length > 0) {
-            LOG.debug(String.format("Adding %s access token claims registered for OAuth appId %s",
-                    accessTokenClaims.length, appId));
-            try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                    .INSERT_ACCESS_TOKEN_CLAIMS)) {
-                for (String claim : accessTokenClaims) {
-                    stmt.setInt(1, appId);
-                    stmt.setString(2, claim);
-                    stmt.addBatch();
-                }
-                stmt.executeBatch();
-            }
-        }
-    }
-
-    /**
-     * Get access token claims.
-     *
-     * @param connection DB connection.
-     * @param appId      Consumer app id.
-     * @return list of Access Token Claims.
-     * @throws SQLException Sql error.
-     */
-    private String[] getAccessTokenClaims(Connection connection, int appId) throws SQLException {
-
-        List<String> claims = new ArrayList<>();
-        try (PreparedStatement stmt = connection.prepareStatement(SQLQueries.OAuthAppDAOSQLQueries
-                .GET_ACCESS_TOKEN_CLAIMS)) {
-            stmt.setInt(1, appId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    claims.add(rs.getString(1));
-                }
-            }
-        }
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Retrieving %d access token claims registered for OAuth appId %s",
-                    claims.size(), appId));
-        }
-        return claims.toArray(new String[0]);
-    }
-
-    /**
      * Get the application id using the client id.
      *
      * @param connection Same db connection used in OAuth creation.
@@ -1778,12 +1691,6 @@ public class OAuthAppDAO {
             }
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
-
-            if (isAccessTokenClaimsSeparationFeatureEnabled()) {
-                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                        IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED,
-                        String.valueOf(consumerAppDO.isAccessTokenClaimsSeparationEnabled()));
-            }
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     HYBRID_FLOW_ENABLED,
@@ -1965,13 +1872,6 @@ public class OAuthAppDAO {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
         }
 
-        String isAccessTokenClaimsSeparationEnabled = getFirstPropertyValue(spOIDCProperties,
-                IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED);
-        if (isAccessTokenClaimsSeparationEnabled != null) {
-            oauthApp.setAccessTokenClaimsSeparationEnabled(
-                    Boolean.parseBoolean(isAccessTokenClaimsSeparationEnabled));
-        }
-
         boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
                 HYBRID_FLOW_ENABLED));
         oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
@@ -2079,10 +1979,5 @@ public class OAuthAppDAO {
             throw new IdentityOAuth2Exception("Error occurred while checking if given tenant with id: " + tenantId +
                     " is a root organization.", e);
         }
-    }
-
-    private boolean isAccessTokenClaimsSeparationFeatureEnabled() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
     }
 }

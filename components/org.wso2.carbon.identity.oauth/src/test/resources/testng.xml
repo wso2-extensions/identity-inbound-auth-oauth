@@ -118,7 +118,6 @@
             <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
             <!--<class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>-->
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
-            <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
             <class name="org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProviderTest"/>
@@ -194,7 +193,6 @@
             <class name="org.wso2.carbon.identity.oauth2.util.OAuth2UtilTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilderTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
-            <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
         </classes>
