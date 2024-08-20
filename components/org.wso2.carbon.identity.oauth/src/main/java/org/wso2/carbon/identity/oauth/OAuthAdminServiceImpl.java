@@ -109,9 +109,9 @@ import static org.wso2.carbon.identity.oauth.Error.INVALID_REQUEST;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_SUBJECT_TYPE_UPDATE;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
@@ -221,7 +221,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Get OAuth application data by the consumer key and tenant domain.
      *
-     * @param consumerKey Consumer Key
+     * @param consumerKey  Consumer Key
      * @param tenantDomain Tenant domain
      * @return <code>OAuthConsumerAppDTO</code> with application information
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
@@ -343,8 +343,8 @@ public class OAuthAdminServiceImpl {
              */
             if (defaultAppOwner == null) {
                 if (LOG.isDebugEnabled()) {
-                        LOG.debug("No authenticated user found. Setting tenant admin as the owner for app : " +
-                                application.getApplicationName());
+                    LOG.debug("No authenticated user found. Setting tenant admin as the owner for app : " +
+                            application.getApplicationName());
                 }
                 String adminUsername = application.getUsername();
                 defaultAppOwner = buildAuthenticatedUser(adminUsername, tenantDomain);
@@ -474,7 +474,7 @@ public class OAuthAdminServiceImpl {
                                 validateFAPISignatureAlgorithms(tokenEndpointAuthSigningAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(tokenEndpointAuthSigningAlgorithm,
-                                      OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
+                                        OAuthConstants.TOKEN_EP_SIGNATURE_ALG_CONFIGURATION);
                             }
                             app.setTokenEndpointAuthSignatureAlgorithm(tokenEndpointAuthSigningAlgorithm);
                         }
@@ -514,7 +514,7 @@ public class OAuthAdminServiceImpl {
                                 validateFAPISignatureAlgorithms(idTokenSignatureAlgorithm);
                             } else {
                                 filterSignatureAlgorithms(idTokenSignatureAlgorithm,
-                                       OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
+                                        OAuthConstants.ID_TOKEN_SIGNATURE_ALG_CONFIGURATION);
                             }
                             app.setIdTokenSignatureAlgorithm(idTokenSignatureAlgorithm);
                         }
@@ -611,7 +611,6 @@ public class OAuthAdminServiceImpl {
         oAuthConsumerAppDTO.setAuditLogData(oidcDataMap);
         return oAuthConsumerAppDTO;
     }
-
 
     private Optional<AuthenticatedUser> getLoggedInUser(String tenantDomain) {
 
@@ -717,6 +716,7 @@ public class OAuthAdminServiceImpl {
     /**
      * FAPI validation to restrict the token binding type to ensure MTLS sender constrained access tokens.
      * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server
+     *
      * @param bindingType Token binding type.
      * @throws IdentityOAuthClientException if binding type is not 'certificate'.
      */
@@ -1496,7 +1496,6 @@ public class OAuthAdminServiceImpl {
         Properties properties = new Properties();
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_DELETED);
 
-
         Set<AccessTokenDO> activeDetailedTokens;
         try {
             activeDetailedTokens = OAuthTokenPersistenceFactory
@@ -1638,7 +1637,7 @@ public class OAuthAdminServiceImpl {
                     try {
                         scopedToken = OAuthTokenPersistenceFactory.getInstance().
                                 getAccessTokenDAO().getLatestAccessToken(clientId, loggedInUser, userStoreDomain,
-                                scopeString, true);
+                                        scopeString, true);
                         if (scopedToken != null && !distinctClientUserScopeCombo.contains(clientId + ":" + username)) {
                             OAuthAppDO appDO = getOAuthAppDO(scopedToken.getConsumerKey(), tenantDomain);
                             if (LOG.isDebugEnabled()) {
@@ -2284,7 +2283,6 @@ public class OAuthAdminServiceImpl {
         return requestedScopeValidators;
     }
 
-
     /**
      * Get the IdToken Encryption Method registered by the user and filter the allowed one.
      *
@@ -2574,7 +2572,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Return whether the request of updating the tokenEndpointAllowReusePvtKeyJwt is valid.
      *
-     * @param tokenEndpointAuthMethod     token endpoint client authentication method.
+     * @param tokenEndpointAuthMethod          token endpoint client authentication method.
      * @param tokenEndpointAllowReusePvtKeyJwt During client authentication whether to reuse private key JWT.
      * @return True if tokenEndpointAuthMethod and tokenEndpointAllowReusePvtKeyJwt is NOT in the correct format.
      */
@@ -2592,6 +2590,7 @@ public class OAuthAdminServiceImpl {
     /**
      * FAPI validation to restrict the token endpoint authentication methods.
      * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server (5.2.2 - 14)
+     *
      * @param authenticationMethod authentication methid used to authenticate to the token endpoint
      * @throws IdentityOAuthClientException
      */
@@ -2607,6 +2606,7 @@ public class OAuthAdminServiceImpl {
     /**
      * FAPI validation to restrict the signature algorithms.
      * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations
+     *
      * @param signatureAlgorithm signature algorithm used to sign the assertions.
      * @throws IdentityOAuthClientException
      */
@@ -2623,6 +2623,7 @@ public class OAuthAdminServiceImpl {
     /**
      * FAPI validation to restrict the encryption algorithms.
      * Link - https://openid.net/specs/openid-financial-api-part-2-1_0.html#encryption-algorithm-considerations
+     *
      * @param encryptionAlgorithm
      * @throws IdentityOAuthClientException
      */
@@ -2634,11 +2635,11 @@ public class OAuthAdminServiceImpl {
         }
     }
 
-
     /**
      * If there are multiple hostnames in the registered redirect_uris,
      * the Client MUST register a sector_identifier_uri.
      * https://openid.net/specs/openid-connect-core-1_0.html#PairwiseAlg
+     *
      * @param redirectURIs list of callback urls sent in the request
      * @throws IdentityOAuthClientException
      */
@@ -2700,7 +2701,8 @@ public class OAuthAdminServiceImpl {
 
     /**
      * Get call back URIs as a list
-     * @param application  OAuthConsumerAppDTO
+     *
+     * @param application OAuthConsumerAppDTO
      * @return list of callback urls
      */
     private List<String> getRedirectURIList(OAuthConsumerAppDTO application) {
@@ -2760,14 +2762,14 @@ public class OAuthAdminServiceImpl {
             authorizedUser = detailToken.getAuthzUser().getUserId();
         } catch (UserIdNotFoundException e) {
             /*
-            * This fall back mechanism is added to support the token deletion process of the token exchange grant type.
-            * When a token is issued from the token exchange grant type, the username for the token is set from the
-            * `sub` property of the JWT token. This `sub` property of the JWT claim can be any value. When deleting
-            * those access tokens while deleting the applications, it tried to resolve the user to remove the cache.
-            * In that case, the user id extraction is failing because the user is searched from the username claim
-            * by adding the `sub` value of the user. To prevent that, the authorized user will be extracted from the
-            * subject identifier of the issued token.
-            */
+             * This fall back mechanism is added to support the token deletion process of the token exchange grant type.
+             * When a token is issued from the token exchange grant type, the username for the token is set from the
+             * `sub` property of the JWT token. This `sub` property of the JWT claim can be any value. When deleting
+             * those access tokens while deleting the applications, it tried to resolve the user to remove the cache.
+             * In that case, the user id extraction is failing because the user is searched from the username claim
+             * by adding the `sub` value of the user. To prevent that, the authorized user will be extracted from the
+             * subject identifier of the issued token.
+             */
             if (detailToken.getAuthzUser().getAuthenticatedSubjectIdentifier() != null) {
                 authorizedUser = detailToken.getAuthzUser().getAuthenticatedSubjectIdentifier();
             } else {
