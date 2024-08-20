@@ -866,19 +866,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             throws IdentityOAuth2Exception {
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
-            Map<String, Object> customClaims = tokenReqMessageContext.getAdditionalAccessTokenClaims();
-
-            if (customClaims != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Pre issue access token actions are executed. " +
-                                    "Returning the customized claim set from actions. Claims: " +
-                                    customClaims.keySet());
-                }
-
-                customClaims.forEach(jwtClaimsSetBuilder::claim);
-            }
-
-            return jwtClaimsSetBuilder.build();
+            return handleCustomClaimsInPreIssueAccessTokenResponse(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
         if (tokenReqMessageContext != null &&
@@ -899,6 +887,10 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                                               OAuthTokenReqMessageContext tokenReqMessageContext, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
+        if (tokenReqMessageContext != null && tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
+            return handleCustomClaimsInPreIssueAccessTokenResponse(jwtClaimsSetBuilder, tokenReqMessageContext);
+        }
+
         if (tokenReqMessageContext != null &&
                 tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
                 StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
@@ -911,6 +903,24 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         CustomClaimsCallbackHandler claimsCallBackHandler = getCustomClaimsCallbackHandler(oAuthAppDO);
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+    }
+
+    private JWTClaimsSet handleCustomClaimsInPreIssueAccessTokenResponse(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                                                         OAuthTokenReqMessageContext
+                                                                                 tokenReqMessageContext) {
+
+        Map<String, Object> customClaims = tokenReqMessageContext.getAdditionalAccessTokenClaims();
+
+        if (customClaims != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Pre issue access token actions are executed. " +
+                        "Returning the customized claim set from actions. Claims: " + customClaims.keySet());
+            }
+
+            customClaims.forEach(jwtClaimsSetBuilder::claim);
+        }
+
+        return jwtClaimsSetBuilder.build();
     }
 
     /**
