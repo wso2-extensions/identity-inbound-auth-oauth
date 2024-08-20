@@ -33,12 +33,16 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -107,6 +111,8 @@ import static org.wso2.carbon.identity.oauth.OAuthUtil.handleError;
 import static org.wso2.carbon.identity.oauth.OAuthUtil.handleErrorWithExceptionType;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_DELETED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.PRIVATE_KEY_JWT;
@@ -227,6 +233,12 @@ public class OAuthAdminServiceImpl {
         try {
             OAuthAppDO app = getOAuthApp(consumerKey, tenantDomain);
             if (app != null) {
+                if (isAccessTokenClaimsSeparationFeatureEnabled() &&
+                        !app.isAccessTokenClaimsSeparationEnabled()) {
+                    // Add requested claims as access token claims if the app is not in the new access token
+                    // claims feature.
+                    addAccessTokenClaims(app, tenantDomain);
+                }
                 dto = OAuthUtil.buildConsumerAppDTO(app);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Found App :" + dto.getApplicationName() + " for consumerKey: " + consumerKey);
@@ -540,6 +552,11 @@ public class OAuthAdminServiceImpl {
                         app.setFapiConformanceEnabled(application.isFapiConformanceEnabled());
                         app.setSubjectTokenEnabled(application.isSubjectTokenEnabled());
                         app.setSubjectTokenExpiryTime(application.getSubjectTokenExpiryTime());
+                        if (isAccessTokenClaimsSeparationFeatureEnabled()) {
+                            validateAccessTokenClaims(application, tenantDomain);
+                            app.setAccessTokenClaims(application.getAccessTokenClaims());
+                            app.setAccessTokenClaimsSeparationEnabled(true);
+                        }
                     }
                     dao.addOAuthApplication(app);
                     if (ApplicationConstants.CONSOLE_APPLICATION_NAME.equals(app.getApplicationName())) {
@@ -976,7 +993,33 @@ public class OAuthAdminServiceImpl {
             oAuthAppDO.setRequestObjectEncryptionMethod(requestObjectEncryptionMethod);
             oAuthAppDO.setRequirePushedAuthorizationRequests(consumerAppDTO.getRequirePushedAuthorizationRequests());
             oAuthAppDO.setSubjectTokenEnabled(consumerAppDTO.isSubjectTokenEnabled());
-            oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());;
+            oAuthAppDO.setSubjectTokenExpiryTime(consumerAppDTO.getSubjectTokenExpiryTime());
+
+            if (isAccessTokenClaimsSeparationFeatureEnabled()) {
+                // We check if the AT claims separation enabled at server level and
+                // the app level. If both are enabled, we validate the claims and update the app.
+                if (oAuthAppDO.isAccessTokenClaimsSeparationEnabled()) {
+                    validateAccessTokenClaims(consumerAppDTO, tenantDomain);
+                    oAuthAppDO.setAccessTokenClaims(consumerAppDTO.getAccessTokenClaims());
+                }
+                // We only trigger the access token claims migration if the following conditions are met.
+                // 1. The AT claims separation is enabled at server level.
+                // 2. The AT claims separation is not enabled at app level.
+                // 3. User tries to enable AT claims separation at app level with update app.
+                if (!oAuthAppDO.isAccessTokenClaimsSeparationEnabled() &&
+                        consumerAppDTO.isAccessTokenClaimsSeparationEnabled()) {
+                    // Add requested claims as access token claims.
+                    try {
+                        addAccessTokenClaims(oAuthAppDO, tenantDomain);
+                    } catch (IdentityOAuth2Exception e) {
+                        throw new IdentityOAuthAdminException("Error while updating existing OAuth application to " +
+                                "the new JWT access token OIDC claims separation model. Application : " +
+                                oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
+                    }
+                }
+                oAuthAppDO.setAccessTokenClaimsSeparationEnabled(consumerAppDTO
+                        .isAccessTokenClaimsSeparationEnabled());
+            }
         }
         dao.updateConsumerApplication(oAuthAppDO);
         AppInfoCache.getInstance().addToCache(oAuthAppDO.getOauthConsumerKey(), oAuthAppDO, tenantDomain);
@@ -2756,5 +2799,93 @@ public class OAuthAdminServiceImpl {
         for (AccessTokenDO detailToken : activeDetailedTokens) {
             clearTokensFromCache(consumerKey, detailToken, detailToken.getAccessToken());
         }
+    }
+
+    /**
+     * validate access token claims.
+     *
+     * @param consumerAppDTO OAuthConsumerAppDTO
+     * @param tenantDomain   tenant domain
+     * @throws IdentityOAuthAdminException if the claim is invalid
+     */
+    private void validateAccessTokenClaims(OAuthConsumerAppDTO consumerAppDTO, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        if (consumerAppDTO.getAccessTokenClaims() != null) {
+            Map<String, String> oidcToLocalClaimMappings;
+            try {
+                oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
+                for (String claimURI : consumerAppDTO.getAccessTokenClaims()) {
+                    if (!oidcToLocalClaimMappings.containsKey(claimURI)) {
+                        throw handleClientError(INVALID_REQUEST, "Invalid access token claim URI: "
+                                + claimURI);
+                    }
+                }
+            } catch (IdentityOAuth2Exception e) {
+                throw handleError("Error while retrieving OIDC to Local claim mappings for " +
+                        "access token claims validation.", e);
+            }
+        }
+    }
+
+    /**
+     * Adding requested claims in service provider as access token claims to the OAuthAppDO.
+     *
+     * @param oauthApp     OAuthAppDO
+     * @param tenantDomain tenant domain
+     * @throws IdentityOAuth2Exception if an error occurs while adding access token claims
+     */
+    private void addAccessTokenClaims(OAuthAppDO oauthApp, String tenantDomain) throws
+            IdentityOAuth2Exception {
+
+        ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder
+                .getApplicationMgtService();
+        try {
+            List<String> jwtAccessTokenClaims = new ArrayList<>();
+            ServiceProvider serviceProvider = applicationMgtService.getServiceProvider(oauthApp.getApplicationName(),
+                    tenantDomain);
+            if (serviceProvider != null) {
+                ClaimMapping[] claimMappings = serviceProvider.getClaimConfig().getClaimMappings();
+                if (claimMappings != null && claimMappings.length > 0) {
+                    Map<String, String> oidcToLocalClaimMappings = getOIDCToLocalClaimMappings(tenantDomain);
+                    for (ClaimMapping claimMapping : claimMappings) {
+                        if (claimMapping.isRequested()) {
+                            for (Map.Entry<String, String> entry : oidcToLocalClaimMappings.entrySet()) {
+                                if (entry.getValue().equals(claimMapping.getLocalClaim().getClaimUri())) {
+                                    jwtAccessTokenClaims.add(entry.getKey());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            oauthApp.setAccessTokenClaims(jwtAccessTokenClaims.toArray(new String[0]));
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while updating existing OAuth application to the new" +
+                    "JWT access token OIDC claims separation model. Application : " + oauthApp.getApplicationName()
+                    + " Tenant : " + tenantDomain, e);
+        }
+    }
+
+    /**
+     * Get OIDC to Local claim mappings.
+     *
+     * @param tenantDomain tenant domain
+     * @return OIDC to Local claim mappings
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving OIDC to Local claim mappings
+     */
+    private Map<String, String> getOIDCToLocalClaimMappings(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return ClaimMetadataHandler.getInstance()
+                    .getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null, tenantDomain, false);
+        } catch (ClaimMetadataException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OIDC to Local claim mappings.", e);
+        }
+    }
+
+    private boolean isAccessTokenClaimsSeparationFeatureEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
     }
 }

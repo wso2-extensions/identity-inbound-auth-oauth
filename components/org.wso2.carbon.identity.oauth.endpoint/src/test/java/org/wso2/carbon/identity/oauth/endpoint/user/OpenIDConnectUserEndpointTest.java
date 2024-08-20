@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.lang.reflect.Method;
-import java.util.Enumeration;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -169,21 +168,7 @@ public class OpenIDConnectUserEndpointTest {
             assertEquals(metadataValue2, "[no-cache]", "Values are not equal");
             assertNotNull(response);
             assertEquals(response.getEntity().toString(), authResponse, "Response values are not same");
-
-            when(httpServletRequest.getParameterNames()).thenReturn(new Enumeration<String>() {
-                @Override
-                public boolean hasMoreElements() {
-
-                    return false;
-                }
-
-                @Override
-                public String nextElement() {
-
-                    return null;
-                }
-            });
-            openIDConnectUserEndpoint.getUserClaimsPost(httpServletRequest, paramMap);
+            openIDConnectUserEndpoint.getUserClaimsPost(httpServletRequest);
         }
     }
 

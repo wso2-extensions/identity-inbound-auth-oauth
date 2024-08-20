@@ -97,6 +97,8 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean fapiConformanceEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private String[] accessTokenClaims;
+    private boolean accessTokenClaimsSeparationEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -545,5 +547,25 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setSubjectTokenExpiryTime(int subjectTokenExpiryTime) {
 
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
+    }
+
+    public String[] getAccessTokenClaims() {
+
+        return accessTokenClaims;
+    }
+
+    public void setAccessTokenClaims(String[] accessTokenClaims) {
+
+        this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public boolean isAccessTokenClaimsSeparationEnabled() {
+
+        return accessTokenClaimsSeparationEnabled;
+    }
+
+    public void setAccessTokenClaimsSeparationEnabled(boolean accessTokenClaimsSeparationEnabled) {
+
+        this.accessTokenClaimsSeparationEnabled = accessTokenClaimsSeparationEnabled;
     }
 }

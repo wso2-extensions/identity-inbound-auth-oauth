@@ -227,6 +227,15 @@ public class SQLQueries {
                         "AND cons.constraint_type = 'U' GROUP BY c.constraint_name " +
                         "HAVING COUNT(DISTINCT c.column_name) = 1 AND MAX(c.column_name) = ?";
 
+        public static final String GET_ACCESS_TOKEN_CLAIMS = "SELECT CLAIM_URI FROM IDN_OAUTH2_TOKEN_CLAIMS " +
+                "WHERE APP_ID=? ";
+
+        public static final String REMOVE_ACCESS_TOKEN_CLAIMS = "DELETE FROM IDN_OAUTH2_TOKEN_CLAIMS " +
+                "WHERE APP_ID=?";
+
+        public static final String INSERT_ACCESS_TOKEN_CLAIMS = "INSERT INTO IDN_OAUTH2_TOKEN_CLAIMS " +
+                "(APP_ID, CLAIM_URI) VALUES (?,?) ";
+
         private OAuthAppDAOSQLQueries() {
         }
     }

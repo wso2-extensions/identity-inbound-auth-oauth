@@ -5529,7 +5529,7 @@ public class OAuth2Util {
         // Set authorized user tenant domain to the tenant domain of the application.
         authenticatedUser.setTenantDomain(appTenantDomain);
     }
-
+  
     public static boolean isPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
