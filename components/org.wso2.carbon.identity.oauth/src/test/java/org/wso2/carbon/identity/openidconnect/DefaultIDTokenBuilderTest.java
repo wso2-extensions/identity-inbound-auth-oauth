@@ -51,18 +51,22 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
@@ -97,7 +101,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.servlet.http.HttpServletRequestWrapper;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
@@ -165,6 +171,20 @@ public class DefaultIDTokenBuilderTest {
                 .put(SAML2BearerGrantHandlerTest.buildClaimMapping(PHONE_NUMBER_VERIFIED), "phone");
         LinkedHashSet acrValuesHashSet = new LinkedHashSet<>();
         acrValuesHashSet.add(new Object());
+
+        OAuthServerConfiguration.getInstance().populateOAuthTokenIssuerMap();
+
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setConsumerKey(CLIENT_ID);
+        accessTokenDO.setAuthzUser(user);
+        accessTokenDO.setScope(new String[]{"openid"});
+        accessTokenDO.setAccessToken(ACCESS_TOKEN);
+
+        AccessTokenDAO accessTokenDAO = mock(AccessTokenDAO.class);
+        setPrivateField(OAuthTokenPersistenceFactory.getInstance(), "tokenDAO", accessTokenDAO);
+        when(accessTokenDAO.getAccessToken(eq(AUTHORIZATION_CODE_VALUE), anyBoolean())).thenReturn(null);
+        when(accessTokenDAO.getAccessToken(eq(ACCESS_TOKEN), anyBoolean())).thenReturn(accessTokenDO);
+
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new AuthorizationGrantCacheEntry(userAttributes);
         authorizationGrantCacheEntry.setSubjectClaim(messageContext.getAuthorizedUser().getUserName());
         authorizationGrantCacheEntry.setNonceValue("nonce");
