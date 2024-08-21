@@ -31,10 +31,13 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -502,8 +505,9 @@ public class TokenValidationHandler {
             }
 
         } else {
+            String tenantDomain;
             try {
-                String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed
@@ -567,9 +571,11 @@ public class TokenValidationHandler {
             }
 
             String tokenType = accessTokenDO.getTokenType();
-            boolean removeUsernameFromAppTokenEnabled = OAuthServerConfiguration.getInstance()
+            boolean removeUsernameFromAppTokenEnabledServerConfig = OAuthServerConfiguration.getInstance()
                     .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
+            boolean removeUsernameFromAppTokenEnabledAppConfig =
+                    isOmitUsernameInIntrospectionRespForAppTokens(accessTokenDO, tenantDomain);
 
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
@@ -578,7 +584,8 @@ public class TokenValidationHandler {
             // token scopes
             introResp.setScope(OAuth2Util.buildScopeString((accessTokenDO.getScope())));
             // set user-name
-            if (!removeUsernameFromAppTokenEnabled || !isAppTokenType) {
+            if (!(removeUsernameFromAppTokenEnabledServerConfig && removeUsernameFromAppTokenEnabledAppConfig)
+                    || !isAppTokenType) {
                 introResp.setUsername(getAuthzUser(accessTokenDO));
             }
             // add client id
@@ -669,6 +676,23 @@ public class TokenValidationHandler {
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
+    }
+
+    private static boolean isOmitUsernameInIntrospectionRespForAppTokens(AccessTokenDO accessTokenDO,
+                                                                         String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        OAuthAdminServiceImpl oAuthAdminService = OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
+        boolean omitUsernameInIntrospectionRespForAppTokens;
+        try {
+            OAuthConsumerAppDTO oAuthApp = oAuthAdminService.getOAuthApplicationData(accessTokenDO.getConsumerKey(),
+                    tenantDomain);
+            omitUsernameInIntrospectionRespForAppTokens = oAuthApp.isOmitUsernameInIntrospectionRespForAppTokens();
+        } catch (Exception e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id:" +
+                    accessTokenDO.getConsumerKey(), e);
+        }
+        return omitUsernameInIntrospectionRespForAppTokens;
     }
 
     private String getAuthzUser(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {

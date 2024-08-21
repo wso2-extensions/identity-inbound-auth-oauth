@@ -60,6 +60,8 @@ public class ApplicationUpdateRequest implements Serializable {
     private boolean tlsClientCertificateBoundAccessTokens;
     private boolean requireSignedRequestObject;
     private String subjectType;
+    private Boolean useClientIdAsSubClaimForAppTokens;
+    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private Map<String, Object> additionalAttributes;
@@ -73,6 +75,26 @@ public class ApplicationUpdateRequest implements Serializable {
     public Map<String, Object> getAdditionalAttributes() {
 
         return additionalAttributes;
+    }
+
+    public Boolean getUseClientIdAsSubClaimForAppTokens() {
+
+        return useClientIdAsSubClaimForAppTokens;
+    }
+
+    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
+
+        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
+    }
+
+    public Boolean getOmitUsernameInIntrospectionRespForAppTokens() {
+
+        return omitUsernameInIntrospectionRespForAppTokens;
+    }
+
+    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
+
+        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
     }
 
     public String getExtAllowedAudience() {

@@ -459,7 +459,8 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled) {
+                if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled
+                        && oAuthAppDO.isUseClientIdAsSubClaimForAppTokens()) {
                     authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
                 } else {
                     authorizedUser.setAuthenticatedSubjectIdentifier(

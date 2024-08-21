@@ -44,9 +44,11 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -81,6 +83,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -92,6 +95,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.SUB_ORG_START_LEVEL;
@@ -138,7 +142,12 @@ public class TokenValidationHandlerTest {
     private IdentityProvider identityProvider;
     @Mock
     private FederatedAuthenticatorConfig federatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
-
+    @Mock
+    OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
+    @Mock
+    OAuthConsumerAppDTO mockedOAuthConsumerAppDTO;
+    @Mock
+    OAuthAdminServiceImpl mockedOAuthAdminService;
     private MockedStatic<LoggerUtils> loggerUtils;
 
     @BeforeMethod
@@ -146,6 +155,7 @@ public class TokenValidationHandlerTest {
 
         authzUser = new AuthenticatedUser();
         authzUser.setAccessingOrganization("test_org");
+        authzUser.setUserName("test_user");
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
         validityPeriodInMillis = 3600000L;
@@ -239,13 +249,21 @@ public class TokenValidationHandlerTest {
     @DataProvider(name = "CommonDataProvider")
     public Object[][] commonDataProvider() {
         return new Object[][]{
-                {true, "1234"},
-                {false, "12345"}
+                {true, "1234", "testAccessToken", false, false},
+                {false, "12345", "testAccessToken", false, false},
+                /* These test data are related to testing token type, server and app level config combination for omit
+                username from introspection response. */
+                {true, "1234", "APPLICATION", true, true},
+                {true, "1234", "APPLICATION", false, true},
+                {true, "1234", "APPLICATION", true, false},
+                {true, "1234", "testAccessToken", true, true}
         };
     }
 
     @Test(dataProvider = "CommonDataProvider")
-    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId) throws Exception {
+    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId, String tokenTypeData,
+                                               boolean omitUsernameInIntrospectionRespAppConfig,
+                                               boolean omitUsernameInIntrospectionRespServerConfig) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -281,8 +299,8 @@ public class TokenValidationHandlerTest {
                 accessToken.setTokenType("bearer");
 
                 AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
-                        refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
-                        authorizationCode);
+                        refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis,
+                        tokenTypeData, authorizationCode);
                 accessTokenDO.setTokenId(accessTokenId);
 
                 TokenBinding tokenBinding = new TokenBinding();
@@ -313,19 +331,43 @@ public class TokenValidationHandlerTest {
                 appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
                 oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
 
-                oAuth2Util.when(OAuth2Util::getPersistenceProcessor).thenReturn(new PlainTextPersistenceProcessor());
-                oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(oAuthAppDO);
-                oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), Mockito.anyBoolean()))
-                        .thenReturn(1000L);
+                try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                             mockStatic(OAuthComponentServiceHolder.class)) {
+                    when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
+                    lenient().when(mockOAuthComponentServiceHolder.getoAuthAdminService())
+                            .thenReturn(mockedOAuthAdminService);
+                    lenient().when(mockedOAuthAdminService.getOAuthApplicationData(anyString(), anyString()))
+                            .thenReturn(mockedOAuthConsumerAppDTO);
+                    lenient().when(mockedOAuthConsumerAppDTO.isOmitUsernameInIntrospectionRespForAppTokens())
+                            .thenReturn(omitUsernameInIntrospectionRespAppConfig);
 
-                OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = tokenValidationHandler
-                        .buildIntrospectionResponse(oAuth2TokenValidationRequestDTO);
-                assertNotNull(oAuth2IntrospectionResponseDTO);
-                assertEquals(oAuth2IntrospectionResponseDTO.getBindingType(),
-                        OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
-                assertEquals(oAuth2IntrospectionResponseDTO.getBindingReference(), "test_binding_reference");
-                assertEquals(oAuth2IntrospectionResponseDTO.getCnfBindingValue(),
-                        "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+                    // Mock server level config value.
+                    when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
+                    lenient().when(mockOAuthServerConfiguration
+                            .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled())
+                            .thenReturn(omitUsernameInIntrospectionRespServerConfig);
+
+                    oAuth2Util.when(OAuth2Util::getPersistenceProcessor)
+                            .thenReturn(new PlainTextPersistenceProcessor());
+                    oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(oAuthAppDO);
+                    oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), Mockito.anyBoolean()))
+                            .thenReturn(1000L);
+
+                    OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = tokenValidationHandler
+                            .buildIntrospectionResponse(oAuth2TokenValidationRequestDTO);
+                    assertNotNull(oAuth2IntrospectionResponseDTO);
+                    assertEquals(oAuth2IntrospectionResponseDTO.getBindingType(),
+                            OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER);
+                    assertEquals(oAuth2IntrospectionResponseDTO.getBindingReference(), "test_binding_reference");
+                    assertEquals(oAuth2IntrospectionResponseDTO.getCnfBindingValue(),
+                            "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+                    if (omitUsernameInIntrospectionRespAppConfig && omitUsernameInIntrospectionRespServerConfig &&
+                            Objects.equals(tokenTypeData, "APPLICATION")) {
+                        assertNull(oAuth2IntrospectionResponseDTO.getUsername());
+                    } else {
+                        assertEquals(oAuth2IntrospectionResponseDTO.getUsername(), authzUser.getUserName());
+                    }
+                }
             }
         }
     }

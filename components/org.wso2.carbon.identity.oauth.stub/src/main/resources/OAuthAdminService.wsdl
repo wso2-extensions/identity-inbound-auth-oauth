@@ -416,6 +416,7 @@
                     <xs:element minOccurs="0" name="jwksURI" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerKey" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="oauthConsumerSecret" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="omitUsernameInIntrospectionRespForAppTokens" nillable="true" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceMandatory" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="pkceSupportPlain" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="refreshTokenExpiryTime" type="xs:long"/>
@@ -439,6 +440,7 @@
                     <xs:element minOccurs="0" name="tokenEndpointAuthSignatureAlgorithm" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="tokenRevocationWithIDPSessionTerminationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="useClientIdAsSubClaimForAppTokens" nillable="true" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="userAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="username" nillable="true" type="xs:string"/>
                 </xs:sequence>
