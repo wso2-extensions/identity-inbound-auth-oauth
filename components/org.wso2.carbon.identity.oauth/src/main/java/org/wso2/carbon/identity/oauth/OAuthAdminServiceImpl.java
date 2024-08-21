@@ -437,21 +437,33 @@ public class OAuthAdminServiceImpl {
                                 application.isTokenRevocationWithIDPSessionTerminationEnabled());
                         /* If the value is not sent at the request, set the default value for new apps, this ensures
                         for new apps, the USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS property is never null. */
+                        boolean useClientIdAsSubClaimForAppTokensEnabledServerConfig = OAuthServerConfiguration
+                                .getInstance().isUseClientIdAsSubClaimForAppTokensEnabled();
                         if (application.isUseClientIdAsSubClaimForAppTokens() != null) {
                             app.setUseClientIdAsSubClaimForAppTokens(application.isUseClientIdAsSubClaimForAppTokens());
-                        } else {
+                        } else if (useClientIdAsSubClaimForAppTokensEnabledServerConfig) {
                             app.setUseClientIdAsSubClaimForAppTokens(
                                     USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE);
+                        } else {
+                            app.setUseClientIdAsSubClaimForAppTokens(
+                                    !USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE);
                         }
+
                         /* If the value is not sent at the request, set the default value for new apps, this ensures
                         for new apps, the OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN property is never null. */
+                        boolean removeUsernameFromAppTokenEnabledServerConfig = OAuthServerConfiguration.getInstance()
+                                .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
                         if (application.isOmitUsernameInIntrospectionRespForAppTokens() != null) {
                             app.setOmitUsernameInIntrospectionRespForAppTokens(
                                     application.isOmitUsernameInIntrospectionRespForAppTokens());
-                        } else {
+                        } else if (removeUsernameFromAppTokenEnabledServerConfig) {
                             app.setOmitUsernameInIntrospectionRespForAppTokens(
                                     OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE);
+                        } else {
+                            app.setOmitUsernameInIntrospectionRespForAppTokens(
+                                    !OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE);
                         }
+
                         String tokenEndpointAuthMethod = application.getTokenEndpointAuthMethod();
                         if (StringUtils.isNotEmpty(tokenEndpointAuthMethod)) {
                             if (isFAPIConformanceEnabled) {
