@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHa
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 
 import java.security.Key;
 import java.security.cert.Certificate;
@@ -68,7 +69,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
@@ -901,7 +901,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return jwtClaimsSetBuilder.build();
         }
 
-        CustomClaimsCallbackHandler claimsCallBackHandler = getCustomClaimsCallbackHandler(oAuthAppDO);
+        CustomClaimsCallbackHandler claimsCallBackHandler = ClaimHandlerUtil.getClaimsCallbackHandler(oAuthAppDO);
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
     }
 
@@ -943,19 +943,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                                             OAuthAuthzReqMessageContext authzReqMessageContext, OAuthAppDO oAuthAppDO)
             throws IdentityOAuth2Exception {
 
-        CustomClaimsCallbackHandler claimsCallBackHandler = getCustomClaimsCallbackHandler(oAuthAppDO);
+        CustomClaimsCallbackHandler claimsCallBackHandler = ClaimHandlerUtil.getClaimsCallbackHandler(oAuthAppDO);
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
-    }
-
-    private CustomClaimsCallbackHandler getCustomClaimsCallbackHandler(OAuthAppDO oAuthAppDO) {
-
-        // If JWT access token OIDC claims separation is enabled and the application is configured to separate OIDC
-        // claims, use the JWTAccessTokenOIDCClaimsHandler to handle custom claims.
-        if (isAccessTokenClaimsSeparationFeatureEnabled() &&
-                oAuthAppDO.isAccessTokenClaimsSeparationEnabled()) {
-            return OAuthServerConfiguration.getInstance().getJWTAccessTokenOIDCClaimsHandler();
-        }
-        return OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
     }
 
     private boolean isUserAccessTokenType(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -1091,10 +1080,5 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             }
             jwtClaimsSetBuilder.claim(OAuth2Constants.IS_FEDERATED, authenticatedUser.isFederatedUser());
         }
-    }
-
-    private boolean isAccessTokenClaimsSeparationFeatureEnabled() {
-
-        return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
     }
 }
