@@ -575,7 +575,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // if a VALID validity period is set through the callback, then use it
         long callbackValidityPeriod = tokReqMsgCtx.getValidityPeriod();
         if (callbackValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD) {
-            validityPeriodInMillis = callbackValidityPeriod * SECONDS_TO_MILISECONDS_FACTOR;
+            validityPeriodInMillis = callbackValidityPeriod;
         }
         return validityPeriodInMillis;
     }
