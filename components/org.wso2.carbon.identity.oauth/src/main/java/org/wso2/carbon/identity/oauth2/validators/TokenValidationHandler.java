@@ -31,15 +31,13 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
@@ -575,7 +573,7 @@ public class TokenValidationHandler {
                     .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
             boolean removeUsernameFromAppTokenEnabledAppConfig =
-                    isOmitUsernameInIntrospectionRespForAppTokens(accessTokenDO, tenantDomain);
+                    isOmitUsernameInIntrospectionRespForAppTokens(accessTokenDO);
 
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
@@ -678,16 +676,23 @@ public class TokenValidationHandler {
         return introResp;
     }
 
-    private static boolean isOmitUsernameInIntrospectionRespForAppTokens(AccessTokenDO accessTokenDO,
-                                                                         String tenantDomain)
+    private static boolean isOmitUsernameInIntrospectionRespForAppTokens(AccessTokenDO accessTokenDO)
             throws IdentityOAuth2Exception {
 
-        OAuthAdminServiceImpl oAuthAdminService = OAuthComponentServiceHolder.getInstance().getoAuthAdminService();
         boolean omitUsernameInIntrospectionRespForAppTokens;
         try {
-            OAuthConsumerAppDTO oAuthApp = oAuthAdminService.getOAuthApplicationData(accessTokenDO.getConsumerKey(),
-                    tenantDomain);
-            omitUsernameInIntrospectionRespForAppTokens = oAuthApp.isOmitUsernameInIntrospectionRespForAppTokens();
+            String appResidentTenantDomain = null;
+            int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+            if (appResidentTenantId != MultitenantConstants.INVALID_TENANT_ID) {
+                appResidentTenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
+                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                        appResidentTenantDomain);
+                omitUsernameInIntrospectionRespForAppTokens = oAuthAppDO
+                        .isOmitUsernameInIntrospectionRespForAppTokens();
+            } else {
+                throw new IdentityOAuth2ServerException("Invalid tenant domain found in access token issue for"
+                        + " client id: " + accessTokenDO.getConsumerKey());
+            }
         } catch (Exception e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id:" +
                     accessTokenDO.getConsumerKey(), e);
