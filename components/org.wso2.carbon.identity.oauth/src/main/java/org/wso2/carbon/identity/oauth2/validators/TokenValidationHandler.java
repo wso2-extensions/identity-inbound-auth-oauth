@@ -687,8 +687,8 @@ public class TokenValidationHandler {
                 appResidentTenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
                 OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
                         appResidentTenantDomain);
-                omitUsernameInIntrospectionRespForAppTokens = oAuthAppDO
-                        .isOmitUsernameInIntrospectionRespForAppTokens();
+                omitUsernameInIntrospectionRespForAppTokens = Boolean.TRUE.equals(oAuthAppDO
+                        .isOmitUsernameInIntrospectionRespForAppTokens());
             } else {
                 throw new IdentityOAuth2ServerException("Invalid tenant domain found in access token issue for"
                         + " client id: " + accessTokenDO.getConsumerKey());
