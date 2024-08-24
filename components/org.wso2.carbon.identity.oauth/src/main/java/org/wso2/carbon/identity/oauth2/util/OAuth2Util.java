@@ -4100,10 +4100,10 @@ public class OAuth2Util {
             }
         }
         if (StringUtils.isNotEmpty(authzUser.getAccessingOrganization())) {
-            authzUser.setAccessingOrganization(authzUser.getAccessingOrganization());
-            authzUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
+            authenticatedUser.setAccessingOrganization(authzUser.getAccessingOrganization());
+            authenticatedUser.setUserResidentOrganization(authzUser.getUserResidentOrganization());
             // Update user tenant domain.
-            authzUser.setTenantDomain(authzUser.getTenantDomain());
+            authenticatedUser.setTenantDomain(authzUser.getTenantDomain());
         }
         return authenticatedUser;
     }
