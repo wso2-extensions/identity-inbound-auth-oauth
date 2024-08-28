@@ -65,8 +65,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
-    private Boolean useClientIdAsSubClaimForAppTokens;
-    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private String tokenEndpointAuthMethod;
     private String tokenEndpointAuthSignatureAlgorithm;
     private Boolean tokenEndpointAllowReusePvtKeyJwt;
@@ -367,26 +365,6 @@ public class OAuthConsumerAppDTO implements InboundProtocolConfigurationDTO {
     public void setTokenBindingValidationEnabled(boolean tokenBindingValidationEnabled) {
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
-    }
-
-    public Boolean isUseClientIdAsSubClaimForAppTokens() {
-
-        return useClientIdAsSubClaimForAppTokens;
-    }
-
-    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
-
-        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
-    }
-
-    public Boolean isOmitUsernameInIntrospectionRespForAppTokens() {
-
-        return omitUsernameInIntrospectionRespForAppTokens;
-    }
-
-    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
-
-        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
     }
 
     public String getTokenEndpointAuthMethod() {
