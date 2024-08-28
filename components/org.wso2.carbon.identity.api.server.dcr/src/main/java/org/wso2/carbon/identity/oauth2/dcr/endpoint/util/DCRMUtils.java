@@ -78,6 +78,10 @@ public class DCRMUtils {
         appRegistrationRequest.setExtPkceMandatory(registrationRequestDTO.getExtPkceMandatory());
         appRegistrationRequest.setExtPkceSupportPlain(registrationRequestDTO.getExtPkceSupportPlain());
         appRegistrationRequest.setExtPublicClient(registrationRequestDTO.getExtPublicClient());
+        appRegistrationRequest.setUseClientIdAsSubClaimForAppTokens(
+                registrationRequestDTO.isUseClientIdAsSubClaimForAppTokens());
+        appRegistrationRequest.setOmitUsernameInIntrospectionRespForAppTokens(
+                registrationRequestDTO.isOmitUsernameInIntrospectionRespForAppTokens());
         appRegistrationRequest.setExtTokenType(registrationRequestDTO.getExtTokenType());
         appRegistrationRequest.setJwksURI(registrationRequestDTO.getJwksUri());
         appRegistrationRequest.setTokenEndpointAuthMethod(registrationRequestDTO.getTokenEndpointAuthMethod());
@@ -127,6 +131,10 @@ public class DCRMUtils {
         applicationUpdateRequest.setExtPublicClient(updateRequestDTO.getExtPublicClient());
         applicationUpdateRequest.setExtTokenType(updateRequestDTO.getExtTokenType());
         applicationUpdateRequest.setJwksURI(updateRequestDTO.getJwksUri());
+        applicationUpdateRequest.setUseClientIdAsSubClaimForAppTokens(
+                updateRequestDTO.isUseClientIdAsSubClaimForAppTokens());
+        applicationUpdateRequest.setOmitUsernameInIntrospectionRespForAppTokens(
+                updateRequestDTO.isOmitUsernameInIntrospectionRespForAppTokens());
         applicationUpdateRequest.setTokenEndpointAuthMethod(updateRequestDTO.getTokenEndpointAuthMethod());
         applicationUpdateRequest.setTokenEndpointAllowReusePvtKeyJwt(
                 updateRequestDTO.isTokenEndpointAllowReusePvtKeyJwt());
@@ -247,6 +255,9 @@ public class DCRMUtils {
         applicationDTO.setIdTokenSignedResponseAlg(application.getIdTokenSignatureAlgorithm());
         applicationDTO.setIdTokenEncryptedResponseAlg(application.getIdTokenEncryptionAlgorithm());
         applicationDTO.setIdTokenEncryptedResponseEnc(application.getIdTokenEncryptionMethod());
+        applicationDTO.setUseClientIdAsSubClaimForAppTokens(application.getUseClientIdAsSubClaimForAppTokens());
+        applicationDTO.setOmitUsernameInIntrospectionRespForAppTokens(
+                application.getOmitUsernameInIntrospectionRespForAppTokens());
         applicationDTO.setRequireSignedRequestObject(application.isRequestObjectSignatureValidationEnabled());
         applicationDTO.setRequestObjectSigningAlg(application.getRequestObjectSignatureAlgorithm());
         applicationDTO.setTlsClientAuthSubjectDn(application.getTlsClientAuthSubjectDN());

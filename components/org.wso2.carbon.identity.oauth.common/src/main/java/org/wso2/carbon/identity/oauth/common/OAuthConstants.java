@@ -626,6 +626,12 @@ public final class OAuthConstants {
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
+        public static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "useClientIdAsSubClaimForAppTokens";
+        public static final boolean USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE = true;
+        public static final String OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN =
+                "omitUsernameInIntrospectionRespForAppTokens";
+        public static final boolean OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE =
+                true;
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
         public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
         public static final String TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT =  "tokenEndpointAllowReusePvtKeyJwt";
