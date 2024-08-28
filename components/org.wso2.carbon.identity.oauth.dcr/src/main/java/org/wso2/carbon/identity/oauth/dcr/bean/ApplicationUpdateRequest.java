@@ -77,26 +77,6 @@ public class ApplicationUpdateRequest implements Serializable {
         return additionalAttributes;
     }
 
-    public Boolean getUseClientIdAsSubClaimForAppTokens() {
-
-        return useClientIdAsSubClaimForAppTokens;
-    }
-
-    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
-
-        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
-    }
-
-    public Boolean getOmitUsernameInIntrospectionRespForAppTokens() {
-
-        return omitUsernameInIntrospectionRespForAppTokens;
-    }
-
-    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
-
-        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
-    }
-
     public String getExtAllowedAudience() {
 
         return extAllowedAudience;

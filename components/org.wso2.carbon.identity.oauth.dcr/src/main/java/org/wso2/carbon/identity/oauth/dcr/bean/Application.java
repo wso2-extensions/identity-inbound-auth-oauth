@@ -61,8 +61,6 @@ public class Application implements Serializable {
     private String idTokenEncryptionAlgorithm = null;
     private String idTokenEncryptionMethod = null;
     private String softwareStatement = null;
-    private Boolean useClientIdAsSubClaimForAppTokens;
-    private Boolean omitUsernameInIntrospectionRespForAppTokens;
 
     private Map<String, Object> additionalAttributes;
     private String extAllowedAudience;
@@ -404,27 +402,6 @@ public class Application implements Serializable {
 
         this.idTokenEncryptionMethod = idTokenEncryptionMethod;
     }
-
-    public Boolean getUseClientIdAsSubClaimForAppTokens() {
-
-        return useClientIdAsSubClaimForAppTokens;
-    }
-
-    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
-
-        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
-    }
-
-    public Boolean getOmitUsernameInIntrospectionRespForAppTokens() {
-
-        return omitUsernameInIntrospectionRespForAppTokens;
-    }
-
-    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
-
-        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
-    }
-
     @Override
     public String toString() {
 
