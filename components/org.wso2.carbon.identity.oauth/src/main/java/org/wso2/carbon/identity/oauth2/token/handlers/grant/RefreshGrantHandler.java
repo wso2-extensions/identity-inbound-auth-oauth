@@ -722,7 +722,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                 .isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN) &&
                 (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
-                        OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) &&
+                        OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
+                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 
