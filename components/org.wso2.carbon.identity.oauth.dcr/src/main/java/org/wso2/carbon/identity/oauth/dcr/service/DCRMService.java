@@ -355,13 +355,6 @@ public class DCRMService {
             if (updateRequest.getExtIdTokenLifetime() != null) {
                 appDTO.setIdTokenExpiryTime(updateRequest.getExtIdTokenLifetime());
             }
-            if (updateRequest.getUseClientIdAsSubClaimForAppTokens() != null) {
-                appDTO.setUseClientIdAsSubClaimForAppTokens(updateRequest.getUseClientIdAsSubClaimForAppTokens());
-            }
-            if (updateRequest.getOmitUsernameInIntrospectionRespForAppTokens() != null) {
-                appDTO.setOmitUsernameInIntrospectionRespForAppTokens(
-                        updateRequest.getOmitUsernameInIntrospectionRespForAppTokens());
-            }
             if (updateRequest.getTokenEndpointAuthMethod() != null) {
                 appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
             }
@@ -701,9 +694,6 @@ public class DCRMService {
         application.setExtTokenType(createdApp.getTokenType());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
-        application.setUseClientIdAsSubClaimForAppTokens(createdApp.isUseClientIdAsSubClaimForAppTokens());
-        application.setOmitUsernameInIntrospectionRespForAppTokens(
-                createdApp.isOmitUsernameInIntrospectionRespForAppTokens());
         application.setTokenEndpointAllowReusePvtKeyJwt(createdApp.isTokenEndpointAllowReusePvtKeyJwt());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
         application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
@@ -795,14 +785,6 @@ public class DCRMService {
         }
         if (registrationRequest.getExtIdTokenLifetime() != null) {
             oAuthConsumerApp.setIdTokenExpiryTime(registrationRequest.getExtIdTokenLifetime());
-        }
-        if (registrationRequest.getUseClientIdAsSubClaimForAppTokens() != null) {
-            oAuthConsumerApp.setUseClientIdAsSubClaimForAppTokens(
-                    registrationRequest.getUseClientIdAsSubClaimForAppTokens());
-        }
-        if (registrationRequest.getOmitUsernameInIntrospectionRespForAppTokens() != null) {
-            oAuthConsumerApp.setOmitUsernameInIntrospectionRespForAppTokens(
-                    registrationRequest.getOmitUsernameInIntrospectionRespForAppTokens());
         }
         if (registrationRequest.getTokenEndpointAuthMethod() != null) {
             oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());
