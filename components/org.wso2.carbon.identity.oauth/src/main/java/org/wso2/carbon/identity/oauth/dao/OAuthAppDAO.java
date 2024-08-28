@@ -90,6 +90,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_SUBJECT_TOKEN_ENABLED;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.RENEW_REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.REQUEST_OBJECT_ENCRYPTION_METHOD;
@@ -108,6 +109,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.TOKEN_TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_CONNECT_AUDIENCE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getConsoleCallbackFromServerConfig;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getMyAccountCallbackFromServerConfig;
@@ -985,13 +987,29 @@ public class OAuthAppDAO {
                 TOKEN_BINDING_VALIDATION, String.valueOf(oauthAppDO.isTokenBindingValidationEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
+        if (oauthAppDO.isUseClientIdAsSubClaimForAppTokens() != null) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS,
+                    String.valueOf(oauthAppDO.isUseClientIdAsSubClaimForAppTokens()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
+        if (oauthAppDO.isOmitUsernameInIntrospectionRespForAppTokens() != null) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN,
+                    String.valueOf(oauthAppDO.isOmitUsernameInIntrospectionRespForAppTokens()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
+
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_AUTH_METHOD, oauthAppDO.getTokenEndpointAuthMethod(),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
-        addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT, String.valueOf(oauthAppDO.isTokenEndpointAllowReusePvtKeyJwt()),
-                prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        if (oauthAppDO.isTokenEndpointAllowReusePvtKeyJwt() != null) {
+            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
+                    TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT, String.valueOf(oauthAppDO.isTokenEndpointAllowReusePvtKeyJwt()),
+                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
+        }
 
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 TOKEN_AUTH_SIGNATURE_ALGORITHM, oauthAppDO.getTokenEndpointAuthSignatureAlgorithm(),
@@ -1727,6 +1745,14 @@ public class OAuthAppDAO {
                     String.valueOf(consumerAppDO.isTokenBindingValidationEnabled()));
 
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS,
+                    String.valueOf(consumerAppDO.isUseClientIdAsSubClaimForAppTokens()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
+                    OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN,
+                    String.valueOf(consumerAppDO.isOmitUsernameInIntrospectionRespForAppTokens()));
+
+            addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     TOKEN_AUTH_METHOD, consumerAppDO.getTokenEndpointAuthMethod());
 
             if (consumerAppDO.isTokenEndpointAllowReusePvtKeyJwt() != null) {
@@ -1893,6 +1919,15 @@ public class OAuthAppDAO {
                     .parseBoolean(getFirstPropertyValue(spOIDCProperties, TOKEN_BINDING_VALIDATION));
             oauthApp.setTokenBindingValidationEnabled(isTokenBindingValidationEnabled);
         }
+
+        String useClientIdAsSubClaimForAppTokens =
+                getFirstPropertyValue(spOIDCProperties, USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS);
+        oauthApp.setUseClientIdAsSubClaimForAppTokens(Boolean.parseBoolean(useClientIdAsSubClaimForAppTokens));
+
+        String omitUsernameInIntrospectionRespForAppTokens =
+                getFirstPropertyValue(spOIDCProperties, OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN);
+        oauthApp.setOmitUsernameInIntrospectionRespForAppTokens(
+                Boolean.parseBoolean(omitUsernameInIntrospectionRespForAppTokens));
 
         String renewRefreshToken = getFirstPropertyValue(spOIDCProperties, RENEW_REFRESH_TOKEN);
         oauthApp.setRenewRefreshTokenEnabled(renewRefreshToken);

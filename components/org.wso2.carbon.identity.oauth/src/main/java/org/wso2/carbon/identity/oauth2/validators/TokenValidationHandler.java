@@ -502,8 +502,9 @@ public class TokenValidationHandler {
             }
 
         } else {
+            String tenantDomain;
             try {
-                String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed
@@ -567,9 +568,11 @@ public class TokenValidationHandler {
             }
 
             String tokenType = accessTokenDO.getTokenType();
-            boolean removeUsernameFromAppTokenEnabled = OAuthServerConfiguration.getInstance()
+            boolean removeUsernameFromAppTokenEnabledServerConfig = OAuthServerConfiguration.getInstance()
                     .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
+            boolean removeUsernameFromAppTokenEnabledAppConfig =
+                    isOmitUsernameInIntrospectionRespForAppTokens(accessTokenDO, tenantDomain);
 
             // should be in seconds
             introResp.setIat(accessTokenDO.getIssuedTime().getTime() / 1000);
@@ -578,7 +581,8 @@ public class TokenValidationHandler {
             // token scopes
             introResp.setScope(OAuth2Util.buildScopeString((accessTokenDO.getScope())));
             // set user-name
-            if (!removeUsernameFromAppTokenEnabled || !isAppTokenType) {
+            if (!(removeUsernameFromAppTokenEnabledServerConfig && removeUsernameFromAppTokenEnabledAppConfig)
+                    || !isAppTokenType) {
                 introResp.setUsername(getAuthzUser(accessTokenDO));
             }
             // add client id
@@ -669,6 +673,26 @@ public class TokenValidationHandler {
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
+    }
+
+    private static boolean isOmitUsernameInIntrospectionRespForAppTokens(AccessTokenDO accessTokenDO,
+                                                                         String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+            if (appResidentTenantId != MultitenantConstants.INVALID_TENANT_ID) {
+                tenantDomain = IdentityTenantUtil.getTenantDomain(appResidentTenantId);
+            }
+            OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                    tenantDomain);
+
+            return Boolean.TRUE.equals(oAuthAppDO.isOmitUsernameInIntrospectionRespForAppTokens());
+
+        } catch (Exception e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving OAuth2 application data for client id:" +
+                    accessTokenDO.getConsumerKey(), e);
+        }
     }
 
     private String getAuthzUser(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {
