@@ -3937,14 +3937,17 @@ public class OAuth2Util {
             for (Map.Entry<String, OauthTokenIssuer> oauthTokenIssuerEntry: tokenIssuerMap.entrySet()) {
                 try {
                     OauthTokenIssuer oauthTokenIssuer = oauthTokenIssuerEntry.getValue();
-                    String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
-                    if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
-                        accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
-                    } else {
-                        accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier, includeExpired);
-                    }
-                    if (accessTokenDO != null) {
-                        return accessTokenDO;
+                    if (oauthTokenIssuer != null) {
+                        String tokenAlias = oauthTokenIssuer.getAccessTokenHash(tokenIdentifier);
+                        if (oauthTokenIssuer.usePersistedAccessTokenAlias()) {
+                            accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenAlias, includeExpired);
+                        } else {
+                            accessTokenDO = OAuth2Util.getAccessTokenDOFromTokenIdentifier(tokenIdentifier,
+                                    includeExpired);
+                        }
+                        if (accessTokenDO != null) {
+                            return accessTokenDO;
+                        }
                     }
                 } catch (OAuthSystemException e) {
                     if (log.isDebugEnabled()) {
