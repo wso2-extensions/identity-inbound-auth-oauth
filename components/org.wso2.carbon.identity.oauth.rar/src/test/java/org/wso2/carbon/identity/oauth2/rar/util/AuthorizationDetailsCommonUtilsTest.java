@@ -20,6 +20,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TYPE;
 
 /**
  * Test class for {@link AuthorizationDetailsCommonUtils}.
@@ -28,7 +29,6 @@ public class AuthorizationDetailsCommonUtilsTest {
 
     private ObjectMapper objectMapper;
     private ObjectMapper mockObjectMapper;
-    private static final String TEST_TYPE = "test_type_v1";
 
     @BeforeClass
     public void setUp() throws JsonProcessingException {

@@ -40,9 +40,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -258,7 +256,7 @@ public class AuthorizationHandlerManager {
             // set the authorization request context to be used by downstream handlers. This is introduced as a fix for
             // IDENTITY-4111
             OAuth2Util.setAuthzRequestContext(authzReqMsgCtx);
-            this.setUserConsentedAuthorizationDetails(authzReqMsgCtx);
+            AuthorizationDetailsUtils.setRARPropertiesToAuthzRequestContext(authzReqMsgCtx);
             authorizeRespDTO = authzHandler.issue(authzReqMsgCtx);
         } finally {
             // clears authorization request context
@@ -680,7 +678,7 @@ public class AuthorizationHandlerManager {
         return false;
     }
 
-    public OAuthAppDO getAppInformation(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception,
+    private OAuthAppDO getAppInformation(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
         OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(authzReqDTO.getConsumerKey());
         if (oAuthAppDO != null) {
@@ -726,23 +724,5 @@ public class AuthorizationHandlerManager {
 
         ResponseTypeHandler responseTypeHandler = responseHandlers.get(oAuth2Parameters.getResponseType());
         return responseTypeHandler.handleAuthenticationFailure(oAuth2Parameters);
-    }
-
-    private void setUserConsentedAuthorizationDetails(final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext)
-            throws IdentityOAuth2Exception {
-
-        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = oAuthAuthzReqMessageContext.getAuthorizationReqDTO();
-        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2AuthorizeReqDTO)) {
-            return;
-        }
-
-        final AuthorizationDetails authorizationDetails = OAuth2ServiceComponentHolder.getInstance()
-                .getAuthorizationDetailsService()
-                .getUserConsentedAuthorizationDetails(
-                        oAuth2AuthorizeReqDTO.getUser(),
-                        oAuth2AuthorizeReqDTO.getConsumerKey(),
-                        IdentityTenantUtil.getTenantId(oAuth2AuthorizeReqDTO.getTenantDomain())
-                );
-        oAuthAuthzReqMessageContext.setAuthorizationDetails(authorizationDetails);
     }
 }

@@ -7,9 +7,11 @@ import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -20,7 +22,6 @@ import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -289,8 +290,8 @@ public class AuthorizationDetailsUtils {
      * @param authorizationDetails The AuthorizationDetails object containing a set of AuthorizationDetail objects.
      * @return The AuthorizationDetails object with unique IDs assigned to each AuthorizationDetail.
      */
-    public static AuthorizationDetails assignUniqueIDsToAuthorizationDetails(final AuthorizationDetails
-                                                                                     authorizationDetails) {
+    public static AuthorizationDetails assignUniqueIDsToAuthorizationDetails(
+            final AuthorizationDetails authorizationDetails) {
 
         authorizationDetails.stream().filter(Objects::nonNull)
                 .forEach(authorizationDetail -> authorizationDetail.setId(UUID.randomUUID().toString()));
@@ -305,15 +306,11 @@ public class AuthorizationDetailsUtils {
      */
     public static String getUrlEncodedAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("Starts URL encoding authorization details: " + authorizationDetails.toJsonString());
-            }
-            if (isRichAuthorizationRequest(authorizationDetails)) {
-                return URLEncoder.encode(authorizationDetails.toJsonString(), StandardCharsets.UTF_8.toString());
-            }
-        } catch (UnsupportedEncodingException e) {
-            log.error("Error occurred while URL encoding authorization details. Caused by, ", e);
+        if (log.isDebugEnabled()) {
+            log.debug("Starts URL encoding authorization details: " + authorizationDetails.toJsonString());
+        }
+        if (isRichAuthorizationRequest(authorizationDetails)) {
+            return URLEncoder.encode(authorizationDetails.toJsonString(), StandardCharsets.UTF_8);
         }
         return StringUtils.EMPTY;
     }
@@ -326,16 +323,35 @@ public class AuthorizationDetailsUtils {
      */
     public static String getUrlDecodedAuthorizationDetails(final String encodedAuthorizationDetails) {
 
-        try {
-            if (log.isDebugEnabled()) {
-                log.debug("Starts decoding URL encoded authorization details JSON: " + encodedAuthorizationDetails);
-            }
-            if (StringUtils.isNotEmpty(encodedAuthorizationDetails)) {
-                return URLDecoder.decode(encodedAuthorizationDetails, StandardCharsets.UTF_8.toString());
-            }
-        } catch (UnsupportedEncodingException e) {
-            log.error("Error occurred while URL decoding authorization details Json. Caused by, ", e);
+        if (log.isDebugEnabled()) {
+            log.debug("Starts decoding URL encoded authorization details JSON: " + encodedAuthorizationDetails);
+        }
+        if (StringUtils.isNotEmpty(encodedAuthorizationDetails)) {
+            return URLDecoder.decode(encodedAuthorizationDetails, StandardCharsets.UTF_8);
         }
         return StringUtils.EMPTY;
+    }
+
+    public static void setRARPropertiesToAuthzRequestContext(
+            final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) throws IdentityOAuth2Exception {
+
+        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = oAuthAuthzReqMessageContext.getAuthorizationReqDTO();
+        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2AuthorizeReqDTO)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Request is not a rich authorization request. " +
+                        "Skips adding authorization details to OAuthAuthzReqMessageContext");
+            }
+            return;
+        }
+
+        final AuthorizationDetails authorizationDetails = OAuth2ServiceComponentHolder.getInstance()
+                .getAuthorizationDetailsService()
+                .getUserConsentedAuthorizationDetails(
+                        oAuth2AuthorizeReqDTO.getUser(),
+                        oAuth2AuthorizeReqDTO.getConsumerKey(),
+                        IdentityTenantUtil.getTenantId(oAuth2AuthorizeReqDTO.getTenantDomain())
+                );
+
+        oAuthAuthzReqMessageContext.setAuthorizationDetails(authorizationDetails);
     }
 }

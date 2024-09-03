@@ -11,6 +11,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
@@ -34,8 +35,12 @@ public class IntrospectionRARDataProvider implements IntrospectionDataProvider {
 
     public IntrospectionRARDataProvider() {
 
-        this.authorizationDetailsValidator =
-                OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsValidator();
+        this(OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsValidator());
+    }
+
+    public IntrospectionRARDataProvider(final AuthorizationDetailsValidator authorizationDetailsValidator) {
+
+        this.authorizationDetailsValidator = authorizationDetailsValidator;
     }
 
     /**
@@ -56,9 +61,13 @@ public class IntrospectionRARDataProvider implements IntrospectionDataProvider {
                 generateOAuth2TokenValidationMessageContext(tokenValidationRequestDTO, introspectionResponseDTO);
 
         if (Objects.nonNull(tokenValidationMessageContext)) {
+
             final AuthorizationDetails validatedAuthorizationDetails = this.authorizationDetailsValidator
                     .getValidatedAuthorizationDetails(tokenValidationMessageContext);
-            introspectionData.put(AUTHORIZATION_DETAILS, validatedAuthorizationDetails.toSet());
+            if (AuthorizationDetailsUtils.isRichAuthorizationRequest(validatedAuthorizationDetails)) {
+
+                introspectionData.put(AUTHORIZATION_DETAILS, validatedAuthorizationDetails.toSet());
+            }
         }
         return introspectionData;
     }

@@ -10,7 +10,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
-import org.wso2.carbon.identity.oauth2.rar.util.DAOUtils;
+import org.wso2.carbon.identity.oauth2.rar.util.TestDAOUtils;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -19,14 +19,13 @@ import java.util.Set;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_CONSENT_ID;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_DB_NAME;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TENANT_ID;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TOKEN_ID;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TYPE;
 
 public class AuthorizationDetailsDAOImplTest {
-
-    private static final String TEST_CONSENT_ID = "52481ccd-0927-4d17-8cfc-5110fc4aa009";
-    private static final String TEST_DB_NAME = "TEST_IAM_RAR_DATABASE";
-    private static final int TEST_TENANT_ID = 1234;
-    private static final String TEST_TOKEN_ID = "e1fea951-a3b5-4347-bd73-b18b3feecd54";
-    private static final String TEST_TYPE = "test_type_v1";
 
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtilMock;
     private AuthorizationDetailsDAO uut;
@@ -34,7 +33,7 @@ public class AuthorizationDetailsDAOImplTest {
     @BeforeClass
     public void setUp() throws SQLException {
         this.uut = new AuthorizationDetailsDAOImpl();
-        DAOUtils.initializeDataSource(TEST_DB_NAME, DAOUtils.getFilePath("h2.sql"));
+        TestDAOUtils.initializeDataSource(TEST_DB_NAME, TestDAOUtils.getFilePath("h2.sql"));
         this.identityDatabaseUtilMock = Mockito.mockStatic(IdentityDatabaseUtil.class);
     }
 
@@ -50,7 +49,7 @@ public class AuthorizationDetailsDAOImplTest {
     public void setUpBeforeMethod() throws SQLException {
         this.identityDatabaseUtilMock
                 .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(DAOUtils.getConnection(TEST_DB_NAME));
+                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
     }
 
     @Test(priority = 0)
@@ -60,7 +59,7 @@ public class AuthorizationDetailsDAOImplTest {
 
         this.identityDatabaseUtilMock
                 .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(DAOUtils.getConnection(TEST_DB_NAME));
+                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
 
         AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
         testAuthorizationDetail.setType(TEST_TYPE);
@@ -93,7 +92,7 @@ public class AuthorizationDetailsDAOImplTest {
 
         this.identityDatabaseUtilMock
                 .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(DAOUtils.getConnection(TEST_DB_NAME));
+                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
 
         assertEquals(0, this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID).size());
     }
@@ -104,7 +103,7 @@ public class AuthorizationDetailsDAOImplTest {
 
         this.identityDatabaseUtilMock
                 .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(DAOUtils.getConnection(TEST_DB_NAME));
+                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
 
         AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
         testAuthorizationDetail.setType(TEST_TYPE);
@@ -136,7 +135,7 @@ public class AuthorizationDetailsDAOImplTest {
 
         this.identityDatabaseUtilMock
                 .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(DAOUtils.getConnection(TEST_DB_NAME));
+                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
 
         assertEquals(0, this.uut.getAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID).size());
     }

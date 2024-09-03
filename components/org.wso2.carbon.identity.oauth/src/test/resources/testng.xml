@@ -122,6 +122,11 @@
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
             <class name="org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
         </classes>
     </test>
 
@@ -195,6 +200,11 @@
             <class name="org.wso2.carbon.identity.openidconnect.DefaultOIDCClaimsCallbackHandlerTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
         </classes>
     </test>
 </suite>

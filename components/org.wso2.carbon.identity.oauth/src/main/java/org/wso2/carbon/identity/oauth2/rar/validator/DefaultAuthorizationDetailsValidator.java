@@ -214,8 +214,7 @@ public class DefaultAuthorizationDetailsValidator implements AuthorizationDetail
 
     private boolean isSupportedAuthorizationDetailType(final String authorizationDetailType) {
 
-        return this.authorizationDetailsProviderFactory
-                .isSupportedAuthorizationDetailsType(authorizationDetailType);
+        return this.authorizationDetailsProviderFactory.isSupportedAuthorizationDetailsType(authorizationDetailType);
     }
 
     /**

@@ -10,9 +10,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * DB Utils.
+ * Test DB Utils.
  */
-public class DAOUtils {
+public class TestDAOUtils {
 
     private static final Map<String, BasicDataSource> dataSourceMap = new HashMap<>();
 
