@@ -51,7 +51,10 @@ public class UpdateRequestDTO {
     private String requestObjectEncryptionAlgorithm = null;
     private String requestObjectEncryptionMethod = null;
     private String softwareStatement = null;
+    private Boolean useClientIdAsSubClaimForAppTokens;
+    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private final Map<String, Object> additionalAttributes = new HashMap<>();
+    private String extAllowedAudience;
 
     @ApiModelProperty(value = "")
     @JsonProperty("redirect_uris")
@@ -265,6 +268,24 @@ public class UpdateRequestDTO {
     }
 
     @ApiModelProperty(value = "")
+    @JsonProperty("use_client_id_as_sub_claim_for_app_tokens")
+    public Boolean isUseClientIdAsSubClaimForAppTokens() {
+        return useClientIdAsSubClaimForAppTokens;
+    }
+    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
+        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
+    }
+
+    @ApiModelProperty(value = "")
+    @JsonProperty("omit_username_in_introspection_resp_for_app_tokens")
+    public Boolean isOmitUsernameInIntrospectionRespForAppTokens() {
+        return omitUsernameInIntrospectionRespForAppTokens;
+    }
+    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
+        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
+    }
+
+    @ApiModelProperty(value = "")
     @JsonProperty("sector_identifier_uri")
     public String getSectorIdentifierUri() {
         return sectorIdentifierUri;
@@ -412,6 +433,15 @@ public class UpdateRequestDTO {
         return additionalAttributes;
     }
 
+    @ApiModelProperty(value = "")
+    @JsonProperty("ext_allowed_audience")
+    public String getExtAllowedAudience() {
+        return extAllowedAudience;
+    }
+    public void setExtAllowedAudience(String extAllowedAudience) {
+        this.extAllowedAudience = extAllowedAudience;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -434,6 +464,9 @@ public class UpdateRequestDTO {
         sb.append("  ext_pkce_mandatory: ").append(extPkceMandatory).append("\n");
         sb.append("  ext_pkce_support_plain: ").append(extPkceSupportPlain).append("\n");
         sb.append("  ext_public_client: ").append(extPublicClient).append("\n");
+        sb.append("  use_client_id_as_sub_claim_for_app_tokens: ").append(useClientIdAsSubClaimForAppTokens).append("\n");
+        sb.append("  omit_username_in_introspection_resp_for_app_tokens: ")
+                .append(omitUsernameInIntrospectionRespForAppTokens).append("\n");
         sb.append("  token_endpoint_auth_method: ").append(tokenEndpointAuthMethod).append("\n");
         sb.append("  token_endpoint_auth_signing_alg: ").append(tokenEndpointAuthSigningAlg).append("\n");
         sb.append("  sector_identifier_uri: ").append(sectorIdentifierUri).append("\n");
@@ -443,6 +476,7 @@ public class UpdateRequestDTO {
         sb.append("  request_object_signing_alg: ").append(requestObjectSigningAlg).append("\n");
         sb.append("  tls_client_auth_subject_dn: ").append(tlsClientAuthSubjectDn).append("\n");
         sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
+        sb.append("  extAllowedAudience: ").append(extAllowedAudience).append("\n");
         sb.append("}\n");
         return sb.toString();
     }

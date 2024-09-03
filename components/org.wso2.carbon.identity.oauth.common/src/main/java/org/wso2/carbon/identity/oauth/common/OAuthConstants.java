@@ -285,6 +285,9 @@ public final class OAuthConstants {
     public static final String TLS_CLIENT_AUTH = "tls_client_auth";
     public static final String RESTRICTED_ENCRYPTION_ALGORITHM = "RSA1_5";
     public static final String ADDITIONAL_ATTRIBUTE_FILTER = "OAuth.DCRM.AdditionalAttributeFilter";
+    public static final String ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN =
+            "OAuth.OpenIDConnect.EnableClaimsSeparationForAccessToken";
+    public static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private OAuthConstants() {
 
@@ -623,6 +626,12 @@ public final class OAuthConstants {
         public static final String TOKEN_REVOCATION_WITH_IDP_SESSION_TERMINATION =
                 "tokenRevocationWithIDPSessionTermination";
         public static final String TOKEN_BINDING_VALIDATION = "tokenBindingValidation";
+        public static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "useClientIdAsSubClaimForAppTokens";
+        public static final boolean USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS_NEW_APP_DEFAULT_VALUE = true;
+        public static final String OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN =
+                "omitUsernameInIntrospectionRespForAppTokens";
+        public static final boolean OMIT_USERNAME_IN_INTROSPECTION_RESP_FOR_APP_TOKEN_NEW_APP_DEFAULT_VALUE =
+                true;
         public static final String TOKEN_BINDING_TYPE_NONE = "None";
         public static final String TOKEN_AUTH_METHOD =  "tokenEndpointAuthMethod";
         public static final String TOKEN_EP_ALLOW_REUSE_PVT_KEY_JWT =  "tokenEndpointAllowReusePvtKeyJwt";
@@ -640,6 +649,8 @@ public final class OAuthConstants {
         public static final String IS_SUBJECT_TOKEN_ENABLED = "isSubjectTokenEnabled";
         public static final String SUBJECT_TOKEN_EXPIRY_TIME = "subjectTokenExpiryTime";
         public static final int SUBJECT_TOKEN_EXPIRY_TIME_VALUE = 180;
+        public static final String IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED =
+                "isAccessTokenClaimsSeparationEnabled";
         public static final String PREVENT_TOKEN_REUSE = "PreventTokenReuse";
         public static final boolean DEFAULT_VALUE_FOR_PREVENT_TOKEN_REUSE = true;
         // Name of the {@code  JWTClientAuthenticatorConfig} resource type in the Configuration Management API.

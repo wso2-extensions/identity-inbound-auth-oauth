@@ -70,6 +70,7 @@ public class JwksEndpoint {
     private static final String SECURITY_KEY_STORE_PW = "Security.KeyStore.Password";
     private static final String KEYS = "keys";
     private static final String ADD_PREVIOUS_VERSION_KID = "JWTValidatorConfigs.JWKSEndpoint.AddPreviousVersionKID";
+    private static final String ENABLE_X5C_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5CInResponse";
     public static final String JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED = "JWTValidatorConfigs.JWKSEndpoint" +
             ".IsThumbprintHexifyRequired";
 
@@ -171,7 +172,9 @@ public class JwksEndpoint {
         }
         jwk.algorithm(algorithm);
         jwk.keyUse(KeyUse.parse(KEY_USE));
-        jwk.x509CertChain(encodedCertList);
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE))) {
+            jwk.x509CertChain(encodedCertList);
+        }
         if (!Boolean.parseBoolean(IdentityUtil.getProperty(JWKS_IS_THUMBPRINT_HEXIFY_REQUIRED))) {
             JWK parsedJWK = JWK.parse(certificate);
             jwk.x509CertSHA256Thumbprint(parsedJWK.getX509CertSHA256Thumbprint());

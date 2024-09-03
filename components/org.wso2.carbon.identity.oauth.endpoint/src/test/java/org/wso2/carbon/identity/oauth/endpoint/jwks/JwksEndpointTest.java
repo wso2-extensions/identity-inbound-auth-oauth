@@ -87,6 +87,7 @@ public class JwksEndpointTest {
     private static final String USE = "sig";
     private static final JSONArray X5C_ARRAY = new JSONArray();
     private static final JSONArray X5T_ARRAY = new JSONArray();
+    private static final String ENABLE_X5C_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5CInResponse";
     private JwksEndpoint jwksEndpoint;
     private Object identityUtilObj;
 
@@ -160,7 +161,8 @@ public class JwksEndpointTest {
 
             // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<KeyStoreManager> keyStoreManager = mockStatic(KeyStoreManager.class);) {
+                 MockedStatic<KeyStoreManager> keyStoreManager = mockStatic(KeyStoreManager.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
                 carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
                 when(serverConfiguration.getFirstProperty("Security.KeyStore.Location")).thenReturn(
@@ -226,6 +228,7 @@ public class JwksEndpointTest {
                 keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
                 lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
                         getKeyStoreFromFile("foo-com.jks", "foo.com"));
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
 
                 String result = jwksEndpoint.jwks();
 

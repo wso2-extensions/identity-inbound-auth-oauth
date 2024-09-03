@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -75,6 +76,8 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
+import static org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.APP_ROLE_AUDIENCE;
+import static org.wso2.carbon.identity.oauth.dcr.util.DCRConstants.ORG_ROLE_AUDIENCE;
 
 /**
  * DCRMService service is used to manage OAuth2/OIDC application registration.
@@ -113,6 +116,7 @@ public class DCRMService {
             consumerAppDTO.setJwksURI(jwksURI);
         }
         Application application = buildResponse(consumerAppDTO, tenantDomain);
+        application.setExtAllowedAudience(serviceProvider.getAssociatedRolesConfig().getAllowedAudience());
 
         String attributeFilterName = IdentityUtil.getProperty(OAuthConstants.ADDITIONAL_ATTRIBUTE_FILTER);
         if (StringUtils.isNotBlank(attributeFilterName)) {
@@ -164,7 +168,10 @@ public class DCRMService {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.FORBIDDEN_UNAUTHORIZED_USER, clientName);
             }
-            return buildResponse(oAuthConsumerAppDTO, tenantDomain);
+            Application application = buildResponse(oAuthConsumerAppDTO, tenantDomain);
+            ServiceProvider serviceProvider = getServiceProvider(clientName, tenantDomain);
+            application.setExtAllowedAudience(serviceProvider.getAssociatedRolesConfig().getAllowedAudience());
+            return application;
         } catch (IdentityOAuthAdminException e) {
             if (INVALID_OAUTH_CLIENT.getErrorCode().equals(e.getErrorCode())) {
                 throw DCRMUtils.generateClientException(
@@ -348,6 +355,13 @@ public class DCRMService {
             if (updateRequest.getExtIdTokenLifetime() != null) {
                 appDTO.setIdTokenExpiryTime(updateRequest.getExtIdTokenLifetime());
             }
+            if (updateRequest.getUseClientIdAsSubClaimForAppTokens() != null) {
+                appDTO.setUseClientIdAsSubClaimForAppTokens(updateRequest.getUseClientIdAsSubClaimForAppTokens());
+            }
+            if (updateRequest.getOmitUsernameInIntrospectionRespForAppTokens() != null) {
+                appDTO.setOmitUsernameInIntrospectionRespForAppTokens(
+                        updateRequest.getOmitUsernameInIntrospectionRespForAppTokens());
+            }
             if (updateRequest.getTokenEndpointAuthMethod() != null) {
                 appDTO.setTokenEndpointAuthMethod(updateRequest.getTokenEndpointAuthMethod());
             }
@@ -401,6 +415,14 @@ public class DCRMService {
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
             oAuthAdminService.updateConsumerApplication(appDTO);
+
+            if (StringUtils.isNotEmpty(updateRequest.getExtAllowedAudience()) &&
+                    (updateRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)
+                            || updateRequest.getExtAllowedAudience().equalsIgnoreCase(APP_ROLE_AUDIENCE))) {
+                AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+                associatedRolesConfig.setAllowedAudience(updateRequest.getExtAllowedAudience().toLowerCase());
+                sp.setAssociatedRolesConfig(associatedRolesConfig);
+            }
         } catch (IdentityOAuthClientException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA, e.getMessage(), e);
         } catch (IdentityOAuthAdminException e) {
@@ -412,6 +434,7 @@ public class DCRMService {
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
         Application application = buildResponse(oAuthConsumerAppDTO, tenantDomain);
         application.setSoftwareStatement(updateRequest.getSoftwareStatement());
+        application.setExtAllowedAudience(sp.getAssociatedRolesConfig().getAllowedAudience());
 
         if (processedAttributes != null) {
             List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
@@ -596,6 +619,12 @@ public class DCRMService {
                     isManagementApp);
         }
 
+        if (StringUtils.isNotEmpty(registrationRequest.getExtAllowedAudience()) &&
+                registrationRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)) {
+            AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+            associatedRolesConfig.setAllowedAudience(registrationRequest.getExtAllowedAudience().toLowerCase());
+            serviceProvider.setAssociatedRolesConfig(associatedRolesConfig);
+        }
         OAuthConsumerAppDTO createdApp;
         try {
             // Register the OAuth app.
@@ -627,6 +656,7 @@ public class DCRMService {
         }
         Application application = buildResponse(createdApp, tenantDomain);
         application.setSoftwareStatement(registrationRequest.getSoftwareStatement());
+        application.setExtAllowedAudience(serviceProvider.getAssociatedRolesConfig().getAllowedAudience());
         if (processedAttributes != null) {
             List<String> responseAttributes = attributeHandler.getResponseAttributeKeys();
             application.setAdditionalAttributes(processedAttributes.entrySet().stream()
@@ -671,6 +701,9 @@ public class DCRMService {
         application.setExtTokenType(createdApp.getTokenType());
         application.setJwksURI(createdApp.getJwksURI());
         application.setTokenEndpointAuthMethod(createdApp.getTokenEndpointAuthMethod());
+        application.setUseClientIdAsSubClaimForAppTokens(createdApp.isUseClientIdAsSubClaimForAppTokens());
+        application.setOmitUsernameInIntrospectionRespForAppTokens(
+                createdApp.isOmitUsernameInIntrospectionRespForAppTokens());
         application.setTokenEndpointAllowReusePvtKeyJwt(createdApp.isTokenEndpointAllowReusePvtKeyJwt());
         application.setTokenEndpointAuthSignatureAlgorithm(createdApp.getTokenEndpointAuthSignatureAlgorithm());
         application.setSectorIdentifierURI(createdApp.getSectorIdentifierURI());
@@ -762,6 +795,14 @@ public class DCRMService {
         }
         if (registrationRequest.getExtIdTokenLifetime() != null) {
             oAuthConsumerApp.setIdTokenExpiryTime(registrationRequest.getExtIdTokenLifetime());
+        }
+        if (registrationRequest.getUseClientIdAsSubClaimForAppTokens() != null) {
+            oAuthConsumerApp.setUseClientIdAsSubClaimForAppTokens(
+                    registrationRequest.getUseClientIdAsSubClaimForAppTokens());
+        }
+        if (registrationRequest.getOmitUsernameInIntrospectionRespForAppTokens() != null) {
+            oAuthConsumerApp.setOmitUsernameInIntrospectionRespForAppTokens(
+                    registrationRequest.getOmitUsernameInIntrospectionRespForAppTokens());
         }
         if (registrationRequest.getTokenEndpointAuthMethod() != null) {
             oAuthConsumerApp.setTokenEndpointAuthMethod(registrationRequest.getTokenEndpointAuthMethod());

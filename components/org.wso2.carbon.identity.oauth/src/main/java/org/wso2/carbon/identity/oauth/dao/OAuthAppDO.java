@@ -80,6 +80,8 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String tokenBindingType;
     private boolean tokenRevocationWithIDPSessionTerminationEnabled;
     private boolean tokenBindingValidationEnabled;
+    private Boolean useClientIdAsSubClaimForAppTokens;
+    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private String tokenEndpointAuthMethod;
     private Boolean tokenEndpointAllowReusePvtKeyJwt;
     private String tokenEndpointAuthSignatureAlgorithm;
@@ -95,6 +97,8 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private boolean fapiConformanceEnabled;
     private boolean subjectTokenEnabled;
     private int subjectTokenExpiryTime;
+    private String[] accessTokenClaims;
+    private boolean accessTokenClaimsSeparationEnabled;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -374,6 +378,27 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
 
         this.tokenBindingValidationEnabled = tokenBindingValidationEnabled;
     }
+
+    public Boolean isUseClientIdAsSubClaimForAppTokens() {
+
+        return useClientIdAsSubClaimForAppTokens;
+    }
+
+    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
+
+        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
+    }
+
+    public Boolean isOmitUsernameInIntrospectionRespForAppTokens() {
+
+        return omitUsernameInIntrospectionRespForAppTokens;
+    }
+
+    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
+
+        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
+    }
+
     public String getTokenEndpointAuthMethod() {
 
         return tokenEndpointAuthMethod;
@@ -522,5 +547,25 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setSubjectTokenExpiryTime(int subjectTokenExpiryTime) {
 
         this.subjectTokenExpiryTime = subjectTokenExpiryTime;
+    }
+
+    public String[] getAccessTokenClaims() {
+
+        return accessTokenClaims;
+    }
+
+    public void setAccessTokenClaims(String[] accessTokenClaims) {
+
+        this.accessTokenClaims = accessTokenClaims;
+    }
+
+    public boolean isAccessTokenClaimsSeparationEnabled() {
+
+        return accessTokenClaimsSeparationEnabled;
+    }
+
+    public void setAccessTokenClaimsSeparationEnabled(boolean accessTokenClaimsSeparationEnabled) {
+
+        this.accessTokenClaimsSeparationEnabled = accessTokenClaimsSeparationEnabled;
     }
 }

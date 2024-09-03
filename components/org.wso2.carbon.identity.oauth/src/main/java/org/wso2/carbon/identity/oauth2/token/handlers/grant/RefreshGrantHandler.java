@@ -578,7 +578,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // if a VALID validity period is set through the callback, then use it
         long callbackValidityPeriod = tokReqMsgCtx.getValidityPeriod();
         if (callbackValidityPeriod != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD) {
-            validityPeriodInMillis = callbackValidityPeriod * SECONDS_TO_MILISECONDS_FACTOR;
+            validityPeriodInMillis = callbackValidityPeriod;
         }
         return validityPeriodInMillis;
     }
@@ -725,7 +725,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                 .isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN) &&
                 (OAuthConstants.GrantTypes.AUTHORIZATION_CODE.equals(grantType) ||
-                        OAuthConstants.GrantTypes.PASSWORD.equals(grantType)) &&
+                        OAuthConstants.GrantTypes.PASSWORD.equals(grantType) ||
+                        OAuthConstants.GrantTypes.REFRESH_TOKEN.equals(grantType)) &&
                 JWT_TOKEN_TYPE.equals(oAuthAppBean.getTokenType());
     }
 

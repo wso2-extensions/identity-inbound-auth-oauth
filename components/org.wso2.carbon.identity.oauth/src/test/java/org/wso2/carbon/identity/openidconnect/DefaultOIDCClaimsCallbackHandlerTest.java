@@ -100,10 +100,11 @@ import java.util.Properties;
 import javax.sql.DataSource;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -131,8 +132,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
     @Mock
     private ApplicationManagementService applicationManagementService;
-
-    private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
     private static final String SAMPLE_ACCESS_TOKEN = "4952b467-86b2-31df-b63c-0bf25cec4f86";
     private static final String SAMPLE_TENANT_DOMAIN = "dummy_domain";
@@ -221,6 +220,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
     Connection connection = null;
 
     private MockedStatic<FrameworkUtils> frameworkUtils;
+    @Mock
+    ClaimMetadataHandler mockClaimMetadataHandler;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -364,6 +365,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         ServiceProvider serviceProvider = new ServiceProvider();
         serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
+        serviceProvider.setTenantDomain(TENANT_DOMAIN);
 
         ClaimConfig claimConfig = new ClaimConfig();
         claimConfig.setClaimMappings(claimMappings);
@@ -590,7 +592,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -600,7 +604,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
 
-            mockClaimHandler();
             String[] arr = new String[1];
             arr[0] = "test";
             requestMsgCtx.setScope(arr);
@@ -618,7 +621,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -627,8 +632,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-
-            mockClaimHandler();
 
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
@@ -645,7 +648,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -659,8 +664,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP_WITH_SECONDARY_ROLES);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-
-            mockClaimHandler();
 
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
@@ -678,7 +681,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -692,8 +697,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-
-            mockClaimHandler();
 
             // Define OIDC Scope property
             Properties oidcProperties = new Properties();
@@ -734,7 +737,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
             requestMsgCtx.setScope(new String[]{OIDC_SCOPE});
@@ -759,8 +764,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
 
-            mockClaimHandler();
-
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
             assertNotNull(jwtClaimsSet);
@@ -783,7 +786,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -805,7 +810,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-            mockClaimHandler();
 
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
@@ -822,7 +826,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
             requestMsgCtx.setScope(new String[]{OIDC_SCOPE, GROUPS});
@@ -839,7 +845,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-            mockClaimHandler();
 
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
@@ -850,7 +855,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         }
     }
 
-    private void mockClaimHandler() throws Exception {
+    private void getUserClaimsMap(MockedStatic<ClaimMetadataHandler> claimMetadataHandler)
+            throws Exception {
 
         Map<String, String> claimMappings = new HashMap<>();
         claimMappings.put(EMAIL, LOCAL_EMAIL_CLAIM_URI);
@@ -865,12 +871,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
         claimMappings.put(DIVISION, LOCAL_DIVISION_CLAIM_URI);
         claimMappings.put(DIVISION_WITH_DOT, LOCAL_DIVISION_CLAIM_WITH_PUNCUTATIONMARK_URI);
         claimMappings.put(GROUPS, LOCAL_GROUPS_CLAIM_URI);
-
-        ClaimMetadataHandler claimMetadataHandler = spy(ClaimMetadataHandler.class);
-        doReturn(claimMappings).when(claimMetadataHandler).getMappingsMapFromOtherDialectToCarbon(OIDC_DIALECT, null,
-                TENANT_DOMAIN, false);
-        // Set Claim Handler instance
-        setStaticField(ClaimMetadataHandler.class, "INSTANCE", claimMetadataHandler);
+        claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+        lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(anyString(), isNull(),
+                anyString(), anyBoolean())).thenReturn(claimMappings);
     }
 
     private void setStaticField(Class classname,
@@ -1122,7 +1125,9 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                      mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            getUserClaimsMap(claimMetadataHandler);
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
 
@@ -1145,7 +1150,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             UserRealm userRealm = getUserRealmWithUserClaims(userClaims);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
-            mockClaimHandler();
 
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);

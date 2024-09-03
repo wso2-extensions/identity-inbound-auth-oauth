@@ -64,6 +64,8 @@ public class ApplicationDTO  {
 
 
     private String jwksUri = null;
+    private Boolean useClientIdAsSubClaimForAppTokens;
+    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private String tokenEndpointAuthMethod = null;
     private Boolean tokenEndpointAllowReusePvtKeyJwt = null;
     private String tokenEndpointAuthSigningAlg = null;
@@ -81,6 +83,7 @@ public class ApplicationDTO  {
     private String requestObjectEncryptionMethod = null;
     private String softwareStatement = null;
     private  Map<String, Object> additionalAttributes;
+    private String extAllowedAudience;
 
   /**
    **/
@@ -285,6 +288,30 @@ public class ApplicationDTO  {
     }
 
   @ApiModelProperty(value = "")
+  @JsonProperty("use_client_id_as_sub_claim_for_app_tokens")
+  public Boolean isUseClientIdAsSubClaimForAppTokens() {
+
+    return useClientIdAsSubClaimForAppTokens;
+  }
+
+  public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
+
+    this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
+  }
+
+  @ApiModelProperty(value = "")
+  @JsonProperty("omit_username_in_introspection_resp_for_app_tokens")
+  public Boolean isOmitUsernameInIntrospectionRespForAppTokens() {
+
+    return omitUsernameInIntrospectionRespForAppTokens;
+  }
+
+  public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
+
+    this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
+  }
+
+  @ApiModelProperty(value = "")
   @JsonProperty("token_endpoint_auth_method")
   public String getTokenEndpointAuthMethod() {
     return tokenEndpointAuthMethod;
@@ -447,6 +474,15 @@ public class ApplicationDTO  {
     return additionalAttributes;
   }
 
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_allowed_audience")
+  public String getExtAllowedAudience() {
+    return extAllowedAudience;
+  }
+  public void setExtAllowedAudience(String extAllowedAudience) {
+    this.extAllowedAudience = extAllowedAudience;
+  }
+
   @Override
   public String toString()  {
     StringBuilder sb = new StringBuilder();
@@ -467,6 +503,9 @@ public class ApplicationDTO  {
     sb.append("  extPkceSupportPlain: ").append(extPkceSupportPlain).append("\n");
     sb.append("  extPublicClient: ").append(extPublicClient).append("\n");
     sb.append("  jwksUri: ").append(jwksUri).append("\n");
+    sb.append("  useClientIdAsSubClaimForAppTokens: ").append(useClientIdAsSubClaimForAppTokens).append("\n");
+    sb.append("  omitUsernameInIntrospectionRespForAppTokens: ")
+            .append(omitUsernameInIntrospectionRespForAppTokens).append("\n");
     sb.append("  tokenEndpointAuthMethod: ").append(tokenEndpointAuthMethod).append("\n");
     sb.append("  tokenEndpointAuthSigningAlg: ").append(tokenEndpointAuthSigningAlg).append("\n");
     sb.append("  sectorIdentifierUri: ").append(sectorIdentifierUri).append("\n");
@@ -483,6 +522,7 @@ public class ApplicationDTO  {
     sb.append("  requestObjectEncryptionMethod: ").append(requestObjectEncryptionMethod).append("\n");
     sb.append("  softwareStatement: ").append(softwareStatement).append("\n");
     sb.append("  additionalAttributes: ").append(additionalAttributes).append("\n");
+    sb.append("  extAllowedAudience: ").append(extAllowedAudience).append("\n");
         
     sb.append("}\n");
     return sb.toString();

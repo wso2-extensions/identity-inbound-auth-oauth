@@ -33,6 +33,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.OAuth;
+import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.owasp.encoder.Encode;
@@ -87,6 +88,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequest
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
+import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -131,6 +133,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -139,6 +142,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -2154,6 +2158,27 @@ public class EndpointUtil {
             log.error(message, e);
             throw new ParClientException(e.getErrorCode(), e.getMessage());
         }
+    }
+
+    /**
+     * Read request body from Servlet request.
+     *
+     * @param request Http servlet request.
+     * @return Request body.
+     * @throws UserInfoEndpointException If an error occurred while reading the request body.
+     */
+    public static String readRequestBody(HttpServletRequest request, Charset charset) throws UserInfoEndpointException {
+
+        StringBuilder stringBuilder = new StringBuilder();
+        try (Scanner scanner = new Scanner(request.getInputStream(), charset.name())) {
+            while (scanner.hasNextLine()) {
+                stringBuilder.append(scanner.nextLine());
+            }
+        } catch (IOException e) {
+            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
+                    "Unable to read the request body");
+        }
+        return stringBuilder.toString();
     }
 
     private static AuthorizationDetails filterConsentRequiredAuthorizationDetails(

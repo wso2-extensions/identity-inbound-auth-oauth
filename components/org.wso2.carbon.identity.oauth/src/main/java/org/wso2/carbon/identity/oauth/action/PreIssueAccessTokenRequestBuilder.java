@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHa
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
@@ -282,11 +283,11 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         try {
             CustomClaimsCallbackHandler claimsCallBackHandler =
-                    OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
+                    ClaimHandlerUtil.getClaimsCallbackHandler(getAppInformation(tokenMessageContext));
             JWTClaimsSet claimsSet =
                     claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), tokenMessageContext);
             return Optional.ofNullable(claimsSet).map(JWTClaimsSet::getClaims).orElseGet(HashMap::new);
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new ActionExecutionRequestBuilderException(
                     "Failed to retrieve OIDC claim set for the access token for grant type: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);

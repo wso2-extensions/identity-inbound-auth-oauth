@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHa
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 
 import java.security.Key;
 import java.security.cert.Certificate;
@@ -621,16 +622,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // This is a spec (openid-connect-core-1_0:2.0) requirement for ID tokens.
         // But we are keeping this in JWT as well.
-        jwtClaimsSetBuilder.audience(tokenReqMessageContext != null ? tokenReqMessageContext.getAudiences() :
-                OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
+        jwtClaimsSetBuilder.audience(tokenReqMessageContext != null && tokenReqMessageContext.getAudiences() != null ?
+                tokenReqMessageContext.getAudiences() : OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO));
 
         JWTClaimsSet jwtClaimsSet;
 
         // Handle custom claims
         if (authAuthzReqMessageContext != null) {
-            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext);
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, authAuthzReqMessageContext, oAuthAppDO);
         } else {
-            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+            jwtClaimsSet = handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext, oAuthAppDO);
         }
 
         // todo: deprecate when pre issue access token action is ready
@@ -865,19 +866,29 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             throws IdentityOAuth2Exception {
 
         if (tokenReqMessageContext != null && tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
-            Map<String, Object> customClaims = tokenReqMessageContext.getAdditionalAccessTokenClaims();
+            return handleCustomClaimsInPreIssueAccessTokenResponse(jwtClaimsSetBuilder, tokenReqMessageContext);
+        }
 
-            if (customClaims != null) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Pre issue access token actions are executed. " +
-                                    "Returning the customized claim set from actions. Claims: " +
-                                    customClaims.keySet());
-                }
+        if (tokenReqMessageContext != null &&
+                tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
+                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
+                OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
 
-                customClaims.forEach(jwtClaimsSetBuilder::claim);
-            }
-
+            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
             return jwtClaimsSetBuilder.build();
+        }
+        CustomClaimsCallbackHandler claimsCallBackHandler =
+                OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+    }
+
+    private JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                              OAuthTokenReqMessageContext tokenReqMessageContext, OAuthAppDO oAuthAppDO)
+            throws IdentityOAuth2Exception {
+
+        if (tokenReqMessageContext != null && tokenReqMessageContext.isPreIssueAccessTokenActionsExecuted()) {
+            return handleCustomClaimsInPreIssueAccessTokenResponse(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
         if (tokenReqMessageContext != null &&
@@ -890,9 +901,26 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return jwtClaimsSetBuilder.build();
         }
 
-        CustomClaimsCallbackHandler claimsCallBackHandler =
-                OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
+        CustomClaimsCallbackHandler claimsCallBackHandler = ClaimHandlerUtil.getClaimsCallbackHandler(oAuthAppDO);
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+    }
+
+    private JWTClaimsSet handleCustomClaimsInPreIssueAccessTokenResponse(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                                                         OAuthTokenReqMessageContext
+                                                                                 tokenReqMessageContext) {
+
+        Map<String, Object> customClaims = tokenReqMessageContext.getAdditionalAccessTokenClaims();
+
+        if (customClaims != null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Pre issue access token actions are executed. " +
+                        "Returning the customized claim set from actions. Claims: " + customClaims.keySet());
+            }
+
+            customClaims.forEach(jwtClaimsSetBuilder::claim);
+        }
+
+        return jwtClaimsSetBuilder.build();
     }
 
     /**
@@ -911,6 +939,13 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
     }
 
+    private JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                            OAuthAuthzReqMessageContext authzReqMessageContext, OAuthAppDO oAuthAppDO)
+            throws IdentityOAuth2Exception {
+
+        CustomClaimsCallbackHandler claimsCallBackHandler = ClaimHandlerUtil.getClaimsCallbackHandler(oAuthAppDO);
+        return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, authzReqMessageContext);
+    }
 
     private boolean isUserAccessTokenType(String grantType, OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
