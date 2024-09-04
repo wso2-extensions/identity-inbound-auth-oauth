@@ -2840,7 +2840,7 @@ public class OAuth2Util {
                 log.debug("Error occurred while validating id token signature.");
             }
             return false;
-        }  catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error occurred while validating id token signature.");
             return false;
         }
