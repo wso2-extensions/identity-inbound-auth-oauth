@@ -29,7 +29,7 @@ import org.wso2.carbon.identity.webfinger.WebFingerEndpointException;
 import org.wso2.carbon.identity.webfinger.WebFingerRequest;
 import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 
@@ -75,7 +75,7 @@ public class WebFingerOIDCResponseBuilderTest {
     @Test
     public void testBuildWebFingerResponse() throws Exception {
 
-        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(any(String.class))).thenReturn(oidcDiscoveryUrl);
+        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(anyString())).thenReturn(oidcDiscoveryUrl);
         WebFingerResponse webFingerResponse = webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
         assertEquals(webFingerResponse.getLinks().get(0).getRel(), rel, "rel is properly assigned");
         assertEquals(webFingerResponse.getLinks().get(0).getHref(), oidcDiscoveryUrl,
@@ -88,7 +88,7 @@ public class WebFingerOIDCResponseBuilderTest {
     public void testBuildWebFingerException() throws WebFingerEndpointException, ServerConfigurationException,
             IdentityException {
 
-        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(any(String.class))).thenThrow
+        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(anyString())).thenThrow
                 (new IdentityOAuth2Exception("Error"));
         webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
     }

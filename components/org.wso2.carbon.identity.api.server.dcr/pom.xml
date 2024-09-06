@@ -180,6 +180,7 @@
                 <version>${maven.surefire.plugin.version}</version>
                 <configuration>
                     <argLine>
+                        ${argLine}
                         --add-opens java.base/jdk.internal.loader=ALL-UNNAMED
                         --add-opens java.xml/jdk.xml.internal=ALL-UNNAMED
                         --add-opens java.base/java.lang=ALL-UNNAMED
@@ -203,21 +204,9 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>default-prepare-agent-integration</id>
-                        <goals>
-                            <goal>prepare-agent-integration</goal>
-                        </goals>
-                    </execution>
-                    <execution>
                         <id>default-report</id>
                         <goals>
                             <goal>report</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>default-report-integration</id>
-                        <goals>
-                            <goal>report-integration</goal>
                         </goals>
                     </execution>
                     <execution>
