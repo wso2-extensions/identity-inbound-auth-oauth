@@ -732,6 +732,11 @@
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -822,6 +827,25 @@
                         </execution>
                     </executions>
                 </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>prepare-agent</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>report</id>
+                            <phase>test</phase>
+                            <goals>
+                                <goal>report</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
 
@@ -884,6 +908,10 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
@@ -1017,7 +1045,7 @@
         <!--Test Dependencies-->
         <junit.version>4.13.1</junit.version>
         <testng.version>7.10.1</testng.version>
-        <jacoco.version>0.8.7</jacoco.version>
+        <jacoco.version>0.8.12</jacoco.version>
         <mockito.version>5.3.1</mockito.version>
         <mockito-testng.version>0.5.2</mockito-testng.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>

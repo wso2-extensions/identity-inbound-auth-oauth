@@ -55,6 +55,7 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.testutil</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -81,11 +82,6 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.testutil</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -144,6 +140,7 @@
                 <version>${maven.surefire.plugin.version}</version>
                 <configuration>
                     <argLine>
+                        ${argLine}
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.io=ALL-UNNAMED
@@ -179,21 +176,9 @@
                         </goals>
                     </execution>
                     <execution>
-                        <id>default-prepare-agent-integration</id>
-                        <goals>
-                            <goal>prepare-agent-integration</goal>
-                        </goals>
-                    </execution>
-                    <execution>
                         <id>default-report</id>
                         <goals>
                             <goal>report</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>default-report-integration</id>
-                        <goals>
-                            <goal>report-integration</goal>
                         </goals>
                     </execution>
                     <execution>
