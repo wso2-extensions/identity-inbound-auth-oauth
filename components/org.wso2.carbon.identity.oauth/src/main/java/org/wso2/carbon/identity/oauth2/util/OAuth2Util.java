@@ -2508,7 +2508,34 @@ public class OAuth2Util {
     public static String getTenantDomainOfOauthApp(String clientId)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId);
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
+                        appOrgId, e);
+            }
+        }
+        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
+        return getTenantDomainOfOauthApp(oAuthAppDO);
+    }
+
+    /**
+     * This is used to get the tenant domain of an application by clientId. Internally it uses the tenant present in
+     * the carbon context.
+     *
+     * @param clientId Consumer key of Application.
+     * @return Tenant Domain.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static String getTenantDomainOfOauthApp(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
         return getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
@@ -4873,6 +4900,17 @@ public class OAuth2Util {
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
 
             String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(appOrgId)) {
+                try {
+                    tenantDomainFromContext = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(appOrgId);
+                } catch (OrganizationManagementException e) {
+                    throw new InvalidOAuthClientException("Error while resolving tenant domain from organization id: "
+                            + appOrgId, e);
+                }
+            }
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
                 if (log.isDebugEnabled()) {

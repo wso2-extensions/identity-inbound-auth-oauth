@@ -63,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.lang.reflect.InvocationTargetException;
@@ -104,12 +105,23 @@ public class DCRMService {
      */
     public Application getApplication(String clientId) throws DCRMException {
 
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new DCRMException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
         validateRequestTenantDomain(clientId);
         OAuthConsumerAppDTO consumerAppDTO = getApplicationById(
-                clientId, DCRMUtils.isApplicationRolePermissionRequired());
+                clientId, DCRMUtils.isApplicationRolePermissionRequired(), tenantDomain);
         // Get the jwksURI from the service provider.
         String applicationName = consumerAppDTO.getApplicationName();
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         ServiceProvider serviceProvider = getServiceProvider(applicationName, tenantDomain);
         String jwksURI = serviceProvider.getJwksUri();
         if (StringUtils.isNotEmpty(jwksURI)) {
@@ -156,6 +168,17 @@ public class DCRMService {
         }
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new DCRMException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
         if (!isServiceProviderExist(clientName, tenantDomain)) {
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME, clientName);
@@ -202,10 +225,21 @@ public class DCRMService {
      */
     public void deleteApplication(String clientId) throws DCRMException {
 
-        validateRequestTenantDomain(clientId);
-        OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
-        String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new DCRMException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        validateRequestTenantDomain(clientId);
+        OAuthConsumerAppDTO appDTO = getApplicationById(clientId, tenantDomain);
+        String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String spName;
         try {
             spName = DCRDataHolder.getInstance().getApplicationManagementService()
@@ -241,8 +275,21 @@ public class DCRMService {
     public Application updateApplication(ApplicationUpdateRequest updateRequest, String clientId) throws DCRMException {
 
         validateRequestTenantDomain(clientId);
-        OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        boolean isSubOrgApp = false;
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                isSubOrgApp = true;
+            } catch (OrganizationManagementException e) {
+                throw new DCRMException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        OAuthConsumerAppDTO appDTO = getApplicationById(clientId, tenantDomain);
         String applicationOwner = StringUtils.isNotBlank(updateRequest.getExtApplicationOwner()) ?
                 updateRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -301,7 +348,7 @@ public class DCRMService {
             }
 
             // Update the service provider properties list with the display name property.
-            updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName());
+            updateServiceProviderPropertyList(sp, updateRequest.getExtApplicationDisplayName(), isSubOrgApp);
             // Update jwksURI.
             if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
                 sp.setJwksUri(updateRequest.getJwksURI());
@@ -429,7 +476,7 @@ public class DCRMService {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION, clientId, e);
         }
-        OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId, tenantDomain);
         // Setting the jwksURI to be sent in the response.
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
         Application application = buildResponse(oAuthConsumerAppDTO, tenantDomain);
@@ -451,10 +498,21 @@ public class DCRMService {
      * @param serviceProvider        Service provider.
      * @param applicationDisplayName Application display name.
      */
-    private void updateServiceProviderPropertyList(ServiceProvider serviceProvider, String applicationDisplayName) {
+    private void updateServiceProviderPropertyList(ServiceProvider serviceProvider, String applicationDisplayName,
+                                                   boolean isSubOrgApp) {
 
         // Retrieve existing service provider properties.
         ServiceProviderProperty[] serviceProviderProperties = serviceProvider.getSpProperties();
+
+        boolean isSubOrgAppPropSet = Arrays.stream(serviceProviderProperties)
+                .anyMatch(property -> property.getName().equals("isSubOrgApp"));
+        if (!isSubOrgAppPropSet) {
+            ServiceProviderProperty isSubOrgAppProp = new ServiceProviderProperty();
+            isSubOrgAppProp.setName("isSubOrgApp");
+            isSubOrgAppProp.setValue(String.valueOf(isSubOrgApp));
+            serviceProviderProperties = (ServiceProviderProperty[]) ArrayUtils.add(serviceProviderProperties,
+                    isSubOrgAppProp);
+        }
 
         boolean isDisplayNameSet = Arrays.stream(serviceProviderProperties)
                 .anyMatch(property -> property.getName().equals(APP_DISPLAY_NAME));
@@ -492,13 +550,13 @@ public class DCRMService {
         return displayNameProperty.map(ServiceProviderProperty::getValue).orElse(null);
     }
 
-    private OAuthConsumerAppDTO getApplicationById(String clientId) throws DCRMException {
+    private OAuthConsumerAppDTO getApplicationById(String clientId, String tenantDomain) throws DCRMException {
 
-        return getApplicationById(clientId, true);
+        return getApplicationById(clientId, true, tenantDomain);
     }
 
-    private OAuthConsumerAppDTO getApplicationById(String clientId, boolean isApplicationRolePermissionRequired)
-            throws DCRMException {
+    private OAuthConsumerAppDTO getApplicationById(String clientId, boolean isApplicationRolePermissionRequired,
+                                                   String tenantDomain) throws DCRMException {
 
         if (StringUtils.isEmpty(clientId)) {
             String errorMessage = "Invalid client_id";
@@ -507,7 +565,7 @@ public class DCRMService {
         }
 
         try {
-            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId, tenantDomain);
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
@@ -534,6 +592,20 @@ public class DCRMService {
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        boolean isSubOrgApp = false;
+
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+                isSubOrgApp = true;
+            } catch (OrganizationManagementException e) {
+                throw new DCRMException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
 
         /*
          * ApplicationOwner will be null and a server error is thrown when creating an app, if the api authentication/
@@ -569,7 +641,7 @@ public class DCRMService {
         }
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey()) && isClientIdExist(
-                registrationRequest.getConsumerKey())) {
+                registrationRequest.getConsumerKey(), tenantDomain)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
         }
@@ -639,7 +711,8 @@ public class DCRMService {
         }
 
         // Update the service provider properties list with the display name property.
-        updateServiceProviderPropertyList(serviceProvider, registrationRequest.getExtApplicationDisplayName());
+        updateServiceProviderPropertyList(serviceProvider, registrationRequest.getExtApplicationDisplayName(),
+                isSubOrgApp);
         // Store jwksURI.
         if (StringUtils.isNotEmpty(registrationRequest.getJwksURI())) {
             serviceProvider.setJwksUri(registrationRequest.getJwksURI());
@@ -954,10 +1027,10 @@ public class DCRMService {
      * @return true if application exists with the client id.
      * @throws DCRMException in case of failure.
      */
-    private boolean isClientIdExist(String clientId) throws DCRMException {
+    private boolean isClientIdExist(String clientId, String tenantDomain) throws DCRMException {
 
         try {
-            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId, tenantDomain);
             return dto != null && StringUtils.isNotBlank(dto.getApplicationName());
         } catch (IdentityOAuthAdminException e) {
             if (e.getCause() instanceof InvalidOAuthClientException) {
@@ -1155,6 +1228,17 @@ public class DCRMService {
 
         try {
             String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                try {
+                    tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(applicationResidentOrgId);
+                } catch (OrganizationManagementException e) {
+                    throw new DCRMServerException("Error while resolving tenant domain from the organization id: "
+                            + applicationResidentOrgId, e);
+                }
+            }
             String spName = DCRDataHolder.getInstance().getApplicationManagementService()
                     .getServiceProviderNameByClientId(clientId, DCRMConstants.OAUTH2, tenantDomain);
             String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername();

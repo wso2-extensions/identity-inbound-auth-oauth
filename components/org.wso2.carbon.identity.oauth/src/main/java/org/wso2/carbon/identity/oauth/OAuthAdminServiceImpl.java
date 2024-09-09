@@ -813,7 +813,18 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST, errorMessage);
         }
 
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuthAdminException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
 
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oAuthAppDO;
@@ -2373,6 +2384,17 @@ public class OAuthAdminServiceImpl {
                 // Since the app owner sent in OAuthConsumerAppDTO is a valid one we set the appOwner to be
                 // the one sent in the OAuthConsumerAppDTO.
                 String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getApplicationResidentOrganizationId();
+                if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                    try {
+                        tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                                .resolveTenantDomain(applicationResidentOrgId);
+                    } catch (OrganizationManagementException e) {
+                        throw new IdentityOAuthAdminException("Error while resolving tenant domain from the " +
+                                "organization id: " + applicationResidentOrgId, e);
+                    }
+                }
                 Optional<User> maybeAppOwner = OAuthUtil.getUser(tenantDomain, tenantAwareAppOwnerInRequest);
                 if (maybeAppOwner.isPresent()) {
                     appOwner = new AuthenticatedUser(maybeAppOwner.get());
