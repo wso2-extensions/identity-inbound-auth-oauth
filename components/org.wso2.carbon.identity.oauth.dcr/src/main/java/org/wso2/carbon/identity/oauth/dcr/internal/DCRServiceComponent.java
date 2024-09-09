@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
 /**
  * OAuth DCRM service component.
@@ -253,5 +254,24 @@ public class DCRServiceComponent {
 
         log.debug("Unregistering the ConfigurationManager in DCR Service Component.");
         DCRDataHolder.getInstance().setConfigurationManager(null);
+    }
+
+    @Reference(
+            name = "organization.service",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager"
+    )
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        DCRDataHolder.getInstance().setOrganizationManager(organizationManager);
+        log.debug("Set the organization management service.");
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        DCRDataHolder.getInstance().setOrganizationManager(null);
+        log.debug("Unset organization management service.");
     }
 }
