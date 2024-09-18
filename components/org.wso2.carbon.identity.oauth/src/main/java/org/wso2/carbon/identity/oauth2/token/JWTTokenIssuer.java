@@ -631,7 +631,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private String getSubjectClaim(String clientId, String spTenantDomain, AuthenticatedUser authorizedUser)
             throws IdentityOAuth2Exception {
 
-        return authorizedUser.getAuthenticatedSubjectIdentifier();
+        return OAuth2Util.useUsernameAsSubClaim() && StringUtils.isNotEmpty(authorizedUser.getUserName()) ?
+                authorizedUser.getUserName() : authorizedUser.getAuthenticatedSubjectIdentifier();
     }
 
     /**

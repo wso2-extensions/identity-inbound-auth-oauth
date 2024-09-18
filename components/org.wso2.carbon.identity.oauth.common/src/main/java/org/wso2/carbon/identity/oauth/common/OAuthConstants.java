@@ -172,6 +172,8 @@ public final class OAuthConstants {
     public static final String BOOLEAN_TRUE_AS_STRING = "true";
     public static final String BOOLEAN_ONE_AS_STRING = "1";
 
+    public static final String SERVICE_PROVIDERS_SUB_CLAIM = "ServiceProviders.UseUsernameAsSubClaim";
+
     private OAuthConstants() {
 
     }
