@@ -247,6 +247,7 @@ public class DCRMService {
                 updateRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String clientName = updateRequest.getClientName();
+        String applicationVersion = updateRequest.getExtApplicationVersion();
         AdditionalAttributeFilter attributeHandler = null;
         Map<String, Object> processedAttributes = null;
 
@@ -306,6 +307,8 @@ public class DCRMService {
             if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
                 sp.setJwksUri(updateRequest.getJwksURI());
             }
+            // Todo: validate version input. Create a function at app mgt.
+            sp.setApplicationVersion(applicationVersion);
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
             ServiceProvider clonedSP = cloneServiceProvider(sp);
@@ -683,6 +686,7 @@ public class DCRMService {
         application.setGrantTypes(grantTypesList);
         ServiceProvider sp = getServiceProvider(createdApp.getApplicationName(), tenantDomain);
         application.setExtApplicationDisplayName(getDisplayNameProperty(sp));
+        application.setExtApplicationVersion(sp.getApplicationVersion());
         application.setExtApplicationOwner(createdApp.getUsername());
         application.setExtApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
         application.setExtUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());

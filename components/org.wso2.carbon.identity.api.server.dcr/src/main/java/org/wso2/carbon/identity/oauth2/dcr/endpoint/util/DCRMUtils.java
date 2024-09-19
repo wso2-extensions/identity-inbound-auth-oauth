@@ -117,6 +117,7 @@ public class DCRMUtils {
         applicationUpdateRequest.setTokenType(updateRequestDTO.getTokenType());
         applicationUpdateRequest.setBackchannelLogoutUri(updateRequestDTO.getBackchannelLogoutUri());
         applicationUpdateRequest.setExtApplicationDisplayName(updateRequestDTO.getExtApplicationDisplayName());
+        applicationUpdateRequest.setExtApplicationVersion(updateRequestDTO.getExtApplicationVersion());
         applicationUpdateRequest.setExtApplicationOwner(updateRequestDTO.getExtApplicationOwner());
         applicationUpdateRequest.setExtApplicationTokenLifetime(updateRequestDTO.getExtApplicationTokenLifetime());
         applicationUpdateRequest.setExtUserTokenLifetime(updateRequestDTO.getExtUserTokenLifetime());
@@ -229,6 +230,7 @@ public class DCRMUtils {
         https://openid.net/specs/openid-connect-registration-1_0.html */
         applicationDTO.setClientSecretExpiresAt(0L);
         applicationDTO.setExtApplicationDisplayName(application.getExtApplicationDisplayName());
+        applicationDTO.setExtApplicationVersion(application.getExtApplicationVersion());
         applicationDTO.setExtApplicationOwner(application.getExtApplicationOwner());
         applicationDTO.setExtApplicationTokenLifetime(application.getExtApplicationTokenLifetime());
         applicationDTO.setExtUserTokenLifetime(application.getExtUserTokenLifetime());

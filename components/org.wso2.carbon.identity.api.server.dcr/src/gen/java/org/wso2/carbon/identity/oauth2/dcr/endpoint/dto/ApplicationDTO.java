@@ -36,6 +36,9 @@ public class ApplicationDTO  {
     private String extApplicationDisplayName = null;
 
 
+    private String extApplicationVersion = null;
+
+
     private String extApplicationOwner = null;
 
 
@@ -164,7 +167,18 @@ public class ApplicationDTO  {
     this.extApplicationDisplayName = extApplicationDisplayName;
   }
 
-    /**
+  /**
+   **/
+  @ApiModelProperty(value = "")
+  @JsonProperty("ext_application_version")
+  public String getExtApplicationVersion() {
+    return extApplicationVersion;
+  }
+  public void setExtApplicationVersion(String extApplicationVersion) {
+    this.extApplicationVersion = extApplicationVersion;
+  }
+
+  /**
     **/
     @ApiModelProperty(value = "")
     @JsonProperty("ext_application_owner")
