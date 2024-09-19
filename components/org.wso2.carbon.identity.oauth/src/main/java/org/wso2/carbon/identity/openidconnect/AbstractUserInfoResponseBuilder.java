@@ -17,6 +17,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -172,7 +173,8 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error occurred while obtaining access token.", e);
         }
-        return authenticatedUser.getAuthenticatedSubjectIdentifier();
+        return OAuth2Util.useUsernameAsSubClaim() && StringUtils.isNotEmpty(authenticatedUser.getUserName()) ?
+                authenticatedUser.getUserName() : authenticatedUser.getAuthenticatedSubjectIdentifier();
     }
 
     /**

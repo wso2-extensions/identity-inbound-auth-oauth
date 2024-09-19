@@ -4741,4 +4741,14 @@ public class OAuth2Util {
         }
         return true;
     }
+
+    /**
+     * To get the config value to determine the subject claim value.
+     *
+     * @return Whether username should be used as the subject claim. If false, userId will be used as the subject claim.
+     */
+    public static boolean useUsernameAsSubClaim() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.SERVICE_PROVIDERS_SUB_CLAIM));
+    }
 }

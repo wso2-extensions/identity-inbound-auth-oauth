@@ -323,7 +323,8 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                                      String spTenantDomain,
                                      AuthenticatedUser authorizedUser) throws IdentityOAuth2Exception {
 
-        return authorizedUser.getAuthenticatedSubjectIdentifier();
+        return OAuth2Util.useUsernameAsSubClaim() && StringUtils.isNotEmpty(authorizedUser.getUserName()) ?
+                authorizedUser.getUserName() : authorizedUser.getAuthenticatedSubjectIdentifier();
     }
 
     protected String getSubjectClaim(OAuthAuthzReqMessageContext authzReqMessageContext,
