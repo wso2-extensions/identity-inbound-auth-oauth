@@ -878,6 +878,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
             return jwtClaimsSetBuilder.build();
         }
+        if (tokenReqMessageContext != null &&
+                !Arrays.asList(tokenReqMessageContext.getScope()).contains(OAuthConstants.Scope.OPENID)) {
+            // Skip OIDC claim handling when OPENID scope is not present.
+            return jwtClaimsSetBuilder.build();
+        }
         CustomClaimsCallbackHandler claimsCallBackHandler =
                 OAuthServerConfiguration.getInstance().getOpenIDConnectCustomClaimsCallbackHandler();
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
