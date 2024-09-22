@@ -620,6 +620,7 @@ public final class OAuthConstants {
         public static final String TOKEN_TYPE = "tokenType";
         public static final String HYBRID_FLOW_ENABLED = "hybridFlowEnabled";
         public static final String HYBRID_FLOW_RESPONSE_TYPE = "hybridFlowResponseType";
+        public static final String HYBRID_FLOW_CODE_ID_TOKEN_TOKEN = "code id_token token";
         public static final String BYPASS_CLIENT_CREDENTIALS = "bypassClientCredentials";
         public static final String RENEW_REFRESH_TOKEN = "renewRefreshToken";
         public static final String TOKEN_BINDING_TYPE = "tokenBindingType";

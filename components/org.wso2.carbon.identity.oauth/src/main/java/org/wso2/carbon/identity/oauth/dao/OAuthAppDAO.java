@@ -79,6 +79,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_CODE_ID_TOKEN_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
@@ -2007,14 +2008,26 @@ public class OAuthAppDAO {
                     Boolean.parseBoolean(isAccessTokenClaimsSeparationEnabled));
         }
 
-        boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
-                HYBRID_FLOW_ENABLED));
-        oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+        String hybridFlowEnabledProperty = getFirstPropertyValue(spOIDCProperties, HYBRID_FLOW_ENABLED);
+        if (hybridFlowEnabledProperty == null) {
+            // This application doesn't have hybridFlowEnabled property, hence providing the previous behaviour.
+            // which is enabling the hybrid flow with all allowed response types.
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("This application with consumer key %s doesn't have hybridFlowEnabled " +
+                        "property, hence providing the previous behaviour, which is enabling the hybrid flow with " +
+                        "all allowed response types.", oauthApp.getOauthConsumerKey()));
+            }
+            oauthApp.setHybridFlowEnabled(true);
+            oauthApp.setHybridFlowResponseType(HYBRID_FLOW_CODE_ID_TOKEN_TOKEN);
+        } else {
+            boolean hybridFlowEnabled = Boolean.parseBoolean(hybridFlowEnabledProperty);
+            oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
 
-        String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
-                OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+            String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
+                    OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
 
-        oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+            oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
