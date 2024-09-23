@@ -221,6 +221,8 @@ public class JwksEndpointTest {
                 keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
                 lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
                         getKeyStoreFromFile("foo-com.jks", "foo.com"));
+                lenient().when(mockKeyStoreManager.getPrimaryKeyStore()).thenReturn(
+                        getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
 
                 String result = jwksEndpoint.jwks();
