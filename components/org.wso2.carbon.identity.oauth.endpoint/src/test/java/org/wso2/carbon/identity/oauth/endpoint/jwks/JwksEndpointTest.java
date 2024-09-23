@@ -165,12 +165,6 @@ public class JwksEndpointTest {
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
                 carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
-                when(serverConfiguration.getFirstProperty("Security.KeyStore.Location")).thenReturn(
-                        keystorePath.toString());
-                lenient().when(serverConfiguration.getFirstProperty("Security.KeyStore.Password"))
-                        .thenReturn("wso2carbon");
-                lenient().when(serverConfiguration.getFirstProperty("Security.KeyStore.KeyAlias"))
-                        .thenReturn("wso2carbon");
 
                 ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
                     protected Map<String, Object> initialValue() {
