@@ -44,6 +44,7 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
@@ -147,6 +148,7 @@ import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -2162,7 +2164,19 @@ public class OAuth2AuthzEndpoint {
             return getErrorPageURL(oAuthMessage.getRequest(), validationResponse.getErrorCode(), OAuth2ErrorCodes
                     .OAuth2SubErrorCodes.INVALID_CLIENT, validationResponse.getErrorMsg(), null);
         } else {
-            populateValidationResponseWithAppDetail(oAuthMessage, validationResponse);
+            String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                try {
+                    tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(applicationResidentOrgId);
+                } catch (OrganizationManagementException e) {
+                    throw new InvalidRequestException("Error while resolving tenant domain from the organization id: "
+                            + applicationResidentOrgId, OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_CLIENT, e);
+                }
+            }
+            populateValidationResponseWithAppDetail(oAuthMessage, validationResponse, tenantDomain);
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
@@ -2172,7 +2186,6 @@ public class OAuth2AuthzEndpoint {
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS));
             }
-            String tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
             setSPAttributeToRequest(oAuthMessage.getRequest(), validationResponse.getApplicationName(), tenantDomain);
         }
 
@@ -2228,12 +2241,13 @@ public class OAuth2AuthzEndpoint {
     }
 
     private void populateValidationResponseWithAppDetail(OAuthMessage oAuthMessage,
-                                                         OAuth2ClientValidationResponseDTO validationResponse)
+                                                         OAuth2ClientValidationResponseDTO validationResponse,
+                                                         String tenantDomain)
             throws OAuthSystemException {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
             if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW))) {
                 validationResponse.setPkceMandatory(false);
             } else {

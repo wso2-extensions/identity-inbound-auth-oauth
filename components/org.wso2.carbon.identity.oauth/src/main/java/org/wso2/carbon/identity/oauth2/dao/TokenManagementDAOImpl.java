@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -163,7 +164,20 @@ public class TokenManagementDAOImpl extends AbstractOAuthDAO implements TokenMan
             prepStmt = connection.prepareStatement(sql);
 
             prepStmt.setString(1, getPersistenceProcessor().getProcessedClientId(consumerKey));
-            prepStmt.setInt(2, IdentityTenantUtil.getLoginTenantId());
+            int tId = IdentityTenantUtil.getLoginTenantId();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                try {
+                    String tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(applicationResidentOrgId);
+                    tId = IdentityTenantUtil.getTenantId(tenantDomain);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                            + applicationResidentOrgId, e);
+                }
+            }
+            prepStmt.setInt(2, tId);
             if (refreshToken != null) {
                 prepStmt.setString(3, getHashingPersistenceProcessor().getProcessedRefreshToken(refreshToken));
             }

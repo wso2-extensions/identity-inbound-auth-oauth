@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -63,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -981,7 +983,14 @@ public class OAuth2Service extends AbstractAdmin {
     public String getOauthApplicationState(String consumerKey) {
 
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            }
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             return appDO.getState();
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while finding application state for application with client_id: " + consumerKey, e);
@@ -992,6 +1001,8 @@ public class OAuth2Service extends AbstractAdmin {
                         consumerKey, e);
             }
             return null;
+        } catch (OrganizationManagementException e) {
+            throw new RuntimeException("Error while resolving tenant domain from the organization id: ", e);
         }
     }
 

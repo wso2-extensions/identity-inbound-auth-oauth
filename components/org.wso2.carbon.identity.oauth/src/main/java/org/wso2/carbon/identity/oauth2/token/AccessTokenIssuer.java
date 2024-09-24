@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -1352,7 +1353,19 @@ public class AccessTokenIssuer {
     private OAuthAppDO getOAuthApplication(String consumerKey) throws InvalidOAuthClientException,
             IdentityOAuth2Exception {
 
-        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         String appState = authAppDO.getState();
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {

@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -120,7 +121,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
         } catch (InvalidOAuthClientException e) {
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
@@ -417,7 +418,11 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        if (isJWTSignedWithSPKey) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        } else if (isJWTSignedWithSPKey) {
             return (String) tokReqMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
         } else {
             return tokReqMsgCtx.getAuthorizedUser().getTenantDomain();

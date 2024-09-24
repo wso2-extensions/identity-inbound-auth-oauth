@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
@@ -505,6 +506,17 @@ public class TokenValidationHandler {
             String tenantDomain;
             try {
                 tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getApplicationResidentOrganizationId();
+                if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                    try {
+                        tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                                .resolveTenantDomain(applicationResidentOrgId);
+                    } catch (OrganizationManagementException e) {
+                        throw new IdentityOAuth2Exception("Error while resolving tenant domain from the " +
+                                "organization id: " + applicationResidentOrgId, e);
+                    }
+                }
                 accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
                 boolean isCrossTenantTokenIntrospectionAllowed

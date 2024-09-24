@@ -2334,9 +2334,18 @@ public class OAuth2Util {
 
         OAuthAppDO appDO;
         try {
-            appDO = getAppInformationByClientId(clientId);
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            }
+            appDO = getAppInformationByClientId(clientId, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
+        } catch (OrganizationManagementException e) {
+            throw new RuntimeException("Error while resolving tenant domain from the organization id: ", e);
         }
         return getOAuthTokenIssuerForOAuthApp(appDO);
     }
@@ -4258,7 +4267,8 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
+                getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
@@ -4275,7 +4285,8 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
+                getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5258,6 +5269,17 @@ public class OAuth2Util {
             return false;
         }
         String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new OAuthClientAuthnException("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, OAuth2ErrorCodes.INVALID_REQUEST, e);
+            }
+        }
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         return oAuthAppDO.isFapiConformanceEnabled();
     }

@@ -127,7 +127,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
             if (diagnosticLogBuilder != null) {
                 diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, clientId);
             }
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(clientId, appTenantDomain);
             String appState = appDO.getState();
 
             if (StringUtils.isEmpty(appState)) {

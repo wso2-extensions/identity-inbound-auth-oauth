@@ -35,6 +35,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -55,6 +56,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.security.Key;
 import java.security.cert.Certificate;
@@ -412,7 +414,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             throws IdentityOAuth2Exception {
 
         String tenantDomain;
-        if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        } else if (OAuthServerConfiguration.getInstance().getUseSPTenantDomainValue()) {
             if (log.isDebugEnabled()) {
                 log.debug("Using the tenant domain of the SP to sign the token");
             }
@@ -560,8 +566,20 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         // loading the stored application data
         OAuthAppDO oAuthAppDO;
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                try {
+                    tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(applicationResidentOrgId);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                            + applicationResidentOrgId, e);
+                }
+            }
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
         }
@@ -577,6 +595,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                     getAccessTokenLifeTimeInMillis(tokenReqMessageContext, oAuthAppDO, consumerKey);
             spTenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         }
+
+        // Need a proper way to handle this.
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            spTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();;
+        }
+
 
         boolean isMTLSrequest;
         if (authAuthzReqMessageContext != null) {

@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
@@ -65,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
@@ -271,13 +273,25 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(tokenReq.getScope());
     }
 
-    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) {
+    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
+            throws IdentityOAuth2Exception {
 
         boolean isEmailUserNameEnabled = MultitenantUtils.isEmailUserName();
         boolean isSaasApp = serviceProvider.isSaasApp();
         boolean isLegacySaaSAuthenticationEnabled = IdentityTenantUtil.isLegacySaaSAuthenticationEnabled();
         String usernameFromRequest = tokenReq.getResourceOwnerUsername();
         String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomainFromContext = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
 
         if (!isSaasApp) {
             /*

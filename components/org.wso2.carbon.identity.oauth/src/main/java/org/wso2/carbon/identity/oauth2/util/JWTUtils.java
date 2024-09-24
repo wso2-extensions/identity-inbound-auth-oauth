@@ -293,7 +293,8 @@ public class JWTUtils {
             return getTenantDomain();
         }
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        if (isJWTSignedWithSPKey) {
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
+        if (isJWTSignedWithSPKey && StringUtils.isEmpty(appOrgId)) {
             try {
                 if (log.isDebugEnabled()) {
                     log.debug("Getting signing tenant domain from OAuth app.");
@@ -303,6 +304,8 @@ public class JWTUtils {
                 throw new IdentityOAuth2Exception("Error while getting tenant domain from OAuth app with consumer key: "
                         + accessTokenDO.getConsumerKey());
             }
+        } else if (StringUtils.isNotEmpty(appOrgId)) {
+            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Getting signing tenant domain from authenticated user.");
