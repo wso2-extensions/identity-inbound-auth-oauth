@@ -84,6 +84,7 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -92,6 +93,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -1447,7 +1449,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                 .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_LOCATION);
         try (FileInputStream smalKeystoreFile = new FileInputStream(keyStoreLocation)) {
             String keyStoreType = ServerConfiguration.getInstance().getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_TYPE);
-            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+            KeyStore keyStore = KeystoreUtils.getKeystoreInstance(keyStoreType);
 
             char[] keyStorePassword = ServerConfiguration.getInstance()
                     .getFirstProperty(SECURITY_SAML_SIGN_KEY_STORE_PASSWORD).toCharArray();
@@ -1462,7 +1464,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         } catch (FileNotFoundException e) {
             throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore.", e);
-        } catch (IOException e) {
+        } catch (IOException | NoSuchProviderException e) {
             throw new IdentityOAuth2Exception("Unable to read SAML sign keystore.", e);
         } catch (CertificateException e) {
             throw new IdentityOAuth2Exception("Unable to read certificate from SAML sign keystore.", e);
