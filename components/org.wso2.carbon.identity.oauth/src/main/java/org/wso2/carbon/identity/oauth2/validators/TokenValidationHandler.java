@@ -461,7 +461,7 @@ public class TokenValidationHandler {
     private OAuth2IntrospectionResponseDTO validateAccessToken(OAuth2TokenValidationMessageContext messageContext,
                                                                OAuth2TokenValidationRequestDTO validationRequest,
                                                                OAuth2TokenValidator tokenValidator)
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2Exception, IdentityApplicationManagementException, InvalidOAuthClientException {
 
         OAuth2IntrospectionResponseDTO introResp = new OAuth2IntrospectionResponseDTO();
         AccessTokenDO accessTokenDO = null;
@@ -567,8 +567,12 @@ public class TokenValidationHandler {
             }
 
             String tokenType = accessTokenDO.getTokenType();
-            boolean removeUsernameFromAppTokenEnabled = OAuthServerConfiguration.getInstance()
-                    .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
+
+            String appResidentTenantDomain = OAuth2Util.getTenantDomain(accessTokenDO.getAppResidentTenantId());
+            String consumerKey = accessTokenDO.getConsumerKey();
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, appResidentTenantDomain);
+            boolean removeUsernameFromAppTokenEnabled = OAuth2Util
+                    .isAllowedToStopUsingAppOwnerForTokenIdentification(serviceProvider.getApplicationVersion());
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
 
             // should be in seconds

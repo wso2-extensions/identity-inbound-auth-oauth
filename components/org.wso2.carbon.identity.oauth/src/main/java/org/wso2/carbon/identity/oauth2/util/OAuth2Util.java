@@ -240,6 +240,7 @@ public class OAuth2Util {
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
     public static final String OPENID_SCOPE = "openid";
+
     /*
      * Maintain a separate parameter "OPENID_CONNECT_AUDIENCE_IDENTITY_CONFIG" to get the audience from the identity.xml
      * when user didn't add any audience in the UI while creating service provider.
@@ -391,6 +392,8 @@ public class OAuth2Util {
     private static final List<String> PORTAL_APP_IDS = Arrays.asList(
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
             ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
+
+    public static final String ALLOWED_VERSION_TO_STOP_USING_APP_OWNER_FOR_TOKEN_IDENTIFICATION = "v1.0.0";
 
     private OAuth2Util() {
 
@@ -5533,5 +5536,27 @@ public class OAuth2Util {
     public static boolean isPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));
+    }
+
+    /**
+     * Compare the app version with allowed minimum version.
+     *
+     * @param appVersion App version.
+     * @return True if the app version is greater than or equal to the allowed minimum version.
+     */
+    public static boolean isAllowedToStopUsingAppOwnerForTokenIdentification(String appVersion) {
+
+        String[] appVersionDigits = appVersion.substring(1).split("\\.");
+        String[] allowedVersionDigits = ALLOWED_VERSION_TO_STOP_USING_APP_OWNER_FOR_TOKEN_IDENTIFICATION.substring(1)
+                .split("\\.");
+
+        for (int i = 0; i < appVersionDigits.length; i++) {
+            if (appVersionDigits[i].equals(allowedVersionDigits[i])) {
+                continue;
+            } else {
+                return Integer.parseInt(appVersionDigits[i]) >= Integer.parseInt(allowedVersionDigits[i]);
+            }
+        }
+        return true;
     }
 }

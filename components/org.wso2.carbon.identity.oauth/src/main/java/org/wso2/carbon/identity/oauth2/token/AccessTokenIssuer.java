@@ -372,8 +372,6 @@ public class AccessTokenIssuer {
         String grantType = tokenReqDTO.getGrantType();
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
         boolean isOfTypeApplicationUser = authzGrantHandler.isOfTypeApplicationUser(tokReqMsgCtx);
-        boolean useClientIdAsSubClaimForAppTokensEnabled = OAuthServerConfiguration.getInstance()
-                .isUseClientIdAsSubClaimForAppTokensEnabled();
 
         boolean isValidGrant = false;
         String error = "Provided Authorization Grant is invalid";
@@ -458,13 +456,14 @@ public class AccessTokenIssuer {
             OAuth2Util.setTokenRequestContext(tokReqMsgCtx);
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
+            ServiceProvider serviceProvider = getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO());
+            boolean useClientIdAsSubClaimForAppTokensEnabled = OAuth2Util
+                    .isAllowedToStopUsingAppOwnerForTokenIdentification(serviceProvider.getApplicationVersion());
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
                 if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled) {
                     authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
                 } else {
-                    authorizedUser.setAuthenticatedSubjectIdentifier(
-                            getSubjectClaim(getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO()),
-                                    authorizedUser));
+                    authorizedUser.setAuthenticatedSubjectIdentifier(getSubjectClaim(serviceProvider, authorizedUser));
                 }
             }
 
