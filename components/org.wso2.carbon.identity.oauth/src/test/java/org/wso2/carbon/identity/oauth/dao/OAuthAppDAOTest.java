@@ -834,6 +834,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertNotNull(oAuthAppDO);
                 assertEquals(oAuthAppDO.isHybridFlowEnabled(), hybridFlowEnabledExpected);
                 assertEquals(oAuthAppDO.getHybridFlowResponseType(), hybridFlowResponseTypeExpected);
+                appDAO.removeConsumerApplication(CONSUMER_KEY);
             }
         } finally {
             resetPrivilegedCarbonContext();
@@ -885,6 +886,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 assertNotNull(oAuthAppDO);
                 assertEquals(oAuthAppDO.isHybridFlowEnabled(), hybridFlowEnabledExpected);
                 assertEquals(oAuthAppDO.getHybridFlowResponseType(), hybridFlowResponseTypeExpected);
+                appDAO.removeConsumerApplication(CONSUMER_KEY);
             }
         } finally {
             resetPrivilegedCarbonContext();
