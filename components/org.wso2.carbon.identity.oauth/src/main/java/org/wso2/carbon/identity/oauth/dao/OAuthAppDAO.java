@@ -145,11 +145,13 @@ public class OAuthAppDAO {
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private List<String> configuredHybridResponseTypes;
 
     public OAuthAppDAO() {
 
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            configuredHybridResponseTypes = OAuthServerConfiguration.getInstance().getConfiguredHybridResponseTypes();
         } catch (IdentityOAuth2Exception e) {
             LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
             persistenceProcessor = new PlainTextPersistenceProcessor();
@@ -2015,10 +2017,22 @@ public class OAuthAppDAO {
             if (LOG.isDebugEnabled()) {
                 LOG.debug(String.format("This application with consumer key %s doesn't have hybridFlowEnabled " +
                         "property, hence providing the previous behaviour, which is enabling the hybrid flow with " +
-                        "all allowed response types.", oauthApp.getOauthConsumerKey()));
+                        "all configured response types.", oauthApp.getOauthConsumerKey()));
             }
-            oauthApp.setHybridFlowEnabled(true);
-            oauthApp.setHybridFlowResponseType(HYBRID_FLOW_CODE_ID_TOKEN_TOKEN);
+            switch (configuredHybridResponseTypes.size()) {
+                case 0:
+                    oauthApp.setHybridFlowEnabled(false);
+                    oauthApp.setHybridFlowResponseType(null);
+                    break;
+                case 1:
+                    oauthApp.setHybridFlowEnabled(true);
+                    oauthApp.setHybridFlowResponseType(configuredHybridResponseTypes.get(0));
+                    break;
+                default:
+                    oauthApp.setHybridFlowEnabled(true);
+                    oauthApp.setHybridFlowResponseType(HYBRID_FLOW_CODE_ID_TOKEN_TOKEN);
+                    break;
+            }
         } else {
             boolean hybridFlowEnabled = Boolean.parseBoolean(hybridFlowEnabledProperty);
             oauthApp.setHybridFlowEnabled(hybridFlowEnabled);

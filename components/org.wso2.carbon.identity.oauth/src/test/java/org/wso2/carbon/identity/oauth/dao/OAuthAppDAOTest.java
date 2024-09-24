@@ -53,6 +53,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -839,8 +840,20 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
-    @Test
-    public void testGetMigratedAppInformationForHybridFlowTest() throws Exception {
+    @DataProvider(name = "testGetMigratedAppInformationForHybridFlowData")
+    public Object[][] testGetMigratedAppInformationForHybridFlowData() {
+
+        return new Object[][]{
+                {Arrays.asList("code token", "code id_token", "code id_token token"), true, "code id_token token"},
+                {Arrays.asList("code id_token"), true, "code id_token"},
+                {Arrays.asList(), false, null},
+        };
+    }
+
+    @Test(dataProvider = "testGetMigratedAppInformationForHybridFlowData")
+    public void testGetMigratedAppInformationForHybridFlowTest(List<String> configuredHybridFlowResponseType,
+                                                               boolean hybridFlowEnabledExpected,
+                                                               String hybridFlowResponseTypeExpected) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -857,6 +870,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
 
             setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            when(mockedServerConfig.getConfiguredHybridResponseTypes()).thenReturn(configuredHybridFlowResponseType);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
                 OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
@@ -869,8 +883,8 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthAppDAO appDAO = new OAuthAppDAO();
                 OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
                 assertNotNull(oAuthAppDO);
-                assertEquals(oAuthAppDO.isHybridFlowEnabled(), true);
-                assertEquals(oAuthAppDO.getHybridFlowResponseType(), "code id_token token");
+                assertEquals(oAuthAppDO.isHybridFlowEnabled(), hybridFlowEnabledExpected);
+                assertEquals(oAuthAppDO.getHybridFlowResponseType(), hybridFlowResponseTypeExpected);
             }
         } finally {
             resetPrivilegedCarbonContext();
