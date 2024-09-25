@@ -1464,13 +1464,13 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         } catch (FileNotFoundException e) {
             throw new IdentityOAuth2Exception("Unable to locate SAML sign keystore.", e);
-        } catch (IOException | NoSuchProviderException e) {
+        } catch (IOException e) {
             throw new IdentityOAuth2Exception("Unable to read SAML sign keystore.", e);
         } catch (CertificateException e) {
             throw new IdentityOAuth2Exception("Unable to read certificate from SAML sign keystore.", e);
         } catch (NoSuchAlgorithmException e) {
             throw new IdentityOAuth2Exception("Unable to load algorithm.", e);
-        } catch (KeyStoreException e) {
+        } catch (KeyStoreException | NoSuchProviderException e) {
             throw new IdentityOAuth2Exception("Unable to load SAML sign keystore.", e);
         }
     }

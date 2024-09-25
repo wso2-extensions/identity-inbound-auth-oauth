@@ -41,6 +41,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.Claim;
@@ -84,6 +85,7 @@ import org.wso2.carbon.user.core.tenant.TenantManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -98,10 +100,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -151,6 +155,8 @@ public class SAML2BearerGrantHandlerTest {
     private TokenPersistenceProcessor persistenceProcessor;
     @Mock
     private SAMLSSOServiceProviderManager samlSSOServiceProviderManager;
+    @Mock
+    private ServerConfiguration mockServerConfiguration;
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<IdentityUtil> identityUtil;
@@ -346,6 +352,64 @@ public class SAML2BearerGrantHandlerTest {
                 assertTrue(ex.getMessage().contains(expected));
             }
         }
+    }
+
+    @Test(description = "Test case to verify successful validation of a SAML assertion signature against a keystore.")
+    public void testValidateSignatureSuccess() throws IdentityOAuth2Exception {
+
+        try (MockedStatic<ServerConfiguration> serverConfiguration = mockStatic(ServerConfiguration.class);
+             MockedStatic<SignatureValidator> signatureValidator = mockStatic(SignatureValidator.class)) {
+
+            serverConfiguration.when(ServerConfiguration::getInstance).thenReturn(mockServerConfiguration);
+
+            when(mockServerConfiguration.getFirstProperty("Security.SAMLSignKeyStore.Location"))
+                    .thenReturn(createPath("testkeystore.jks").toString());
+            when(mockServerConfiguration.getFirstProperty("Security.SAMLSignKeyStore.Type")).thenReturn("JKS");
+            when(mockServerConfiguration.getFirstProperty("Security.SAMLSignKeyStore.Password"))
+                    .thenReturn("wso2carbon");
+            when(mockServerConfiguration.getFirstProperty("Security.SAMLSignKeyStore.KeyAlias"))
+                    .thenReturn("wso2carbon");
+
+            // Mock Assertion and Signature
+            Assertion mockedAssertion = mock(Assertion.class);
+            Signature mockedSignature = mock(Signature.class);
+            when(mockedAssertion.getSignature()).thenReturn(mockedSignature);
+
+            signatureValidator.when(() -> SignatureValidator.validate(any(), any())).thenAnswer(invocation -> {
+                // Simulate successful validation (no exception thrown)
+                return null;
+            });
+
+            saml2BearerGrantHandler.validateSignatureAgainstSAMLSignKeyStoreCertificate(mockedAssertion);
+        }
+    }
+
+    @Test(description = "Test case to verify that an exception is thrown when the keystore configuration is incorrect.")
+    public void testValidateSignatureException() {
+
+        try (MockedStatic<ServerConfiguration> serverConfiguration = mockStatic(ServerConfiguration.class)) {
+
+            serverConfiguration.when(ServerConfiguration::getInstance).thenReturn(mockServerConfiguration);
+
+            when(mockServerConfiguration.getFirstProperty("Security.SAMLSignKeyStore.Location"))
+                    .thenReturn(createPath("testkeystore.jks").toString());
+            when(mockServerConfiguration.getFirstProperty("Security.SAMLSignKeyStore.Type")).thenReturn("PKCS12");
+            when(mockServerConfiguration.getFirstProperty("JCEProvider")).thenReturn("BC");
+
+            Assertion mockedAssertion = mock(Assertion.class);
+
+            // Execute method under test
+            assertThrows(IdentityOAuth2Exception.class, () -> {
+                saml2BearerGrantHandler.validateSignatureAgainstSAMLSignKeyStoreCertificate(mockedAssertion);
+            });
+        }
+    }
+
+    private Path createPath(String keystoreName) {
+
+        Path keystorePath = Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository",
+                "resources", "security", keystoreName);
+        return keystorePath;
     }
 
     private Property getProperty(String name, String value) {
