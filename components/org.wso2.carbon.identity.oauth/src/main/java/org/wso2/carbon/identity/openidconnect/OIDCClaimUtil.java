@@ -255,6 +255,30 @@ public class OIDCClaimUtil {
         }
     }
 
+    /**
+     * Get oidc claims mapping.
+     *
+     * @param spTenantDomain    Tenant domain.
+     * @param claims            User claims
+     * @return user attributes.
+     * @throws IdentityOAuth2Exception If an exception occurred while getting user claims.
+     */
+    public static Map<String, Object> getMergedUserClaimsInOIDCDialect(String spTenantDomain,
+                                                                       Map<String, String> claims)
+            throws IdentityOAuth2Exception {
+
+        Map<String, Object> oidcClaims = new HashMap<>();
+        try {
+            oidcClaims = OIDCClaimUtil.getUserClaimsInOIDCDialect(spTenantDomain, claims);
+            // Merge the initial claims into oidcClaims, while prioritizing the initial claims map.
+            oidcClaims.putAll(claims);
+            return oidcClaims;
+        } catch (ClaimMetadataException e) {
+            throw new IdentityOAuth2Exception("Error occurred while mapping claims for user: " +
+                    " from userstore.", e);
+        }
+    }
+
     public static Map<String, Object> filterUserClaimsBasedOnConsent(Map<String, Object> userClaims,
                                                                      AuthenticatedUser authenticatedUser,
                                                                      String clientId,
