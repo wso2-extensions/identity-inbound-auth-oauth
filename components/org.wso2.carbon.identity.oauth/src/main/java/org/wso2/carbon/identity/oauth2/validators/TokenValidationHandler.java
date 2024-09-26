@@ -568,6 +568,8 @@ public class TokenValidationHandler {
 
             String tokenType = accessTokenDO.getTokenType();
 
+            boolean removeUsernameFromAppTokenEnabledServerConfig = OAuthServerConfiguration.getInstance()
+                    .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
             String appResidentTenantDomain = OAuth2Util.getTenantDomain(accessTokenDO.getAppResidentTenantId());
             String consumerKey = accessTokenDO.getConsumerKey();
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, appResidentTenantDomain);
@@ -582,7 +584,8 @@ public class TokenValidationHandler {
             // token scopes
             introResp.setScope(OAuth2Util.buildScopeString((accessTokenDO.getScope())));
             // set user-name
-            if (!removeUsernameFromAppTokenEnabled || !isAppTokenType) {
+            if (!(removeUsernameFromAppTokenEnabled || removeUsernameFromAppTokenEnabledServerConfig)
+                    || !isAppTokenType) {
                 introResp.setUsername(getAuthzUser(accessTokenDO));
             }
             // add client id

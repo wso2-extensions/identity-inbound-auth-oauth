@@ -457,10 +457,13 @@ public class AccessTokenIssuer {
 
             AuthenticatedUser authorizedUser = tokReqMsgCtx.getAuthorizedUser();
             ServiceProvider serviceProvider = getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO());
+            boolean useClientIdAsSubClaimForAppTokensEnabledServerConfig = OAuthServerConfiguration.getInstance()
+                    .isUseClientIdAsSubClaimForAppTokensEnabled();
             boolean useClientIdAsSubClaimForAppTokensEnabled = OAuth2Util
                     .isAllowedToStopUsingAppOwnerForTokenIdentification(serviceProvider.getApplicationVersion());
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
-                if (!isOfTypeApplicationUser && useClientIdAsSubClaimForAppTokensEnabled) {
+                if ((!isOfTypeApplicationUser && (useClientIdAsSubClaimForAppTokensEnabled
+                        || useClientIdAsSubClaimForAppTokensEnabledServerConfig))) {
                     authorizedUser.setAuthenticatedSubjectIdentifier(oAuthAppDO.getOauthConsumerKey());
                 } else {
                     authorizedUser.setAuthenticatedSubjectIdentifier(getSubjectClaim(serviceProvider, authorizedUser));
