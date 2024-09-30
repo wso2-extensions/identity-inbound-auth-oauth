@@ -170,7 +170,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             userClaimsInOIDCDialect = retrieveClaimsForLocalUser(requestMsgCtx);
         } else {
             // Get claim map from the cached attributes
-            userClaimsInOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
+            userClaimsInOIDCDialect = getOIDCClaimsFromUserAttributes(userAttributes, requestMsgCtx);
         }
 
         Object hasNonOIDCClaimsProperty = requestMsgCtx.getProperty(OIDCConstants.HAS_NON_OIDC_CLAIMS);
@@ -592,6 +592,27 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             }
         }
         return claims;
+    }
+
+    /**
+     * Get oidc claims mapping.
+     *
+     * @param userAttributes    User attributes.
+     * @param requestMsgCtx     Request Context.
+     * @return User attributes Map.
+     */
+    private Map<String, Object> getOIDCClaimsFromUserAttributes(Map<ClaimMapping, String> userAttributes,
+                                                                OAuthTokenReqMessageContext requestMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
+        Map<String, String> claims = new HashMap<>();
+        if (isNotEmpty(userAttributes)) {
+            for (Map.Entry<ClaimMapping, String> entry : userAttributes.entrySet()) {
+                claims.put(entry.getKey().getRemoteClaim().getClaimUri(), entry.getValue().toString());
+            }
+        }
+        return OIDCClaimUtil.getMergedUserClaimsInOIDCDialect(spTenantDomain, claims);
     }
 
     private Map<String, Object> getUserClaimsInOIDCDialect(String spTenantDomain, String clientId,

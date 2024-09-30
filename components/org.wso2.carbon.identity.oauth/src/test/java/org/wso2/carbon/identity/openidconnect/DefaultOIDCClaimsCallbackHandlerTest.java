@@ -484,13 +484,15 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
                 mockStatic(JDBCPersistenceManager.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                     OAuthServerConfiguration.class)) {
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);) {
             // Create a token request with User Attributes.
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             Map<ClaimMapping, String> userAttributes = new HashMap<>();
             userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(COUNTRY), TestConstants.CLAIM_VALUE1);
             userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(EMAIL), TestConstants.CLAIM_VALUE2);
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(userAttributes);
+            getUserClaimsMap(claimMetadataHandler);
 
             // Mock to return all the scopes when the consent is asked for.
             UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
@@ -516,7 +518,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                      OAuthServerConfiguration.class);
              MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                     mockStatic(AuthorizationGrantCache.class);) {
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);) {
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(null);
             // Add the relevant oidc claims to scope resource.
@@ -535,6 +538,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
                     new AuthorizationGrantCacheEntry(userAttributes);
             authorizationGrantCacheEntry.setSubjectClaim(requestMsgCtx.getAuthorizedUser().getUserName());
             mockAuthorizationGrantCache(authorizationGrantCacheEntry, authorizationGrantCache);
+            getUserClaimsMap(claimMetadataHandler);
 
             RefreshTokenValidationDataDO refreshTokenValidationDataDO =
                     Mockito.mock(RefreshTokenValidationDataDO.class);
@@ -1169,7 +1173,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                      OAuthServerConfiguration.class);
              MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                mockStatic(AuthorizationGrantCache.class);) {
+                mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);) {
             JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
             Map<ClaimMapping, String> userAttributes = new HashMap<>();
             userAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(COUNTRY), TestConstants.CLAIM_VALUE1);
@@ -1179,6 +1184,7 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry = mock(AuthorizationGrantCacheEntry.class);
             mockAuthorizationGrantCache(authorizationGrantCacheEntry, authorizationGrantCache);
+            getUserClaimsMap(claimMetadataHandler);
 
             UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
             mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
