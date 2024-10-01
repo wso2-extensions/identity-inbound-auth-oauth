@@ -767,6 +767,12 @@
                 <artifactId>org.wso2.carbon.identity.configuration.mgt.core</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>org.wso2.carbon.identity.application.authz.topaz</groupId>
+                <artifactId>org.wso2.carbon.identity.application.authz.topaz</artifactId>
+                <version>1.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
