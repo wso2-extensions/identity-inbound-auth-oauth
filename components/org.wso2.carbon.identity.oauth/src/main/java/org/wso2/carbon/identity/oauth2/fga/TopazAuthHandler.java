@@ -2,13 +2,13 @@ package org.wso2.carbon.identity.oauth2.fga;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.application.authz.topaz.handler.core.DirectoryGraphAuthzResponse;
+import org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthzHandler;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TopazAuthzHandler implements AccessControlHandler {
+public class TopazAuthHandler implements AccessControlHandler {
     private static final Log LOG = LogFactory.getLog(org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthzHandler.class);
 
     @Override
@@ -28,7 +28,7 @@ public class TopazAuthzHandler implements AccessControlHandler {
             request.setResource(new AccessCheckRequestResource()
                     .id(resource)
                     .type(resourceType));
-            org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthzHandler topazAuthzHandler = new org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthzHandler();
+            TopazAuthzHandler topazAuthzHandler = new TopazAuthzHandler();
 
             boolean decision = false;
             try {
@@ -56,7 +56,7 @@ public class TopazAuthzHandler implements AccessControlHandler {
 //    public List<String> getScopes(AuthorizationRequest authorizationRequest) {
 //        String oSubjectId = authorizationRequest.getSubject().getId();
 //        String oResourceId = authorizationRequest.getResource().getId();
-//        org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthzHandler topazAuthzHandler = new org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthzHandler();
+//        org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthHandler topazAuthzHandler = new org.wso2.carbon.identity.application.authz.topaz.handler.topaz.TopazAuthHandler();
 //        DirectoryGraphAuthzResponse directoryGraphAuthzResponse = topazAuthzHandler.getTopazDirectoryHandler().graph(
 //                topazAuthzHandler.getObjManagementHandler().createDirectoryRequestObject(
 //                        authorizationRequest.getSubject().getType(),
