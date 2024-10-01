@@ -13,7 +13,7 @@ public class AccessControlFactory extends AbstractFactoryBean<AccessControlHandl
     @Override
     public AccessControlHandler createInstance() throws Exception {
         if(accessControlHandler == null){
-            accessControlHandler = new TopazAuthzHandler();
+            accessControlHandler = new TopazAuthHandler();
         }
         return accessControlHandler;
     }
