@@ -25,9 +25,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -39,6 +41,8 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+
+import static org.mockito.Mockito.mock;
 
 /**
  * Test class covering CodeResponseTypeHandler
@@ -61,11 +65,16 @@ public class CodeResponseTypeHandlerTest {
 
     @BeforeClass
     public void init() throws IdentityOAuthAdminException {
+
+        IdentityEventService identityEventService = mock(IdentityEventService.class);
+        CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
         new OAuthAppDAO().addOAuthApplication(getDefaultOAuthAppDO());
     }
 
     @AfterClass
     public void clear() throws IdentityOAuthAdminException {
+
+        CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
         new OAuthAppDAO().removeConsumerApplication(TEST_CONSUMER_KEY);
     }
 
@@ -78,6 +87,7 @@ public class CodeResponseTypeHandlerTest {
         authenticatedUser.setUserName("testUser");
         authenticatedUser.setTenantDomain("carbon.super");
         authenticatedUser.setUserStoreDomain("PRIMARY");
+        authenticatedUser.setUserId("1234");
         authorizationReqDTO.setUser(authenticatedUser);
         authorizationReqDTO.setResponseType(OAuthConstants.GrantTypes.TOKEN);
         authAuthzReqMessageContext

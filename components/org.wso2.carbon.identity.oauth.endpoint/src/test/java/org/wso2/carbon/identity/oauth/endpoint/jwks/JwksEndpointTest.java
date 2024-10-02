@@ -62,7 +62,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -165,12 +164,6 @@ public class JwksEndpointTest {
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
                 carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
-                when(serverConfiguration.getFirstProperty("Security.KeyStore.Location")).thenReturn(
-                        keystorePath.toString());
-                lenient().when(serverConfiguration.getFirstProperty("Security.KeyStore.Password"))
-                        .thenReturn("wso2carbon");
-                lenient().when(serverConfiguration.getFirstProperty("Security.KeyStore.KeyAlias"))
-                        .thenReturn("wso2carbon");
 
                 ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
                     protected Map<String, Object> initialValue() {
@@ -228,6 +221,8 @@ public class JwksEndpointTest {
                 keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
                 lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
                         getKeyStoreFromFile("foo-com.jks", "foo.com"));
+                lenient().when(mockKeyStoreManager.getPrimaryKeyStore()).thenReturn(
+                        getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
 
                 String result = jwksEndpoint.jwks();
