@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -70,7 +71,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -250,14 +250,14 @@ public class DefaultIDTokenBuilderTest {
                     .addUser(TestConstants.USER_NAME, TestConstants.PASSWORD, new String[0], claims,
                              TestConstants.DEFAULT_PROFILE);
 
-        Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
-        publicCerts.put(SUPER_TENANT_ID, ReadCertStoreSampleUtil.createKeyStore(getClass())
+        Map<String, Certificate> publicCerts = new ConcurrentHashMap<>();
+        publicCerts.put(String.valueOf(SUPER_TENANT_ID), ReadCertStoreSampleUtil.createKeyStore(getClass())
                                                                 .getCertificate("wso2carbon"));
-        setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
-        Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
-        privateKeys.put(SUPER_TENANT_ID, ReadCertStoreSampleUtil.createKeyStore(getClass())
+        setFinalStatic(IdentityKeyStoreResolver.class.getDeclaredField("publicCerts"), publicCerts);
+        Map<String, Key> privateKeys = new ConcurrentHashMap<>();
+        privateKeys.put(String.valueOf(SUPER_TENANT_ID), ReadCertStoreSampleUtil.createKeyStore(getClass())
                                                                 .getKey("wso2carbon", "wso2carbon".toCharArray()));
-        setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
+        setFinalStatic(IdentityKeyStoreResolver.class.getDeclaredField("privateKeys"), privateKeys);
 
         OpenIDConnectServiceComponentHolder.getInstance()
                 .getOpenIDConnectClaimFilters().add(new OpenIDConnectClaimFilterImpl());
