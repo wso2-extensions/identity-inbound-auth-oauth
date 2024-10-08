@@ -299,6 +299,9 @@ public class ResponseTypeHandlerUtil {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(), appTenant,
                             authorizationReqDTO.getCallbackUrl(), authzCodeDO);
+
+            OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                    .storeAuthorizationCodeAuthorizationDetails(authzCodeDO, oauthAuthzMsgCtx);
         } else {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(),

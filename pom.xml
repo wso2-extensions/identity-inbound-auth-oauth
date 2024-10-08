@@ -413,6 +413,12 @@
                 <artifactId>auto-service</artifactId>
                 <version>${com.google.auto.service.version}</version>
             </dependency>
+            <!-- To validate json structures against json schemas like 'draft 2020-12' -->
+            <dependency>
+                <groupId>io.vertx</groupId>
+                <artifactId>vertx-json-schema</artifactId>
+                <version>${vertx.json.schema.version}</version>
+            </dependency>
 
             <!-- Carbon Identity Inbound Authentication OAuth dependency -->
             <dependency>
@@ -561,6 +567,7 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
                 <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
+                <scope>provided</scope>
                 <version>${project.version}</version>
             </dependency>
 
@@ -1011,6 +1018,7 @@
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
         <com.google.auto.service.version>1.1.1</com.google.auto.service.version>
+        <vertx.json.schema.version>4.5.10</vertx.json.schema.version>
 
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>

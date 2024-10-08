@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.rar.dao;
 
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsCodeDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
 
@@ -27,7 +28,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -43,11 +43,12 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
      */
     @Override
     public int[] addUserConsentedAuthorizationDetails(
-            final List<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs) throws SQLException {
+            final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs) throws SQLException {
 
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-             final PreparedStatement ps =
-                     connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
+             PreparedStatement ps = connection.getMetaData().getDatabaseProductName().contains("H2")
+                     ? connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS_H2)
+                     : connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
 
             for (AuthorizationDetailsConsentDTO consentDTO : authorizationDetailsConsentDTOs) {
                 ps.setString(1, consentDTO.getConsentId());
@@ -81,7 +82,7 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
                 final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs = new HashSet<>();
                 while (rs.next()) {
                     final String id = rs.getString(1);
-                    final int typeId = rs.getInt(2);
+                    final String typeId = rs.getString(2);
                     final String authorizationDetail = rs.getString(3);
                     final boolean isConsentActive = rs.getBoolean(4);
 
@@ -91,31 +92,6 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
                 return authorizationDetailsConsentDTOs;
             }
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int[] updateUserConsentedAuthorizationDetails(
-            final List<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs) throws SQLException {
-
-//         todo: This won't update the expected element. Hence, need to revisit the update logic
-        return null;
-
-//        try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-//             final PreparedStatement ps =
-//                     connection.prepareStatement(SQLQueries.UPDATE_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
-//
-//            for (AuthorizationDetailsConsentDTO consentDTO : authorizationDetailsConsentDTOs) {
-//                ps.setString(1, consentDTO.getAuthorizationDetail().toJsonString());
-//                ps.setBoolean(2, consentDTO.isConsentActive());
-//                ps.setString(3, consentDTO.getConsentId());
-//                ps.setInt(4, consentDTO.getTenantId());
-//                ps.addBatch();
-//            }
-//            return ps.executeBatch();
-//        }
     }
 
     /**
@@ -139,7 +115,7 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
      * {@inheritDoc}
      */
     @Override
-    public int[] addAccessTokenAuthorizationDetails(final List<AuthorizationDetailsTokenDTO>
+    public int[] addAccessTokenAuthorizationDetails(final Set<AuthorizationDetailsTokenDTO>
                                                             authorizationDetailsTokenDTOs) throws SQLException {
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
@@ -161,8 +137,9 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
      * {@inheritDoc}
      */
     @Override
-    public Set<AuthorizationDetailsTokenDTO> getAccessTokenAuthorizationDetails(
-            final String accessTokenId, final int tenantId) throws SQLException {
+    public Set<AuthorizationDetailsTokenDTO> getAccessTokenAuthorizationDetails(final String accessTokenId,
+                                                                                final int tenantId)
+            throws SQLException {
 
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
@@ -175,7 +152,7 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
                 final Set<AuthorizationDetailsTokenDTO> authorizationDetailsTokenDTO = new HashSet<>();
                 while (rs.next()) {
                     final String id = rs.getString(1);
-                    final int typeId = rs.getInt(2);
+                    final String typeId = rs.getString(2);
                     final String authorizationDetail = rs.getString(3);
 
                     authorizationDetailsTokenDTO.add(
@@ -200,6 +177,58 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
             ps.setString(1, accessTokenId);
             ps.setInt(2, tenantId);
             return ps.executeUpdate();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int[] addOAuth2CodeAuthorizationDetails(final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs)
+            throws SQLException {
+
+        try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             final PreparedStatement ps =
+                     connection.prepareStatement(SQLQueries.ADD_OAUTH2_CODE_AUTHORIZATION_DETAILS)) {
+
+            for (AuthorizationDetailsCodeDTO authorizationDetailsCodeDTO : authorizationDetailsCodeDTOs) {
+                ps.setString(1, authorizationDetailsCodeDTO.getAuthorizationCodeId());
+                ps.setString(2, authorizationDetailsCodeDTO.getAuthorizationDetail().toJsonString());
+                ps.setString(3, authorizationDetailsCodeDTO.getAuthorizationDetail().getType());
+                ps.setInt(4, authorizationDetailsCodeDTO.getTenantId());
+                ps.setInt(5, authorizationDetailsCodeDTO.getTenantId());
+                ps.addBatch();
+            }
+            return ps.executeBatch();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Set<AuthorizationDetailsCodeDTO> getOAuth2CodeAuthorizationDetails(final String authorizationCode,
+                                                                              final int tenantId) throws SQLException {
+
+        try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             final PreparedStatement ps =
+                     connection.prepareStatement(SQLQueries.GET_OAUTH2_CODE_AUTHORIZATION_DETAILS_BY_CODE)) {
+
+            ps.setString(1, authorizationCode);
+            ps.setInt(2, tenantId);
+            try (ResultSet rs = ps.executeQuery()) {
+
+                final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs = new HashSet<>();
+                while (rs.next()) {
+                    final String codeId = rs.getString(1);
+                    final String typeId = rs.getString(2);
+                    final String authorizationDetail = rs.getString(3);
+
+                    authorizationDetailsCodeDTOs.add(new AuthorizationDetailsCodeDTO(
+                            codeId, typeId, authorizationDetail, tenantId));
+                }
+                return authorizationDetailsCodeDTOs;
+            }
         }
     }
 

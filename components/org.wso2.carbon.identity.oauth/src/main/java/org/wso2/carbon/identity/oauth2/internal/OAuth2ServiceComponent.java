@@ -33,6 +33,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
+import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
@@ -84,6 +85,8 @@ import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.model.ResourceAccessControlKey;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandler;
 import org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProvider;
 import org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProvider;
@@ -1620,5 +1623,72 @@ public class OAuth2ServiceComponent {
             log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
         }
         OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(null);
+    }
+
+    /**
+     * Registers the {@link AuthorizationDetailsTypeManager} service.
+     *
+     * @param typeManager The {@code AuthorizationDetailsTypeManager} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager",
+            service = AuthorizationDetailsTypeManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthorizationDetailsTypeManager"
+    )
+    protected void registerAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager typeManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthorizationDetailsTypeManager service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsTypeManager(typeManager);
+    }
+
+
+    /**
+     * Unset the {@link AuthorizationDetailsTypeManager} service.
+     *
+     * @param typeManager The {@code AuthorizationDetailsTypeManager} instance.
+     */
+    protected void unregisterAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager typeManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthorizationDetailsTypeManager service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsTypeManager(null);
+    }
+
+    /**
+     * Registers the {@link AuthorizationDetailsProcessor} service.
+     *
+     * @param processor The {@code AuthorizationDetailsProcessor} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor",
+            service = AuthorizationDetailsProcessor.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthorizationDetailsProcessor"
+    )
+    protected void registerAuthorizationDetailsProcessor(AuthorizationDetailsProcessor processor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthorizationDetailsProcessor service.");
+        }
+        AuthorizationDetailsProcessorFactory.getInstance().setAuthorizationDetailsProcessors(processor);
+    }
+
+    /**
+     * Unset the {@link AuthorizationDetailsProcessor} service.
+     *
+     * @param processor The {@code AuthorizationDetailsProcessor} instance.
+     */
+    protected void unregisterAuthorizationDetailsProcessor(AuthorizationDetailsProcessor processor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthorizationDetailsProcessor service.");
+        }
+        AuthorizationDetailsProcessorFactory.getInstance().setAuthorizationDetailsProcessors(null);
     }
 }

@@ -23,15 +23,20 @@ package org.wso2.carbon.identity.oauth2.rar.util;
  */
 public final class AuthorizationDetailsConstants {
 
-    private AuthorizationDetailsConstants() {
-        // Private constructor to prevent instantiation
-    }
-
     public static final String AUTHORIZATION_DETAILS = "authorization_details";
     public static final String AUTHORIZATION_DETAILS_ID_PREFIX = "authorization_detail_id_";
     public static final String PARAM_SEPARATOR = "&&";
-
-    public static final String TYPE_NOT_SUPPORTED_ERR_MSG_FORMAT = "%s is not a supported authorization details type";
+    public static final String TYPE_NOT_SUPPORTED_ERR_FORMAT = "%s is an unknown authorization details type value";
+    public static final String TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT =
+            "The payload of the authorization details type '%s' contains errors: %s";
+    public static final String SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT =
+            "The schema of the authorization details type contains errors: %s";
     public static final String VALIDATION_FAILED_ERR_MSG = "Authorization details validation failed";
     public static final String VALIDATION_FAILED_ERR_CODE = "invalid_authorization_details";
+    public static final String EMPTY_JSON_OBJECT = "{}";
+    public static final String EMPTY_JSON_ARRAY = "[]";
+
+    private AuthorizationDetailsConstants() {
+        // Private constructor to prevent instantiation
+    }
 }

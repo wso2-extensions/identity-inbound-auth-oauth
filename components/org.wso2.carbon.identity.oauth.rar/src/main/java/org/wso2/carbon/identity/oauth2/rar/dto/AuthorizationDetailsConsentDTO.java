@@ -21,7 +21,7 @@ public class AuthorizationDetailsConsentDTO extends AuthorizationDetailsDTO {
      * @param isConsentActive         the consent status.
      * @param tenantId                the tenant ID.
      */
-    public AuthorizationDetailsConsentDTO(final String id, final String consentId, final int typeId,
+    public AuthorizationDetailsConsentDTO(final String id, final String consentId, final String typeId,
                                           final String authorizationDetailJson,
                                           final boolean isConsentActive, final int tenantId) {
 

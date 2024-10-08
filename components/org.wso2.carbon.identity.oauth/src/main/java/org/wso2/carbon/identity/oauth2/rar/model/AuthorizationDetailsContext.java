@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.rar.model;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.AuthorizationDetailsType;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -40,9 +41,30 @@ public class AuthorizationDetailsContext {
 
     private final AuthenticatedUser authenticatedUser;
     private final AuthorizationDetail authorizationDetail;
+    private final AuthorizationDetailsType authorizationDetailsType;
     private final HttpServletRequestWrapper httpServletRequestWrapper;
     private final OAuthAppDO oAuthAppDO;
     private final String[] scopes;
+
+    /**
+     * Constructs a new {@code AuthorizationDetailsContext}.
+     *
+     * @param authorizationDetail         the specific {@link AuthorizationDetail} to be validated.
+     * @param oAuthAuthzReqMessageContext the {@link OAuthAuthzReqMessageContext} instance which represent
+     *                                    the authorization request context.
+     * @throws NullPointerException if any of the arguments are {@code null}.
+     */
+    public AuthorizationDetailsContext(final AuthorizationDetail authorizationDetail,
+                                       final AuthorizationDetailsType authorizationDetailsType,
+                                       final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
+
+        this(oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getUser(),
+                authorizationDetail,
+                authorizationDetailsType,
+                oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getHttpServletRequestWrapper(),
+                (OAuthAppDO) oAuthAuthzReqMessageContext.getProperty(OAUTH_APP_PROPERTY),
+                oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getScopes());
+    }
 
     /**
      * Constructs a new {@code AuthorizationDetailsContext}.
@@ -59,34 +81,19 @@ public class AuthorizationDetailsContext {
      */
     public AuthorizationDetailsContext(final AuthenticatedUser authenticatedUser,
                                        final AuthorizationDetail authorizationDetail,
+                                       final AuthorizationDetailsType authorizationDetailsType,
                                        final HttpServletRequestWrapper httpServletRequestWrapper,
                                        final OAuthAppDO oAuthAppDO,
                                        final String[] scopes) {
 
         this.authenticatedUser = Objects.requireNonNull(authenticatedUser, "authenticatedUser cannot be null");
         this.authorizationDetail = Objects.requireNonNull(authorizationDetail, "authorizationDetail cannot be null");
-        this.httpServletRequestWrapper = Objects
-                .requireNonNull(httpServletRequestWrapper, "httpServletRequestWrapper cannot be null");
+        this.authorizationDetailsType =
+                Objects.requireNonNull(authorizationDetailsType, "authorizationDetailsType cannot be null");
+        this.httpServletRequestWrapper =
+                Objects.requireNonNull(httpServletRequestWrapper, "httpServletRequestWrapper cannot be null");
         this.oAuthAppDO = Objects.requireNonNull(oAuthAppDO, "oAuthAppDO cannot be null");
         this.scopes = Objects.requireNonNull(scopes, "scopes cannot be null");
-    }
-
-    /**
-     * Constructs a new {@code AuthorizationDetailsContext}.
-     *
-     * @param authorizationDetail         the specific {@link AuthorizationDetail} to be validated.
-     * @param oAuthAuthzReqMessageContext the {@link OAuthAuthzReqMessageContext} instance which represent
-     *                                    the authorization request context.
-     * @throws NullPointerException if any of the arguments are {@code null}.
-     */
-    public AuthorizationDetailsContext(final AuthorizationDetail authorizationDetail,
-                                       final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
-
-        this(oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getUser(),
-                authorizationDetail,
-                oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getHttpServletRequestWrapper(),
-                (OAuthAppDO) oAuthAuthzReqMessageContext.getProperty(OAUTH_APP_PROPERTY),
-                oAuthAuthzReqMessageContext.getAuthorizationReqDTO().getScopes());
     }
 
     /**
@@ -98,10 +105,12 @@ public class AuthorizationDetailsContext {
      * @throws NullPointerException if any of the arguments are {@code null}.
      */
     public AuthorizationDetailsContext(final AuthorizationDetail authorizationDetail,
+                                       final AuthorizationDetailsType authorizationDetailsType,
                                        final OAuthTokenReqMessageContext oAuthTokenReqMessageContext) {
 
         this(oAuthTokenReqMessageContext.getAuthorizedUser(),
                 authorizationDetail,
+                authorizationDetailsType,
                 oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getHttpServletRequestWrapper(),
                 (OAuthAppDO) oAuthTokenReqMessageContext.getProperty(OAUTH_APP_PROPERTY),
                 oAuthTokenReqMessageContext.getScope());
@@ -117,11 +126,20 @@ public class AuthorizationDetailsContext {
     }
 
     /**
+     * Returns the {@code AuthorizationDetailsType} instance.
+     *
+     * @return the {@link AuthorizationDetailsType} instance.
+     */
+    public AuthorizationDetailsType getAuthorizationDetailsType() {
+        return this.authorizationDetailsType;
+    }
+
+    /**
      * Returns the OAuth application details.
      *
      * @return the {@link OAuthAppDO} instance.
      */
-    public OAuthAppDO getoAuthAppDO() {
+    public OAuthAppDO getOAuthAppDO() {
         return this.oAuthAppDO;
     }
 

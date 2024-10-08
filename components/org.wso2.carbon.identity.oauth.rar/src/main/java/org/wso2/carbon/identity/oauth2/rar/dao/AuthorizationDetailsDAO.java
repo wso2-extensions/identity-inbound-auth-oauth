@@ -18,11 +18,11 @@
 
 package org.wso2.carbon.identity.oauth2.rar.dao;
 
+import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsCodeDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
 
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -36,13 +36,13 @@ public interface AuthorizationDetailsDAO {
     /**
      * Adds user consented authorization details to the database.
      *
-     * @param authorizationDetailsConsentDTOs List of user consented authorization details DTOs.
+     * @param authorizationDetailsConsentDTOs A set of user consented authorization details DTOs.
      *                                        {@link AuthorizationDetailsConsentDTO }
      * @return An array of positive integers indicating the number of rows affected for each batch operation,
      * or negative integers if any of the batch operations fail.
      * @throws SQLException If a database access error occurs.
      */
-    int[] addUserConsentedAuthorizationDetails(List<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs)
+    int[] addUserConsentedAuthorizationDetails(Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs)
             throws SQLException;
 
     /**
@@ -54,18 +54,6 @@ public interface AuthorizationDetailsDAO {
      * @throws SQLException If a database access error occurs.
      */
     Set<AuthorizationDetailsConsentDTO> getUserConsentedAuthorizationDetails(String consentId, int tenantId)
-            throws SQLException;
-
-    /**
-     * Updates user consented authorization details in the database.
-     *
-     * @param authorizationDetailsConsentDTOs A list of user consented authorization details DTOs.
-     *                                        {@link AuthorizationDetailsConsentDTO}
-     * @return An array of integers indicating the number of rows affected for each batch operation.
-     * Positive values indicate success, negative values indicate failure.
-     * @throws SQLException If a database access error occurs.
-     */
-    int[] updateUserConsentedAuthorizationDetails(List<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs)
             throws SQLException;
 
     /**
@@ -81,13 +69,13 @@ public interface AuthorizationDetailsDAO {
     /**
      * Adds access token authorization details to the database.
      *
-     * @param authorizationDetailsTokenDTOs A list of access token authorization details DTOs.
+     * @param authorizationDetailsTokenDTOs A set of access token authorization details DTOs.
      *                                      {@link AuthorizationDetailsTokenDTO}
      * @return An array of integers indicating the number of rows affected for each batch operation.
      * Positive values indicate success, negative values indicate failure.
      * @throws SQLException If a database access error occurs.
      */
-    int[] addAccessTokenAuthorizationDetails(List<AuthorizationDetailsTokenDTO> authorizationDetailsTokenDTOs)
+    int[] addAccessTokenAuthorizationDetails(Set<AuthorizationDetailsTokenDTO> authorizationDetailsTokenDTOs)
             throws SQLException;
 
     /**
@@ -110,6 +98,28 @@ public interface AuthorizationDetailsDAO {
      * @throws SQLException If a database access error occurs.
      */
     int deleteAccessTokenAuthorizationDetails(String accessTokenId, int tenantId) throws SQLException;
+
+    /**
+     * Adds authorization details against a given OAuth2 code.
+     *
+     * @param authorizationDetailsCodeDTOs A list of code authorization details DTOs to store.
+     * @return An array of positive integers indicating the number of rows affected for each batch operation,
+     * or negative integers if any of the batch operations fail.
+     * @throws SQLException If a database access error occurs.
+     */
+    int[] addOAuth2CodeAuthorizationDetails(Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs)
+            throws SQLException;
+
+    /**
+     * Retrieves authorization code authorization details from the database.
+     *
+     * @param authorizationCode The value of the authorization code.
+     * @param tenantId      The tenant ID.
+     * @return A set of authorization code authorization details DTOs.
+     * @throws SQLException If a database access error occurs.
+     */
+    Set<AuthorizationDetailsCodeDTO> getOAuth2CodeAuthorizationDetails(String authorizationCode, int tenantId)
+            throws SQLException;
 
     /**
      * Retrieves the consent ID associated with a specific user ID and application ID.

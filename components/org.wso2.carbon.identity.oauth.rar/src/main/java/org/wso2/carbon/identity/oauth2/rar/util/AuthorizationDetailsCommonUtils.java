@@ -28,10 +28,14 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.EMPTY_JSON_ARRAY;
+import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.EMPTY_JSON_OBJECT;
 
 /**
  * Utility class for handling OAuth2 Rich Authorization Requests.
@@ -39,9 +43,8 @@ import java.util.Set;
 public class AuthorizationDetailsCommonUtils {
 
     private static final Log log = LogFactory.getLog(AuthorizationDetailsCommonUtils.class);
-    private static final String empty_json = "{}";
-    private static final String empty_json_array = "[]";
-    private static final ObjectMapper objectMapper = createDefaultObjectMapper();
+
+    private static volatile ObjectMapper objectMapper;
 
     private AuthorizationDetailsCommonUtils() {
         // Private constructor to prevent instantiation
@@ -122,7 +125,7 @@ public class AuthorizationDetailsCommonUtils {
         } catch (JsonProcessingException e) {
             log.debug("Error occurred while parsing AuthorizationDetails to String. Caused by, ", e);
         }
-        return empty_json_array;
+        return EMPTY_JSON_ARRAY;
     }
 
     /**
@@ -150,7 +153,7 @@ public class AuthorizationDetailsCommonUtils {
         } catch (JsonProcessingException e) {
             log.debug("Error occurred while parsing AuthorizationDetail to String. Caused by, ", e);
         }
-        return empty_json;
+        return EMPTY_JSON_OBJECT;
     }
 
     /**
@@ -175,19 +178,7 @@ public class AuthorizationDetailsCommonUtils {
             return objectMapper.convertValue(authorizationDetail, new TypeReference<Map<String, Object>>() {
             });
         }
-        return new HashMap<>();
-    }
-
-    /**
-     * Creates a singleton instance of {@link ObjectMapper}.
-     *
-     * @return the singleton {@link ObjectMapper} instance.
-     */
-    private static ObjectMapper createDefaultObjectMapper() {
-
-        final ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        return objectMapper;
+        return Collections.emptyMap();
     }
 
     /**
@@ -198,6 +189,14 @@ public class AuthorizationDetailsCommonUtils {
      * @return a configured {@link ObjectMapper} instance.
      */
     public static ObjectMapper getDefaultObjectMapper() {
+        if (objectMapper == null) {
+            synchronized (AuthorizationDetailsCommonUtils.class) {
+                if (objectMapper == null) {
+                    objectMapper = new ObjectMapper();
+                    objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+                }
+            }
+        }
         return objectMapper;
     }
 }

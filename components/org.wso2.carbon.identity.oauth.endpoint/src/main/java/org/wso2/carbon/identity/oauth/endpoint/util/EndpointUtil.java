@@ -1102,7 +1102,8 @@ public class EndpointUtil {
         }
         try {
             Set<String> userApprovedScopesSet = params.getConsentRequiredScopes();
-            if (CollectionUtils.isNotEmpty(userApprovedScopesSet)) {
+            if (CollectionUtils.isNotEmpty(userApprovedScopesSet) ||
+                    AuthorizationDetailsUtils.isRichAuthorizationRequest(params)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Storing user consent for approved scopes : " + userApprovedScopesSet.stream()
                             .collect(Collectors.joining(" ")) + " of client : " + params.getClientId());

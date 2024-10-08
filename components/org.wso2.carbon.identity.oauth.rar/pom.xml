@@ -24,7 +24,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.0.133-SNAPSHOT</version>
+        <version>7.0.150-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -45,14 +45,14 @@
         </dependency>
 
         <dependency>
-            <groupId>com.google.auto.service</groupId>
-            <artifactId>auto-service</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-json-schema</artifactId>
         </dependency>
 
         <!--Test Dependencies-->
@@ -123,8 +123,9 @@
                     <excludes>
                         <!--Excluding them in coverage reports-->
                         <exclude>**/*Constants.class</exclude>
-                        <exclude>**/model/**</exclude>
                         <exclude>**/dto/**</exclude>
+                        <exclude>**/exception/**</exclude>
+                        <exclude>**/model/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

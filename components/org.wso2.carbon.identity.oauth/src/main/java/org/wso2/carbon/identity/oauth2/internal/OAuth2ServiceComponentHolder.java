@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
+import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
@@ -127,6 +128,7 @@ public class OAuth2ServiceComponentHolder {
     private ConfigurationManager configurationManager;
     private AuthorizationDetailsService authorizationDetailsService;
     private AuthorizationDetailsValidator authorizationDetailsValidator;
+    private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -384,7 +386,7 @@ public class OAuth2ServiceComponentHolder {
 
         return idpManager;
     }
-    
+
     /**
     * Set UserSessionManagementService Instance.
     *
@@ -918,5 +920,23 @@ public class OAuth2ServiceComponentHolder {
             this.authorizationDetailsValidator = new DefaultAuthorizationDetailsValidator();
         }
         return this.authorizationDetailsValidator;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsTypeManager} instance.
+     *
+     * @return A {@link AuthorizationDetailsTypeManager} singleton instance.
+     */
+    public AuthorizationDetailsTypeManager getAuthorizationDetailsTypeManager() {
+
+        return this.authorizationDetailsTypeManager;
+    }
+
+    /**
+     * set an {@link AuthorizationDetailsTypeManager} instance.
+     */
+    public void setAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager authorizationDetailsTypeManager) {
+
+        this.authorizationDetailsTypeManager = authorizationDetailsTypeManager;
     }
 }

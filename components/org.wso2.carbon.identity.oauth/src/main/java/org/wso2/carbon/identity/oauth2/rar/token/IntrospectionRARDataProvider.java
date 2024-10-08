@@ -10,6 +10,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
@@ -56,20 +57,25 @@ public class IntrospectionRARDataProvider implements IntrospectionDataProvider {
             final OAuth2TokenValidationRequestDTO tokenValidationRequestDTO,
             final OAuth2IntrospectionResponseDTO introspectionResponseDTO) throws IdentityOAuth2Exception {
 
-        final Map<String, Object> introspectionData = new HashMap<>();
-        final OAuth2TokenValidationMessageContext tokenValidationMessageContext =
-                generateOAuth2TokenValidationMessageContext(tokenValidationRequestDTO, introspectionResponseDTO);
+        try {
+            final OAuth2TokenValidationMessageContext tokenValidationMessageContext =
+                    generateOAuth2TokenValidationMessageContext(tokenValidationRequestDTO, introspectionResponseDTO);
+            final Map<String, Object> introspectionData = new HashMap<>();
 
-        if (Objects.nonNull(tokenValidationMessageContext)) {
+            if (Objects.nonNull(tokenValidationMessageContext)) {
 
-            final AuthorizationDetails validatedAuthorizationDetails = this.authorizationDetailsValidator
-                    .getValidatedAuthorizationDetails(tokenValidationMessageContext);
-            if (AuthorizationDetailsUtils.isRichAuthorizationRequest(validatedAuthorizationDetails)) {
+                final AuthorizationDetails validatedAuthorizationDetails = this.authorizationDetailsValidator
+                        .getValidatedAuthorizationDetails(tokenValidationMessageContext);
 
-                introspectionData.put(AUTHORIZATION_DETAILS, validatedAuthorizationDetails.toSet());
+                if (AuthorizationDetailsUtils.isRichAuthorizationRequest(validatedAuthorizationDetails)) {
+                    introspectionData.put(AUTHORIZATION_DETAILS, validatedAuthorizationDetails.toSet());
+                }
             }
+            return introspectionData;
+        } catch (AuthorizationDetailsProcessingException e) {
+            log.error("Authorization details validation failed. Caused by, ", e);
+            throw new IdentityOAuth2Exception("Authorization details validation failed", e);
         }
-        return introspectionData;
     }
 
     /**

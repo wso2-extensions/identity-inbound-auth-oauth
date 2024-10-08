@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package org.wso2.carbon.identity.oauth2.rar.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,6 +38,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.EMPTY_JSON_ARRAY;
+import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.EMPTY_JSON_OBJECT;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_NAME;
 import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TYPE;
 
 /**
@@ -38,7 +59,7 @@ public class AuthorizationDetailsCommonUtilsTest {
 
         // mock
         doThrow(JsonProcessingException.class)
-                .when(this.mockObjectMapper).writeValueAsString(any(TestAuthorizationDetail.class));
+                .when(this.mockObjectMapper).writeValueAsString(any(TestDAOUtils.TestAuthorizationDetail.class));
         doThrow(JsonProcessingException.class).when(this.mockObjectMapper).writeValueAsString(any(Set.class));
     }
 
@@ -60,7 +81,7 @@ public class AuthorizationDetailsCommonUtilsTest {
             case "shouldReturnCorrectType_whenJSONIsValid":
                 return new Object[][]{
                         {AuthorizationDetail.class},
-                        {TestAuthorizationDetail.class}
+                        {TestDAOUtils.TestAuthorizationDetail.class}
                 };
         }
         return null;
@@ -95,42 +116,53 @@ public class AuthorizationDetailsCommonUtilsTest {
     @Test
     public void shouldReturnCorrectJson_whenAuthorizationDetailsAreValid() {
 
-        AuthorizationDetail inputAuthorizationDetail = new TestAuthorizationDetail();
+        TestDAOUtils.TestAuthorizationDetail inputAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
         inputAuthorizationDetail.setType(TEST_TYPE);
+        inputAuthorizationDetail.setName(TEST_NAME);
 
-        assertTrue(AuthorizationDetailsCommonUtils.toJSON(Sets.newHashSet(inputAuthorizationDetail), objectMapper)
-                .contains(TEST_TYPE));
-        assertEquals("[]", AuthorizationDetailsCommonUtils.toJSON((Set<AuthorizationDetail>) null, objectMapper));
-        assertEquals("[]",
+        final String authorizationDetails = AuthorizationDetailsCommonUtils
+                .toJSON(Sets.newHashSet(inputAuthorizationDetail), objectMapper);
+
+        assertTrue(authorizationDetails.contains(TEST_TYPE));
+        assertTrue(authorizationDetails.contains(TEST_NAME));
+        assertEquals(EMPTY_JSON_ARRAY,
+                AuthorizationDetailsCommonUtils.toJSON((Set<AuthorizationDetail>) null, objectMapper));
+        assertEquals(EMPTY_JSON_ARRAY,
                 AuthorizationDetailsCommonUtils.toJSON(Sets.newHashSet(inputAuthorizationDetail), mockObjectMapper));
     }
 
     @Test
     public void shouldReturnCorrectJson_whenAuthorizationDetailIsValid() {
 
-        AuthorizationDetail inputAuthorizationDetail = new TestAuthorizationDetail();
+        TestDAOUtils.TestAuthorizationDetail inputAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
         inputAuthorizationDetail.setType(TEST_TYPE);
+        inputAuthorizationDetail.setName(TEST_NAME);
 
-        assertTrue(AuthorizationDetailsCommonUtils.toJSON(inputAuthorizationDetail, objectMapper).contains(TEST_TYPE));
-        assertEquals("{}", AuthorizationDetailsCommonUtils.toJSON((TestAuthorizationDetail) null, objectMapper));
-        assertEquals("{}", AuthorizationDetailsCommonUtils.toJSON(new TestAuthorizationDetail(), mockObjectMapper));
+        final String authorizationDetail =
+                AuthorizationDetailsCommonUtils.toJSON(inputAuthorizationDetail, objectMapper);
+
+        assertTrue(authorizationDetail.contains(TEST_TYPE));
+        assertTrue(authorizationDetail.contains(TEST_NAME));
+        assertEquals(EMPTY_JSON_OBJECT,
+                AuthorizationDetailsCommonUtils.toJSON((TestDAOUtils.TestAuthorizationDetail) null, objectMapper));
+        assertEquals(EMPTY_JSON_OBJECT,
+                AuthorizationDetailsCommonUtils.toJSON(new TestDAOUtils.TestAuthorizationDetail(), mockObjectMapper));
     }
 
     @Test
     public void shouldReturnMap_whenAuthorizationDetailIsValid() {
 
-        AuthorizationDetail inputAuthorizationDetail = new TestAuthorizationDetail();
+        TestDAOUtils.TestAuthorizationDetail inputAuthorizationDetail = new TestDAOUtils.TestAuthorizationDetail();
         inputAuthorizationDetail.setType(TEST_TYPE);
-        Map<String, Object> actualMap = AuthorizationDetailsCommonUtils.toMap(inputAuthorizationDetail, objectMapper);
+        inputAuthorizationDetail.setName(TEST_NAME);
+        Map<String, Object> map = AuthorizationDetailsCommonUtils.toMap(inputAuthorizationDetail, objectMapper);
 
-        assertTrue(actualMap.containsKey("type"));
-        assertEquals(TEST_TYPE, String.valueOf(actualMap.get("type")));
-        assertEquals(1, actualMap.keySet().size());
+        assertTrue(map.containsKey("type"));
+        assertTrue(map.containsKey("name"));
+        assertEquals(TEST_TYPE, String.valueOf(map.get("type")));
+        assertEquals(TEST_NAME, String.valueOf(map.get("name")));
+        assertEquals(2, map.keySet().size());
 
         assertFalse(AuthorizationDetailsCommonUtils.toMap(null, objectMapper).containsKey(TEST_TYPE));
-    }
-
-    private static class TestAuthorizationDetail extends AuthorizationDetail {
-        // Test authorization detail class which extends AuthorizationDetail
     }
 }

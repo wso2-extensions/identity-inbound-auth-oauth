@@ -11,20 +11,26 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
 import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
+import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetailsContext;
+import org.wso2.carbon.identity.oauth2.rar.model.ValidationResult;
 import org.wso2.carbon.identity.oauth2.rar.utils.AuthorizationDetailsBaseTest;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -32,12 +38,14 @@ import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertNull;
 import static org.wso2.carbon.identity.oauth2.TestConstants.ACESS_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.TestConstants.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_DOMAIN;
@@ -78,7 +86,8 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
     }
 
     @BeforeMethod()
-    public void setUpMethod() throws SQLException {
+    public void setUpMethod()
+            throws SQLException, IdentityOAuth2ServerException, AuthorizationDetailsProcessingException {
 
         this.authorizationDetailsDAOMock = Mockito.mock(AuthorizationDetailsDAO.class);
         when(this.authorizationDetailsDAOMock.getConsentIdByUserIdAndAppId(TEST_USER_ID, TEST_APP_ID, TENANT_ID))
@@ -92,13 +101,23 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
                 .thenReturn(Collections.singleton(new AuthorizationDetailsTokenDTO(ACESS_TOKEN_ID,
                         this.authorizationDetail, TENANT_ID)));
 
-        uut = new AuthorizationDetailsService(this.providerFactoryMock, this.authorizationDetailsDAOMock);
+        AuthorizationDetailsProcessor processor = Mockito.mock(AuthorizationDetailsProcessor.class);
+        when(processor.isEqualOrSubset(any(AuthorizationDetail.class), any(AuthorizationDetails.class)))
+                .thenReturn(true);
+        when(processor.enrich(any(AuthorizationDetailsContext.class))).thenReturn(this.authorizationDetail);
+        when(processor.getType()).thenReturn(TEST_TYPE);
+        when(processor.validate(any(AuthorizationDetailsContext.class))).thenReturn(ValidationResult.valid());
+
+        when(this.processorFactoryMock.getAuthorizationDetailsProcessorByType(TEST_TYPE))
+                .thenReturn(Optional.of(processor));
+
+        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock);
     }
 
     @BeforeMethod(onlyForGroups = {"error-flow-tests"}, dependsOnMethods = {"setUpMethod"})
     public void setUpErrorMethod() throws SQLException {
 
-        when(this.authorizationDetailsDAOMock.addUserConsentedAuthorizationDetails(anyList()))
+        when(this.authorizationDetailsDAOMock.addUserConsentedAuthorizationDetails(anySet()))
                 .thenThrow(SQLException.class);
         when(this.authorizationDetailsDAOMock.deleteUserConsentedAuthorizationDetails(anyString(), anyInt()))
                 .thenThrow(SQLException.class);
@@ -106,12 +125,12 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
                 .thenThrow(SQLException.class);
         when(this.authorizationDetailsDAOMock.getAccessTokenAuthorizationDetails(anyString(), anyInt()))
                 .thenThrow(SQLException.class);
-        when(this.authorizationDetailsDAOMock.addAccessTokenAuthorizationDetails(anyList()))
+        when(this.authorizationDetailsDAOMock.addAccessTokenAuthorizationDetails(anySet()))
                 .thenThrow(SQLException.class);
         when(this.authorizationDetailsDAOMock.deleteAccessTokenAuthorizationDetails(anyString(), anyInt()))
                 .thenThrow(SQLException.class);
 
-        uut = new AuthorizationDetailsService(this.providerFactoryMock, this.authorizationDetailsDAOMock);
+        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock);
     }
 
     @Test
@@ -121,7 +140,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 new OAuth2Parameters(), authorizationDetails);
 
-        verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anySet());
     }
 
     @Test
@@ -134,7 +153,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 oAuth2Parameters, authorizationDetails);
 
-        verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anySet());
     }
 
     @Test
@@ -144,7 +163,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 oAuth2Parameters, authorizationDetails);
 
-        verify(authorizationDetailsDAOMock, times(1)).addUserConsentedAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(1)).addUserConsentedAuthorizationDetails(anySet());
     }
 
     @Test
@@ -186,7 +205,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         verify(authorizationDetailsDAOMock, times(1))
                 .deleteUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TENANT_ID);
-        verify(authorizationDetailsDAOMock, times(1)).addUserConsentedAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(1)).addUserConsentedAuthorizationDetails(anySet());
     }
 
     @Test
@@ -202,13 +221,12 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
     }
 
     @Test
-    public void shouldReturnEmptyAuthorizationDetails_whenConsentIsInvalid() throws IdentityOAuth2Exception {
+    public void shouldReturnNull_whenConsentIsInvalid() throws IdentityOAuth2Exception {
 
         AuthenticatedUser invalidUser = new AuthenticatedUser();
         invalidUser.setUserId("invalid-user-id");
 
-        assertTrue(uut.getUserConsentedAuthorizationDetails(invalidUser, CLIENT_ID, TENANT_ID)
-                .getDetails().isEmpty());
+        assertNull(uut.getUserConsentedAuthorizationDetails(invalidUser, CLIENT_ID, TENANT_ID));
     }
 
     @Test
@@ -249,7 +267,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         uut.storeAccessTokenAuthorizationDetails(accessTokenDO, new OAuthAuthzReqMessageContext(null));
 
-        verify(authorizationDetailsDAOMock, times(0)).addAccessTokenAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(0)).addAccessTokenAuthorizationDetails(anySet());
     }
 
     @Test
@@ -261,7 +279,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         uut.storeAccessTokenAuthorizationDetails(accessTokenDO, oAuthAuthzReqMessageContext);
 
-        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anySet());
     }
 
     @Test
@@ -271,7 +289,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         uut.storeOrReplaceAccessTokenAuthorizationDetails(accessTokenDO, accessTokenDO,
                 new OAuthTokenReqMessageContext(new OAuth2AccessTokenReqDTO()));
 
-        verify(authorizationDetailsDAOMock, times(0)).addAccessTokenAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(0)).addAccessTokenAuthorizationDetails(anySet());
         verify(authorizationDetailsDAOMock, times(0)).deleteAccessTokenAuthorizationDetails(anyString(), anyInt());
     }
 
@@ -284,7 +302,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         uut.storeOrReplaceAccessTokenAuthorizationDetails(accessTokenDO, null, messageContext);
 
-        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anySet());
         verify(authorizationDetailsDAOMock, times(0)).deleteAccessTokenAuthorizationDetails(anyString(), anyInt());
     }
 
@@ -297,7 +315,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         uut.storeOrReplaceAccessTokenAuthorizationDetails(accessTokenDO, accessTokenDO, messageContext);
 
-        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anySet());
         verify(authorizationDetailsDAOMock, times(1)).deleteAccessTokenAuthorizationDetails(anyString(), anyInt());
     }
 
@@ -313,7 +331,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         verify(authorizationDetailsDAOMock, times(1))
                 .deleteAccessTokenAuthorizationDetails(oldAccessTokenId, TENANT_ID);
-        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anyList());
+        verify(authorizationDetailsDAOMock, times(1)).addAccessTokenAuthorizationDetails(anySet());
     }
 
     @Test

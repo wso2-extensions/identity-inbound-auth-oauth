@@ -8,9 +8,10 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
-import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProviderFactory;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants;
@@ -49,8 +50,10 @@ public class AuthorizationDetailsBaseTest {
     protected AccessTokenDO accessTokenDO;
     protected OAuth2AccessTokenReqDTO accessTokenReqDTO;
 
-    protected AuthorizationDetailsProviderFactory providerFactoryMock;
+    protected AuthorizationDetailsProcessorFactory processorFactoryMock;
     protected AuthorizationDetailsService serviceMock;
+
+    protected AuthorizationDetailsSchemaValidator schemaValidatorMock;
 
     public AuthorizationDetailsBaseTest() {
 
@@ -95,6 +98,8 @@ public class AuthorizationDetailsBaseTest {
 
         mockAuthorizationDetailsProviderFactory();
         this.serviceMock = mock(AuthorizationDetailsService.class);
+
+        this.schemaValidatorMock = spy(AuthorizationDetailsSchemaValidator.class);
     }
 
     public static void assertAuthorizationDetailsPresent(final Map<String, Object> attributes) {
@@ -111,13 +116,13 @@ public class AuthorizationDetailsBaseTest {
 
     private void mockAuthorizationDetailsProviderFactory() {
 
-        this.providerFactoryMock = spy(AuthorizationDetailsProviderFactory.class);
+        this.processorFactoryMock = spy(AuthorizationDetailsProcessorFactory.class);
         try {
-            Field privateField = AuthorizationDetailsProviderFactory.class
-                    .getDeclaredField("supportedAuthorizationDetailsTypes");
+            Field privateField = AuthorizationDetailsProcessorFactory.class
+                    .getDeclaredField("authorizationDetailsProcessors");
             privateField.setAccessible(true);
 
-            privateField.set(this.providerFactoryMock, new HashMap<String, AuthorizationDetailsProcessor>() {{
+            privateField.set(this.processorFactoryMock, new HashMap<String, AuthorizationDetailsProcessor>() {{
                 put(TEST_TYPE, getAuthorizationDetailsProcessorMock());
             }});
         } catch (Exception e) {

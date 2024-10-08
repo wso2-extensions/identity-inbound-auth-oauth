@@ -37,10 +37,12 @@ import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -67,6 +69,9 @@ public class ProviderConfigBuilderTest {
 
     @Mock
     private OIDProviderRequest mockOidProviderRequest;
+//
+//    @Mock
+//    private AuthorizationDetailsProcessorFactory mockAuthorizationDetailsProcessorFactory;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -84,7 +89,9 @@ public class ProviderConfigBuilderTest {
             OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
             oAuthServerConfiguration.when(
                     OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
-            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<AuthorizationDetailsProcessorFactory> factoryMock =
+                         mockStatic(AuthorizationDetailsProcessorFactory.class)) {
 
                 OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
                 mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
@@ -107,6 +114,13 @@ public class ProviderConfigBuilderTest {
                         .thenReturn(JWSAlgorithm.RS256);
                 when(mockOidProviderRequest.getTenantDomain()).thenReturn(
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+                AuthorizationDetailsProcessorFactory processorFactoryMock =
+                        spy(AuthorizationDetailsProcessorFactory.class);
+                when(processorFactoryMock.getSupportedAuthorizationDetailTypes()).thenReturn(new HashSet<String>() {{
+                    add("test_type");
+                }});
+                factoryMock.when(AuthorizationDetailsProcessorFactory::getInstance).thenReturn(processorFactoryMock);
                 assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
             }
         }

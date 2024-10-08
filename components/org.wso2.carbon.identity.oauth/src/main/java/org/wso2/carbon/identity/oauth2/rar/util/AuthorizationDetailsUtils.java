@@ -13,26 +13,33 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsCodeDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetailsContext;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toSet;
 import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.AUTHORIZATION_DETAILS_ID_PREFIX;
 
 /**
@@ -52,6 +59,36 @@ public class AuthorizationDetailsUtils {
     public static boolean isRichAuthorizationRequest(final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
 
         return isRichAuthorizationRequest(oAuthAuthzReqMessageContext.getAuthorizationDetails());
+    }
+
+    /**
+     * Determines if the request is a rich authorization request using provided {@link AuthorizationDetails} object.
+     * <p>
+     * This method checks if the specified {@link AuthorizationDetails} instance is not {@code null}
+     * and has a non-empty details set.
+     *
+     * @param authorizationDetails The {@link AuthorizationDetails} to check.
+     * @return {@code true} if the {@link AuthorizationDetails} is not {@code null} and has a non-empty details set,
+     * {@code false} otherwise.
+     */
+    public static boolean isRichAuthorizationRequest(final AuthorizationDetails authorizationDetails) {
+
+        return !isEmpty(authorizationDetails);
+    }
+
+    /**
+     * Determines if the provided {@link AuthorizationDetails} object is empty or not.
+     * <p>
+     * This method checks if the specified {@link AuthorizationDetails} instance is not {@code null}
+     * and has a non-empty details set.
+     *
+     * @param authorizationDetails The {@link AuthorizationDetails} to check.
+     * @return {@code true} if the {@link AuthorizationDetails} is not {@code null} and has a non-empty details set,
+     * {@code false} otherwise.
+     */
+    public static boolean isEmpty(final AuthorizationDetails authorizationDetails) {
+
+        return authorizationDetails == null || authorizationDetails.getDetails().isEmpty();
     }
 
     /**
@@ -80,33 +117,6 @@ public class AuthorizationDetailsUtils {
     }
 
     /**
-     * Determines if the request is a rich authorization request using provided {@link AuthorizationDetails} object.
-     * <p>
-     * This method checks if the specified {@link AuthorizationDetails} instance is not {@code null}
-     * and has a non-empty details set.
-     *
-     * @param authorizationDetails The {@link AuthorizationDetails} to check.
-     * @return {@code true} if the {@link AuthorizationDetails} is not {@code null} and has a non-empty details set,
-     * {@code false} otherwise.
-     */
-    public static boolean isRichAuthorizationRequest(final AuthorizationDetails authorizationDetails) {
-
-        return authorizationDetails != null && !authorizationDetails.getDetails().isEmpty();
-    }
-
-    /**
-     * Determines if the given {@link OAuth2Parameters} object contains {@link AuthorizationDetails}.
-     *
-     * @param oAuth2Parameters The requested OAuth2Parameters to check.
-     * @return {@code true} if the OAuth2Parameters contains non-empty authorization details set,
-     * {@code false} otherwise.
-     */
-    public static boolean isRichAuthorizationRequest(final OAuth2Parameters oAuth2Parameters) {
-
-        return isRichAuthorizationRequest(oAuth2Parameters.getAuthorizationDetails());
-    }
-
-    /**
      * Determines if the given {@link OAuthTokenReqMessageContext} object or the
      * {@link OAuthTokenReqMessageContext#getOauth2AccessTokenReqDTO} contains {@link AuthorizationDetails}.
      *
@@ -119,18 +129,6 @@ public class AuthorizationDetailsUtils {
         return isRichAuthorizationRequest(oAuthTokenReqMessageContext.getAuthorizationDetails()) ||
                 isRichAuthorizationRequest(oAuthTokenReqMessageContext
                         .getOauth2AccessTokenReqDTO().getAuthorizationDetails());
-    }
-
-    /**
-     * Determines if the given {@link OAuth2AuthorizeReqDTO} object contains {@link AuthorizationDetails}.
-     *
-     * @param oAuth2AuthorizeReqDTO The requested oAuth2AuthorizeReqDTO to check.
-     * @return {@code true} if the oAuth2AuthorizeReqDTO contains non-empty authorization details set,
-     * {@code false} otherwise.
-     */
-    public static boolean isRichAuthorizationRequest(final OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
-
-        return isRichAuthorizationRequest(oAuth2AuthorizeReqDTO.getAuthorizationDetails());
     }
 
     /**
@@ -169,7 +167,7 @@ public class AuthorizationDetailsUtils {
     }
 
     /**
-     * Generates a list of {@link AuthorizationDetailsConsentDTO} from the provided consent ID,
+     * Generates a set of {@link AuthorizationDetailsConsentDTO} from the provided consent ID,
      * authorization details, and tenant ID.
      *
      * @param consentId                         The consent ID.
@@ -177,30 +175,48 @@ public class AuthorizationDetailsUtils {
      * @param tenantId                          The tenant ID.
      * @return A list of {@link AuthorizationDetailsConsentDTO}.
      */
-    public static List<AuthorizationDetailsConsentDTO> getAuthorizationDetailsConsentDTOs(
+    public static Set<AuthorizationDetailsConsentDTO> getAuthorizationDetailsConsentDTOs(
             final String consentId, final AuthorizationDetails userConsentedAuthorizationDetails, final int tenantId) {
 
         return userConsentedAuthorizationDetails.stream()
                 .map(detail -> new AuthorizationDetailsConsentDTO(consentId, detail, true, tenantId))
-                .collect(Collectors.toList());
+                .collect(toSet());
     }
 
     /**
-     * Generates a list of {@link AuthorizationDetailsTokenDTO} from the provided access token and
+     * Generates a set of {@link AuthorizationDetailsTokenDTO} from the provided access token and
      * authorization details.
      *
      * @param accessTokenDO        The access token data object.
      * @param authorizationDetails The user-consented authorization details.
      * @return A list of {@link AuthorizationDetailsTokenDTO}.
      */
-    public static List<AuthorizationDetailsTokenDTO> getAccessTokenAuthorizationDetailsDTOs(
+    public static Set<AuthorizationDetailsTokenDTO> getAccessTokenAuthorizationDetailsDTOs(
             final AccessTokenDO accessTokenDO, final AuthorizationDetails authorizationDetails) {
 
         return authorizationDetails
                 .stream()
                 .map(authorizationDetail -> new AuthorizationDetailsTokenDTO(
                         accessTokenDO.getTokenId(), authorizationDetail, accessTokenDO.getTenantID()))
-                .collect(Collectors.toList());
+                .collect(toSet());
+    }
+
+    /**
+     * Generates a set of {@link AuthorizationDetailsCodeDTO} from the provided access token and
+     * authorization details.
+     *
+     * @param authzCodeDO          The authorization code data object.
+     * @param authorizationDetails The user-consented authorization details.
+     * @return A list of {@link AuthorizationDetailsTokenDTO}.
+     */
+    public static Set<AuthorizationDetailsCodeDTO> getCodeAuthorizationDetailsDTOs(
+            final AuthzCodeDO authzCodeDO, final AuthorizationDetails authorizationDetails, final int tenantId) {
+
+        return authorizationDetails
+                .stream()
+                .map(authorizationDetail ->
+                        new AuthorizationDetailsCodeDTO(authzCodeDO.getAuthzCodeId(), authorizationDetail, tenantId))
+                .collect(toSet());
     }
 
     /**
@@ -222,16 +238,31 @@ public class AuthorizationDetailsUtils {
         final Set<String> consentedAuthorizationDetailIDs = httpServletRequest.getParameterMap().keySet().stream()
                 .filter(parameterName -> parameterName.startsWith(AUTHORIZATION_DETAILS_ID_PREFIX))
                 .map(parameterName -> parameterName.substring(AUTHORIZATION_DETAILS_ID_PREFIX.length()))
-                .collect(Collectors.toSet());
+                .collect(toSet());
 
         // Filter and collect the consented authorization details
-        final Set<AuthorizationDetail> consentedAuthorizationDetails = oAuth2Parameters.getAuthorizationDetails()
+        final AuthorizationDetails consentedAuthorizationDetails = new AuthorizationDetails(oAuth2Parameters
+                .getAuthorizationDetails()
                 .stream()
                 .filter(authorizationDetail -> consentedAuthorizationDetailIDs.contains(authorizationDetail.getId()))
-                .collect(Collectors.toSet());
+                .collect(toSet()));
 
         log.debug("User consented authorization details extracted successfully.");
-        return new AuthorizationDetails(consentedAuthorizationDetails);
+
+        oAuth2Parameters.setAuthorizationDetails(consentedAuthorizationDetails);
+        return consentedAuthorizationDetails;
+    }
+
+    /**
+     * Determines if the given {@link OAuth2Parameters} object contains {@link AuthorizationDetails}.
+     *
+     * @param oAuth2Parameters The requested OAuth2Parameters to check.
+     * @return {@code true} if the OAuth2Parameters contains non-empty authorization details set,
+     * {@code false} otherwise.
+     */
+    public static boolean isRichAuthorizationRequest(final OAuth2Parameters oAuth2Parameters) {
+
+        return isRichAuthorizationRequest(oAuth2Parameters.getAuthorizationDetails());
     }
 
     /**
@@ -251,7 +282,7 @@ public class AuthorizationDetailsUtils {
                     authorizationDetail.setId(protectedAuthorizationDetail.getId());
                     authorizationDetail.setConsentDescription(protectedAuthorizationDetail.getConsentDescription());
                     return authorizationDetail;
-                }).collect(Collectors.toSet());
+                }).collect(toSet());
 
         return new AuthorizationDetails(displayableAuthorizationDetails);
     }
@@ -352,6 +383,34 @@ public class AuthorizationDetailsUtils {
                         IdentityTenantUtil.getTenantId(oAuth2AuthorizeReqDTO.getTenantDomain())
                 );
 
-        oAuthAuthzReqMessageContext.setAuthorizationDetails(authorizationDetails);
+        if (authorizationDetails != null) {
+            oAuthAuthzReqMessageContext.setAuthorizationDetails(authorizationDetails);
+        }
+    }
+
+    /**
+     * Determines if the given {@link OAuth2AuthorizeReqDTO} object contains {@link AuthorizationDetails}.
+     *
+     * @param oAuth2AuthorizeReqDTO The requested oAuth2AuthorizeReqDTO to check.
+     * @return {@code true} if the oAuth2AuthorizeReqDTO contains non-empty authorization details set,
+     * {@code false} otherwise.
+     */
+    public static boolean isRichAuthorizationRequest(final OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO) {
+
+        return isRichAuthorizationRequest(oAuth2AuthorizeReqDTO.getAuthorizationDetails());
+    }
+
+    /**
+     * Converts a list of AuthorizationDetails into a map with the type as the key.
+     *
+     * @param authorizationDetails {@link AuthorizationDetails} instance to be converted.
+     * @return A map where the key is the type and the value is the corresponding AuthorizationDetails object.
+     */
+    public static Map<String, Set<AuthorizationDetail>> getAuthorizationDetailsTypesMap(
+            final AuthorizationDetails authorizationDetails) {
+
+        return authorizationDetails == null ? Collections.emptyMap()
+                : authorizationDetails.stream()
+                .collect(groupingBy(AuthorizationDetail::getType, mapping(identity(), toSet())));
     }
 }

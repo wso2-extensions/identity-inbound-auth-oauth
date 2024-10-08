@@ -13,7 +13,7 @@ import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsCommo
 public class AuthorizationDetailsDTO {
 
     final String id;
-    final int typeId;
+    final String typeId;
     final AuthorizationDetail authorizationDetail;
     final int tenantId;
 
@@ -25,7 +25,7 @@ public class AuthorizationDetailsDTO {
      * @param authorizationDetail the authorization detail object.
      * @param tenantId           the tenant ID.
      */
-    public AuthorizationDetailsDTO(final String id, final int typeId, final AuthorizationDetail authorizationDetail,
+    public AuthorizationDetailsDTO(final String id, final String typeId, final AuthorizationDetail authorizationDetail,
                                    final int tenantId) {
 
         this.id = id;
@@ -42,7 +42,7 @@ public class AuthorizationDetailsDTO {
      * @param authorizationDetailJson the JSON string of the authorization detail.
      * @param tenantId               the tenant ID.
      */
-    public AuthorizationDetailsDTO(final String id, final int typeId, final String authorizationDetailJson,
+    public AuthorizationDetailsDTO(final String id, final String typeId, final String authorizationDetailJson,
                                    final int tenantId) {
 
         this(id, typeId, AuthorizationDetailsCommonUtils
@@ -57,7 +57,7 @@ public class AuthorizationDetailsDTO {
      */
     public AuthorizationDetailsDTO(final AuthorizationDetail authorizationDetail, final int tenantId) {
 
-        this(null, 0, authorizationDetail, tenantId);
+        this(null, null, authorizationDetail, tenantId);
     }
 
     /**
@@ -74,7 +74,7 @@ public class AuthorizationDetailsDTO {
      *
      * @return the type ID of the authorization detail.
      */
-    public int getTypeId() {
+    public String getTypeId() {
         return this.typeId;
     }
 

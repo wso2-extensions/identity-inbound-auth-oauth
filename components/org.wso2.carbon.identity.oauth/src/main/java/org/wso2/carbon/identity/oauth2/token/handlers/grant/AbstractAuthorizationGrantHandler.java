@@ -1240,18 +1240,41 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return tokReqMsgCtx.getAuthorizedUser().isFederatedUser();
     }
 
+    /**
+     * Sets the Rich Authorization Requests (RAR) properties for token generation.
+     * It retrieves the user-consented authorization details or fallback to code authorization details
+     * based on the provided OAuth token request context.
+     *
+     * @param oAuthTokenReqMessageContext Context of the OAuth token request message.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving authorization details.
+     */
     protected void setRARPropertiesForTokenGeneration(final OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        final int tenantId = OAuth2Util
-                .getTenantId(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+        final int tenantId =
+                OAuth2Util.getTenantId(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
 
-        final AuthorizationDetails userConsentedAuthorizationDetails =
-                this.authorizationDetailsService.getUserConsentedAuthorizationDetails(
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving user consented authorization details for user: "
+                    + oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableMaskedUserId());
+        }
+
+        AuthorizationDetails authorizationDetails = this.authorizationDetailsService
+                .getUserConsentedAuthorizationDetails(
                         oAuthTokenReqMessageContext.getAuthorizedUser(),
                         oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
                         tenantId);
 
-        oAuthTokenReqMessageContext.setAuthorizationDetails(userConsentedAuthorizationDetails);
+        // Fallback to code authorization details if user consent is unavailable
+        if (authorizationDetails == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("No user consent is available. Fetching authorization details for code: " +
+                        oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode());
+            }
+
+            authorizationDetails = this.authorizationDetailsService.getAuthorizationCodeAuthorizationDetails(
+                    oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode(), tenantId);
+        }
+        oAuthTokenReqMessageContext.setAuthorizationDetails(authorizationDetails);
     }
 }

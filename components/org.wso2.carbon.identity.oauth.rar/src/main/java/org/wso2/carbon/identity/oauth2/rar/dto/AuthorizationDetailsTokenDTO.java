@@ -19,7 +19,7 @@ public class AuthorizationDetailsTokenDTO extends AuthorizationDetailsDTO {
      * @param authorizationDetail the {@link AuthorizationDetail} object.
      * @param tenantId            the tenant ID.
      */
-    public AuthorizationDetailsTokenDTO(final String id, final String accessTokenId, final int typeId,
+    public AuthorizationDetailsTokenDTO(final String id, final String accessTokenId, final String typeId,
                                         final String authorizationDetail, final int tenantId) {
 
         super(id, typeId, authorizationDetail, tenantId);

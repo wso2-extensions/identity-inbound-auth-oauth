@@ -1,15 +1,15 @@
 package org.wso2.carbon.identity.oauth2.rar.exception;
 
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
+import org.wso2.carbon.identity.base.IdentityException;
 
 /**
  * Exception class to represent failures related to Rich Authorization Requests in OAuth 2.0 clients.
  *
  * <p>This exception is thrown when there are errors in processing authorization details during the OAuth 2.0
- * authorization flow. It extends the {@link IdentityOAuth2ClientException} class, providing more specific
+ * authorization flow. It extends the {@link IdentityException} class, providing more specific
  * context for authorization-related issues.</p>
  */
-public class AuthorizationDetailsProcessingException extends IdentityOAuth2ClientException {
+public class AuthorizationDetailsProcessingException extends IdentityException {
 
     private static final long serialVersionUID = -206212512259482200L;
 

@@ -2608,8 +2608,7 @@ public class OAuth2AuthzEndpoint {
 
             final String authorizationDetailsJson = oauthRequest
                     .getParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS);
-            params.setAuthorizationDetails(AuthorizationDetailsUtils
-                    .generateAndAssignUniqueIDs(authorizationDetailsJson));
+            params.setAuthorizationDetails(new AuthorizationDetails(authorizationDetailsJson));
         }
 
         handleMaxAgeParameter(oauthRequest, params);
@@ -4849,10 +4848,12 @@ public class OAuth2AuthzEndpoint {
                     .getValidatedAuthorizationDetails(oAuthAuthzReqMessageContext);
 
             // update oAuth2Parameters with validated authorization details
-            oAuth2Parameters.setAuthorizationDetails(validatedAuthorizationDetails);
+            oAuth2Parameters.setAuthorizationDetails(AuthorizationDetailsUtils
+                    .assignUniqueIDsToAuthorizationDetails(validatedAuthorizationDetails));
 
             // Update the authorization message context with validated authorization details
-            oAuthAuthzReqMessageContext.setAuthorizationDetails(validatedAuthorizationDetails);
+            oAuthAuthzReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
+                    .assignUniqueIDsToAuthorizationDetails(validatedAuthorizationDetails));
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(oAuthAuthzReqMessageContext);
 
             if (LoggerUtils.isDiagnosticLogsEnabled()) {

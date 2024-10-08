@@ -10,6 +10,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.utils.AuthorizationDetailsBaseTest;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
@@ -36,7 +37,7 @@ public class IntrospectionRARDataProviderTest extends AuthorizationDetailsBaseTe
     private IntrospectionRARDataProvider uut;
 
     @BeforeClass
-    public void setUpClass() throws IdentityOAuth2Exception {
+    public void setUpClass() throws IdentityOAuth2Exception, AuthorizationDetailsProcessingException {
 
         this.validatorMock = Mockito.mock(AuthorizationDetailsValidator.class);
         when(validatorMock.getValidatedAuthorizationDetails(any(OAuth2TokenValidationMessageContext.class)))
@@ -55,7 +56,7 @@ public class IntrospectionRARDataProviderTest extends AuthorizationDetailsBaseTe
 
     @Test(priority = 1)
     public void shouldNotReturnAuthorizationDetails_ifNotRichAuthorizationRequest()
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2Exception, AuthorizationDetailsProcessingException {
 
         when(validatorMock.getValidatedAuthorizationDetails(any(OAuth2TokenValidationMessageContext.class)))
                 .thenReturn(new AuthorizationDetails());

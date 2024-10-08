@@ -27,13 +27,11 @@ import org.wso2.carbon.identity.oauth2.rar.model.ValidationResult;
 
 /**
  * The {@code AuthorizationDetailsProcessor} interface defines a contract for implementing
- * different types of authorization detail providers in a Service Provider Interface (SPI) setup.
+ * different types of authorization detail providers in an OSGI setup.
  * <p>
  * Implementing classes are expected to provide mechanisms to validate, enrich, and identify
  * authorization details specific to various types.
  * </p>
- *
- * @see <a href="https://docs.oracle.com/javase%2Ftutorial%2F/sound/SPI-intro.html">Java SPI</a>
  */
 public interface AuthorizationDetailsProcessor {
 

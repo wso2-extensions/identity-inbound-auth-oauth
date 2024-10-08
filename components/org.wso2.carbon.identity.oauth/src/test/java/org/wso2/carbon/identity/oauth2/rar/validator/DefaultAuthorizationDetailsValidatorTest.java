@@ -24,7 +24,7 @@ public class DefaultAuthorizationDetailsValidatorTest extends AuthorizationDetai
         when(serviceMock.getAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID))
                 .thenReturn(authorizationDetails);
 
-        this.uut = new DefaultAuthorizationDetailsValidator(providerFactoryMock, serviceMock);
+        this.uut = new DefaultAuthorizationDetailsValidator(processorFactoryMock, serviceMock, schemaValidatorMock);
     }
 
     @Test
