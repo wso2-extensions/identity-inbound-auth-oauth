@@ -144,7 +144,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         tokenMessageContext.setScope(responseAccessToken.getScopes().toArray(new String[0]));
 
-        String expiresInClaimName = CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName();
+        String expiresInClaimName = AccessToken.ClaimNames.EXPIRES_IN.getName();
         responseAccessToken.getClaims().stream()
                 .filter(claim -> expiresInClaimName.equals(claim.getName()))
                 .findFirst()
@@ -533,10 +533,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
 
         responseAccessToken.getClaims().removeIf(
-                claim -> claim.getName()
-                        .equals(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName()));
-        responseAccessToken.addClaim(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName(),
-                expiresIn);
+                claim -> claim.getName().equals(AccessToken.ClaimNames.EXPIRES_IN.getName()));
+        responseAccessToken.addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(), expiresIn);
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
                 "Expiry time updated.");
     }

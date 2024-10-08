@@ -355,11 +355,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         initMocks(this);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         mockDatabase(identityDatabaseUtil);
+        IdentityEventService identityEventService = mock(IdentityEventService.class);
+        CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
     }
 
     @AfterClass
     public void tearDown() throws Exception {
+
         super.cleanData();
+        CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
     }
 
     @AfterMethod

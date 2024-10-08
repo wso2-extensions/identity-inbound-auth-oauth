@@ -23,19 +23,25 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.webfinger.WebFingerEndpointException;
 import org.wso2.carbon.identity.webfinger.WebFingerRequest;
 import org.wso2.carbon.identity.webfinger.WebFingerResponse;
 
-import static org.mockito.ArgumentMatchers.any;
+import java.lang.reflect.Field;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 
 /**
  * Unit test coverage for WebFingerOIDCResponseBuilder class.
  */
+@WithCarbonHome
 public class WebFingerOIDCResponseBuilderTest {
 
     private WebFingerOIDCResponseBuilder webFingerOIDCResponseBuilder;
@@ -49,6 +55,8 @@ public class WebFingerOIDCResponseBuilderTest {
     private final String scheme = "https";
     private final int port = 9443;
 
+    private OAuthServerConfiguration mockOAuthServerConfiguration;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<OAuth2Util> oAuth2Util;
 
     @BeforeMethod
@@ -63,6 +71,10 @@ public class WebFingerOIDCResponseBuilderTest {
         webFingerRequest.setRel(rel);
         webFingerRequest.setTenant(tenant);
 
+        mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         oAuth2Util = mockStatic(OAuth2Util.class);
     }
 
@@ -70,12 +82,21 @@ public class WebFingerOIDCResponseBuilderTest {
     public void tearDown() {
 
         oAuth2Util.close();
+        oAuthServerConfiguration.close();
+    }
+
+    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
+            throws NoSuchFieldException, IllegalAccessException {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(null, newValue);
     }
 
     @Test
     public void testBuildWebFingerResponse() throws Exception {
 
-        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(any(String.class))).thenReturn(oidcDiscoveryUrl);
+        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(anyString())).thenReturn(oidcDiscoveryUrl);
         WebFingerResponse webFingerResponse = webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
         assertEquals(webFingerResponse.getLinks().get(0).getRel(), rel, "rel is properly assigned");
         assertEquals(webFingerResponse.getLinks().get(0).getHref(), oidcDiscoveryUrl,
@@ -88,7 +109,7 @@ public class WebFingerOIDCResponseBuilderTest {
     public void testBuildWebFingerException() throws WebFingerEndpointException, ServerConfigurationException,
             IdentityException {
 
-        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(any(String.class))).thenThrow
+        oAuth2Util.when(() -> OAuth2Util.getIssuerLocation(anyString())).thenThrow
                 (new IdentityOAuth2Exception("Error"));
         webFingerOIDCResponseBuilder.buildWebFingerResponse(webFingerRequest);
     }

@@ -67,8 +67,6 @@ public class ApplicationRegistrationRequest implements Serializable {
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private Map<String, Object> additionalAttributes;
-    private Boolean useClientIdAsSubClaimForAppTokens;
-    private Boolean omitUsernameInIntrospectionRespForAppTokens;
     private String extAllowedAudience;
 
     public void setAdditionalAttributes(Map<String, Object> additionalAttributes) {
@@ -543,24 +541,5 @@ public class ApplicationRegistrationRequest implements Serializable {
         this.softwareStatement = softwareStatement;
     }
 
-    public Boolean getUseClientIdAsSubClaimForAppTokens() {
-
-        return useClientIdAsSubClaimForAppTokens;
-    }
-
-    public void setUseClientIdAsSubClaimForAppTokens(Boolean useClientIdAsSubClaimForAppTokens) {
-
-        this.useClientIdAsSubClaimForAppTokens = useClientIdAsSubClaimForAppTokens;
-    }
-
-    public Boolean getOmitUsernameInIntrospectionRespForAppTokens() {
-
-        return omitUsernameInIntrospectionRespForAppTokens;
-    }
-
-    public void setOmitUsernameInIntrospectionRespForAppTokens(Boolean omitUsernameInIntrospectionRespForAppTokens) {
-
-        this.omitUsernameInIntrospectionRespForAppTokens = omitUsernameInIntrospectionRespForAppTokens;
-    }
 
 }

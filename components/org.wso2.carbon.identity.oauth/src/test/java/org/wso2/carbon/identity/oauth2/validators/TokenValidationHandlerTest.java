@@ -81,7 +81,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -93,7 +92,6 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants.SUB_ORG_START_LEVEL;
@@ -140,6 +138,7 @@ public class TokenValidationHandlerTest {
     private IdentityProvider identityProvider;
     @Mock
     private FederatedAuthenticatorConfig federatedAuthenticatorConfig = new FederatedAuthenticatorConfig();
+
     private MockedStatic<LoggerUtils> loggerUtils;
 
     @BeforeMethod
@@ -147,7 +146,6 @@ public class TokenValidationHandlerTest {
 
         authzUser = new AuthenticatedUser();
         authzUser.setAccessingOrganization("test_org");
-        authzUser.setUserName("test_user");
         issuedTime = new Timestamp(System.currentTimeMillis());
         refreshTokenIssuedTime = new Timestamp(System.currentTimeMillis());
         validityPeriodInMillis = 3600000L;
@@ -241,21 +239,13 @@ public class TokenValidationHandlerTest {
     @DataProvider(name = "CommonDataProvider")
     public Object[][] commonDataProvider() {
         return new Object[][]{
-                {true, "1234", "testAccessToken", false, false},
-                {false, "12345", "testAccessToken", false, false},
-                /* These test data are related to testing token type, server and app level config combination for omit
-                username from introspection response. */
-                {true, "1234", "APPLICATION", true, true},
-                {true, "1234", "APPLICATION", false, true},
-                {true, "1234", "APPLICATION", true, false},
-                {true, "1234", "testAccessToken", true, true}
+                {true, "1234"},
+                {false, "12345"}
         };
     }
 
     @Test(dataProvider = "CommonDataProvider")
-    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId, String tokenTypeData,
-                                               boolean omitUsernameInIntrospectionRespAppConfig,
-                                               boolean omitUsernameInIntrospectionRespServerConfig) throws Exception {
+    public void testBuildIntrospectionResponse(boolean isIDPIdColumnEnabled, String accessTokenId) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -291,8 +281,8 @@ public class TokenValidationHandlerTest {
                 accessToken.setTokenType("bearer");
 
                 AccessTokenDO accessTokenDO = new AccessTokenDO(clientId, authzUser, scopeArraySorted, issuedTime,
-                        refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis,
-                        tokenTypeData, authorizationCode);
+                        refreshTokenIssuedTime, validityPeriodInMillis, refreshTokenValidityPeriodInMillis, tokenType,
+                        authorizationCode);
                 accessTokenDO.setTokenId(accessTokenId);
 
                 TokenBinding tokenBinding = new TokenBinding();
@@ -300,7 +290,6 @@ public class TokenValidationHandlerTest {
                 tokenBinding.setBindingReference("test_binding_reference");
                 tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
                 accessTokenDO.setTokenBinding(tokenBinding);
-                accessTokenDO.setAppResidentTenantId(-1234);
 
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
                 TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
@@ -320,21 +309,11 @@ public class TokenValidationHandlerTest {
                 OAuthAppDO oAuthAppDO = new OAuthAppDO();
                 oAuthAppDO.setTokenType("Default");
                 oAuthAppDO.setApplicationName("testApp");
-                oAuthAppDO.setOmitUsernameInIntrospectionRespForAppTokens(omitUsernameInIntrospectionRespAppConfig);
                 AppInfoCache appInfoCache = AppInfoCache.getInstance();
                 appInfoCache.addToCache("testConsumerKey", oAuthAppDO);
                 oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
 
-                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
-                        .thenReturn(oAuthAppDO);
-                // Mock server level config value.
-                when(OAuthServerConfiguration.getInstance()).thenReturn(mockOAuthServerConfiguration);
-                lenient().when(mockOAuthServerConfiguration
-                                .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled())
-                        .thenReturn(omitUsernameInIntrospectionRespServerConfig);
-
-                oAuth2Util.when(OAuth2Util::getPersistenceProcessor)
-                        .thenReturn(new PlainTextPersistenceProcessor());
+                oAuth2Util.when(OAuth2Util::getPersistenceProcessor).thenReturn(new PlainTextPersistenceProcessor());
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(oAuthAppDO);
                 oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), Mockito.anyBoolean()))
                         .thenReturn(1000L);
@@ -347,12 +326,6 @@ public class TokenValidationHandlerTest {
                 assertEquals(oAuth2IntrospectionResponseDTO.getBindingReference(), "test_binding_reference");
                 assertEquals(oAuth2IntrospectionResponseDTO.getCnfBindingValue(),
                         "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
-                if (omitUsernameInIntrospectionRespAppConfig && omitUsernameInIntrospectionRespServerConfig &&
-                        Objects.equals(tokenTypeData, "APPLICATION")) {
-                    assertNull(oAuth2IntrospectionResponseDTO.getUsername());
-                } else {
-                    assertEquals(oAuth2IntrospectionResponseDTO.getUsername(), authzUser.getUserName());
-                }
             }
         }
     }
