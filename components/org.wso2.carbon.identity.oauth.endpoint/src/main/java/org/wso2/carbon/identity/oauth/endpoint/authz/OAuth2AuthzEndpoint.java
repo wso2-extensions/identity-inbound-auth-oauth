@@ -1461,10 +1461,13 @@ public class OAuth2AuthzEndpoint {
         String type = getRequestProtocolType(oAuthMessage);
         try {
             // Add the service provider id to the redirect URL. This is needed to support application wise branding.
-            String serviceProviderId =
-                    getServiceProvider(oAuthMessage.getRequest().getParameter("client_id")).getApplicationResourceId();
-            redirectURL = addServiceProviderIdToRedirectURI(redirectURL, serviceProviderId);
-        } catch (Exception e) {
+            String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
+            ServiceProvider serviceProvider = getServiceProvider(clientId);
+            if (serviceProvider != null) {
+                redirectURL = addServiceProviderIdToRedirectURI(redirectURL,
+                        serviceProvider.getApplicationResourceId());
+            }
+        } catch (OAuthSystemException e) {
             // The value is set to be used for branding purposes. Therefore, if an error occurs, the process should
             // continue without breaking.
             log.error("Error while getting the service provider id", e);
@@ -3968,13 +3971,13 @@ public class OAuth2AuthzEndpoint {
                 } else {
                     try {
                         String serviceProviderId =
-                                getServiceProvider(oAuthMessage.getRequest().getParameter("client_id"))
+                                getServiceProvider(oAuthMessage.getRequest().getParameter(CLIENT_ID))
                                 .getApplicationResourceId();
                         requestWrapper.setParameter(SERVICE_PROVIDER_ID, serviceProviderId);
                     } catch (Exception e) {
                         // The value is set to be used for branding purposes. Therefore, if an error occurs,
                         // the process should continue without breaking.
-                        log.debug("Error occurred while getting service provider id.");
+                        log.error("Error occurred while getting service provider id.");
                     }
                     return authorize(requestWrapper, oAuthMessage.getResponse());
                 }
@@ -4775,8 +4778,10 @@ public class OAuth2AuthzEndpoint {
             try {
                 URI uri = new URI(redirectURI);
                 String query = uri.getRawQuery();
-                if (StringUtils.isNotBlank(query) && !query.contains(SERVICE_PROVIDER_ID + "=")) {
-                    redirectURI = redirectURI + "&" + SERVICE_PROVIDER_ID + "=" + serviceProviderId;
+                if (StringUtils.isNotBlank(query)) {
+                    if (!query.contains(SERVICE_PROVIDER_ID + "=")) {
+                        redirectURI = redirectURI + "&" + SERVICE_PROVIDER_ID + "=" + serviceProviderId;
+                    }
                 } else {
                     redirectURI = redirectURI + "?" + SERVICE_PROVIDER_ID + "=" + serviceProviderId;
                 }
