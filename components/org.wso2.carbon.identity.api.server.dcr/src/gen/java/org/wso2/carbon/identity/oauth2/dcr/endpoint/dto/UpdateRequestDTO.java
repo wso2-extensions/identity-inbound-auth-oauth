@@ -26,6 +26,7 @@ public class UpdateRequestDTO {
     private String backchannelLogoutUri = null;
     private boolean backchannelLogoutSessionRequired;
     private String extApplicationDisplayName = null;
+    private String extApplicationVersion = null;
     private String extApplicationOwner = null;
     private Long extApplicationTokenLifetime = null;
     private Long extUserTokenLifetime = null;
@@ -151,6 +152,16 @@ public class UpdateRequestDTO {
 
     public void setExtApplicationDisplayName(String extApplicationDisplayName) {
         this.extApplicationDisplayName = extApplicationDisplayName;
+    }
+
+    @ApiModelProperty
+    @JsonProperty("ext_application_version")
+    public String getExtApplicationVersion() {
+        return extApplicationVersion;
+    }
+
+    public void setExtApplicationVersion(String extApplicationVersion) {
+        this.extApplicationVersion = extApplicationVersion;
     }
 
     @ApiModelProperty
@@ -435,6 +446,7 @@ public class UpdateRequestDTO {
         sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");
         sb.append("  backchannel_logout_session_required: ").append(backchannelLogoutSessionRequired).append("\n");
         sb.append("  ext_application_display_name: ").append(extApplicationDisplayName).append("\n");
+        sb.append("  ext_application_version: ").append(extApplicationVersion).append("\n");
         sb.append("  tokenTypeExtension: ").append(tokenType).append("\n");
         sb.append("  ext_application_owner: ").append(extApplicationOwner).append("\n");
         sb.append("  ext_application_token_lifetime: ").append(extApplicationTokenLifetime).append("\n");

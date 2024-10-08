@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth2.validators;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.dbcp.BasicDataSource;
+import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.as.issuer.OAuthIssuer;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
@@ -84,6 +86,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
@@ -317,6 +320,14 @@ public class TokenValidationHandlerTest {
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByAccessTokenDO(any())).thenReturn(oAuthAppDO);
                 oAuth2Util.when(() -> OAuth2Util.getAccessTokenExpireMillis(any(), Mockito.anyBoolean()))
                         .thenReturn(1000L);
+
+                ServiceProvider serviceProvider = new ServiceProvider();
+                serviceProvider.setApplicationVersion("v1.0.0");
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), any()))
+                        .thenReturn(serviceProvider);
+                // As the token is dummy, no point in getting actual tenant details.
+                oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt()))
+                        .thenReturn(StringUtils.EMPTY);
 
                 OAuth2IntrospectionResponseDTO oAuth2IntrospectionResponseDTO = tokenValidationHandler
                         .buildIntrospectionResponse(oAuth2TokenValidationRequestDTO);
