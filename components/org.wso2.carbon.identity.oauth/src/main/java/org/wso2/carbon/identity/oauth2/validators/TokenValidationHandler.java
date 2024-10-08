@@ -571,6 +571,10 @@ public class TokenValidationHandler {
             boolean removeUsernameFromAppTokenEnabledServerConfig = OAuthServerConfiguration.getInstance()
                     .isRemoveUsernameFromIntrospectionResponseForAppTokensEnabled();
             String appResidentTenantDomain = OAuth2Util.getTenantDomain(accessTokenDO.getAppResidentTenantId());
+            if (StringUtils.isEmpty(appResidentTenantDomain)) {
+                // Get user domain as app domain.
+                appResidentTenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            }
             String consumerKey = accessTokenDO.getConsumerKey();
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, appResidentTenantDomain);
             boolean removeUsernameFromAppTokenEnabled = OAuth2Util
