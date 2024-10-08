@@ -41,6 +41,7 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.ResponseTypeHandler;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
@@ -255,6 +256,7 @@ public class AuthorizationHandlerManager {
             // set the authorization request context to be used by downstream handlers. This is introduced as a fix for
             // IDENTITY-4111
             OAuth2Util.setAuthzRequestContext(authzReqMsgCtx);
+            AuthorizationDetailsUtils.setRARPropertiesToAuthzRequestContext(authzReqMsgCtx);
             authorizeRespDTO = authzHandler.issue(authzReqMsgCtx);
         } finally {
             // clears authorization request context

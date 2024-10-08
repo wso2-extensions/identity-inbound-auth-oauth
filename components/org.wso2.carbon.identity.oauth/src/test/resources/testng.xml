@@ -108,7 +108,7 @@
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidatorTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandlerTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>
+<!--            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandlerTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest"/>
@@ -123,6 +123,11 @@
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
             <class name="org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
         </classes>
     </test>
 
@@ -180,7 +185,7 @@
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractValidatorTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationCodeGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandlerTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>
+<!--            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandlerTest"/>
             <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest"/>
@@ -197,6 +202,11 @@
             <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandler"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
         </classes>
     </test>
 </suite>

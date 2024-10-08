@@ -44,6 +44,9 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
+import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
@@ -122,7 +125,8 @@ public class OAuth2ServiceComponentHolder {
 
     private List<ImpersonationValidator> impersonationValidators = new ArrayList<>();
     private ConfigurationManager configurationManager;
-
+    private AuthorizationDetailsService authorizationDetailsService;
+    private AuthorizationDetailsValidator authorizationDetailsValidator;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -888,5 +892,31 @@ public class OAuth2ServiceComponentHolder {
     public void setConfigurationManager(ConfigurationManager configurationManager) {
 
         this.configurationManager = configurationManager;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsService} instance.
+     *
+     * @return A {@link AuthorizationDetailsService} singleton instance.
+     */
+    public AuthorizationDetailsService getAuthorizationDetailsService() {
+
+        if (this.authorizationDetailsService == null) {
+            this.authorizationDetailsService = new AuthorizationDetailsService();
+        }
+        return this.authorizationDetailsService;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsValidator} instance.
+     *
+     * @return A {@link AuthorizationDetailsValidator} singleton instance.
+     */
+    public AuthorizationDetailsValidator getAuthorizationDetailsValidator() {
+
+        if (this.authorizationDetailsValidator == null) {
+            this.authorizationDetailsValidator = new DefaultAuthorizationDetailsValidator();
+        }
+        return this.authorizationDetailsValidator;
     }
 }
