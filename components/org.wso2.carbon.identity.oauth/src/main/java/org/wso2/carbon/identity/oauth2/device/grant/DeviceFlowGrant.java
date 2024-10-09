@@ -35,6 +35,9 @@ import org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizatio
 import java.sql.Timestamp;
 import java.util.Date;
 
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.PENDING;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.SLOW_DOWN;
+
 /**
  * Device flow grant type for Identity Server.
  */
@@ -47,11 +50,11 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             IdentityOAuth2Exception {
 
         super.validateGrant(oAuthTokenReqMessageContext);
-        boolean authStatus = false;
         RequestParameter[] parameters = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getRequestParameters();
         String deviceCode = null;
         String clientId = oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String deviceStatus;
+        DeviceFlowDO deviceFlowDO = null;
 
         for (RequestParameter parameter : parameters) {
             if (Constants.DEVICE_CODE.equals(parameter.getKey()) && StringUtils.isNotBlank(parameter.getValue()[0])) {
@@ -64,32 +67,56 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
             log.debug("Getting ready to release token for device_code: " + deviceCode);
         }
 
-        DeviceFlowDO deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
-                .getAuthenticationDetails(deviceCode, clientId);
-        Date date = new Date();
-        deviceStatus = deviceFlowDO.getStatus();
-        deviceFlowDO.setDeviceCode(deviceCode);
-        if (Constants.NOT_EXIST.equals(deviceStatus)) {
-            throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST, DeviceErrorCodes.INVALID_REQUEST);
+        try {
+            deviceFlowDO = DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()
+                    .getAuthenticationDetails(deviceCode, clientId);
+            deviceStatus = deviceFlowDO.getStatus();
+            deviceFlowDO.setDeviceCode(deviceCode);
+            setLastPollTime(deviceCode);
+        } catch (IdentityOAuth2Exception e) {
+            deviceStatus = e.getMessage();
+            setLastPollTime(deviceCode);
+            handleInvalidRequests(deviceStatus);
         }
-        Timestamp newPollTime = new Timestamp(date.getTime());
-        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
-        if (!isWithinValidPollInterval(newPollTime, deviceFlowDO)) {
-            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
-                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.SLOW_DOWN);
-        } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
-            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
-                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.EXPIRED_TOKEN);
-        } else if (Constants.AUTHORIZED.equals(deviceStatus)) {
-            authStatus = true;
+
+        handleInvalidRequests(deviceStatus, deviceFlowDO);
+        if (Constants.AUTHORIZED.equals(deviceStatus)) {
             DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setDeviceCodeExpired(deviceCode,
                     Constants.EXPIRED);
             setPropertiesForTokenGeneration(oAuthTokenReqMessageContext, deviceFlowDO);
-        } else if (Constants.USED.equals(deviceStatus) || Constants.PENDING.equals(deviceStatus)) {
+        }
+        return true;
+    }
+
+    private void setLastPollTime(String deviceCode)
+            throws IdentityOAuth2Exception {
+
+        Date date = new Date();
+        Timestamp newPollTime = new Timestamp(date.getTime());
+        DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO().setLastPollTime(deviceCode, newPollTime);
+    }
+
+    private void handleInvalidRequests(String deviceStatus, DeviceFlowDO deviceFlowDO)
+            throws IdentityOAuth2Exception {
+
+        Date date = new Date();
+        if (Constants.NOT_EXIST.equals(deviceStatus)) {
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST, DeviceErrorCodes.INVALID_REQUEST);
+        } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.EXPIRED_TOKEN);
+        }
+    }
+
+    private void handleInvalidRequests(String deviceStatus) throws IdentityOAuth2Exception {
+
+        if (PENDING.equals(deviceStatus)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING,
                     DeviceErrorCodes.SubDeviceErrorCodesDescriptions.AUTHORIZATION_PENDING);
+        } else if (SLOW_DOWN.equals(deviceStatus)) {
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.SLOW_DOWN);
         }
-        return authStatus;
     }
 
     /**

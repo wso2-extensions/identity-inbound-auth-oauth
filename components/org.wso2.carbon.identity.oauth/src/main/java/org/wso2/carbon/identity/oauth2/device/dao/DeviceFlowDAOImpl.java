@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.errorcodes.DeviceErrorCodes;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
 import org.wso2.carbon.identity.oauth2.device.util.DeviceFlowUtil;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -52,6 +53,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.SLOW_DOWN;
 
 /**
  * This class contains override methods of DeviceFlowDAO.
@@ -178,6 +181,9 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
         String authenticatedIDP = null;
         String subjectIdentifier = null;
         List<String> scopes = null;
+        String deviceStatus = null;
+        Date date = new Date();
+        Timestamp newPollTime = new Timestamp(date.getTime());
         DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement prepStmt =
@@ -186,12 +192,18 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             prepStmt.setString(2, clientId);
             try (ResultSet resultSet = prepStmt.executeQuery()) {
                 if (resultSet.next()) {
-                    deviceFlowDO.setStatus(resultSet.getString(1));
+                    deviceStatus = resultSet.getString(1);
+                    deviceFlowDO.setStatus(deviceStatus);
                     deviceFlowDO.setLastPollTime(resultSet.getTimestamp(2,
                             Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
                     deviceFlowDO.setPollTime(resultSet.getLong(3));
                     deviceFlowDO.setExpiryTime(resultSet.getTimestamp(4,
                             Calendar.getInstance(TimeZone.getTimeZone(Constants.UTC))));
+
+                    if (!Constants.AUTHORIZED.equals(deviceStatus)) {
+                        handleAuthorizationPending(deviceStatus, newPollTime, deviceFlowDO);
+                    }
+
                     userName = resultSet.getString(5);
                     tenantId = resultSet.getInt(6);
                     userDomain = resultSet.getString(7);
@@ -235,6 +247,18 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throw new IdentityOAuth2Exception("Error when getting authentication status for device_code: " +
                     deviceCode, e);
         }
+    }
+
+    private void handleAuthorizationPending(String deviceStatus, Timestamp newPollTime, DeviceFlowDO deviceFlowDO)
+            throws IdentityOAuth2Exception {
+
+        if (!isWithinValidPollInterval(newPollTime, deviceFlowDO)) {
+            deviceStatus = SLOW_DOWN;
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
+                    deviceStatus);
+        }
+        throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING,
+                deviceStatus);
     }
 
     @Override
@@ -697,5 +721,17 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throw new IdentityOAuth2Exception("Error when getting scopes for codeId: " + codeId, e);
         }
         return scopeSet;
+    }
+
+    /**
+     * This checks whether polling frequency is correct or not.
+     *
+     * @param newPollTime  Time of the new poll request.
+     * @param deviceFlowDO DO class that contains values from database.
+     * @return true or false.
+     */
+    private boolean isWithinValidPollInterval(Timestamp newPollTime, DeviceFlowDO deviceFlowDO) {
+
+        return newPollTime.getTime() - deviceFlowDO.getLastPollTime().getTime() > deviceFlowDO.getPollTime();
     }
 }
