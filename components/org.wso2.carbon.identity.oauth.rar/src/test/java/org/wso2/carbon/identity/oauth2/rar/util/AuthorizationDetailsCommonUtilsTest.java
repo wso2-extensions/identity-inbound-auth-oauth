@@ -57,7 +57,6 @@ public class AuthorizationDetailsCommonUtilsTest {
         this.objectMapper = AuthorizationDetailsCommonUtils.getDefaultObjectMapper();
         this.mockObjectMapper = Mockito.spy(this.objectMapper);
 
-        // mock
         doThrow(JsonProcessingException.class)
                 .when(this.mockObjectMapper).writeValueAsString(any(TestDAOUtils.TestAuthorizationDetail.class));
         doThrow(JsonProcessingException.class).when(this.mockObjectMapper).writeValueAsString(any(Set.class));

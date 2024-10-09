@@ -49,6 +49,9 @@ import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TENANT
 import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TYPE;
 
+/**
+ * Test class for {@link AuthorizationDetailsDAO}.
+ */
 public class AuthorizationDetailsDAOImplTest {
 
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtilMock;
