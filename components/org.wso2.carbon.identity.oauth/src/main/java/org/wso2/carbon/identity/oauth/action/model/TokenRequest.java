@@ -18,12 +18,12 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
+import org.wso2.carbon.identity.action.execution.model.Header;
+import org.wso2.carbon.identity.action.execution.model.Param;
 import org.wso2.carbon.identity.action.execution.model.Request;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This class models the request at a pre issue access token trigger.
@@ -72,8 +72,8 @@ public class TokenRequest extends Request {
      */
     public static class Builder {
 
-        private final Map<String, String[]> additionalHeaders = new HashMap<>();
-        private final Map<String, String[]> additionalParams = new HashMap<>();
+        private final List<Header> additionalHeaders = new ArrayList<>();
+        private final List<Param> additionalParams = new ArrayList<>();
         private String clientId;
         private String grantType;
         private String redirectUri;
@@ -103,15 +103,15 @@ public class TokenRequest extends Request {
             return this;
         }
 
-        public Builder addAdditionalHeader(String key, String[] value) {
+        public Builder addAdditionalHeader(String name, String[] value) {
 
-            this.additionalHeaders.put(key, value);
+            this.additionalHeaders.add(new Header(name, value));
             return this;
         }
 
-        public Builder addAdditionalParam(String key, String[] value) {
+        public Builder addAdditionalParam(String name, String[] value) {
 
-            this.additionalParams.put(key, value);
+            this.additionalParams.add(new Param(name, value));
             return this;
         }
 
