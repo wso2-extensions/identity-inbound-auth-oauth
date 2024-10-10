@@ -289,6 +289,13 @@
                 <version>${saml.common.util.version}</version>
             </dependency>
 
+            <!--Event handler dependencies-->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+                <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+                <version>${account.lock.service.version}</version>
+            </dependency>
+
             <!-- Orbit dependencies -->
             <dependency>
                 <groupId>com.google.gdata.wso2</groupId>
@@ -966,6 +973,10 @@
         <!--SAML Common Util Version-->
         <saml.common.util.version>1.4.1</saml.common.util.version>
         <saml.common.util.version.range>[1.4.0,1.5.0)</saml.common.util.version.range>
+
+        <!-- Account lock service versions -->
+        <account.lock.service.version>1.9.11</account.lock.service.version>
+        <account.lock.service.imp.pkg.version.range>[1.9.11, 2.0.0)</account.lock.service.imp.pkg.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
