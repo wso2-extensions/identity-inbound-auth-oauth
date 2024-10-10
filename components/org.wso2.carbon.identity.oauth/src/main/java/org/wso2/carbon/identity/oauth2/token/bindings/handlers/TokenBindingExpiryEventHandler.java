@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -65,6 +66,8 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
 
     private static final Log log = LogFactory.getLog(TokenBindingExpiryEventHandler.class);
+
+    private static final List<String> TOKEN_BINDING_PREFIX_LIST = Arrays.asList("org_switch_");
 
     @Override
     public void handleEvent(Event event) throws IdentityEventException {
@@ -311,6 +314,10 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
 
         Set<AccessTokenDO> boundTokens = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .getAccessTokensByBindingRef(tokenBindingReference);
+        for (String prefix : TOKEN_BINDING_PREFIX_LIST) {
+            boundTokens.addAll(OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensByBindingRef(prefix + tokenBindingReference));
+        }
         if (log.isDebugEnabled() && CollectionUtils.isEmpty(boundTokens)) {
             log.debug("No bound tokens found for the the provided binding reference: " + tokenBindingReference);
         }
