@@ -228,6 +228,7 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.MAX_AGE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.NONCE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PROVIDER_ID;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 /**
@@ -1281,6 +1282,8 @@ public class OAuth2AuthzEndpoint {
         try {
             redirectURL = doUserAuthorization(oAuthMessage, oAuthMessage.getSessionDataKeyFromLogin(), sessionState,
                     authorizationResponseDTO);
+            String serviceProviderId = oAuthMessage.getRequest().getParameter(SERVICE_PROVIDER_ID);
+            redirectURL = addServiceProviderIdToRedirectURI(redirectURL, serviceProviderId);
         } catch (OAuthProblemException ex) {
             if (isFormPostOrFormPostJWTResponseMode(oauth2Params.getResponseMode())) {
                 return handleFailedState(oAuthMessage, oauth2Params, ex, authorizationResponseDTO);
@@ -1456,7 +1459,19 @@ public class OAuth2AuthzEndpoint {
         }
         String redirectURL = handleOAuthAuthorizationRequest(oAuthMessage);
         String type = getRequestProtocolType(oAuthMessage);
-
+        try {
+            // Add the service provider id to the redirect URL. This is needed to support application wise branding.
+            String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
+            ServiceProvider serviceProvider = getServiceProvider(clientId);
+            if (serviceProvider != null) {
+                redirectURL = addServiceProviderIdToRedirectURI(redirectURL,
+                        serviceProvider.getApplicationResourceId());
+            }
+        } catch (OAuthSystemException e) {
+            // The value is set to be used for branding purposes. Therefore, if an error occurs, the process should
+            // continue without breaking.
+            log.error("Error while getting the service provider id", e);
+        }
         if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
             return handleAuthFlowThroughFramework(oAuthMessage, type, redirectURL);
         } else {
@@ -3954,6 +3969,16 @@ public class OAuth2AuthzEndpoint {
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
                     }
                 } else {
+                    try {
+                        String serviceProviderId =
+                                getServiceProvider(oAuthMessage.getRequest().getParameter(CLIENT_ID))
+                                .getApplicationResourceId();
+                        requestWrapper.setParameter(SERVICE_PROVIDER_ID, serviceProviderId);
+                    } catch (Exception e) {
+                        // The value is set to be used for branding purposes. Therefore, if an error occurs,
+                        // the process should continue without breaking.
+                        log.error("Error occurred while getting service provider id.");
+                    }
                     return authorize(requestWrapper, oAuthMessage.getResponse());
                 }
             } else {
@@ -4745,5 +4770,25 @@ public class OAuth2AuthzEndpoint {
         return ApiAuthnUtils.buildResponseForClientError(
                 new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
                         "App native authentication is only supported with code response type."), log);
+    }
+
+    private String addServiceProviderIdToRedirectURI(String redirectURI, String serviceProviderId) {
+
+        if (StringUtils.isNotBlank(serviceProviderId)) {
+            try {
+                URI uri = new URI(redirectURI);
+                String query = uri.getRawQuery();
+                if (StringUtils.isNotBlank(query)) {
+                    if (!query.contains(SERVICE_PROVIDER_ID + "=")) {
+                        redirectURI = redirectURI + "&" + SERVICE_PROVIDER_ID + "=" + serviceProviderId;
+                    }
+                } else {
+                    redirectURI = redirectURI + "?" + SERVICE_PROVIDER_ID + "=" + serviceProviderId;
+                }
+            } catch (URISyntaxException e) {
+                log.error("Error occurred while adding service provider id to redirect URI.", e);
+            }
+        }
+        return redirectURI;
     }
 }
