@@ -25,18 +25,32 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.dao.util.DAOUtils;
+import org.wso2.carbon.identity.oauth2.device.constants.Constants;
+import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
+import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
+import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.lang.reflect.Method;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertFalse;
 
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql",
@@ -47,14 +61,19 @@ public class DeviceFlowGrantTest {
     private Timestamp newTime = new Timestamp(date.getTime());
     private DeviceFlowDO deviceFlowDO1 = new DeviceFlowDO();
     private DeviceFlowDO deviceFlowDO2 = new DeviceFlowDO();
+    private DeviceFlowGrant deviceFlowGrant;
+    private OAuthTokenReqMessageContext oAuthTokenReqMessageContext;
+    private DeviceFlowDO deviceFlowDO3;
+
+    MockedStatic<DeviceFlowPersistenceFactory> mockedStatic;
 
     public static final String DB_NAME = "jdbc/WSO2CarbonDB";
-    public static final String H2_SCRIPT1_NAME = "h2.sql";
     public static final String H2_SCRIPT2_NAME = "identity.sql";
     MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
 
     @BeforeClass
     public void setupBeforeClass() throws Exception {
+
         DAOUtils.initializeDataSource(DB_NAME, DAOUtils.getFilePath(H2_SCRIPT2_NAME));
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
@@ -64,13 +83,36 @@ public class DeviceFlowGrantTest {
                 "java.naming.factory.initial",
                 "org.wso2.carbon.identity.common.testng.MockInitialContextFactory"
         );
+
+        deviceFlowDO3 = new DeviceFlowDO();
+        deviceFlowDO3.setStatus(Constants.AUTHORIZED);
+        long currentTimeMillis = System.currentTimeMillis();
+        long twentyFourHoursInMillis = 24 * 60 * 60 * 1000;
+        Timestamp expiryTime = new Timestamp(currentTimeMillis + twentyFourHoursInMillis);
+        deviceFlowDO3.setExpiryTime(expiryTime);
+
+        List<String> scopesList = new ArrayList<>();
+        scopesList.add("internal");
+        deviceFlowDO3.setScopes(scopesList);
+
+        AuthenticatedUser authorizedUser = new AuthenticatedUser();
+        authorizedUser.setUserName("test");
+        deviceFlowDO3.setAuthorizedUser(authorizedUser);
+
+        // Mocking DeviceFlowDAO and DeviceFlowPersistenceFactory
+        DeviceFlowDAO deviceFlowDAO = mock(DeviceFlowDAO.class);
+        mockedStatic = mockStatic(DeviceFlowPersistenceFactory.class);
+        mockedStatic.when(DeviceFlowPersistenceFactory::getInstance).thenReturn
+                (mock(DeviceFlowPersistenceFactory.class));
+        when(DeviceFlowPersistenceFactory.getInstance().getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
+        when(deviceFlowDAO.getAuthenticationDetails(anyString(), anyString())).thenReturn(deviceFlowDO3);
     }
 
     @BeforeMethod
     public void setUp() throws Exception {
 
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
-        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(true))
+        identityDatabaseUtil.when(() -> IdentityDatabaseUtil.getDBConnection(anyBoolean()))
                 .thenReturn(DAOUtils.getConnection(DB_NAME));
         deviceFlowDO1.setExpiryTime(new Timestamp(date.getTime() - 1000));
         deviceFlowDO1.setLastPollTime(new Timestamp(date.getTime() - 1000));
@@ -78,6 +120,16 @@ public class DeviceFlowGrantTest {
         deviceFlowDO2.setExpiryTime(new Timestamp(date.getTime() + 1000));
         deviceFlowDO2.setLastPollTime(new Timestamp(date.getTime() - 2000));
         deviceFlowDO2.setPollTime(1500);
+        deviceFlowGrant = new DeviceFlowGrant();
+        oAuthTokenReqMessageContext = mock(OAuthTokenReqMessageContext.class);
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn("clientId123");
+        when(oAuth2AccessTokenReqDTO.getRequestParameters()).thenReturn(
+                new RequestParameter[] {
+                        new RequestParameter(Constants.DEVICE_CODE, new String[]{"validDeviceCode"})
+                }
+        );
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
     }
 
     @AfterMethod
@@ -100,6 +152,25 @@ public class DeviceFlowGrantTest {
                 "isWithinValidPollInterval", newTime, deviceFlowDO1));
         Assert.assertTrue((Boolean) invokePrivateStaticMethod(DeviceFlowGrant.class,
                 "isWithinValidPollInterval", newTime, deviceFlowDO2));
+    }
+
+    @Test
+    public void testValidateGrantAuthorizedDevice() throws Exception {
+
+        deviceFlowDO3.setStatus(Constants.AUTHORIZED);
+        boolean result = deviceFlowGrant.validateGrant(oAuthTokenReqMessageContext);
+
+        Assert.assertTrue(result, "The grant validation should be successful.");
+
+    }
+
+    @Test
+    public void testValidateGrantPendingDevice() throws Exception {
+
+        deviceFlowDO3.setStatus(Constants.PENDING);
+        boolean result = deviceFlowGrant.validateGrant(oAuthTokenReqMessageContext);
+
+        assertFalse(result, "The grant validation should not be successful.");
     }
 
     private Object invokePrivateStaticMethod(Class<?> clazz, String methodName, Object... params) throws Exception {
