@@ -178,7 +178,6 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doAnswer;
@@ -310,7 +309,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
     private static final int MILLISECONDS_PER_SECOND = 1000;
     private static final int TIME_MARGIN_IN_SECONDS = 3000;
-    private static final String INVALID_CLIENT_ID = "invalidId";
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
     private Object authzEndpointObject;
@@ -588,12 +586,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                             .thenReturn(oAuth2ClientValidationResponseDTO);
                     when(oAuth2ClientValidationResponseDTO.isValidClient()).thenReturn(true);
                 }
-
-                ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
-                OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
-                when(appMgtService.getServiceProviderByClientId(anyString(), any(), anyString())).thenReturn(dummySp);
-                when(appMgtService.getServiceProviderByClientId(eq(INVALID_CLIENT_ID), any(), anyString()))
-                        .thenReturn(null);
 
                 try (MockedConstruction<CommonAuthenticationHandler> mockedConstruction = Mockito.mockConstruction(
                         CommonAuthenticationHandler.class,
