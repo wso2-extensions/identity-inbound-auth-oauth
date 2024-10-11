@@ -393,8 +393,6 @@ public class OAuth2Util {
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
             ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
-    public static final String ALLOWED_VERSION_TO_STOP_USING_APP_OWNER_FOR_TOKEN_IDENTIFICATION = "v1.0.0";
-
     private OAuth2Util() {
 
     }
@@ -5634,11 +5632,33 @@ public class OAuth2Util {
      * @param appVersion App version.
      * @return True if the app version is greater than or equal to the allowed minimum version.
      */
+    @Deprecated
     public static boolean isAllowedToStopUsingAppOwnerForTokenIdentification(String appVersion) {
 
         String[] appVersionDigits = appVersion.substring(1).split("\\.");
-        String[] allowedVersionDigits = ALLOWED_VERSION_TO_STOP_USING_APP_OWNER_FOR_TOKEN_IDENTIFICATION.substring(1)
+        String[] allowedVersionDigits = ApplicationConstants.ApplicationVersion.APP_VERSION_V1.substring(1)
                 .split("\\.");
+
+        for (int i = 0; i < appVersionDigits.length; i++) {
+            if (appVersionDigits[i].equals(allowedVersionDigits[i])) {
+                continue;
+            } else {
+                return Integer.parseInt(appVersionDigits[i]) >= Integer.parseInt(allowedVersionDigits[i]);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Compare the app version with allowed minimum app version.
+     *
+     * @param appVersion App version.
+     * @return True if the app version is greater than or equal to the allowed minimum app version.
+     */
+    public static boolean isGivenAppVersionAllowed(String appVersion, String allowedAppVersion) {
+
+        String[] appVersionDigits = appVersion.substring(1).split("\\.");
+        String[] allowedVersionDigits = allowedAppVersion.substring(1).split("\\.");
 
         for (int i = 0; i < appVersionDigits.length; i++) {
             if (appVersionDigits[i].equals(allowedVersionDigits[i])) {
