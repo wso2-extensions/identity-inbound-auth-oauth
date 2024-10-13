@@ -505,6 +505,13 @@ public class OAuthServerConfigurationTest {
         Assert.assertEquals(supportedTokenEndpointSigningAlgorithms.size(), 3);
     }
 
+    @Test
+    public void testIsValidateAuthenticatedUserForRefreshGrantEnabled() throws Exception {
+
+        Assert.assertTrue(OAuthServerConfiguration.getInstance()
+                .isValidateAuthenticatedUserForRefreshGrantEnabled());
+    }
+
     private String fillURLPlaceholdersForTest(String url) {
 
         return url.replace("${carbon.protocol}", "https")

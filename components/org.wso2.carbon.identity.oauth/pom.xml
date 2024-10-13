@@ -552,6 +552,12 @@
                         </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <excludes>
+                        <exclude>org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent</exclude>
+                        <exclude>org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder</exclude>
+                    </excludes>
+                </configuration>
             </plugin>
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
