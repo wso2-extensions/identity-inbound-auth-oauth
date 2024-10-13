@@ -165,6 +165,8 @@
         <EnableOAuthCache>false</EnableOAuthCache>
         <!-- Enable renewal of refresh token for refresh_token grant -->
         <RenewRefreshTokenForRefreshGrant>true</RenewRefreshTokenForRefreshGrant>
+        <!-- Enable the authenticated user validation config for refresh grant -->
+        <ValidateAuthenticatedUserForRefreshGrant>true</ValidateAuthenticatedUserForRefreshGrant>
         <!-- Process the token before storing it in database, e.g. encrypting -->
         <TokenPersistenceProcessor>org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor</TokenPersistenceProcessor>
         <!-- Supported Client Authentication Methods -->
