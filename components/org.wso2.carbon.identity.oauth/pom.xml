@@ -554,8 +554,8 @@
                 </executions>
                 <configuration>
                     <excludes>
-                        <exclude>org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponent</exclude>
-                        <exclude>org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder</exclude>
+                        <exclude>org/wso2/carbon/identity/oauth2/internal/OAuth2ServiceComponent.class</exclude>
+                        <exclude>org/wso2/carbon/identity/oauth2/internal/OAuth2ServiceComponentHolder.class</exclude>
                     </excludes>
                 </configuration>
             </plugin>
