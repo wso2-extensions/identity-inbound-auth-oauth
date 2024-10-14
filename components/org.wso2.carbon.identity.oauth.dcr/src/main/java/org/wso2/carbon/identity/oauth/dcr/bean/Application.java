@@ -35,6 +35,7 @@ public class Application implements Serializable {
     private List<String> redirectUris = null;
     private List<String> grantTypes = null;
     private String extApplicationDisplayName = null;
+    private String extApplicationVersion = null;
     private String extApplicationOwner = null;
     private Long extApplicationTokenLifetime = null;
     private Long extUserTokenLifetime = null;
@@ -147,6 +148,16 @@ public class Application implements Serializable {
     public void setExtApplicationDisplayName(String extApplicationDisplayName) {
 
         this.extApplicationDisplayName = extApplicationDisplayName;
+    }
+
+    public String getExtApplicationVersion() {
+
+        return extApplicationVersion;
+    }
+
+    public void setExtApplicationVersion(String extApplicationVersion) {
+
+        this.extApplicationVersion = extApplicationVersion;
     }
 
     public String getExtApplicationDisplayName() {

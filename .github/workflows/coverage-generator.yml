@@ -2,6 +2,9 @@ name: Code Coverage Generator
 
 on:
   workflow_dispatch:
+  schedule:
+    # Daily 22:00 UTC (3.30 AM SL time).
+    - cron: '00 22 * * *'
 
 jobs:
   build-source:

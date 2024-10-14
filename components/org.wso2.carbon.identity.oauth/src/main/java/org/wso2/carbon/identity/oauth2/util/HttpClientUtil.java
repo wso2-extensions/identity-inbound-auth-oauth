@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.utils.CarbonUtils;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -51,6 +52,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 
 import javax.net.ssl.SSLContext;
@@ -148,7 +150,7 @@ public class HttpClientUtil {
         String keyStorePassword = CarbonUtils.getServerConfiguration()
                 .getFirstProperty(Constants.TRUSTSTORE_PASSWORD);
         try {
-            KeyStore trustStore = KeyStore.getInstance(Constants.TRUSTSTORE_TYPE);
+            KeyStore trustStore = KeystoreUtils.getKeystoreInstance(Constants.TRUSTSTORE_TYPE);
             trustStore.load(new FileInputStream(keyStorePath), keyStorePassword.toCharArray());
             sslContext = SSLContexts.custom().loadTrustMaterial(trustStore).build();
 
@@ -164,7 +166,7 @@ public class HttpClientUtil {
             }
 
             return new SSLConnectionSocketFactory(sslContext, hostnameVerifier);
-        } catch (KeyStoreException e) {
+        } catch (KeyStoreException | NoSuchProviderException e) {
             throw new IdentityOAuth2Exception("Failed to read from Key Store. ", e);
         } catch (IOException e) {
             throw new IdentityOAuth2Exception("Key Store not found in " + keyStorePath, e);

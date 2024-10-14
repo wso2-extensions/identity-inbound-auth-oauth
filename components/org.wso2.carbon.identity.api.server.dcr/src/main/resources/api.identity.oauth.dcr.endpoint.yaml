@@ -5,8 +5,6 @@ info:
   description: >
     This document specifies an **OAuth2 Dynamic Client Registration Endpoint**
     for WSO2 **Identity Server** .
-
-
     It is written with [swagger 2](http://swagger.io/).
   contact:
     name: WSO2
@@ -396,6 +394,8 @@ definitions:
         type: string
       ext_application_owner:
         type: string
+      ext_application_version:
+        type: string
       ext_application_token_lifetime:
         type: integer
         format: int64
@@ -478,6 +478,8 @@ definitions:
       ext_application_token_lifetime:
         type: integer
         format: int64
+      ext_application_version:
+        type: string
       ext_user_token_lifetime:
         type: integer
         format: int64

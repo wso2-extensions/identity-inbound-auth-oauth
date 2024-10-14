@@ -116,9 +116,11 @@ public class ProviderConfigBuilder {
         providerConfig.setSubjectTypesSupported(new String[]{"public", "pairwise"});
 
         providerConfig.setCheckSessionIframe(buildServiceUrl(IdentityConstants.OAuth.CHECK_SESSION,
-                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL)));
+                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL),
+                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_CHECK_SESSION_EP_URL_V2)));
         providerConfig.setEndSessionEndpoint(buildServiceUrl(IdentityConstants.OAuth.LOGOUT,
-                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL)));
+                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL),
+                IdentityUtil.getProperty(IdentityConstants.OAuth.OIDC_LOGOUT_EP_URL_V2)));
         try {
             providerConfig.setUserinfoSigningAlgValuesSupported(new String[] {
                     OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(

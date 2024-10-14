@@ -49,6 +49,7 @@ public class Constants {
     public static final String X509 = "X.509";
     public static final String SHA1 = "SHA-1";
     public static final String SHA256 = "SHA-256";
+    public static final String SERVICE_PROVIDER_ID = "spId";
 
 
     //JWS is consists of three parts seperated by 2 '.'s as JOSE header, JWS payload, JWS signature

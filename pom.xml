@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.0.156-SNAPSHOT</version>
+    <version>7.0.168-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -933,13 +933,13 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.9.23</carbon.kernel.version>
-        <carbon.kernel.feature.version>4.9.7</carbon.kernel.feature.version>
-        <carbon.kernel.imp.pkg.version.range>[4.5.0, 5.0.0)</carbon.kernel.imp.pkg.version.range>
+        <carbon.kernel.version>4.10.22</carbon.kernel.version>
+        <carbon.kernel.feature.version>4.10.22</carbon.kernel.feature.version>
+        <carbon.kernel.imp.pkg.version.range>[4.10.22, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.3.62</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.5.64</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -971,7 +971,7 @@
         <axiom.osgi.version.range>[1.2.11, 2.0.0)</axiom.osgi.version.range>
 
         <!--SAML Common Util Version-->
-        <saml.common.util.version>1.4.0</saml.common.util.version>
+        <saml.common.util.version>1.4.1</saml.common.util.version>
         <saml.common.util.version.range>[1.4.0,1.5.0)</saml.common.util.version.range>
 
         <!-- Account lock service versions -->
@@ -1020,7 +1020,7 @@
         <tomcat.version>9.0.93</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
-        <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
+        <org.apache.cxf.version>3.5.9</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
 

@@ -36,6 +36,7 @@ public class ApplicationUpdateRequest implements Serializable {
     private String tokenType = null;
     private String backchannelLogoutUri = null;
     private String extApplicationDisplayName = null;
+    private String extApplicationVersion = null;
     private String extApplicationOwner = null;
     private Long extApplicationTokenLifetime = null;
     private Long extUserTokenLifetime = null;
@@ -153,6 +154,24 @@ public class ApplicationUpdateRequest implements Serializable {
     public void setExtApplicationDisplayName(String extApplicationDisplayName) {
 
         this.extApplicationDisplayName = extApplicationDisplayName;
+    }
+
+    /**
+     * Get the external parameter application version.
+     * @return external parameter application version.
+     */
+    public String getExtApplicationVersion() {
+
+        return extApplicationVersion;
+    }
+
+    /**
+     * Set the external parameter application version.
+     * @param extApplicationVersion external parameter application version.
+     */
+    public void setExtApplicationVersion(String extApplicationVersion) {
+
+        this.extApplicationVersion = extApplicationVersion;
     }
 
     /**

@@ -992,6 +992,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         String postLogoutRedirectUri = request.getParameter(OIDCSessionConstants.OIDC_POST_LOGOUT_REDIRECT_URI_PARAM);
         if ((StringUtils.isBlank(clientId) && StringUtils.isBlank(idTokenHint)) ||
                 StringUtils.isBlank(postLogoutRedirectUri)) {
+            String state = request
+                    .getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
+            redirectURL = appendStateQueryParam(redirectURL, state);
             response.sendRedirect(getRedirectURL(redirectURL, request));
             return;
         }
@@ -1044,6 +1047,9 @@ public class OIDCLogoutServlet extends HttpServlet {
             log.error(msg + " Client id from id token: " + clientId, e);
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
+        String state = request
+                .getParameter(OIDCSessionConstants.OIDC_STATE_PARAM);
+        redirectURL = appendStateQueryParam(redirectURL, state);
         response.sendRedirect(getRedirectURL(redirectURL, request));
     }
 

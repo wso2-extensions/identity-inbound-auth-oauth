@@ -17,6 +17,7 @@ package org.wso2.carbon.identity.oauth2.authz;
 
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -24,10 +25,12 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceDataHolder;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.TestUtil;
@@ -57,6 +60,8 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     @BeforeClass
     public void setUp() throws Exception {
 
+        IdentityEventService identityEventService = mock(IdentityEventService.class);
+        CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
         applicationManagementService = mock(ApplicationManagementService.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
         serviceProvider = mock(ServiceProvider.class);
@@ -65,6 +70,12 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
+    }
+
+    @AfterClass
+    public void tearDown() {
+
+        CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
     }
 
     @BeforeMethod
