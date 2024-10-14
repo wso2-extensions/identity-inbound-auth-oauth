@@ -2912,11 +2912,16 @@ public class OAuth2UtilTest {
 
         List<ExternalClaim> oidcDialectClaims = new ArrayList<>();
 
-        ExternalClaim claim1 = new ExternalClaim("http://wso2.org/oidc", "http://wso2.org/oidc/claim/email", "http://wso2.org/claims/emailaddress");
-        ExternalClaim claim2 = new ExternalClaim("http://wso2.org/oidc", "http://wso2.org/oidc/claim/profile", "http://wso2.org/claims/url");
-        ExternalClaim claim3 = new ExternalClaim("http://wso2.org/oidc", "http://wso2.org/oidc/claim/first_name", "http://wso2.org/claims/givenname");
-        ExternalClaim claim4 = new ExternalClaim("http://wso2.org/oidc", "http://wso2.org/oidc/claim/last_name", "http://wso2.org/claims/lastname");
-        ExternalClaim claim5 = new ExternalClaim("http://wso2.org/oidc", "http://wso2.org/oidc/claim/phone_number", "http://wso2.org/claims/mobile");
+        ExternalClaim claim1 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/email", "http://wso2.org/claims/emailaddress");
+        ExternalClaim claim2 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/profile", "http://wso2.org/claims/url");
+        ExternalClaim claim3 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/first_name", "http://wso2.org/claims/givenname");
+        ExternalClaim claim4 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/last_name", "http://wso2.org/claims/lastname");
+        ExternalClaim claim5 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/phone_number", "http://wso2.org/claims/mobile");
 
         oidcDialectClaims.add(claim1);
         oidcDialectClaims.add(claim2);
