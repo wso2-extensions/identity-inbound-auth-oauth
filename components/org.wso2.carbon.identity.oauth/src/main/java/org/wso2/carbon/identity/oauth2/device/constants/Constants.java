@@ -42,6 +42,7 @@ public class Constants {
     public static final String NOT_EXIST = "NOT_EXIST";
     public static final String EXPIRY_TIME = "EXPIRY_TIME";
     public static final String PENDING = "PENDING";
+    public static final String SLOW_DOWN = "SLOW_DOWN";
     public static final String AUTHZ_USER = "AUTHZ_USER";
     public static final String LAST_POLL_TIME = "LAST_POLL_TIME";
     public static final String POLL_TIME = "POLL_TIME";
