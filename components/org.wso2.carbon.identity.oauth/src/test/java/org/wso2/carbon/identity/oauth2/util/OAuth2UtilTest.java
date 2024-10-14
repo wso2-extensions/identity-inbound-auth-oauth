@@ -26,6 +26,8 @@ import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -105,6 +107,7 @@ import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.KeyStore;
@@ -127,6 +130,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -2846,22 +2850,26 @@ public class OAuth2UtilTest {
 
     @Test(dataProvider = "initiateOIDCScopesDataProvider")
     public void testInitiateOIDCScopes(List<ScopeDTO> scopeClaimsList, List<ExternalClaim> oidcDialectClaims)
-            throws ClaimMetadataException, IdentityOAuth2Exception {
+            throws Exception {
 
         try (MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory =
                      mockStatic(OAuthTokenPersistenceFactory.class);
              MockedStatic<OAuth2ServiceComponentHolder> mockedOAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<LogFactory> mockedLogFactory = mockStatic(LogFactory.class)) {
 
             OAuth2ServiceComponentHolder mockServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
             OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
             ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
             ScopeClaimMappingDAO scopeClaimMappingDAO = mock(ScopeClaimMappingDAO.class);
+            Log log = mock(Log.class);
 
             mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
                     .thenReturn(mockTokenPersistenceFactory);
             mockedOAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
                     .thenReturn(mockServiceComponentHolder);
+            mockedLogFactory.when(() -> LogFactory.getLog(any(Class.class))).thenReturn(log);
+            setPrivateStaticFinalField(OAuth2Util.class, "log", log);
 
             when(mockTokenPersistenceFactory.getScopeClaimMappingDAO()).thenReturn(scopeClaimMappingDAO);
             doNothing().when(scopeClaimMappingDAO).initScopeClaimMapping(SUPER_TENANT_ID, scopeClaimsList);
@@ -2873,6 +2881,14 @@ public class OAuth2UtilTest {
             verify(scopeClaimMappingDAO, times(1))
                     .initScopeClaimMapping(SUPER_TENANT_ID, scopeClaimsList);
             verify(claimService, times(4)).updateExternalClaim(any(), anyString());
+            clearInvocations(log);
+
+            ClaimMetadataException claimMetadataException = new ClaimMetadataException("error");
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(claimMetadataException);
+            OAuth2Util.initiateOIDCScopes(SUPER_TENANT_ID);
+            verify(log, times(1))
+                    .error(claimMetadataException.getMessage(), claimMetadataException);
         }
     }
 
@@ -2939,5 +2955,17 @@ public class OAuth2UtilTest {
         Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(object, value);
+    }
+
+    private void setPrivateStaticFinalField(Class<?> clazz, String fieldName, Object value) throws Exception {
+
+        Field field = clazz.getDeclaredField(fieldName);
+        field.setAccessible(true);
+
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+
+        field.set(null, value);
     }
 }
