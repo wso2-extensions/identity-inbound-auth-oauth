@@ -31,7 +31,6 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -67,9 +66,6 @@ import static org.testng.Assert.fail;
 
 @Listeners(MockitoTestNGListener.class)
 public class JwksEndpointTest {
-
-    @Mock
-    ServerConfiguration serverConfiguration;
 
     @Mock
     OAuthServerConfiguration mockOAuthServerConfiguration;
