@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -459,8 +460,9 @@ public class AccessTokenIssuer {
             ServiceProvider serviceProvider = getServiceProvider(tokReqMsgCtx.getOauth2AccessTokenReqDTO());
             boolean useClientIdAsSubClaimForAppTokensEnabledServerConfig = OAuthServerConfiguration.getInstance()
                     .isUseClientIdAsSubClaimForAppTokensEnabled();
-            boolean useClientIdAsSubClaimForAppTokensEnabled = OAuth2Util
-                    .isAllowedToStopUsingAppOwnerForTokenIdentification(serviceProvider.getApplicationVersion());
+            boolean useClientIdAsSubClaimForAppTokensEnabled =
+                    OAuth2Util.isGivenAppVersionAllowed(serviceProvider.getApplicationVersion(),
+                            ApplicationConstants.ApplicationVersion.APP_VERSION_V1);
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
                 if ((!isOfTypeApplicationUser && (useClientIdAsSubClaimForAppTokensEnabled
                         || useClientIdAsSubClaimForAppTokensEnabledServerConfig))) {

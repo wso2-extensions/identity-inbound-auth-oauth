@@ -395,7 +395,6 @@
                 <xs:sequence>
                     <xs:element minOccurs="0" name="OAuthVersion" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="accessTokenClaims" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="accessTokenClaimsSeparationEnabled" type="xs:boolean"/>
                     <xs:element minOccurs="0" name="applicationAccessTokenExpiryTime" type="xs:long"/>
                     <xs:element minOccurs="0" name="applicationName" nillable="true" type="xs:string"/>
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="audiences" nillable="true" type="xs:string"/>
