@@ -5627,29 +5627,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Compare the app version with allowed minimum version.
-     *
-     * @param appVersion App version.
-     * @return True if the app version is greater than or equal to the allowed minimum version.
-     */
-    @Deprecated
-    public static boolean isAllowedToStopUsingAppOwnerForTokenIdentification(String appVersion) {
-
-        String[] appVersionDigits = appVersion.substring(1).split("\\.");
-        String[] allowedVersionDigits = ApplicationConstants.ApplicationVersion.APP_VERSION_V1.substring(1)
-                .split("\\.");
-
-        for (int i = 0; i < appVersionDigits.length; i++) {
-            if (appVersionDigits[i].equals(allowedVersionDigits[i])) {
-                continue;
-            } else {
-                return Integer.parseInt(appVersionDigits[i]) >= Integer.parseInt(allowedVersionDigits[i]);
-            }
-        }
-        return true;
-    }
-
-    /**
      * Compare the app version with allowed minimum app version.
      *
      * @param appVersion App version.
