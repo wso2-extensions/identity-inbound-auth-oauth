@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.openidconnect.util;
 
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -65,7 +66,6 @@ public class ClaimHandlerUtil {
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(oAuthAppDO.getOauthConsumerKey(), tenantDomain);
         String appVersion = serviceProvider.getApplicationVersion();
 
-        // Todo change to constant.
-        return OAuth2Util.isGivenAppVersionAllowed(appVersion, "v2.0.0");
+        return OAuth2Util.isGivenAppVersionAllowed(appVersion, ApplicationConstants.ApplicationVersion.APP_VERSION_V2);
     }
 }
