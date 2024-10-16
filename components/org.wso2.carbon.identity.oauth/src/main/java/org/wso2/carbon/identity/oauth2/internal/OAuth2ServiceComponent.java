@@ -1623,17 +1623,13 @@ public class OAuth2ServiceComponent {
     )
     protected void setAccountLockService(AccountLockService accountLockService) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("AccountLockService set in OAuth2ServiceComponent bundle.");
-        }
         OAuth2ServiceComponentHolder.setAccountLockService(accountLockService);
+        log.debug("AccountLockService set in OAuth2ServiceComponent bundle.");
     }
 
     protected void unsetAccountLockService(AccountLockService accountLockService) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("AccountLockService unset in OAuth2ServiceComponent bundle.");
-        }
         OAuth2ServiceComponentHolder.setAccountLockService(null);
+        log.debug("AccountLockService unset in OAuth2ServiceComponent bundle.");
     }
 }
