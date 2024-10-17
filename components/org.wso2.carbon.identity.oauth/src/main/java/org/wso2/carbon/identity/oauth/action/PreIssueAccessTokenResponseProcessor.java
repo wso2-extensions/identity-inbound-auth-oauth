@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessRe
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.Event;
 import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
+import org.wso2.carbon.identity.action.execution.ActionExecutionLogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
@@ -120,7 +121,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             List<Map<String, String>> operationDetailsList = new ArrayList<>();
             operationExecutionResultList.forEach(performedOperation -> {
                 operationDetailsList.add(Map.of(
-                        "operation", performedOperation.getOperation().getOp() + " with path: " +
+                        "operation", performedOperation.getOperation().getOp() + " path: " +
                                 performedOperation.getOperation().getPath(),
                         "status", performedOperation.getStatus().toString(),
                         "message", performedOperation.getMessage()
@@ -128,10 +129,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             });
 
             DiagnosticLog.DiagnosticLogBuilder diagLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    "action-execution",
-                    "execute-action-operations");
+                    ActionExecutionLogConstants.ACTION_EXECUTION,
+                    ActionExecutionLogConstants.ActionIDs.EXECUTE_ACTION_OPERATIONS);
             diagLogBuilder
-                    .configParam("executed operations", operationDetailsList.isEmpty() ? "empty" : operationDetailsList)
+                    .inputParam("executed operations", operationDetailsList.isEmpty() ? "empty" : operationDetailsList)
                     .resultMessage("Allowed operations are executed for " + actionType + " action.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
