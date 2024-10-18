@@ -305,15 +305,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return true;
         }
 
-        checkAccountLockStatusOfTheUser(validationBean, oAuthTokenReqMessageContext);
-
-        return true;
-    }
-
-    private void checkAccountLockStatusOfTheUser(RefreshTokenValidationDataDO validationBean,
-                                                 OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
-            throws IdentityOAuth2Exception {
-
         AuthenticatedUser authenticatedUser = validationBean.getAuthorizedUser();
         if (authenticatedUser != null) {
             String username = null;
@@ -345,19 +336,27 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 tenantDomain = authenticatedUser.getTenantDomain();
             }
 
-            if (username != null && tenantDomain != null) {
-                AccountLockService accountLockService = OAuth2ServiceComponentHolder.getAccountLockService();
+            checkAccountLockStatusOfTheUser(username, tenantDomain);
+        }
 
-                try {
-                    boolean accountLockStatus = accountLockService.isAccountLocked(username, tenantDomain);
-                    if (accountLockStatus) {
-                        throw new IdentityOAuth2Exception(UserCoreConstants.ErrorCode.USER_IS_LOCKED,
-                                String.format(ACCOUNT_LOCK_ERROR_MESSAGE, username, tenantDomain));
-                    }
-                } catch (AccountLockServiceException e) {
-                    throw new IdentityOAuth2Exception(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
-                            String.format(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getMessage(), username), e);
+        return true;
+    }
+
+    private void checkAccountLockStatusOfTheUser(String username, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (username != null && tenantDomain != null) {
+            AccountLockService accountLockService = OAuth2ServiceComponentHolder.getAccountLockService();
+
+            try {
+                boolean accountLockStatus = accountLockService.isAccountLocked(username, tenantDomain);
+                if (accountLockStatus) {
+                    throw new IdentityOAuth2Exception(UserCoreConstants.ErrorCode.USER_IS_LOCKED,
+                            String.format(ACCOUNT_LOCK_ERROR_MESSAGE, username, tenantDomain));
                 }
+            } catch (AccountLockServiceException e) {
+                throw new IdentityOAuth2Exception(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
+                        String.format(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getMessage(), username), e);
             }
         }
     }
