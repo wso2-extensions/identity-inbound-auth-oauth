@@ -23,6 +23,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
@@ -38,6 +39,7 @@ import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 
@@ -96,17 +98,19 @@ public class RefreshGrantHandlerTest {
         federatedUser.setFederatedIdPName(federatedIDPName);
 
         return new Object[][] {
-                { user1, null, null, false, null, false },
-                { user1, null, null, false, null, true },
-                { user1, null, null, true, null, true },
-                { federatedUser, null, null, false, null, true },
-                { federatedUser, user1, null, false, null, true },
-                { federatedUser, user1, null, true, null, true },
-                { federatedUser, user1, new FederatedAssociationManagerException("test error"), true, null, true },
-                { federatedUser, user1, new FrameworkException("test error"), true, null, true },
-                { federatedUser, user1, null, true, new AccountLockServiceException("test error"), true },
-                { null, null, null, false, null, true },
-                { user2, null, null, false, null, true }
+                {user1, null, null, false, null, false},
+                {user1, null, null, false, null, true},
+                {user1, null, null, true, null, true},
+                {federatedUser, null, null, false, null, true},
+                {federatedUser, user1, null, false, null, true},
+                {federatedUser, user1, null, true, null, true},
+                {federatedUser, user1, new FederatedAssociationManagerClientException("test error"), true, null, true},
+                {federatedUser, user1, new FrameworkClientException("test error"), true, null, true},
+                {federatedUser, user1, new FederatedAssociationManagerException("test error"), true, null, true},
+                {federatedUser, user1, new FrameworkException("test error"), true, null, true},
+                {federatedUser, user1, null, true, new AccountLockServiceException("test error"), true},
+                {null, null, null, false, null, true},
+                {user2, null, null, false, null, true}
         };
     }
 
