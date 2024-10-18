@@ -27,6 +27,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -578,7 +579,8 @@ public class TokenValidationHandler {
             String consumerKey = accessTokenDO.getConsumerKey();
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, appResidentTenantDomain);
             boolean removeUsernameFromAppTokenEnabled = OAuth2Util
-                    .isAllowedToStopUsingAppOwnerForTokenIdentification(serviceProvider.getApplicationVersion());
+                    .isGivenAppVersionAllowed(serviceProvider.getApplicationVersion(),
+                            ApplicationConstants.ApplicationVersion.APP_VERSION_V1);
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
 
             // should be in seconds
