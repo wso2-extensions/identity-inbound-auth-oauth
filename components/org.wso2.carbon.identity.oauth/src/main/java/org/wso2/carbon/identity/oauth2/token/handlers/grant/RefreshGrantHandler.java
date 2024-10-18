@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -64,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -325,8 +328,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                         username = associatedLocalUsername;
                         tenantDomain = oAuthAppTenantDomain;
                     }
+                } catch (FederatedAssociationManagerClientException | FrameworkClientException e) {
+                    throw new IdentityOAuth2ClientException(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(),
+                            String.format(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getMessage(),
+                                    authenticatedUser.getFederatedIdPName()), e);
                 } catch (FederatedAssociationManagerException | FrameworkException e) {
-                    throw new IdentityOAuth2Exception(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(),
+                    throw new IdentityOAuth2ServerException(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(),
                             String.format(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getMessage(),
                                     authenticatedUser.getFederatedIdPName()), e);
                 }
@@ -351,11 +358,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             try {
                 boolean accountLockStatus = accountLockService.isAccountLocked(username, tenantDomain);
                 if (accountLockStatus) {
-                    throw new IdentityOAuth2Exception(UserCoreConstants.ErrorCode.USER_IS_LOCKED,
+                    throw new IdentityOAuth2ClientException(UserCoreConstants.ErrorCode.USER_IS_LOCKED,
                             String.format(ACCOUNT_LOCK_ERROR_MESSAGE, username, tenantDomain));
                 }
             } catch (AccountLockServiceException e) {
-                throw new IdentityOAuth2Exception(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
+                throw new IdentityOAuth2ServerException(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
                         String.format(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getMessage(), username), e);
             }
         }
