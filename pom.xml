@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015-2023, WSO2 LLC. (http://www.wso2.com).
+  ~ Copyright (c) 2015-2024, WSO2 LLC. (http://www.wso2.com).
   ~
   ~ WSO2 LLC. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
@@ -287,6 +287,13 @@
                 <groupId>org.wso2.carbon.identity.saml.common</groupId>
                 <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
                 <version>${saml.common.util.version}</version>
+            </dependency>
+
+            <!--Event handler dependencies-->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+                <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+                <version>${account.lock.service.version}</version>
             </dependency>
 
             <!-- Orbit dependencies -->
@@ -966,6 +973,10 @@
         <!--SAML Common Util Version-->
         <saml.common.util.version>1.4.1</saml.common.util.version>
         <saml.common.util.version.range>[1.4.0,1.5.0)</saml.common.util.version.range>
+
+        <!-- Account lock service versions -->
+        <account.lock.service.version>1.9.11</account.lock.service.version>
+        <account.lock.service.imp.pkg.version.range>[1.9.11, 2.0.0)</account.lock.service.imp.pkg.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
