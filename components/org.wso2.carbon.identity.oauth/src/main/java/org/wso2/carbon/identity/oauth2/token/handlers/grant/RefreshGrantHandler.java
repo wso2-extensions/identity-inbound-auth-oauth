@@ -305,6 +305,15 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return true;
         }
 
+        checkAccountLockStatusOfTheUser(validationBean, oAuthTokenReqMessageContext);
+
+        return true;
+    }
+
+    private void checkAccountLockStatusOfTheUser(RefreshTokenValidationDataDO validationBean,
+                                                 OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
         AuthenticatedUser authenticatedUser = validationBean.getAuthorizedUser();
         if (authenticatedUser != null) {
             String username = null;
@@ -351,8 +360,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                 }
             }
         }
-
-        return true;
     }
 
     private OAuth2AccessTokenRespDTO buildTokenResponse(OAuthTokenReqMessageContext tokReqMsgCtx,
