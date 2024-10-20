@@ -215,12 +215,6 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
         Map<String, String> stringContent = getBodyParameters(params);
         String clientId = stringContent.get(OAuth.OAUTH_CLIENT_ID);
-        /* With API based authentication, client authentication is provided for the authorization endpoint.
-         When calling /GET authorization ep, the client ID is not available in the request body.
-         Hence, the client ID is extracted from the request parameter.*/
-        if (StringUtils.isBlank(clientId) && isApiBasedAuthenticationFlow(request)) {
-            clientId = request.getParameter(OAuth.OAUTH_CLIENT_ID);
-        }
         context.setClientId(clientId);
     }
 
