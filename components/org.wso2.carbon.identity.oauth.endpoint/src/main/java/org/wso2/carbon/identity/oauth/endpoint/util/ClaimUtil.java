@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -47,6 +48,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -165,8 +167,36 @@ public class ClaimUtil {
                     spToLocalClaimMappings = ClaimMetadataHandler.getInstance().getMappingsMapFromOtherDialectToCarbon
                             (SP_DIALECT, null, userTenantDomain, true);
 
-                    realm = getUserRealm(null, userTenantDomain);
-                    Map<String, String> userClaims = getUserClaimsFromUserStore(userId, realm, claimURIList);
+                    Map<String, String> userClaims;
+
+                    AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
+                    if (!StringUtils.equals(authenticatedUser.getUserResidentOrganization(),
+                            authenticatedUser.getAccessingOrganization()) &&
+                            !CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME &&
+                            StringUtils.isNotEmpty(AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser))) {
+                        authenticatedUser.setSharedUserId(AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser));
+                        authenticatedUser.setUserSharedOrganizationId(authenticatedUser
+                                .getAccessingOrganization());
+                    }
+                    if (OIDCClaimUtil.isSharedUserAccessingSharedOrg(authenticatedUser) &&
+                            StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
+                        String userAccessingTenantDomain =
+                                OIDCClaimUtil.resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+                        String sharedUserId = authenticatedUser.getSharedUserId();
+
+                        realm = getUserRealm(null, userAccessingTenantDomain);
+
+                        try {
+                            FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
+                            userClaims = getUserClaimsFromUserStore(sharedUserId, realm, claimURIList);
+                        } finally {
+                            FrameworkUtils.endTenantFlow();
+                        }
+                    } else {
+                        realm = getUserRealm(null, userTenantDomain);
+                        userClaims = getUserClaimsFromUserStore(userId, realm, claimURIList);
+                    }
+
 
                     if (isNotEmpty(userClaims)) {
                         for (Map.Entry<String, String> entry : userClaims.entrySet()) {

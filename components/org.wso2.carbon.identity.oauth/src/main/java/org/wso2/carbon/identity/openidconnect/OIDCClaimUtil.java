@@ -621,12 +621,17 @@ public class OIDCClaimUtil {
         }
     }
 
-    private static boolean isSharedUserAccessingSharedOrg(AuthenticatedUser authenticatedUser) {
+    public static boolean isSharedUserAccessingSharedOrg(AuthenticatedUser authenticatedUser) {
 
         return StringUtils.isNotEmpty(authenticatedUser.getUserSharedOrganizationId()) &&
                 StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization()) &&
                 StringUtils.equals(authenticatedUser.getUserSharedOrganizationId(),
                         authenticatedUser.getAccessingOrganization());
+    }
+
+    public static String resolveTenantDomain(String organizationId) throws OrganizationManagementException {
+
+        return OAuthComponentServiceHolder.getInstance().getOrganizationManager().resolveTenantDomain(organizationId);
     }
 
     private static void addSharedUserGroupsFromSharedOrganization(AuthenticatedUser authenticatedUser,
