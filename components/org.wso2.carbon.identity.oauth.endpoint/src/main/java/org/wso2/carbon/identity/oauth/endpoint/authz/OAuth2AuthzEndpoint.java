@@ -332,23 +332,6 @@ public class OAuth2AuthzEndpoint {
             return handleIdentityException(request, e);
         }
 
-        // Perform request authentication for API based auth flow.
-        if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
-            OAuthClientAuthnContext oAuthClientAuthnContext = getClientAuthnContext(request);
-            if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return handleAuthFailureResponse(oAuthClientAuthnContext);
-            }
-
-            ClientAttestationContext clientAttestationContext = getClientAttestationContext(request);
-            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
-                return handleAttestationFailureResponse(clientAttestationContext);
-            }
-
-            if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
-                return handleUnsupportedGrantForApiBasedAuth();
-            }
-        }
-
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
