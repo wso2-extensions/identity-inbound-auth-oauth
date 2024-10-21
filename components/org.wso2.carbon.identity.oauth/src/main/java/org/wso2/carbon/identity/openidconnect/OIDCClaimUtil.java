@@ -484,7 +484,29 @@ public class OIDCClaimUtil {
             claimURIList.remove(APP_ROLES_CLAIM);
             appRoleClaimRequested = true;
         }
-        Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+
+        Map<String, String> userClaims;
+        if (isSharedUserAccessingSharedOrg(authenticatedUser) &&
+                StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
+            String userAccessingTenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(userAccessingTenantDomain))
+                            .getUserStoreManager();
+            String fullQualifiedSharedUsername = userStoreManager.getUser(authenticatedUser.getSharedUserId(), null)
+                    .getFullQualifiedUsername();
+            realm = IdentityTenantUtil.getRealm(userAccessingTenantDomain, fullQualifiedSharedUsername);
+
+            try {
+                FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
+                userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+            } finally {
+                FrameworkUtils.endTenantFlow();
+            }
+        } else {
+            userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+        }
 
         if (roleClaimRequested || appRoleClaimRequested) {
             String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(authenticatedUser,
