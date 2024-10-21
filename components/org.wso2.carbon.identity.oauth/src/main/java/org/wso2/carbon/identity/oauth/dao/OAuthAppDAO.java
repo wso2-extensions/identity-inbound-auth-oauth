@@ -79,6 +79,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BACK_CHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.BYPASS_CLIENT_CREDENTIALS;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.FRONT_CHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_CODE_ID_TOKEN_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTED;
@@ -142,11 +143,13 @@ public class OAuthAppDAO {
 
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private List<String> configuredHybridResponseTypes;
 
     public OAuthAppDAO() {
 
         try {
             persistenceProcessor = OAuthServerConfiguration.getInstance().getPersistenceProcessor();
+            configuredHybridResponseTypes = OAuthServerConfiguration.getInstance().getConfiguredHybridResponseTypes();
         } catch (IdentityOAuth2Exception e) {
             LOG.error("Error retrieving TokenPersistenceProcessor. Defaulting to PlainTextPersistenceProcessor");
             persistenceProcessor = new PlainTextPersistenceProcessor();
@@ -1972,14 +1975,38 @@ public class OAuthAppDAO {
                     Boolean.parseBoolean(isAccessTokenClaimsSeparationEnabled));
         }
 
-        boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
-                HYBRID_FLOW_ENABLED));
-        oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+        String hybridFlowEnabledProperty = getFirstPropertyValue(spOIDCProperties, HYBRID_FLOW_ENABLED);
+        if (hybridFlowEnabledProperty == null) {
+            // This application doesn't have hybridFlowEnabled property, hence providing the previous behaviour.
+            // which is enabling the hybrid flow with all allowed response types.
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("This application with consumer key %s doesn't have hybridFlowEnabled " +
+                        "property, hence providing the previous behaviour, which is enabling the hybrid flow with " +
+                        "all configured response types.", oauthApp.getOauthConsumerKey()));
+            }
+            switch (configuredHybridResponseTypes.size()) {
+                case 0:
+                    oauthApp.setHybridFlowEnabled(false);
+                    oauthApp.setHybridFlowResponseType(null);
+                    break;
+                case 1:
+                    oauthApp.setHybridFlowEnabled(true);
+                    oauthApp.setHybridFlowResponseType(configuredHybridResponseTypes.get(0));
+                    break;
+                default:
+                    oauthApp.setHybridFlowEnabled(true);
+                    oauthApp.setHybridFlowResponseType(HYBRID_FLOW_CODE_ID_TOKEN_TOKEN);
+                    break;
+            }
+        } else {
+            boolean hybridFlowEnabled = Boolean.parseBoolean(hybridFlowEnabledProperty);
+            oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
 
-        String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
-                OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+            String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
+                    OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
 
-        oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+            oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
