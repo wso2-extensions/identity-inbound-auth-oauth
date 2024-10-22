@@ -52,6 +52,9 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
@@ -124,9 +127,12 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -135,8 +141,11 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
 
 @Listeners(MockitoTestNGListener.class)
 @WithCarbonHome
@@ -222,9 +231,6 @@ public class OAuth2UtilTest {
 
     @Mock
     private AccessTokenDAO accessTokenDAO;
-
-    @Mock
-    OAuth2ServiceComponentHolder mockOAuth2ServiceComponentHolder;
 
     @Mock
     OAuthAdminServiceImpl oAuthAdminService;
@@ -2836,6 +2842,96 @@ public class OAuth2UtilTest {
         Assert.assertTrue(supportedTokenBindingTypes
                 .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
         Assert.assertEquals(supportedTokenBindingTypes.size(), 3);
+    }
+
+    @Test(dataProvider = "initiateOIDCScopesDataProvider")
+    public void testInitiateOIDCScopes(List<ScopeDTO> scopeClaimsList, List<ExternalClaim> oidcDialectClaims)
+            throws ClaimMetadataException, IdentityOAuth2Exception {
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedOAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            ScopeClaimMappingDAO scopeClaimMappingDAO = mock(ScopeClaimMappingDAO.class);
+
+            mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(mockTokenPersistenceFactory);
+            mockedOAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockServiceComponentHolder);
+
+            when(mockTokenPersistenceFactory.getScopeClaimMappingDAO()).thenReturn(scopeClaimMappingDAO);
+            doNothing().when(scopeClaimMappingDAO).initScopeClaimMapping(SUPER_TENANT_ID, scopeClaimsList);
+            when(mockServiceComponentHolder.getClaimMetadataManagementService()).thenReturn(claimService);
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME)).thenReturn(oidcDialectClaims);
+            when(mockServiceComponentHolder.getOIDCScopesClaims()).thenReturn(scopeClaimsList);
+
+            OAuth2Util.initiateOIDCScopes(SUPER_TENANT_ID);
+            verify(scopeClaimMappingDAO, times(1))
+                    .initScopeClaimMapping(SUPER_TENANT_ID, scopeClaimsList);
+            verify(claimService, times(4)).updateExternalClaim(any(), anyString());
+        }
+    }
+
+    @DataProvider(name = "initiateOIDCScopesDataProvider")
+    public Object[][] initiateOIDCScopesDataProvider() {
+
+        List<ScopeDTO> scopeClaimsList = new ArrayList<>();
+
+        ScopeDTO scope1 = new ScopeDTO();
+        scope1.setName("openid");
+        scope1.setDescription("OpenID scope");
+        scope1.setClaim(new String[] {
+                "http://wso2.org/oidc/claim/email",
+                "http://wso2.org/oidc/claim/profile"
+        });
+
+        ScopeDTO scope2 = new ScopeDTO();
+        scope2.setName("profile");
+        scope2.setDescription("Profile scope");
+        scope2.setClaim(new String[] {
+                "http://wso2.org/oidc/claim/first_name",
+                "http://wso2.org/oidc/claim/last_name",
+                "http://wso2.org/oidc/claim/profile"
+        });
+
+        ScopeDTO scope3 = new ScopeDTO();
+        scope3.setName("email");
+        scope3.setDescription("Email scope");
+        scope3.setClaim(new String[] {
+                "http://wso2.org/oidc/claim/email",
+                "http://wso2.org/oidc/claim/email_verified"
+        });
+
+        scopeClaimsList.add(scope1);
+        scopeClaimsList.add(scope2);
+        scopeClaimsList.add(scope3);
+
+        List<ExternalClaim> oidcDialectClaims = new ArrayList<>();
+
+        ExternalClaim claim1 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/email", "http://wso2.org/claims/emailaddress");
+        ExternalClaim claim2 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/profile", "http://wso2.org/claims/url");
+        ExternalClaim claim3 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/first_name", "http://wso2.org/claims/givenname");
+        ExternalClaim claim4 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/last_name", "http://wso2.org/claims/lastname");
+        ExternalClaim claim5 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/phone_number", "http://wso2.org/claims/mobile");
+
+        oidcDialectClaims.add(claim1);
+        oidcDialectClaims.add(claim2);
+        oidcDialectClaims.add(claim3);
+        oidcDialectClaims.add(claim4);
+        oidcDialectClaims.add(claim5);
+
+        return new Object[][]{
+                {scopeClaimsList, oidcDialectClaims}
+        };
     }
 
     private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
