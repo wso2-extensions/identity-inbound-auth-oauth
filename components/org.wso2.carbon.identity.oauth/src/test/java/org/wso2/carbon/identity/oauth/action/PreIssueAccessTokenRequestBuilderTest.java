@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.action.execution.model.Operation;
 import org.wso2.carbon.identity.action.execution.model.Param;
 import org.wso2.carbon.identity.action.execution.model.Tenant;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
@@ -72,6 +73,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic;
     private MockedStatic<OAuth2Util> oAuth2UtilMockedStatic;
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     private static final String CLIENT_ID_TEST = "test-client-id";
     private static final String CLIENT_SECRET_TEST = "test-client-secret";
@@ -115,6 +117,9 @@ public class PreIssueAccessTokenRequestBuilderTest {
         identityTenantUtilMockedStatic.when(() -> IdentityTenantUtil.getTenantId(TENANT_DOMAIN_TEST))
                 .thenReturn(TENANT_ID_TEST);
 
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(() -> LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
+
         AuthorizationGrantHandler authorizationGrantHandler = mock(AuthorizationGrantHandler.class);
         Map<String, AuthorizationGrantHandler> mockGrantTypesMap = new HashMap<>();
         mockGrantTypesMap.put(GRANT_TYPE_TEST, authorizationGrantHandler);
@@ -131,6 +136,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
         oAuthServerConfiguration.close();
         claimHandlerUtilMockedStatic.close();
         identityTenantUtilMockedStatic.close();
+        loggerUtils.close();
     }
 
     @Test

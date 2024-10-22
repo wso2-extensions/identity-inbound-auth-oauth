@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.action.execution.ActionExecutionLogConstants;
 import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionResponseProcessorException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
@@ -31,11 +32,13 @@ import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessRe
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.Event;
 import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
 import org.wso2.carbon.identity.oauth.action.model.OperationExecutionResult;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -113,7 +116,29 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     private void logOperationExecutionResults(ActionType actionType,
                                               List<OperationExecutionResult> operationExecutionResultList) {
 
-        //todo: need to add to diagnostic logs
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+
+            List<Map<String, String>> operationDetailsList = new ArrayList<>();
+            operationExecutionResultList.forEach(performedOperation -> {
+                operationDetailsList.add(Map.of(
+                        "operation", performedOperation.getOperation().getOp() + " path: " +
+                                performedOperation.getOperation().getPath(),
+                        "status", performedOperation.getStatus().toString(),
+                        "message", performedOperation.getMessage()
+                ));
+            });
+
+            DiagnosticLog.DiagnosticLogBuilder diagLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    ActionExecutionLogConstants.ACTION_EXECUTION_COMPONENT_ID,
+                    ActionExecutionLogConstants.ActionIDs.EXECUTE_ACTION_OPERATIONS);
+            diagLogBuilder
+                    .inputParam("executed operations", operationDetailsList.isEmpty() ? "empty" : operationDetailsList)
+                    .resultMessage("Allowed operations are executed for " + actionType + " action.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                    .build();
+            LoggerUtils.triggerDiagnosticLogEvent(diagLogBuilder);
+        }
         if (LOG.isDebugEnabled()) {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
