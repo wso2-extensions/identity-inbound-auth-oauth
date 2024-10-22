@@ -5632,7 +5632,7 @@ public class OAuth2Util {
      * @param appVersion App version.
      * @return True if the app version is greater than or equal to the allowed minimum app version.
      */
-    public static boolean isGivenAppVersionAllowed(String appVersion, String allowedAppVersion) {
+    public static boolean isAppVersionAllowed(String appVersion, String allowedAppVersion) {
 
         String[] appVersionDigits = appVersion.substring(1).split("\\.");
         String[] allowedVersionDigits = allowedAppVersion.substring(1).split("\\.");

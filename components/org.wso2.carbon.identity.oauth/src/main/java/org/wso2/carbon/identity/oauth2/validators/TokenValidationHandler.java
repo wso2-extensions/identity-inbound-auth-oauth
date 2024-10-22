@@ -579,7 +579,7 @@ public class TokenValidationHandler {
             String consumerKey = accessTokenDO.getConsumerKey();
             ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, appResidentTenantDomain);
             boolean removeUsernameFromAppTokenEnabled = OAuth2Util
-                    .isGivenAppVersionAllowed(serviceProvider.getApplicationVersion(),
+                    .isAppVersionAllowed(serviceProvider.getApplicationVersion(),
                             ApplicationConstants.ApplicationVersion.APP_VERSION_V1);
             boolean isAppTokenType = StringUtils.equals(OAuthConstants.UserType.APPLICATION, tokenType);
 

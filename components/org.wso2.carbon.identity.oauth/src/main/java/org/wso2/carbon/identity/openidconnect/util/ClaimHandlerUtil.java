@@ -66,6 +66,6 @@ public class ClaimHandlerUtil {
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(oAuthAppDO.getOauthConsumerKey(), tenantDomain);
         String appVersion = serviceProvider.getApplicationVersion();
 
-        return OAuth2Util.isGivenAppVersionAllowed(appVersion, ApplicationConstants.ApplicationVersion.APP_VERSION_V2);
+        return OAuth2Util.isAppVersionAllowed(appVersion, ApplicationConstants.ApplicationVersion.APP_VERSION_V2);
     }
 }

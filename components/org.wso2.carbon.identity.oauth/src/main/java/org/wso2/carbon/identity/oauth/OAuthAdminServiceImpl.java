@@ -2876,7 +2876,7 @@ public class OAuthAdminServiceImpl {
             throws IdentityOAuth2Exception {
 
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, tenantDomain);
-        return OAuth2Util.isGivenAppVersionAllowed(serviceProvider.getApplicationVersion(),
+        return OAuth2Util.isAppVersionAllowed(serviceProvider.getApplicationVersion(),
                 ApplicationConstants.ApplicationVersion.APP_VERSION_V2);
     }
 }

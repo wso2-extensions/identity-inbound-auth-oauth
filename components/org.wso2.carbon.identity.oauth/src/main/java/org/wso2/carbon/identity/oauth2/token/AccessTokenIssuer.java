@@ -461,7 +461,7 @@ public class AccessTokenIssuer {
             boolean useClientIdAsSubClaimForAppTokensEnabledServerConfig = OAuthServerConfiguration.getInstance()
                     .isUseClientIdAsSubClaimForAppTokensEnabled();
             boolean useClientIdAsSubClaimForAppTokensEnabled =
-                    OAuth2Util.isGivenAppVersionAllowed(serviceProvider.getApplicationVersion(),
+                    OAuth2Util.isAppVersionAllowed(serviceProvider.getApplicationVersion(),
                             ApplicationConstants.ApplicationVersion.APP_VERSION_V1);
             if (authorizedUser.getAuthenticatedSubjectIdentifier() == null) {
                 if ((!isOfTypeApplicationUser && (useClientIdAsSubClaimForAppTokensEnabled
