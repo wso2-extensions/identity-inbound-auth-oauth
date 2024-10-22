@@ -54,6 +54,7 @@ import java.util.Optional;
 import java.util.TimeZone;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.EXPIRED;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.SLOW_DOWN;
 
 /**
@@ -257,6 +258,12 @@ public class DeviceFlowDAOImpl implements DeviceFlowDAO {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.SLOW_DOWN,
                     deviceStatus);
         }
+
+        if (EXPIRED.equals(deviceStatus)) {
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.EXPIRED_TOKEN);
+        }
+
         throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.AUTHORIZATION_PENDING,
                 deviceStatus);
     }
