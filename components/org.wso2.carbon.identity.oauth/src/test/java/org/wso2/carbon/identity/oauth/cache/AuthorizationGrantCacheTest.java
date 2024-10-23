@@ -3,14 +3,15 @@ package org.wso2.carbon.identity.oauth.cache;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
-import org.junit.Before;
-import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
+import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
-
-import java.text.ParseException;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -28,82 +29,74 @@ public class AuthorizationGrantCacheTest {
     @Mock
     private OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory;
 
-    @Before
+    @Mock
+    private SessionDataStore sessionDataStore;
+
+    private static final String AUTHORIZATION_GRANT_CACHE_NAME = "AuthorizationGrantCache";
+
+    @BeforeMethod
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         cache = AuthorizationGrantCache.getInstance();
-
-        // Mock OAuthTokenPersistenceFactory and AccessTokenDAO
-        mockStatic(OAuthTokenPersistenceFactory.class);
-        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockedOAuthTokenPersistenceFactory);
-
-        // Mock the getAccessTokenDAO() method
-        when(mockedOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(accessTokenDAO);
     }
 
-    @Test
-    public void testReplaceFromTokenId_withJWTToken() throws Exception {
-        // Mock JWT token parsing and claim retrieval
-        JWT jwtMock = mock(JWT.class);
-        JWTClaimsSet claimsSetMock = mock(JWTClaimsSet.class);
+    @Test(dataProvider = "replaceFromTokenIdDataProvider")
+    public void testReplaceFromTokenId(String accessToken, String jwtId, String tokenId, boolean isJwtToken)
+            throws Exception {
 
-        when(JWTParser.parse("jwtAccessToken")).thenReturn(jwtMock);
-        when(jwtMock.getJWTClaimsSet()).thenReturn(claimsSetMock);
-        when(claimsSetMock.getJWTID()).thenReturn("jwtId123");
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<JWTParser> mockedJwtParser = mockStatic(JWTParser.class);
+             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class)) {
 
-        // Mock DAO to return tokenId for the JWT ID
-        when(accessTokenDAO.getTokenIdByAccessToken("jwtId123")).thenReturn("tokenId123");
+            mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(
+                    mockedOAuthTokenPersistenceFactory);
 
-        // Prepare cache key
-        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey("jwtAccessToken");
+            when(mockedOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(accessTokenDAO);
 
-        // Call the public method which invokes replaceFromTokenId indirectly
-        AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
+            if (isJwtToken) {
+                JWT jwtMock = mock(JWT.class);
+                JWTClaimsSet claimsSetMock = mock(JWTClaimsSet.class);
 
-        // Verify the token ID returned from the DAO is as expected
-        assertEquals("tokenId123", result.getTokenId());
+                mockedJwtParser.when(() -> JWTParser.parse(accessToken)).thenReturn(jwtMock);
+                when(jwtMock.getJWTClaimsSet()).thenReturn(claimsSetMock);
+                when(claimsSetMock.getJWTID()).thenReturn(jwtId);
+            }
 
-        // Verify that the JWT token was parsed and the correct claim was retrieved
-        verify(claimsSetMock).getJWTID();
-        verify(accessTokenDAO).getTokenIdByAccessToken("jwtId123");
+            // Mock DAO to return tokenId for the JWT ID
+            when(accessTokenDAO.getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken)).thenReturn(tokenId);
+
+            // Mock SessionDataStore static instance and return a mock session data store
+            mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
+
+            // Mock SessionDataStore return for session data (from getFromSessionStore)
+            AuthorizationGrantCacheEntry mockCacheEntry = new AuthorizationGrantCacheEntry();
+            mockCacheEntry.setTokenId(tokenId);
+
+            when(sessionDataStore.getSessionData(tokenId, AUTHORIZATION_GRANT_CACHE_NAME)).thenReturn(mockCacheEntry);
+
+            AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(accessToken);
+            AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
+
+            // Verify the token ID returned from the DAO is as expected
+            assertEquals(tokenId, result.getTokenId());
+
+            // Verify that the JWT token was parsed and the correct claim was retrieved if it was a JWT
+            if (isJwtToken) {
+                verify(accessTokenDAO).getTokenIdByAccessToken(jwtId);
+            } else {
+                verify(accessTokenDAO).getTokenIdByAccessToken(accessToken);
+            }
+
+            // Ensure accessTokenDAO is only called once
+            verify(accessTokenDAO).getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken);
+        }
     }
 
-    @Test
-    public void testReplaceFromTokenId_withNonJWTToken() throws Exception {
-        // Mock DAO to return tokenId for the non-JWT access token
-        when(accessTokenDAO.getTokenIdByAccessToken("nonJWTAccessToken")).thenReturn("tokenId456");
-
-        // Prepare cache key with a non-JWT access token
-        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey("nonJWTAccessToken");
-
-        // Call the public method which invokes replaceFromTokenId indirectly
-        AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
-
-        // Verify the token ID returned from the DAO is as expected
-        assertEquals("tokenId456", result.getTokenId());
-
-        // Verify the DAO was called with the access token directly (since it's not JWT)
-        verify(accessTokenDAO).getTokenIdByAccessToken("nonJWTAccessToken");
-    }
-
-    @Test
-    public void testReplaceFromTokenId_withJWTParseException() throws Exception {
-        // Simulate JWT parsing failure
-        when(JWTParser.parse("invalidJWTToken")).thenThrow(new ParseException("Invalid JWT", 0));
-
-        // Mock DAO to return tokenId for the token (even though it's invalid JWT)
-        when(accessTokenDAO.getTokenIdByAccessToken("invalidJWTToken")).thenReturn("tokenId789");
-
-        // Prepare cache key with an invalid JWT access token
-        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey("invalidJWTToken");
-
-        // Call the public method which invokes replaceFromTokenId indirectly
-        AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
-
-        // Verify the token ID returned from the DAO is as expected
-        assertEquals("tokenId789", result.getTokenId());
-
-        // Verify that the DAO was called even though JWT parsing failed
-        verify(accessTokenDAO).getTokenIdByAccessToken("invalidJWTToken");
+    @DataProvider(name = "replaceFromTokenIdDataProvider")
+    public Object[][] getReplaceFromTokenIdData() {
+        return new Object[][]{
+                {"jwt.Access.Token", "jwtId", "jwtTokenId", true},
+                {"nonJWTAccessToken", null, "nonJWTTokenId", false}
+        };
     }
 }
