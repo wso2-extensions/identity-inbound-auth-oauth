@@ -38,7 +38,6 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -459,17 +458,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
         try {
             String tenantDomain = resolveSigningTenantDomain(tokenContext, authorizationContext);
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
 
             // Add claim with signer tenant to jwt claims set.
             jwtClaimsSet = setSignerRealm(tenantDomain, jwtClaimsSet);
 
-            Key privateKey = getPrivateKey(tenantDomain, tenantId);
+            Key privateKey = getPrivateKey(tenantDomain);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            Certificate certificate = OAuth2Util.getCertificate(tenantDomain, tenantId);
+            Certificate certificate = OAuth2Util.getCertificate(tenantDomain);
             String certThumbPrint = OAuth2Util.getThumbPrintWithPrevAlgorithm(certificate, false);
-            headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain, tenantId),
+            headerBuilder.keyID(OAuth2Util.getKID(OAuth2Util.getCertificate(tenantDomain),
                     (JWSAlgorithm) signatureAlgorithm, tenantDomain));
 
             if (authorizationContext != null && authorizationContext.isSubjectTokenFlow()) {
