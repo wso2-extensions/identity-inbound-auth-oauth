@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth.cache;
 
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTParser;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -33,6 +35,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -237,11 +240,20 @@ public class AuthorizationGrantCache extends
      * @return TOKEN_ID from the database
      */
     private String replaceFromTokenId(String keyValue) {
-        try {
-            AccessTokenDO accessTokenDO = OAuth2Util.findAccessToken(keyValue, true);
-            if (accessTokenDO != null) {
-                return accessTokenDO.getTokenId();
+
+        if (OAuth2Util.isJWT(keyValue)) {
+            try {
+                JWT parsedJwtToken = JWTParser.parse(keyValue);
+                keyValue = parsedJwtToken.getJWTClaimsSet().getJWTID();
+            } catch (ParseException e) {
+                if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(
+                        IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Error while getting JWTID from token: " + keyValue, e);
+                }
             }
+        }
+        try {
+            return OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().getTokenIdByAccessToken(keyValue);
         } catch (IdentityOAuth2Exception e) {
             log.error("Failed to retrieve token id by token from store for - ." + keyValue, e);
         }
