@@ -13,6 +13,8 @@ import org.wso2.carbon.identity.application.authentication.framework.store.Sessi
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
+import java.text.ParseException;
+
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -41,8 +43,8 @@ public class AuthorizationGrantCacheTest {
     }
 
     @Test(dataProvider = "replaceFromTokenIdDataProvider")
-    public void testReplaceFromTokenId(String accessToken, String jwtId, String tokenId, boolean isJwtToken)
-            throws Exception {
+    public void testReplaceFromTokenId(String accessToken, String jwtId, String tokenId, boolean isJwtToken,
+                                       boolean isInvalidJWTToken) throws Exception {
 
         try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
              MockedStatic<JWTParser> mockedJwtParser = mockStatic(JWTParser.class);
@@ -57,9 +59,13 @@ public class AuthorizationGrantCacheTest {
                 JWT jwtMock = mock(JWT.class);
                 JWTClaimsSet claimsSetMock = mock(JWTClaimsSet.class);
 
-                mockedJwtParser.when(() -> JWTParser.parse(accessToken)).thenReturn(jwtMock);
-                when(jwtMock.getJWTClaimsSet()).thenReturn(claimsSetMock);
-                when(claimsSetMock.getJWTID()).thenReturn(jwtId);
+                if (isInvalidJWTToken) {
+                    when(JWTParser.parse(accessToken)).thenThrow(new ParseException("Invalid JWT", 0));
+                } else {
+                    mockedJwtParser.when(() -> JWTParser.parse(accessToken)).thenReturn(jwtMock);
+                    when(jwtMock.getJWTClaimsSet()).thenReturn(claimsSetMock);
+                    when(claimsSetMock.getJWTID()).thenReturn(jwtId);
+                }
             }
 
             // Mock DAO to return tokenId for the JWT ID
@@ -81,7 +87,7 @@ public class AuthorizationGrantCacheTest {
             assertEquals(tokenId, result.getTokenId());
 
             // Verify that the JWT token was parsed and the correct claim was retrieved if it was a JWT
-            if (isJwtToken) {
+            if (isJwtToken && !isInvalidJWTToken) {
                 verify(accessTokenDAO).getTokenIdByAccessToken(jwtId);
             } else {
                 verify(accessTokenDAO).getTokenIdByAccessToken(accessToken);
@@ -95,8 +101,9 @@ public class AuthorizationGrantCacheTest {
     @DataProvider(name = "replaceFromTokenIdDataProvider")
     public Object[][] getReplaceFromTokenIdData() {
         return new Object[][]{
-                {"jwt.Access.Token", "jwtId", "jwtTokenId", true},
-                {"nonJWTAccessToken", null, "nonJWTTokenId", false}
+                {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false},
+                {"nonJWTAccessToken", null, "nonJWTTokenId", false, false},
+                {"invalid.JWT.Token", null, "invalidJWTTokenId", true, true}
         };
     }
 }
