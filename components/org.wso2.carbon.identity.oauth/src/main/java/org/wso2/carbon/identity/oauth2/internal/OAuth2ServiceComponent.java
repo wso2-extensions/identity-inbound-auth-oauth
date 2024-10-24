@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -1611,5 +1612,24 @@ public class OAuth2ServiceComponent {
             log.debug("Unregistering the ConfigurationManager in JWT Client Authenticator ManagementService.");
         }
         OAuth2ServiceComponentHolder.getInstance().setConfigurationManager(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService",
+            service = AccountLockService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccountLockService"
+    )
+    protected void setAccountLockService(AccountLockService accountLockService) {
+
+        OAuth2ServiceComponentHolder.setAccountLockService(accountLockService);
+        log.debug("AccountLockService set in OAuth2ServiceComponent bundle.");
+    }
+
+    protected void unsetAccountLockService(AccountLockService accountLockService) {
+
+        OAuth2ServiceComponentHolder.setAccountLockService(null);
+        log.debug("AccountLockService unset in OAuth2ServiceComponent bundle.");
     }
 }

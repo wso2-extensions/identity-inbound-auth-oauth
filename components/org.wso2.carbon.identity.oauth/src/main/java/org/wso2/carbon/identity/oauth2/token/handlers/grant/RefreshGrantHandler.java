@@ -27,10 +27,16 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
@@ -45,6 +51,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -52,11 +59,17 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
+import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
@@ -69,6 +82,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
@@ -86,6 +101,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
     private static final Log log = LogFactory.getLog(RefreshGrantHandler.class);
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private static final String ACCOUNT_LOCK_ERROR_MESSAGE = "Account is locked for user %s in tenant %s. Cannot" +
+            " login until the account is unlocked.";
 
     @Override
     public boolean validateGrant(OAuthTokenReqMessageContext tokReqMsgCtx)
@@ -98,6 +115,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
         validateRefreshTokenInRequest(tokenReq, validationBean);
         validateTokenBindingReference(tokenReq, validationBean);
+        validateAuthenticatedUser(validationBean, tokReqMsgCtx);
 
         if (log.isDebugEnabled()) {
             log.debug("Refresh token validation successful for Client id : " + tokenReq.getClientId() +
@@ -282,6 +300,73 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return true;
     }
 
+    private boolean validateAuthenticatedUser(RefreshTokenValidationDataDO validationBean,
+                                              OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        if (!OAuthServerConfiguration.getInstance().isValidateAuthenticatedUserForRefreshGrantEnabled()) {
+            return true;
+        }
+
+        AuthenticatedUser authenticatedUser = validationBean.getAuthorizedUser();
+        if (authenticatedUser != null) {
+            String username = null;
+            String tenantDomain = null;
+
+            if (authenticatedUser.isFederatedUser()) {
+                try {
+                    FederatedAssociationManager federatedAssociationManager =
+                            FrameworkUtils.getFederatedAssociationManager();
+                    OAuthAppDO oAuthAppDO =
+                            (OAuthAppDO) oAuthTokenReqMessageContext.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+                    String oAuthAppTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                    String associatedLocalUsername =
+                            federatedAssociationManager.getUserForFederatedAssociation(oAuthAppTenantDomain,
+                                    authenticatedUser.getFederatedIdPName(),
+                                    authenticatedUser.getAuthenticatedSubjectIdentifier());
+                    if (associatedLocalUsername != null) {
+                        username = associatedLocalUsername;
+                        tenantDomain = oAuthAppTenantDomain;
+                    }
+                } catch (FederatedAssociationManagerClientException | FrameworkClientException e) {
+                    throw new IdentityOAuth2ClientException(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(),
+                            String.format(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getMessage(),
+                                    authenticatedUser.getFederatedIdPName()), e);
+                } catch (FederatedAssociationManagerException | FrameworkException e) {
+                    throw new IdentityOAuth2ServerException(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(),
+                            String.format(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getMessage(),
+                                    authenticatedUser.getFederatedIdPName()), e);
+                }
+            } else {
+                username = UserCoreUtil.addDomainToName(authenticatedUser.getUserName(),
+                        authenticatedUser.getUserStoreDomain());
+                tenantDomain = authenticatedUser.getTenantDomain();
+            }
+
+            checkAccountLockStatusOfTheUser(username, tenantDomain);
+        }
+
+        return true;
+    }
+
+    private void checkAccountLockStatusOfTheUser(String username, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        if (username != null && tenantDomain != null) {
+            AccountLockService accountLockService = OAuth2ServiceComponentHolder.getAccountLockService();
+
+            try {
+                boolean accountLockStatus = accountLockService.isAccountLocked(username, tenantDomain);
+                if (accountLockStatus) {
+                    throw new IdentityOAuth2ClientException(UserCoreConstants.ErrorCode.USER_IS_LOCKED,
+                            String.format(ACCOUNT_LOCK_ERROR_MESSAGE, username, tenantDomain));
+                }
+            } catch (AccountLockServiceException e) {
+                throw new IdentityOAuth2ServerException(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
+                        String.format(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getMessage(), username), e);
+            }
+        }
+    }
 
     private OAuth2AccessTokenRespDTO buildTokenResponse(OAuthTokenReqMessageContext tokReqMsgCtx,
                                                         AccessTokenDO accessTokenBean) {
