@@ -45,7 +45,7 @@ public class AuthorizationGrantCacheTest {
 
     @Test(dataProvider = "replaceFromTokenIdDataProvider")
     public void testReplaceFromTokenId(String accessToken, String jwtId, String tokenId, boolean isJwtToken,
-                                       boolean isInvalidJWTToken) throws Exception {
+                                       boolean isInvalidJWTToken, boolean isFailedTokenRetrieval) throws Exception {
 
         try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
              MockedStatic<JWTParser> mockedJwtParser = mockStatic(JWTParser.class);
@@ -69,9 +69,8 @@ public class AuthorizationGrantCacheTest {
                 }
             }
 
-            // Mock DAO to return tokenId for the JWT ID
-            if (isInvalidJWTToken) {
-                when(accessTokenDAO.getTokenIdByAccessToken(accessToken)).thenThrow(
+            if (isFailedTokenRetrieval) {
+                when(accessTokenDAO.getTokenIdByAccessToken(jwtId)).thenThrow(
                         new IdentityOAuth2Exception("Failed to retrieve token id by token from store"));
             } else {
                 when(accessTokenDAO.getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken)).thenReturn(tokenId);
@@ -98,20 +97,16 @@ public class AuthorizationGrantCacheTest {
             } else {
                 verify(accessTokenDAO).getTokenIdByAccessToken(accessToken);
             }
-
-            // Ensure accessTokenDAO is only called once
-            if (!isInvalidJWTToken) {
-                verify(accessTokenDAO).getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken);
-            }
         }
     }
 
     @DataProvider(name = "replaceFromTokenIdDataProvider")
     public Object[][] getReplaceFromTokenIdData() {
         return new Object[][]{
-                {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false},
-                {"nonJWTAccessToken", null, "nonJWTTokenId", false, false},
-                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true}
+                {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false, false},
+                {"nonJWTAccessToken", null, "nonJWTTokenId", false, false, false},
+                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false},
+                {"fail.Store.TokenId", "jwtId", "jwtId", true, false, true}
         };
     }
 }
