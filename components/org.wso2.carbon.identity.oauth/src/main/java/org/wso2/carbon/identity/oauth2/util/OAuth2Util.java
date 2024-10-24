@@ -2118,15 +2118,11 @@ public class OAuth2Util {
             Set<String> oidcClaimsMappedToScopes = scopeClaimsList.stream()
                     .flatMap(scopeDTO -> Arrays.stream(scopeDTO.getClaim()))
                     .collect(Collectors.toSet());
-            oidcDialectClaims.stream()
-                    .filter(oidcClaim -> oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI()))
-                    .forEach(oidcClaim -> {
-                        try {
-                            claimService.updateExternalClaim(oidcClaim, tenantDomain);
-                        } catch (ClaimMetadataException e) {
-                            log.error("Error updating OIDC claim: " + oidcClaim.getClaimURI(), e);
-                        }
-                    });
+            for (ExternalClaim oidcClaim : oidcDialectClaims) {
+                if (oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI())) {
+                    claimService.updateExternalClaim(oidcClaim, tenantDomain);
+                }
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().initScopeClaimMapping(tenantId,
                     scopeClaimsList);
         } catch (IdentityOAuth2ClientException e) {

@@ -130,9 +130,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -2877,20 +2875,13 @@ public class OAuth2UtilTest {
             when(mockServiceComponentHolder.getClaimMetadataManagementService()).thenReturn(claimService);
             when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME)).thenReturn(oidcDialectClaims);
             when(mockServiceComponentHolder.getOIDCScopesClaims()).thenReturn(scopeClaimsList);
-            ClaimMetadataException claimMetadataException = new ClaimMetadataException("error");
-            doThrow(claimMetadataException)
-                    .when(claimService)
-                    .updateExternalClaim(oidcDialectClaims.get(0), SUPER_TENANT_DOMAIN_NAME);
 
             OAuth2Util.initiateOIDCScopes(SUPER_TENANT_ID);
             verify(scopeClaimMappingDAO, times(1))
                     .initScopeClaimMapping(SUPER_TENANT_ID, scopeClaimsList);
             verify(claimService, times(4)).updateExternalClaim(any(), anyString());
-            verify(log, times(1)).error(
-                    "Error updating OIDC claim: " + oidcDialectClaims.get(0).getClaimURI(),
-                    claimMetadataException);
-            clearInvocations(log);
 
+            ClaimMetadataException claimMetadataException = new ClaimMetadataException("error");
             when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
                     .thenThrow(claimMetadataException);
             OAuth2Util.initiateOIDCScopes(SUPER_TENANT_ID);
