@@ -1163,6 +1163,7 @@ public class OAuthAdminServiceImplTest {
             mockedOAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
                     .thenReturn(mockServiceComponentHolder);
 
+            PrivilegedCarbonContext.startTenantFlow();
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(SUPER_TENANT_ID))
                     .thenReturn(SUPER_TENANT_DOMAIN_NAME);
