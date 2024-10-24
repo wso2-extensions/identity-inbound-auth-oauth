@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
+import org.wso2.carbon.identity.oauth2.fga.*;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
@@ -106,6 +107,25 @@ public class DefaultOAuth2ScopeValidator {
                         .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
+        boolean runFga = false;
+        List<String> fgaScopes = new ArrayList<>();
+        for (String scope: requestedScopes){
+            if (scope.contains("fga")){
+                fgaScopes.add(scope);
+                runFga = true;
+            }
+        }
+        if(runFga){
+            AccessControlHandler service = null;
+            List<String> results;
+            try {
+                service = new AccessControlFactory().createInstance();
+                results = service.getAuthorized(fgaScopes,authzReqMessageContext.getAuthorizationReqDTO().getUser().getUserId());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            authorizedScopes.addAll(results);
+        }
         return authorizedScopes;
     }
 
@@ -144,6 +164,25 @@ public class DefaultOAuth2ScopeValidator {
         if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
             authorizedScopes.remove(OPENID_SCOPE);
+        }
+        boolean runFga = false;
+        List<String> fgaScopes = new ArrayList<>();
+        for (String scope: requestedScopes){
+            if (scope.contains("fga")){
+                fgaScopes.add(scope);
+                runFga = true;
+            }
+        }
+        if(runFga){
+            AccessControlHandler handler = null;
+            List<String> results;
+            try {
+                handler = new AccessControlFactory().createInstance();
+                results = handler.getAuthorized(fgaScopes,tokenReqMessageContext.getAuthorizedUser().getUserId());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            authorizedScopes.addAll(results);
         }
         return authorizedScopes;
     }
