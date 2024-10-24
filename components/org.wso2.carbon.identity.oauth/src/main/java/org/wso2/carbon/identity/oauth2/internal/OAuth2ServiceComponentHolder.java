@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
@@ -124,7 +125,7 @@ public class OAuth2ServiceComponentHolder {
     private List<ImpersonationValidator> impersonationValidators = new ArrayList<>();
     private ConfigurationManager configurationManager;
     private static AccountLockService accountLockService;
-
+    private ClaimMetadataManagementService claimMetadataManagementService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -910,5 +911,25 @@ public class OAuth2ServiceComponentHolder {
     public static AccountLockService getAccountLockService() {
 
         return OAuth2ServiceComponentHolder.accountLockService;
+    }
+
+    /**
+     * Set the ClaimMetadataManagementService instance.
+     *
+     * @param claimMetadataManagementService ClaimMetadataManagementService instance.
+     */
+    public void setClaimMetadataManagementService(ClaimMetadataManagementService claimMetadataManagementService) {
+
+        this.claimMetadataManagementService = claimMetadataManagementService;
+    }
+
+    /**
+     * Get the ClaimMetadataManagementService instance.
+     *
+     * @return ClaimMetadataManagementService instance.
+     */
+    public ClaimMetadataManagementService getClaimMetadataManagementService() {
+
+        return claimMetadataManagementService;
     }
 }

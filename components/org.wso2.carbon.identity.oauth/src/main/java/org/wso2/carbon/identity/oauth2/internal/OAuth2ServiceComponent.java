@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.AuthorizedAPIManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
 import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServerConfigsManagementService;
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
@@ -1631,5 +1632,34 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.setAccountLockService(null);
         log.debug("AccountLockService unset in OAuth2ServiceComponent bundle.");
+    }
+
+    /**
+     * Set the ClaimMetadataManagementService.
+     *
+     * @param claimMetadataManagementService The {@code ClaimMetadataManagementService} instance.
+     */
+    @Reference(
+            name = "claim.metadata.mgt.service",
+            service = ClaimMetadataManagementService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterClaimMetadataManagementService"
+    )
+    protected void registerClaimMetadataManagementService(
+            ClaimMetadataManagementService claimMetadataManagementService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setClaimMetadataManagementService(claimMetadataManagementService);
+    }
+
+    /**
+     * Unset the ClaimMetadataManagementService.
+     *
+     * @param claimMetadataManagementService The {@code ClaimMetadataManagementService} instance.
+     */
+    protected void unregisterClaimMetadataManagementService(
+            ClaimMetadataManagementService claimMetadataManagementService) {
+
+        OAuth2ServiceComponentHolder.getInstance().setClaimMetadataManagementService(null);
     }
 }
