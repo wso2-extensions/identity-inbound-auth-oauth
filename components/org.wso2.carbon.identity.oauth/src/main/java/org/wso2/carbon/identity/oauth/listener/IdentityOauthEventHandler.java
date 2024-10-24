@@ -243,7 +243,7 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
                 AuthorizedAPI authorizedAPI = OAuthComponentServiceHolder.getInstance()
                         .getAuthorizedAPIManagementService()
                         .getAuthorizedAPI(appId, apiId, tenantDomain);
-                if (authorizedAPI.getScopes() == null) {
+                if (null == authorizedAPI || authorizedAPI.getScopes() == null) {
                     return;
                 }
                 List<String> removedScopes = authorizedAPI.getScopes().stream()
