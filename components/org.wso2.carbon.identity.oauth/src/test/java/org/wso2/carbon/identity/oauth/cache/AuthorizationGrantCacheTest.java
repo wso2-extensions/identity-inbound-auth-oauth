@@ -10,6 +10,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
@@ -69,7 +70,12 @@ public class AuthorizationGrantCacheTest {
             }
 
             // Mock DAO to return tokenId for the JWT ID
-            when(accessTokenDAO.getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken)).thenReturn(tokenId);
+            if (isInvalidJWTToken) {
+                when(accessTokenDAO.getTokenIdByAccessToken(accessToken)).thenThrow(
+                        new IdentityOAuth2Exception("Failed to retrieve token id by token from store"));
+            } else {
+                when(accessTokenDAO.getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken)).thenReturn(tokenId);
+            }
 
             // Mock SessionDataStore static instance and return a mock session data store
             mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
@@ -94,7 +100,9 @@ public class AuthorizationGrantCacheTest {
             }
 
             // Ensure accessTokenDAO is only called once
-            verify(accessTokenDAO).getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken);
+            if (!isInvalidJWTToken) {
+                verify(accessTokenDAO).getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken);
+            }
         }
     }
 
@@ -103,7 +111,7 @@ public class AuthorizationGrantCacheTest {
         return new Object[][]{
                 {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false},
                 {"nonJWTAccessToken", null, "nonJWTTokenId", false, false},
-                {"invalid.JWT.Token", null, "invalidJWTTokenId", true, true}
+                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true}
         };
     }
 }
