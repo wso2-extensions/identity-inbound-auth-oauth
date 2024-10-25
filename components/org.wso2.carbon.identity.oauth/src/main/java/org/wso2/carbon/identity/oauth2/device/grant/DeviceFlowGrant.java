@@ -100,7 +100,8 @@ public class DeviceFlowGrant extends AbstractAuthorizationGrantHandler {
 
         Date date = new Date();
         if (Constants.NOT_EXIST.equals(deviceStatus)) {
-            throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST, DeviceErrorCodes.INVALID_REQUEST);
+            throw new IdentityOAuth2Exception(DeviceErrorCodes.INVALID_REQUEST,
+                    DeviceErrorCodes.SubDeviceErrorCodesDescriptions.NOT_EXIST);
         } else if (Constants.EXPIRED.equals(deviceStatus) || isExpiredDeviceCode(deviceFlowDO, date)) {
             throw new IdentityOAuth2Exception(DeviceErrorCodes.SubDeviceErrorCodes.EXPIRED_TOKEN,
                     DeviceErrorCodes.SubDeviceErrorCodesDescriptions.EXPIRED_TOKEN);
