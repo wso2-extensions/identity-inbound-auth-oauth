@@ -45,6 +45,7 @@ public class AuthorizationDetailsCommonUtils {
     private static final Log log = LogFactory.getLog(AuthorizationDetailsCommonUtils.class);
 
     private static volatile ObjectMapper objectMapper;
+    private static final TypeReference<Map<String, Object>> TYPE_MAP = new TypeReference<Map<String, Object>>() { };
 
     private AuthorizationDetailsCommonUtils() {
         // Private constructor to prevent instantiation
@@ -55,20 +56,19 @@ public class AuthorizationDetailsCommonUtils {
      *
      * @param authorizationDetailsJson A JSON string containing authorization details which comes in the
      *                                 OAuth 2.0 authorization request or token request
-     * @param objectMapper             A Jackson {@link ObjectMapper} used for parsing
      * @param clazz                    A Class that extends {@link AuthorizationDetail} to be parsed
      * @param <T>                      the type parameter extending {@code AuthorizationDetail}
      * @return an immutable set of {@link AuthorizationDetail} objects parsed from the given JSON string,
      * or an empty set if parsing fails
      * @see AuthorizationDetails
      */
-    public static <T extends AuthorizationDetail> Set<T> fromJSONArray(
-            final String authorizationDetailsJson, final Class<T> clazz, final ObjectMapper objectMapper) {
+    public static <T extends AuthorizationDetail> Set<T> fromJSONArray(final String authorizationDetailsJson,
+                                                                       final Class<T> clazz) {
 
         try {
             if (StringUtils.isNotEmpty(authorizationDetailsJson)) {
-                return objectMapper.readValue(authorizationDetailsJson,
-                        objectMapper.getTypeFactory().constructCollectionType(Set.class, clazz));
+                return getDefaultObjectMapper().readValue(authorizationDetailsJson,
+                        getDefaultObjectMapper().getTypeFactory().constructCollectionType(Set.class, clazz));
             }
         } catch (JsonProcessingException e) {
             log.debug("Error occurred while parsing String to AuthorizationDetails. Caused by, ", e);
@@ -80,19 +80,18 @@ public class AuthorizationDetailsCommonUtils {
      * Parses the given JSON object string into an {@link AuthorizationDetail} object.
      *
      * @param authorizationDetailJson A JSON string containing authorization detail object
-     * @param objectMapper            A Jackson {@link ObjectMapper} used for parsing
      * @param clazz                   A Class that extends {@link AuthorizationDetail} to be parsed
      * @param <T>                     the type parameter extending {@code AuthorizationDetail}
      * @return an {@link AuthorizationDetail} objects parsed from the given JSON string,
      * or null if parsing fails
      * @see AuthorizationDetail
      */
-    public static <T extends AuthorizationDetail> T fromJSON(
-            final String authorizationDetailJson, final Class<T> clazz, final ObjectMapper objectMapper) {
+    public static <T extends AuthorizationDetail> T fromJSON(final String authorizationDetailJson,
+                                                             final Class<T> clazz) {
 
         try {
             if (StringUtils.isNotEmpty(authorizationDetailJson)) {
-                return objectMapper.readValue(authorizationDetailJson, clazz);
+                return getDefaultObjectMapper().readValue(authorizationDetailJson, clazz);
             }
         } catch (JsonProcessingException e) {
             log.debug("Error occurred while parsing String to AuthorizationDetails. Caused by, ", e);
@@ -108,19 +107,17 @@ public class AuthorizationDetailsCommonUtils {
      * </p>
      *
      * @param authorizationDetails the set of {@code AuthorizationDetail} objects to convert
-     * @param objectMapper         the {@code ObjectMapper} instance to use for serialization
      * @param <T>                  the type parameter extending {@code AuthorizationDetail}
      * @return a JSON string representation of the authorization details set,
      * or an empty JSON array if null or an error occurs
      * @see AuthorizationDetail
      * @see AuthorizationDetails
      */
-    public static <T extends AuthorizationDetail> String toJSON(
-            final Set<T> authorizationDetails, final ObjectMapper objectMapper) {
+    public static <T extends AuthorizationDetail> String toJSON(final Set<T> authorizationDetails) {
 
         try {
             if (authorizationDetails != null) {
-                return objectMapper.writeValueAsString(authorizationDetails);
+                return getDefaultObjectMapper().writeValueAsString(authorizationDetails);
             }
         } catch (JsonProcessingException e) {
             log.debug("Error occurred while parsing AuthorizationDetails to String. Caused by, ", e);
@@ -136,19 +133,17 @@ public class AuthorizationDetailsCommonUtils {
      * </p>
      *
      * @param authorizationDetail the {@code AuthorizationDetail} object to convert
-     * @param objectMapper        the {@code ObjectMapper} instance to use for serialization
      * @param <T>                 the type parameter extending {@code AuthorizationDetail}
      * @return a JSON string representation of the authorization detail,
      * or an empty JSON object if null or an error occurs
      * @see AuthorizationDetail
      * @see AuthorizationDetails
      */
-    public static <T extends AuthorizationDetail> String toJSON(
-            final T authorizationDetail, final ObjectMapper objectMapper) {
+    public static <T extends AuthorizationDetail> String toJSON(final T authorizationDetail) {
 
         try {
             if (authorizationDetail != null) {
-                return objectMapper.writeValueAsString(authorizationDetail);
+                return getDefaultObjectMapper().writeValueAsString(authorizationDetail);
             }
         } catch (JsonProcessingException e) {
             log.debug("Error occurred while parsing AuthorizationDetail to String. Caused by, ", e);
@@ -164,21 +159,16 @@ public class AuthorizationDetailsCommonUtils {
      * </p>
      *
      * @param authorizationDetail the {@code AuthorizationDetail} object to convert
-     * @param objectMapper        the {@code ObjectMapper} instance to use for serialization
      * @param <T>                 the type parameter extending {@code AuthorizationDetail}
      * @return a {@code Map} representation of the authorization detail,
      * or an empty {@code HashMap} if null or an error occurs
      * @see AuthorizationDetail
      * @see AuthorizationDetails
      */
-    public static <T extends AuthorizationDetail> Map<String, Object> toMap(
-            final T authorizationDetail, final ObjectMapper objectMapper) {
+    public static <T extends AuthorizationDetail> Map<String, Object> toMap(final T authorizationDetail) {
 
-        if (authorizationDetail != null) {
-            return objectMapper.convertValue(authorizationDetail, new TypeReference<Map<String, Object>>() {
-            });
-        }
-        return Collections.emptyMap();
+        return (authorizationDetail == null) ? Collections.emptyMap()
+                : getDefaultObjectMapper().convertValue(authorizationDetail, TYPE_MAP);
     }
 
     /**

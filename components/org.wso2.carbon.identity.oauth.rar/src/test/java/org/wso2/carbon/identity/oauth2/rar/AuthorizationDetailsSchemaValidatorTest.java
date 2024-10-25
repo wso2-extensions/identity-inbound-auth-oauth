@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.rar;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -27,6 +28,9 @@ import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth2.rar.util.TestDAOUtils;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -54,6 +58,7 @@ public class AuthorizationDetailsSchemaValidatorTest {
         testAuthorizationDetail.setType(TEST_TYPE);
 
         assertTrue(this.uut.isSchemaCompliant(TEST_SCHEMA, testAuthorizationDetail));
+        assertTrue(this.uut.isSchemaCompliant(this.getTestSchema(), testAuthorizationDetail));
     }
 
     @Test
@@ -61,6 +66,10 @@ public class AuthorizationDetailsSchemaValidatorTest {
 
         assertFalse(this.uut.isSchemaCompliant(StringUtils.EMPTY, new TestDAOUtils.TestAuthorizationDetail()));
         assertFalse(this.uut.isSchemaCompliant(TEST_SCHEMA, null));
+        assertFalse(this.uut.isSchemaCompliant((JsonObject) null, new TestDAOUtils.TestAuthorizationDetail()));
+        assertFalse(this.uut.isSchemaCompliant(new JsonObject(), null));
+        assertFalse(this.uut.isSchemaCompliant((Map<String, Object>) null, new TestDAOUtils.TestAuthorizationDetail()));
+        assertFalse(this.uut.isSchemaCompliant(this.getTestSchema(), null));
     }
 
     @Test(expectedExceptions = {AuthorizationDetailsProcessingException.class})
@@ -101,5 +110,29 @@ public class AuthorizationDetailsSchemaValidatorTest {
                 "\"properties\":[{\"type\":{\"type\":\"string\"}}]}";
 
         assertFalse(this.uut.isValidSchema(invalidSchema));
+    }
+
+    private Map<String, Object> getTestSchema() {
+        final Map<String, Object> items = new HashMap<>();
+        items.put("type", "string");
+        items.put("enum", Collections.singletonList("initiate"));
+
+        final Map<String, Object> actions = new HashMap<>();
+        actions.put("type", "array");
+        actions.put("items", items);
+
+        final Map<String, Object> type = new HashMap<>();
+        type.put("type", "string");
+        type.put("enum", Collections.singletonList("test_type_v1"));
+
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put("type", type);
+        properties.put("actions", actions);
+
+        final Map<String, Object> schema = new HashMap<>();
+        schema.put("type", "object");
+        schema.put("required", Collections.singletonList("type"));
+        schema.put("properties", properties);
+        return schema;
     }
 }

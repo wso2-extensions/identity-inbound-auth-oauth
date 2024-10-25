@@ -30,11 +30,14 @@ import io.vertx.json.schema.OutputUnit;
 import io.vertx.json.schema.SchemaRepository;
 import io.vertx.json.schema.Validator;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
+
+import java.util.Map;
 
 import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT;
 import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT;
@@ -107,13 +110,15 @@ public class AuthorizationDetailsSchemaValidator {
             return false;
         }
 
-        final OutputUnit outputUnit = this.buildOutputUnit(null, this.parseJsonString(schema));
+        final OutputUnit outputUnit = this.buildOutputUnit(null, this.parseJsonObject(schema));
         try {
             // Validates the schema itself against the DRAFT202012 schema standard
             outputUnit.checkValidity();
         } catch (JsonSchemaValidationException e) {
-            logDebugIfEnabled(String.format("Validation failed against DRAFT202012 schema for input: %s. Caused by, ",
-                    schema), e);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Validation failed against DRAFT202012 schema for input: %s. Caused by, ",
+                        schema), e);
+            }
             throw new AuthorizationDetailsProcessingException(String.format(SCHEMA_VALIDATION_FAILED_ERR_MSG_FORMAT,
                     buildSchemaValidationErrorMessage(outputUnit, e)), e);
         }
@@ -137,14 +142,16 @@ public class AuthorizationDetailsSchemaValidator {
      * @return A {@link JsonObject} created from the input string.
      * @throws AuthorizationDetailsProcessingException if the input string is not valid JSON.
      */
-    private JsonObject parseJsonString(final String jsonString) throws AuthorizationDetailsProcessingException {
+    private JsonObject parseJsonObject(final String jsonString) throws AuthorizationDetailsProcessingException {
 
         try {
             return new JsonObject(jsonString);
         } catch (DecodeException e) {
-            this.logDebugIfEnabled(String.format("Failed to parse the JSON input: '%s'. Caused by, ", jsonString), e);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Failed to parse the JSON input: '%s'. Caused by, ", jsonString), e);
+            }
             throw new AuthorizationDetailsProcessingException(
-                    String.format("%s. Invalid Json input received.", VALIDATION_FAILED_ERR_MSG), e);
+                    String.format("%s. Invalid JSON input received.", VALIDATION_FAILED_ERR_MSG), e);
         }
     }
 
@@ -175,33 +182,45 @@ public class AuthorizationDetailsSchemaValidator {
             return false;
         }
 
-        final JsonObject jsonSchema = this.parseJsonString(schema);
-        jsonSchema.put(ADDITIONAL_PROPERTIES, false); // Ensure no unknown fields are allowed
+        return this.isSchemaCompliant(this.parseJsonObject(schema), authorizationDetail);
+    }
+
+    public boolean isSchemaCompliant(final JsonObject schema, final AuthorizationDetail authorizationDetail)
+            throws AuthorizationDetailsProcessingException {
+
+        if (schema == null || authorizationDetail == null) {
+            log.debug("Schema validation failed. Inputs cannot be null");
+            return false;
+        }
 
         final OutputUnit outputUnit =
-                this.buildOutputUnit(jsonSchema, this.parseJsonString(authorizationDetail.toJsonString()));
+                this.buildOutputUnit(schema, this.parseJsonObject(authorizationDetail.toJsonString()));
+
         try {
             // Validates the authorization detail against the schema
             outputUnit.checkValidity();
         } catch (JsonSchemaValidationException e) {
-            logDebugIfEnabled(String.format("Schema validation failed for authorization details type: %s. Caused by, ",
-                    authorizationDetail.getType()), e);
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Schema validation failed for authorization details type: %s. Caused by, ",
+                        authorizationDetail.getType()), e);
+            }
             throw new AuthorizationDetailsProcessingException(String.format(TYPE_VALIDATION_FAILED_ERR_MSG_FORMAT,
-                    authorizationDetail.getType(), buildSchemaValidationErrorMessage(outputUnit, e)), e);
+                    authorizationDetail.getType(), this.buildSchemaValidationErrorMessage(outputUnit, e)), e);
         }
         return true;
     }
 
-    /**
-     * Logs a debug message along with the exception if debug logging is enabled.
-     *
-     * @param message The debug message to log.
-     * @param ex      The exception to log along with the message.
-     */
-    private void logDebugIfEnabled(final String message, final Exception ex) {
+    public boolean isSchemaCompliant(final Map<String, Object> schema, final AuthorizationDetail authorizationDetail)
+            throws AuthorizationDetailsProcessingException {
 
-        if (log.isDebugEnabled()) {
-            log.debug(message, ex);
+        if (MapUtils.isEmpty(schema) || authorizationDetail == null) {
+            log.debug("Schema validation failed. Inputs cannot be null");
+            return false;
         }
+
+        final JsonObject jsonSchema = new JsonObject(schema);
+        jsonSchema.put(ADDITIONAL_PROPERTIES, false); // Ensure no unknown fields are allowed
+
+        return this.isSchemaCompliant(jsonSchema, authorizationDetail);
     }
 }

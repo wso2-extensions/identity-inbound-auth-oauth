@@ -46,9 +46,8 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
             final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs) throws SQLException {
 
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
-             PreparedStatement ps = connection.getMetaData().getDatabaseProductName().contains("H2")
-                     ? connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS_H2)
-                     : connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
+             PreparedStatement ps =
+                     connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
 
             for (AuthorizationDetailsConsentDTO consentDTO : authorizationDetailsConsentDTOs) {
                 ps.setString(1, consentDTO.getConsentId());

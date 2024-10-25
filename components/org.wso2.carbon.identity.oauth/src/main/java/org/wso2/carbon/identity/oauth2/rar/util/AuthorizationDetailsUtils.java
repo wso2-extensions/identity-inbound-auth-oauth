@@ -266,7 +266,7 @@ public class AuthorizationDetailsUtils {
 
     /**
      * Transforms the given {@link AuthorizationDetails} by creating a new set of {@link AuthorizationDetail} objects
-     * with only the displayable fields ({@code type}, {@code id}, {@code consentDescription}) copied over.
+     * with only the displayable fields ({@code type}, {@code id}, {@code description}) copied over.
      *
      * @param authorizationDetails The original AuthorizationDetails to be transformed.
      * @return A new {@link AuthorizationDetails} object containing the displayable authorization details.
@@ -277,9 +277,9 @@ public class AuthorizationDetailsUtils {
         final Set<AuthorizationDetail> displayableAuthorizationDetails = authorizationDetails.stream()
                 .map(protectedAuthorizationDetail -> {
                     final AuthorizationDetail authorizationDetail = new AuthorizationDetail();
-                    authorizationDetail.setType(protectedAuthorizationDetail.getType());
                     authorizationDetail.setId(protectedAuthorizationDetail.getId());
-                    authorizationDetail.setConsentDescription(protectedAuthorizationDetail.getConsentDescription());
+                    authorizationDetail.setType(protectedAuthorizationDetail.getType());
+                    authorizationDetail.setDescription(protectedAuthorizationDetail.getDescription());
                     return authorizationDetail;
                 }).collect(toSet());
 
@@ -297,21 +297,9 @@ public class AuthorizationDetailsUtils {
 
         authorizationDetails.stream().forEach(authorizationDetail -> {
             authorizationDetail.setId(null);
-            authorizationDetail.setConsentDescription(null);
+            authorizationDetail.setDescription(null);
         });
         return authorizationDetails;
-    }
-
-    /**
-     * Generates an {@link AuthorizationDetails} instance from given JSON string
-     * and assigns unique IDs for each {@link AuthorizationDetail}.
-     *
-     * @param authorizationDetailsJson The JSON string representing the authorization details.
-     * @return The AuthorizationDetails object with unique IDs assigned to each AuthorizationDetail.
-     */
-    public static AuthorizationDetails generateAndAssignUniqueIDs(final String authorizationDetailsJson) {
-
-        return assignUniqueIDsToAuthorizationDetails(new AuthorizationDetails(authorizationDetailsJson));
     }
 
     /**

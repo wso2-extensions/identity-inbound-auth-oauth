@@ -31,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsCommonUtils.getDefaultObjectMapper;
-
 /**
  * Represents an individual authorization details object which specifies the authorization requirements for a
  * specific resource type within the {@code authorization_details} request parameter used in OAuth 2.0 flows
@@ -76,8 +74,6 @@ public class AuthorizationDetail implements Serializable {
 
     private static final long serialVersionUID = -3928636285264078857L;
 
-    @JsonProperty("_id")
-    private String id;
     private String type;
     private List<String> locations;
     private List<String> actions;
@@ -86,7 +82,11 @@ public class AuthorizationDetail implements Serializable {
     private String identifier;
     private List<String> privileges;
     private Map<String, Object> details;
-    private String consentDescription;
+
+    @JsonProperty("_id")
+    private String id;
+    @JsonProperty("_description")
+    private String description;
 
     /**
      * Gets the unique ID of the authorization detail.
@@ -234,7 +234,7 @@ public class AuthorizationDetail implements Serializable {
     public void setDetail(final String key, final Object value) {
 
         if (this.details == null) {
-            setDetails(new HashMap<>());
+            this.setDetails(new HashMap<>());
         }
         this.details.put(key, value);
     }
@@ -247,21 +247,21 @@ public class AuthorizationDetail implements Serializable {
      *
      * @return A string representing the consent description of the {@code authorization_details}.
      */
-    public String getConsentDescription() {
-        return this.consentDescription;
+    public String getDescription() {
+        return this.description;
     }
 
     /**
      * Sets a human-readable sentence that describes the {@code authorization_details}. This sentence is used to
      * display to the user and obtain their consent for the current {@link AuthorizationDetail AuthorizationDetail}.
      *
-     * @param consentDescription A string representing the description of the authorization detail.
-     *                           This description should be clear and understandable to the user,
-     *                           explaining what they are consenting to.
+     * @param description A string representing the description of the authorization detail.
+     *                    This description should be clear and understandable to the user,
+     *                    explaining what they are consenting to.
      */
-    public void setConsentDescription(final String consentDescription) {
+    public void setDescription(final String description) {
 
-        this.consentDescription = consentDescription;
+        this.description = description;
     }
 
     /**
@@ -286,10 +286,9 @@ public class AuthorizationDetail implements Serializable {
      * @param defaultFunction the Function that provides a default value if the consent description is not present
      * @return the consent description if present, otherwise the value from the Function
      */
-    public String getConsentDescriptionOrDefault(Function<AuthorizationDetail, String> defaultFunction) {
+    public String getDescriptionOrDefault(Function<AuthorizationDetail, String> defaultFunction) {
 
-        return StringUtils.isNotEmpty(this.getConsentDescription()) ?
-                this.getConsentDescription() : defaultFunction.apply(this);
+        return StringUtils.isNotEmpty(this.getDescription()) ? this.getDescription() : defaultFunction.apply(this);
     }
 
     /**
@@ -299,7 +298,7 @@ public class AuthorizationDetail implements Serializable {
      */
     public String toJsonString() {
 
-        return AuthorizationDetailsCommonUtils.toJSON(this, getDefaultObjectMapper());
+        return AuthorizationDetailsCommonUtils.toJSON(this);
     }
 
     /**
@@ -309,7 +308,7 @@ public class AuthorizationDetail implements Serializable {
      */
     public Map<String, Object> toMap() {
 
-        return AuthorizationDetailsCommonUtils.toMap(this, getDefaultObjectMapper());
+        return AuthorizationDetailsCommonUtils.toMap(this);
     }
 
     @Override
@@ -323,7 +322,6 @@ public class AuthorizationDetail implements Serializable {
                 ", identifier=" + this.identifier +
                 ", privileges=" + this.privileges +
                 ", details=" + this.details +
-                ", consentDescription=" + this.consentDescription +
                 '}';
     }
 }

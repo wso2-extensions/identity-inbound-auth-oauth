@@ -205,7 +205,7 @@ public class AuthorizationDetailsDAOImplTest {
 
         try (Connection connectionMock = Mockito.spy(Connection.class)) {
 
-            Mockito.when(connectionMock.getMetaData()).thenThrow(SQLException.class);
+            Mockito.when(connectionMock.prepareStatement(anyString())).thenThrow(SQLException.class);
             identityDatabaseUtilMock
                     .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
                     .thenReturn(connectionMock);
@@ -235,6 +235,6 @@ public class AuthorizationDetailsDAOImplTest {
     @Test
     public void shouldReturnNull_whenUserIdOrAppIdInvalid() throws SQLException {
 
-        assertNull(this.uut.getConsentIdByUserIdAndAppId("invlid_user_id", "invalid_app_id", TEST_TENANT_ID));
+        assertNull(this.uut.getConsentIdByUserIdAndAppId("invalid_user_id", "invalid_app_id", TEST_TENANT_ID));
     }
 }

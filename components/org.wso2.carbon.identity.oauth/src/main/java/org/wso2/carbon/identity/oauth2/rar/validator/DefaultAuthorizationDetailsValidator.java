@@ -306,15 +306,15 @@ public class DefaultAuthorizationDetailsValidator implements AuthorizationDetail
             final List<AuthorizationDetailsType> authorizationDetailsTypes = OAuth2ServiceComponentHolder.getInstance()
                     .getAuthorizedAPIManagementService().getAuthorizedAuthorizationDetailsTypes(appId, tenantDomain);
 
-            if (CollectionUtils.isEmpty(authorizationDetailsTypes)) {
-                return Collections.emptyMap();
+            if (CollectionUtils.isNotEmpty(authorizationDetailsTypes)) {
+                return authorizationDetailsTypes.stream()
+                        .collect(Collectors.toMap(AuthorizationDetailsType::getType, Function.identity()));
             }
-            return authorizationDetailsTypes.stream()
-                    .collect(Collectors.toMap(AuthorizationDetailsType::getType, Function.identity()));
         } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
             log.error("Unable to retrieve authorized authorization details types. Caused by, ", e);
             throw new IdentityOAuth2ServerException("Unable to retrieve authorized authorization details types", e);
         }
+        return Collections.emptyMap();
     }
 
     private Set<AuthorizationDetail> getSchemaCompliantAuthorizationDetails(

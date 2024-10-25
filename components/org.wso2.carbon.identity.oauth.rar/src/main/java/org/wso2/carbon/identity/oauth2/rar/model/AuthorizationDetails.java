@@ -31,8 +31,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsCommonUtils.getDefaultObjectMapper;
-
 /**
  * Represents a set of {@link AuthorizationDetail} objects which specifies the authorization requirements for a
  * specific resource type within the {@code authorization_details} request parameter used in OAuth 2.0 flows
@@ -77,8 +75,7 @@ public class AuthorizationDetails implements Serializable {
      */
     public AuthorizationDetails(final String authorizationDetailsJson) {
 
-        this(AuthorizationDetailsCommonUtils.fromJSONArray(
-                authorizationDetailsJson, AuthorizationDetail.class, getDefaultObjectMapper()));
+        this(AuthorizationDetailsCommonUtils.fromJSONArray(authorizationDetailsJson, AuthorizationDetail.class));
     }
 
     /**
@@ -124,7 +121,7 @@ public class AuthorizationDetails implements Serializable {
      */
     public String toJsonString() {
 
-        return AuthorizationDetailsCommonUtils.toJSON(this.getDetails(), getDefaultObjectMapper());
+        return AuthorizationDetailsCommonUtils.toJSON(this.getDetails());
     }
 
     /**
@@ -136,8 +133,7 @@ public class AuthorizationDetails implements Serializable {
     public String toReadableText() {
 
         return this.stream()
-                .map(authorizationDetail ->
-                        authorizationDetail.getConsentDescriptionOrDefault(AuthorizationDetail::getType))
+                .map(authorizationDetail -> authorizationDetail.getDescriptionOrDefault(AuthorizationDetail::getType))
                 .collect(Collectors.joining(AuthorizationDetailsConstants.PARAM_SEPARATOR));
     }
 
