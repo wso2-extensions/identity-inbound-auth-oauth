@@ -105,7 +105,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
         MockitoAnnotations.initMocks(this);
         when(mockActionExecutionService.execute(any(ActionType.class), anyMap(), any())).thenReturn(
-                new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, null));
+                new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS));
 
         authenticatedUser.setUserName("randomUser");
         authenticatedUser.setTenantDomain("Homeless");

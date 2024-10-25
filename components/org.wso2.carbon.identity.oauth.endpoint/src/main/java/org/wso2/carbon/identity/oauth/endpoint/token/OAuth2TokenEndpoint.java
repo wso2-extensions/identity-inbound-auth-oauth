@@ -366,7 +366,6 @@ public class OAuth2TokenEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
 
     }
-
     private Response handleSQLError() throws OAuthSystemException {
 
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_GATEWAY).
