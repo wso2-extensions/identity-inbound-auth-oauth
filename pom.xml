@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015-2023, WSO2 LLC. (http://www.wso2.com).
+  ~ Copyright (c) 2015-2024, WSO2 LLC. (http://www.wso2.com).
   ~
   ~ WSO2 LLC. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.0.162-SNAPSHOT</version>
+    <version>7.0.174-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -288,6 +288,13 @@
                 <groupId>org.wso2.carbon.identity.saml.common</groupId>
                 <artifactId>org.wso2.carbon.identity.saml.common.util</artifactId>
                 <version>${saml.common.util.version}</version>
+            </dependency>
+
+            <!--Event handler dependencies-->
+            <dependency>
+                <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+                <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+                <version>${account.lock.service.version}</version>
             </dependency>
 
             <!-- Orbit dependencies -->
@@ -950,7 +957,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.3.75-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.5.86</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -984,6 +991,10 @@
         <!--SAML Common Util Version-->
         <saml.common.util.version>1.4.1</saml.common.util.version>
         <saml.common.util.version.range>[1.4.0,1.5.0)</saml.common.util.version.range>
+
+        <!-- Account lock service versions -->
+        <account.lock.service.version>1.9.11</account.lock.service.version>
+        <account.lock.service.imp.pkg.version.range>[1.9.11, 2.0.0)</account.lock.service.imp.pkg.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
@@ -1027,7 +1038,7 @@
         <tomcat.version>9.0.93</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
-        <org.apache.cxf.version>3.3.7</org.apache.cxf.version>
+        <org.apache.cxf.version>3.5.9</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
 

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+  ~ Copyright (c) 2017-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
   ~
   ~ WSO2 Inc. licenses this file to you under the Apache License,
   ~ Version 2.0 (the "License"); you may not use this file except
@@ -110,7 +110,7 @@
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandlerTest"/>
 <!--            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandlerTest"/>
-            <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML1BearerGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.JWTTokenIssuerTest"/>
@@ -187,7 +187,7 @@
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.ClientCredentialsGrantHandlerTest"/>
 <!--            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.iwa.ntlm.NTLMAuthenticationGrantHandlerTest"/>-->
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.PasswordGrantHandlerTest"/>
-            <!--<class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>-->
+            <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML1BearerGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.JWTTokenIssuerTest"/>

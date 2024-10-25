@@ -216,7 +216,7 @@ public class ApiAuthnHandler {
         List<Link> links = new ArrayList<>();
         Link authnEpLink = new Link();
         authnEpLink.setName(AUTHENTICATION_EP_LINK_NAME);
-        String href = OAuth2Util.buildServiceUrl(AUTHENTICATION_EP, null);
+        String href = OAuth2Util.buildServiceUrl(AUTHENTICATION_EP, null, null);
         authnEpLink.setHref(href);
         authnEpLink.setMethod(HTTP_POST);
         links.add(authnEpLink);

@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementValidationException;
 import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
@@ -247,6 +248,7 @@ public class DCRMService {
                 updateRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
         String clientName = updateRequest.getClientName();
+        String applicationVersion = updateRequest.getExtApplicationVersion();
         AdditionalAttributeFilter attributeHandler = null;
         Map<String, Object> processedAttributes = null;
 
@@ -306,6 +308,8 @@ public class DCRMService {
             if (StringUtils.isNotEmpty(updateRequest.getJwksURI())) {
                 sp.setJwksUri(updateRequest.getJwksURI());
             }
+            // Todo: validate version input. Create a function at app mgt.
+            sp.setApplicationVersion(applicationVersion);
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
             ServiceProvider clonedSP = cloneServiceProvider(sp);
@@ -683,6 +687,7 @@ public class DCRMService {
         application.setGrantTypes(grantTypesList);
         ServiceProvider sp = getServiceProvider(createdApp.getApplicationName(), tenantDomain);
         application.setExtApplicationDisplayName(getDisplayNameProperty(sp));
+        application.setExtApplicationVersion(sp.getApplicationVersion());
         application.setExtApplicationOwner(createdApp.getUsername());
         application.setExtApplicationTokenLifetime(createdApp.getApplicationAccessTokenExpiryTime());
         application.setExtUserTokenLifetime(createdApp.getUserAccessTokenExpiryTime());
@@ -969,6 +974,9 @@ public class DCRMService {
         try {
             DCRDataHolder.getInstance().getApplicationManagementService()
                     .updateApplication(serviceProvider, tenantDomain, userName);
+        } catch (IdentityApplicationManagementValidationException e) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_INPUT,
+                    serviceProvider.getApplicationName());
         } catch (IdentityApplicationManagementException e) {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_SP, serviceProvider.getApplicationName(), e);

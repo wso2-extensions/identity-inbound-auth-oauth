@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,249 +11,193 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
-import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
+import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.mgt.ApplicationManagementServiceImpl;
-import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponent;
-import org.wso2.carbon.identity.application.mgt.internal.ApplicationManagementServiceComponentHolder;
-import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.common.testng.WithH2Database;
-import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
-import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
-import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
-import org.wso2.carbon.identity.testutil.Whitebox;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
+import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerException;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_EXPIRED;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_INACTIVE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 
 /**
- * Test class for RefreshGrantHandler test cases.
+ * Unit tests for the RefreshGrantHandler class.
  */
-@WithCarbonHome
-@WithRealmService(injectToSingletons = { OAuthComponentServiceHolder.class,
-        ApplicationManagementServiceComponentHolder.class })
-@WithH2Database(files = { "dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql" })
 public class RefreshGrantHandlerTest {
 
-    private static final String TEST_USER_ID = "testUser";
-    private static final String TEST_USER_DOMAIN = "testDomain";
-    private RefreshGrantHandler refreshGrantHandler;
-    private AuthenticatedUser authenticatedUser;
-    private String[] scopes;
-
-    @BeforeClass
-    protected void setUp() throws Exception {
-        OAuth2ServiceComponentHolder.setApplicationMgtService(ApplicationManagementServiceImpl.getInstance());
-        authenticatedUser = new MockAuthenticatedUser(TEST_USER_ID);
-        authenticatedUser.setUserStoreDomain(TEST_USER_DOMAIN);
-        scopes = new String[] { "scope1", "scope2" };
-    }
+    private RefreshTokenGrantProcessor refreshTokenGrantProcessor;
+    private OAuthTokenReqMessageContext oAuthTokenReqMessageContext;
+    private RefreshTokenValidationDataDO refreshTokenValidationDataDO;
+    private OAuthServerConfiguration oAuthServerConfiguration;
+    private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
+    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
 
     @BeforeMethod
-    protected void setUpMethod() throws Exception {
-
-        ApplicationManagementServiceComponent applicationManagementServiceComponent =
-                new ApplicationManagementServiceComponent();
-        Whitebox.invokeMethod(applicationManagementServiceComponent, "buildFileBasedSPList", null);
+    public void init() {
+        refreshTokenGrantProcessor = mock(DefaultRefreshTokenGrantProcessor.class);
+        oAuthTokenReqMessageContext = mock(OAuthTokenReqMessageContext.class);
+        refreshTokenValidationDataDO = mock(RefreshTokenValidationDataDO.class);
+        oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+        oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
+        oAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
     }
 
-    @DataProvider(name = "GetValidateGrantData")
-    public Object[][] validateGrantData() {
+    @DataProvider(name = "validateGrantWhenUserIsLockedInUserStoreEnd")
+    public Object[][] validateGrantWhenUserIsLockedInUserStoreEnd() {
+
+        String userStoreDomain = "user-store-domain";
+        String tenantDomain = "tenant-domain";
+        String username = "user";
+        MockAuthenticatedUser user1 = new MockAuthenticatedUser(username);
+        user1.setUserStoreDomain(userStoreDomain);
+        user1.setTenantDomain(tenantDomain);
+
+        MockAuthenticatedUser user2 = new MockAuthenticatedUser(username);
+
+        String subjectIdentifier = "subject-identifier";
+        String federatedUserId = "federated-user-id";
+        String federatedIDPName = "federated-idp";
+        MockAuthenticatedUser federatedUser = new MockAuthenticatedUser(federatedUserId);
+        federatedUser.setAuthenticatedSubjectIdentifier(subjectIdentifier);
+        federatedUser.setFederatedUser(true);
+        federatedUser.setFederatedIdPName(federatedIDPName);
 
         return new Object[][] {
-                { "clientId1" },
-                { "clientId2" },
-                { "clientId2" }
+                {user1, null, null, false, null, false},
+                {user1, null, null, false, null, true},
+                {user1, null, null, true, null, true},
+                {federatedUser, null, null, false, null, true},
+                {federatedUser, user1, null, false, null, true},
+                {federatedUser, user1, null, true, null, true},
+                {federatedUser, user1, new FederatedAssociationManagerClientException("test error"), true, null, true},
+                {federatedUser, user1, new FrameworkClientException("test error"), true, null, true},
+                {federatedUser, user1, new FederatedAssociationManagerException("test error"), true, null, true},
+                {federatedUser, user1, new FrameworkException("test error"), true, null, true},
+                {federatedUser, user1, null, true, new AccountLockServiceException("test error"), true},
+                {null, null, null, false, null, true},
+                {user2, null, null, false, null, true}
         };
     }
 
-    @Test(dataProvider = "GetValidateGrantData")
-    public void testValidateGrant(String clientId)
+    /**
+     * Test scenarios for the `validateGrant` method when the user, locked at the user store level,
+     * attempts to use the refresh grant.
+     *
+     * @param user                                       The user attempts to use the refresh grant.
+     * @param associatedUser                             Associated local user if the user is federated user.
+     * @param federatedAssociationManagerException       Exception when resolving the local associated user.
+     * @param isUserLocked                               Whether the user is locked from user store end.
+     * @param accountLockServiceException                Exception when checking the account lock status.
+     * @param isValidateAuthenticatedUserForRefreshGrant Whether the `ValidateAuthenticatedUserForRefreshGrant`
+     *                                                   config is enabled in identity.xml.
+     * @throws Exception Any uncaught exception thrown while running the test case.
+     */
+    @Test(dataProvider = "validateGrantWhenUserIsLockedInUserStoreEnd")
+    public void testValidateGrantWhenUserIsLockedInUserStoreEnd(AuthenticatedUser user,
+                                                                AuthenticatedUser associatedUser,
+                                                                Throwable federatedAssociationManagerException,
+                                                                boolean isUserLocked,
+                                                                Throwable accountLockServiceException,
+                                                                boolean isValidateAuthenticatedUserForRefreshGrant)
             throws Exception {
 
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        oAuthAppDAO.removeConsumerApplication(clientId);
+        when(refreshTokenGrantProcessor.validateRefreshToken(any())).thenReturn(refreshTokenValidationDataDO);
+        when(refreshTokenValidationDataDO.getAuthorizedUser()).thenReturn(user);
+        when(refreshTokenGrantProcessor.isLatestRefreshToken(any(), any(), any())).thenReturn(true);
+        when(oAuthServerConfiguration.isValidateAuthenticatedUserForRefreshGrantEnabled()).thenReturn(
+                isValidateAuthenticatedUserForRefreshGrant);
+        when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
+        when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
 
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setGrantTypes("implicit");
-        oAuthAppDO.setOauthConsumerKey(clientId);
-        oAuthAppDO.setUser(authenticatedUser);
-        oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
-
-        oAuthAppDAO.addOAuthApplication(oAuthAppDO);
-
-        refreshGrantHandler = new RefreshGrantHandler();
-        refreshGrantHandler.init();
-
-        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
-        tokenReqDTO.setClientId(clientId);
-        tokenReqDTO.setRefreshToken("refreshToken1");
-        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
-
-        boolean isValid = refreshGrantHandler.validateGrant(tokenReqMessageContext);
-        assertTrue(isValid, "Refresh token validation should be successful.");
-    }
-
-    @DataProvider(name = "validateGrantExceptionData")
-    public Object[][] validateGrantExceptionData() {
-
-        List<AccessTokenDO> accessTokenDOS = new ArrayList<>();
-        AccessTokenDO accessTokenDO1 = new AccessTokenDO();
-        accessTokenDO1.setTokenState(TOKEN_STATE_ACTIVE);
-        accessTokenDO1.setRefreshToken("refreshToken1");
-
-        AccessTokenDO accessTokenDO2 = new AccessTokenDO();
-        accessTokenDO2.setTokenState(TOKEN_STATE_EXPIRED);
-        accessTokenDO2.setRefreshToken("refreshToken2");
-
-        accessTokenDOS.add(accessTokenDO1);
-        accessTokenDOS.add(accessTokenDO2);
-
-        return new Object[][] { { "clientId1", "refreshToken1", "accessToken1", TOKEN_STATE_INACTIVE, accessTokenDOS },
-                { "clientId1", "refreshToken3", "accessToken1", TOKEN_STATE_EXPIRED, accessTokenDOS },
-                { "clientId1", "refreshToken3", "accessToken1", TOKEN_STATE_EXPIRED, null },
-                { "clientId1", "refreshToken1", null, null, accessTokenDOS }, };
-    }
-
-    @Test(dataProvider = "validateGrantExceptionData", expectedExceptions = IdentityOAuth2Exception.class)
-    public void testValidateGrantForException(String clientId, String refreshToken, String accessToken,
-            String tokenState, Object accessTokenObj) throws Exception {
-
-        refreshGrantHandler = new RefreshGrantHandler();
-        refreshGrantHandler.init();
-
-        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
-        tokenReqDTO.setClientId(clientId);
-        tokenReqDTO.setRefreshToken(refreshToken);
-        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
-
-        refreshGrantHandler.validateGrant(tokenReqMessageContext);
-        Assert.fail("Authenticated user cannot be null.");
-    }
-
-    @Test(dataProvider = "GetTokenIssuerData")
-    public void testIssue(Long userAccessTokenExpiryTime, Long validityPeriod, String renewRefreshToken,
-                          String clientId) throws Exception {
-
-        OAuthAppDAO oAuthAppDAO = new OAuthAppDAO();
-        oAuthAppDAO.removeConsumerApplication(clientId);
-        OAuthAppDO oAuthAppDO = new OAuthAppDO();
-        oAuthAppDO.setUserAccessTokenExpiryTime(userAccessTokenExpiryTime);
-        oAuthAppDO.setRefreshTokenExpiryTime(userAccessTokenExpiryTime);
-        oAuthAppDO.setUser(authenticatedUser);
-        oAuthAppDO.setOauthConsumerKey(clientId);
-        oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
-        oAuthAppDO.setRenewRefreshTokenEnabled(renewRefreshToken);
-        oAuthAppDAO.addOAuthApplication(oAuthAppDO);
-
-        refreshGrantHandler = new RefreshGrantHandler();
-        refreshGrantHandler.init();
-
-        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
-        tokenReqDTO.setClientId(clientId);
-        tokenReqDTO.setRefreshToken("refreshToken1");
-        tokenReqDTO.setScope(scopes);
-
-        RefreshTokenValidationDataDO oldAccessToken = new RefreshTokenValidationDataDO();
-        oldAccessToken.setTokenId("tokenId");
-        oldAccessToken.setAccessToken("oldAccessToken");
-
-        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
-        tokenReqMessageContext.addProperty("previousAccessToken", oldAccessToken);
-        tokenReqMessageContext.setAuthorizedUser(authenticatedUser);
-        tokenReqMessageContext.setValidityPeriod(validityPeriod);
-        tokenReqMessageContext.setScope(scopes);
-
-        OAuth2AccessTokenRespDTO actual = refreshGrantHandler.issue(tokenReqMessageContext);
-        assertFalse(actual.isError());
-        assertNotNull(actual.getRefreshToken());
-        if (Objects.equals(renewRefreshToken, "true") || (renewRefreshToken == null)) {
-            assertNotEquals("refreshToken1", actual.getRefreshToken());
-        } else {
-            assertEquals("refreshToken1", actual.getRefreshToken());
+        FederatedAssociationManager federatedAssociationManager = mock(FederatedAssociationManager.class);
+        if (federatedAssociationManagerException instanceof FederatedAssociationManagerException) {
+            when(federatedAssociationManager.getUserForFederatedAssociation(anyString(),
+                    eq(user.getFederatedIdPName()), eq(user.getAuthenticatedSubjectIdentifier()))).thenThrow(
+                    federatedAssociationManagerException);
+        } else if (associatedUser != null) {
+            when(federatedAssociationManager.getUserForFederatedAssociation(anyString(),
+                    eq(user.getFederatedIdPName()), eq(user.getAuthenticatedSubjectIdentifier()))).thenReturn(
+                    associatedUser.getUserName());
         }
-    }
 
-    @Test(dataProvider = "GetValidateScopeData")
-    public void validateScope(String[] requestedScopes, String[] grantedScopes, boolean expected, String message)
-            throws Exception {
+        AccountLockService accountLockService = mock(AccountLockService.class);
+        if (accountLockServiceException != null) {
+            when(accountLockService.isAccountLocked(anyString(), anyString())).thenThrow(
+                    accountLockServiceException);
+        } else {
+            when(accountLockService.isAccountLocked(anyString(), anyString())).thenReturn(isUserLocked);
+        }
 
-        OAuth2AccessTokenReqDTO tokenReqDTO = new OAuth2AccessTokenReqDTO();
-        tokenReqDTO.setScope(requestedScopes);
-        tokenReqDTO.setClientId("clientId1");
-        tokenReqDTO.setRefreshToken("refreshToken1");
-        tokenReqDTO.setGrantType("refreshTokenGrant");
-        OAuthTokenReqMessageContext tokenReqMessageContext = new OAuthTokenReqMessageContext(tokenReqDTO);
-        tokenReqMessageContext.setScope(grantedScopes);
+        refreshTokenValidationDataDO.setRefreshTokenState(OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE);
+        try {
+            try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                    OAuthServerConfiguration.class);
+                 MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic = mockStatic(
+                         OAuth2ServiceComponentHolder.class);
+                 MockedStatic<FrameworkUtils> frameworkUtilsMockedStatic = mockStatic(FrameworkUtils.class)) {
+                oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                        .thenReturn(oAuthServerConfiguration);
+                oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
+                        .thenReturn(oAuth2ServiceComponentHolder);
+                oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getAccountLockService)
+                        .thenReturn(accountLockService);
+                if (federatedAssociationManagerException instanceof FrameworkException) {
+                    frameworkUtilsMockedStatic.when(FrameworkUtils::getFederatedAssociationManager)
+                            .thenThrow(federatedAssociationManagerException);
+                } else {
+                    frameworkUtilsMockedStatic.when(FrameworkUtils::getFederatedAssociationManager)
+                            .thenReturn(federatedAssociationManager);
+                }
 
-        refreshGrantHandler = new RefreshGrantHandler();
-        refreshGrantHandler.init();
-        boolean actual = refreshGrantHandler.validateScope(tokenReqMessageContext);
-        assertEquals(actual, expected, message);
-    }
-
-    @DataProvider(name = "GetTokenIssuerData")
-    public Object[][] tokenIssuerData() {
-
-        return new Object[][] {
-                { 0L, UNASSIGNED_VALIDITY_PERIOD, "true", "clientId1" },
-                { 20L, UNASSIGNED_VALIDITY_PERIOD, "true", "clientId2" },
-                { 20L, 20L, "true", "clientId3" },
-                { 0L, UNASSIGNED_VALIDITY_PERIOD, "true", "clientId4" },
-                { 20L, 20L, "false", "clientId5" },
-                { 20L, 20L, null, "clientId6" },
-                { 20L, 20L, "true", "clientId7" } };
-    }
-
-    @DataProvider(name = "GetValidateScopeData")
-    public Object[][] validateScopeData() {
-
-        String[] requestedScopes = new String[2];
-        requestedScopes[0] = "scope1";
-        requestedScopes[1] = "scope2";
-
-        String[] grantedScopes = new String[1];
-        grantedScopes[0] = "scope1";
-
-        String[] grantedScopesWithRequestedScope = new String[1];
-        grantedScopesWithRequestedScope[0] = "scope1";
-        grantedScopesWithRequestedScope[0] = "scope2";
-
-        return new Object[][] { { requestedScopes, grantedScopes, false, "scope validation should fail." },
-                { requestedScopes, grantedScopesWithRequestedScope, false, "scope validation should fail." },
-                { requestedScopes, new String[0], false, "scope validation should fail." },
-                { new String[] { "scope_not_granted" }, grantedScopes, false, "scope validation should fail." }, };
+                RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+                boolean validateResult = refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
+                assertTrue(validateResult);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            if (federatedAssociationManagerException != null) {
+                assertEquals(ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP.getCode(), e.getErrorCode());
+            } else if (accountLockServiceException != null) {
+                assertEquals(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(), e.getErrorCode());
+            } else if (isUserLocked) {
+                assertEquals(UserCoreConstants.ErrorCode.USER_IS_LOCKED, e.getErrorCode());
+            } else {
+                fail("Unexpected exception is thrown.");
+            }
+        }
     }
 }
