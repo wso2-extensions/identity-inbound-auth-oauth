@@ -133,7 +133,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     ActionExecutionLogConstants.ActionIDs.EXECUTE_ACTION_OPERATIONS);
             diagLogBuilder
                     .inputParam("executed operations", operationDetailsList.isEmpty() ? "empty" : operationDetailsList)
-                    .resultMessage("Allowed operations are executed for " + actionType + " action.")
+                    .resultMessage("Allowed operations are executed for " + actionType.getDisplayName() + " action.")
                     .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
                     .build();
