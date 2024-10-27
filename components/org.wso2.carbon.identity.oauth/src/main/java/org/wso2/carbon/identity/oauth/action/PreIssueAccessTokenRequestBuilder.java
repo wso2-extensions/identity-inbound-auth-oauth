@@ -282,7 +282,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
 
         try {
-            String tenantDomain = tokenMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
             CustomClaimsCallbackHandler claimsCallBackHandler =
                     ClaimHandlerUtil.getClaimsCallbackHandler(getAppInformation(tokenMessageContext));
             JWTClaimsSet claimsSet =
