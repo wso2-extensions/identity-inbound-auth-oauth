@@ -232,7 +232,7 @@ public class OAuthAdminServiceImpl {
             OAuthAppDO app = getOAuthApp(consumerKey, tenantDomain);
             if (app != null) {
                 if (isAccessTokenClaimsSeparationFeatureEnabled() &&
-                        !app.isAccessTokenClaimsSeparationEnabled()) {
+                        !isAccessTokenClaimsSeparationEnabledForApp(consumerKey, tenantDomain)) {
                     // Add requested claims as access token claims if the app is not in the new access token
                     // claims feature.
                     addAccessTokenClaims(app, tenantDomain);
@@ -536,7 +536,6 @@ public class OAuthAdminServiceImpl {
                         if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                             validateAccessTokenClaims(application, tenantDomain);
                             app.setAccessTokenClaims(application.getAccessTokenClaims());
-                            app.setAccessTokenClaimsSeparationEnabled(true);
                         }
                     }
                     dao.addOAuthApplication(app);
@@ -977,27 +976,32 @@ public class OAuthAdminServiceImpl {
             if (isAccessTokenClaimsSeparationFeatureEnabled()) {
                 // We check if the AT claims separation enabled at server level and
                 // the app level. If both are enabled, we validate the claims and update the app.
-                if (oAuthAppDO.isAccessTokenClaimsSeparationEnabled()) {
-                    validateAccessTokenClaims(consumerAppDTO, tenantDomain);
-                    oAuthAppDO.setAccessTokenClaims(consumerAppDTO.getAccessTokenClaims());
+                try {
+                    if (isAccessTokenClaimsSeparationEnabledForApp(oAuthAppDO.getOauthConsumerKey(), tenantDomain)) {
+                        validateAccessTokenClaims(consumerAppDTO, tenantDomain);
+                        oAuthAppDO.setAccessTokenClaims(consumerAppDTO.getAccessTokenClaims());
+                    }
+                } catch (IdentityOAuth2Exception e) {
+                    throw new IdentityOAuthAdminException("Error while updating existing OAuth application to " +
+                            "the new JWT access token OIDC claims separation model. Application : " +
+                            oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
                 }
                 // We only trigger the access token claims migration if the following conditions are met.
                 // 1. The AT claims separation is enabled at server level.
                 // 2. The AT claims separation is not enabled at app level.
-                // 3. User tries to enable AT claims separation at app level with update app.
-                if (!oAuthAppDO.isAccessTokenClaimsSeparationEnabled() &&
-                        consumerAppDTO.isAccessTokenClaimsSeparationEnabled()) {
-                    // Add requested claims as access token claims.
-                    try {
+                // 3. The access token claims are empty.
+                try {
+                    if (!isAccessTokenClaimsSeparationEnabledForApp(oAuthAppDO.getOauthConsumerKey(),
+                            tenantDomain) && oAuthAppDO.getAccessTokenClaims().length == 0) {
+                        // Add requested claims as access token claims.
                         addAccessTokenClaims(oAuthAppDO, tenantDomain);
-                    } catch (IdentityOAuth2Exception e) {
-                        throw new IdentityOAuthAdminException("Error while updating existing OAuth application to " +
-                                "the new JWT access token OIDC claims separation model. Application : " +
-                                oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
                     }
+
+                } catch (IdentityOAuth2Exception e) {
+                    throw new IdentityOAuthAdminException("Error while updating existing OAuth application to " +
+                            "the new JWT access token OIDC claims separation model. Application : " +
+                            oAuthAppDO.getApplicationName() + " Tenant : " + tenantDomain, e);
                 }
-                oAuthAppDO.setAccessTokenClaimsSeparationEnabled(consumerAppDTO
-                        .isAccessTokenClaimsSeparationEnabled());
             }
         }
         dao.updateConsumerApplication(oAuthAppDO);
@@ -2866,5 +2870,13 @@ public class OAuthAdminServiceImpl {
     private boolean isAccessTokenClaimsSeparationFeatureEnabled() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN));
+    }
+
+    private boolean isAccessTokenClaimsSeparationEnabledForApp(String consumerKey, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, tenantDomain);
+        return OAuth2Util.isAppVersionAllowed(serviceProvider.getApplicationVersion(),
+                ApplicationConstants.ApplicationVersion.APP_VERSION_V2);
     }
 }

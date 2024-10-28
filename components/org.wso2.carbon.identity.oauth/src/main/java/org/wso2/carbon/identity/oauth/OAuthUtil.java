@@ -563,7 +563,6 @@ public final class OAuthUtil {
         dto.setSubjectTokenEnabled(appDO.isSubjectTokenEnabled());
         dto.setSubjectTokenExpiryTime(appDO.getSubjectTokenExpiryTime());
         dto.setAccessTokenClaims(appDO.getAccessTokenClaims());
-        dto.setAccessTokenClaimsSeparationEnabled(appDO.isAccessTokenClaimsSeparationEnabled());
         return dto;
     }
 
