@@ -295,10 +295,12 @@ public class AuthorizationDetailsUtils {
      */
     public static AuthorizationDetails getTrimmedAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
-        authorizationDetails.stream().forEach(authorizationDetail -> {
-            authorizationDetail.setId(null);
-            authorizationDetail.setDescription(null);
-        });
+        if (authorizationDetails != null) {
+            authorizationDetails.stream().forEach(authorizationDetail -> {
+                authorizationDetail.setId(null);
+                authorizationDetail.setDescription(null);
+            });
+        }
         return authorizationDetails;
     }
 

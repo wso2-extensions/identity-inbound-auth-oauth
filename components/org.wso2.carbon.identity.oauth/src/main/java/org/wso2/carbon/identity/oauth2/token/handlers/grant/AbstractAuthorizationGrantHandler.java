@@ -1275,6 +1275,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             authorizationDetails = this.authorizationDetailsService.getAuthorizationCodeAuthorizationDetails(
                     oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode(), tenantId);
         }
-        oAuthTokenReqMessageContext.setAuthorizationDetails(authorizationDetails);
+        oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
+                .getTrimmedAuthorizationDetails(authorizationDetails));
     }
 }

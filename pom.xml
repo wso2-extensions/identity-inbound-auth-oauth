@@ -62,12 +62,12 @@
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>components/org.wso2.carbon.identity.oauth.ciba</module>
         <module>components/org.wso2.carbon.identity.client.attestation.filter</module>
+        <module>components/org.wso2.carbon.identity.oauth.rar</module>
         <module>features/org.wso2.carbon.identity.oauth.common.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.ui.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.dcr.server.feature</module>
-        <module>components/org.wso2.carbon.identity.oauth.rar</module>
     </modules>
 
     <dependencyManagement>
@@ -957,7 +957,8 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.5.86</carbon.identity.framework.version>
+        <!-- todo: need to bump this version, once the framework PR is merged -->
+        <carbon.identity.framework.version>7.5.94-SNAPSHOT</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
