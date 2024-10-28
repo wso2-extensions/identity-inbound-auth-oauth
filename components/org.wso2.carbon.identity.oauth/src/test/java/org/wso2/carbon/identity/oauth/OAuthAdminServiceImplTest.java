@@ -35,6 +35,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
@@ -45,6 +46,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
@@ -61,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
@@ -92,6 +95,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
@@ -103,6 +107,7 @@ import static org.testng.Assert.assertThrows;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 
 public class OAuthAdminServiceImplTest {
 
@@ -131,9 +136,10 @@ public class OAuthAdminServiceImplTest {
     AbstractUserStoreManager mockAbstractUserStoreManager;
     @Mock
     OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
-
     @Mock
-    ObjectMapper objectMapper;
+    ServiceProvider mockServiceProvider;
+    @Mock
+    OAuthServerConfiguration mockOAuthServerConfiguration;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
 
@@ -346,23 +352,65 @@ public class OAuthAdminServiceImplTest {
         }
     }
 
-    @Test
-    public void testGetOAuthApplicationData() throws Exception {
+    @DataProvider(name = "setAccessTokenClaims")
+    public Object[][] getOAuthApplicationData() {
 
-        String consumerKey = "some-consumer-key";
-        Mockito.when(tenantManager.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        return new Object[][] {
+                { "v0.0.0", true },
+                { "v1.0.0", true },
+                { "v2.0.0", true },
+                { "v0.0.0", false },
+                { "v1.0.0", false },
+                { "v2.0.0", false }
+        };
+    }
 
-        OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
-        try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
-                (mock, context) -> {
-                    when(mock.getAppInformation(consumerKey, MultitenantConstants.SUPER_TENANT_ID)).thenReturn(app);
-                })) {
+    @Test(dataProvider = "setAccessTokenClaims")
+    public void testGetOAuthApplicationData(String appVersion, boolean claimSeparationFeatureEnabled) throws Exception {
 
-            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
-            OAuthConsumerAppDTO oAuthConsumerApp = oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey,
-                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
-            assertAllAttributesOfConsumerAppDTO(oAuthConsumerApp, app);
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class);) {
+            // Mock and initialize the OAuthServerConfiguration.
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
+
+            try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+
+                String consumerKey = "some-consumer-key";
+                Mockito.when(tenantManager.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN))
+                        .thenReturn(claimSeparationFeatureEnabled ? "true" : "false");
+
+                mockServiceProvider = mock(ServiceProvider.class);
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                        .thenReturn(mockServiceProvider);
+                when(mockServiceProvider.getApplicationVersion()).thenReturn(appVersion);
+
+                OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
+                try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                        (mock, context) -> {
+                            when(mock.getAppInformation(consumerKey, MultitenantConstants.SUPER_TENANT_ID))
+                                    .thenReturn(app);
+                        })) {
+
+                    ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
+                    OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
+                    when(appMgtService.getServiceProvider(consumerKey, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                            .thenReturn(mockServiceProvider);
+
+                    OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+                    OAuthConsumerAppDTO oAuthConsumerApp = oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey,
+                            MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+                    oAuthConsumerApp.setUsername(app.getUser().toString());
+
+                    assertAllAttributesOfConsumerAppDTO(oAuthConsumerApp, app);
+                }
+            }
         }
     }
 
@@ -517,10 +565,16 @@ public class OAuthAdminServiceImplTest {
 
         return new Object[][]{
                 // Logged In user , App Owner in Request , App Owner in request exists, Excepted App Owner after update
-                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "original-app-owner@wso2.com"},
-                {"admin@carbon.super", "H2/new-app-owner@carbon.super", true, "H2/new-app-owner@carbon.super"},
-                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "original-app-owner@wso2.com"},
-                {"admin@wso2.com", "H2/new-app-owner@wso2.com", true, "H2/new-app-owner@wso2.com"}
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "original-app-owner@wso2.com",
+                        true, "v2.0.0"},
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", true, "H2/new-app-owner@carbon.super",
+                        true, "v2.0.0"},
+                {"admin@wso2.com", "H2/new-app-owner@wso2.com", false, "original-app-owner@wso2.com",
+                        true, "v2.0.0"},
+                {"admin@wso2.com", "H2/new-app-owner@wso2.com", true, "H2/new-app-owner@wso2.com",
+                        true, "v2.0.0"},
+                {"admin@carbon.super", "H2/new-app-owner@carbon.super", false, "original-app-owner@wso2.com",
+                        false, "v2.0.0"},
         };
     }
 
@@ -543,80 +597,108 @@ public class OAuthAdminServiceImplTest {
     public void testUpdateConsumerApplication(String loggedInUsername,
                                               String appOwnerInRequest,
                                               boolean appOwnerInRequestExists,
-                                              String expectedAppOwnerAfterUpdate) throws Exception {
+                                              String expectedAppOwnerAfterUpdate,
+                                              boolean claimSeparationFeatureEnabled, String appVersion)
+            throws Exception {
 
-        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class);) {
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class);) {
+            // Mock and initialize the OAuthServerConfiguration.
+            mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(300L);
 
-            AuthenticatedUser loggedInUser = buildUser(loggedInUsername);
-            identityUtil.when(() -> IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
-            identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
+            try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+                 MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                         mockStatic(OAuthComponentServiceHolder.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
 
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(loggedInUser.getTenantDomain());
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(
-                    IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain()));
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(loggedInUser.getUserName());
-            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN))
+                        .thenReturn(claimSeparationFeatureEnabled ? "true" : "false");
 
-            AuthenticatedUser appOwner = buildUser(appOwnerInRequest);
-            String tenantAwareUsernameOfAppOwner =
-                    MultitenantUtils.getTenantAwareUsername(appOwner.toFullQualifiedUsername());
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString(), anyString()))
+                        .thenReturn(mockServiceProvider);
+                when(mockServiceProvider.getApplicationVersion()).thenReturn(appVersion);
 
-            when(userStoreManager.isExistingUser(tenantAwareUsernameOfAppOwner)).thenReturn(appOwnerInRequestExists);
+                AuthenticatedUser loggedInUser = buildUser(loggedInUsername);
+                identityUtil.when(() -> IdentityUtil.isUserStoreCaseSensitive(anyString(), anyInt())).thenReturn(true);
+                identityUtil.when(() -> IdentityUtil.addDomainToName(anyString(), anyString())).thenCallRealMethod();
 
-            String consumerKey = UUID.randomUUID().toString();
-            OAuthAppDO app = buildDummyOAuthAppDO("original-app-owner");
-            AuthenticatedUser originalOwner = app.getAppOwner();
+                PrivilegedCarbonContext.startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(loggedInUser.getTenantDomain());
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(
+                        IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain()));
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername(loggedInUser.getUserName());
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(userRealm);
 
-            try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
-                    (mock, context) -> {
-                        when(mock.getAppInformation(consumerKey,
-                                IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain())))
-                                .thenReturn(app);
-                    })) {
+                AuthenticatedUser appOwner = buildUser(appOwnerInRequest);
+                String tenantAwareUsernameOfAppOwner =
+                        MultitenantUtils.getTenantAwareUsername(appOwner.toFullQualifiedUsername());
 
-                OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
-                OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
-                consumerAppDTO.setApplicationName("new-application-name");
-                consumerAppDTO.setCallbackUrl("http://new-call-back-url.com");
-                consumerAppDTO.setOauthConsumerKey(consumerKey);
-                consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
-                consumerAppDTO.setOAuthVersion("new-oauth-version");
-                consumerAppDTO.setUsername(appOwner.toFullQualifiedUsername());
+                when(userStoreManager.isExistingUser(tenantAwareUsernameOfAppOwner)).thenReturn(
+                        appOwnerInRequestExists);
 
-                mockOAuthComponentServiceHolder(oAuthComponentServiceHolder);
+                String consumerKey = UUID.randomUUID().toString();
+                OAuthAppDO app = buildDummyOAuthAppDO("original-app-owner");
+                AuthenticatedUser originalOwner = app.getAppOwner();
 
-                String tenantDomain = MultitenantUtils.getTenantDomain(appOwnerInRequest);
-                String userStoreDomain = UserCoreUtil.extractDomainFromName(appOwnerInRequest);
-                String domainFreeName = UserCoreUtil.removeDomainFromName(appOwnerInRequest);
-                String username = MultitenantUtils.getTenantAwareUsername(domainFreeName);
+                try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
+                        (mock, context) -> {
+                            when(mock.getAppInformation(consumerKey,
+                                    IdentityTenantUtil.getTenantId(loggedInUser.getTenantDomain())))
+                                    .thenReturn(app);
+                        })) {
 
-                org.wso2.carbon.user.core.common.User user = new org.wso2.carbon.user.core.common.User();
-                user.setUsername(username);
-                user.setTenantDomain(tenantDomain);
-                user.setUserStoreDomain(userStoreDomain);
-                Mockito.when(mockAbstractUserStoreManager.getUser(any(), anyString())).thenReturn(user);
-                Mockito.when(mockAbstractUserStoreManager.isExistingUser(anyString()))
-                        .thenReturn(appOwnerInRequestExists);
+                    ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
+                    OAuth2ServiceComponentHolder.setApplicationMgtService(appMgtService);
+                    when(appMgtService.getServiceProvider(consumerKey, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                            .thenReturn(mockServiceProvider);
 
-                oAuthAdminServiceImpl.updateConsumerApplication(consumerAppDTO);
-                OAuthConsumerAppDTO updatedOAuthConsumerApp = oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey,
-                        tenantDomain);
-                Assert.assertEquals(updatedOAuthConsumerApp.getApplicationName(), consumerAppDTO.getApplicationName(),
-                        "Updated Application name should be same as the application name in consumerAppDTO " +
-                                "data object.");
-                Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
-                        "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO " +
-                                "data object.");
+                    OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+                    OAuthConsumerAppDTO consumerAppDTO = new OAuthConsumerAppDTO();
+                    consumerAppDTO.setApplicationName("new-application-name");
+                    consumerAppDTO.setCallbackUrl("http://new-call-back-url.com");
+                    consumerAppDTO.setOauthConsumerKey(consumerKey);
+                    consumerAppDTO.setOauthConsumerSecret("some-consumer-secret");
+                    consumerAppDTO.setOAuthVersion("new-oauth-version");
+                    consumerAppDTO.setUsername(appOwner.toFullQualifiedUsername());
 
-                if (appOwnerInRequestExists) {
-                    // Application update should change the app owner if the app owner sent in the request is a
-                    // valid user.
-                    Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(),
-                            originalOwner.toFullQualifiedUsername());
+                    mockOAuthComponentServiceHolder(oAuthComponentServiceHolder);
+
+                    String tenantDomain = MultitenantUtils.getTenantDomain(appOwnerInRequest);
+                    String userStoreDomain = UserCoreUtil.extractDomainFromName(appOwnerInRequest);
+                    String domainFreeName = UserCoreUtil.removeDomainFromName(appOwnerInRequest);
+                    String username = MultitenantUtils.getTenantAwareUsername(domainFreeName);
+
+                    org.wso2.carbon.user.core.common.User user = new org.wso2.carbon.user.core.common.User();
+                    user.setUsername(username);
+                    user.setTenantDomain(tenantDomain);
+                    user.setUserStoreDomain(userStoreDomain);
+                    Mockito.when(mockAbstractUserStoreManager.getUser(any(), anyString())).thenReturn(user);
+                    Mockito.when(mockAbstractUserStoreManager.isExistingUser(anyString()))
+                            .thenReturn(appOwnerInRequestExists);
+
+                    oAuthAdminServiceImpl.updateConsumerApplication(consumerAppDTO);
+                    OAuthConsumerAppDTO updatedOAuthConsumerApp =
+                            oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey,
+                                    tenantDomain);
+                    Assert.assertEquals(updatedOAuthConsumerApp.getApplicationName(),
+                            consumerAppDTO.getApplicationName(),
+                            "Updated Application name should be same as the application name in consumerAppDTO " +
+                                    "data object.");
+                    Assert.assertEquals(updatedOAuthConsumerApp.getCallbackUrl(), consumerAppDTO.getCallbackUrl(),
+                            "Updated Application callbackUrl should be same as the callbackUrl in consumerAppDTO " +
+                                    "data object.");
+
+                    if (appOwnerInRequestExists) {
+                        // Application update should change the app owner if the app owner sent in the request is a
+                        // valid user.
+                        Assert.assertNotEquals(updatedOAuthConsumerApp.getUsername(),
+                                originalOwner.toFullQualifiedUsername());
+                    }
+                    Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), expectedAppOwnerAfterUpdate);
                 }
-                Assert.assertEquals(updatedOAuthConsumerApp.getUsername(), expectedAppOwnerAfterUpdate);
             }
         }
     }

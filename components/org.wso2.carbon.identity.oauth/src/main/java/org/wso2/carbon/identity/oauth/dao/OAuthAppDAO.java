@@ -85,7 +85,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigPro
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_ENCRYPTION_METHOD;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.ID_TOKEN_SIGNATURE_ALGORITHM;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_CERTIFICATE_BOUND_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_FAPI_CONFORMANT_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.IS_PUSH_AUTH;
@@ -1044,13 +1043,6 @@ public class OAuthAppDAO {
                 SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(oauthAppDO.getSubjectTokenExpiryTime()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
 
-        if (isAccessTokenClaimsSeparationFeatureEnabled()) {
-            addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
-                    IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED,
-                    String.valueOf(oauthAppDO.isAccessTokenClaimsSeparationEnabled()),
-                    prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
-        }
-
         addOrUpdateOIDCSpProperty(preprocessedClientId, spTenantId, spOIDCProperties,
                 HYBRID_FLOW_ENABLED, String.valueOf(oauthAppDO.isHybridFlowEnabled()),
                 prepStatementForPropertyAdd, preparedStatementForPropertyUpdate);
@@ -1779,12 +1771,6 @@ public class OAuthAppDAO {
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     SUBJECT_TOKEN_EXPIRY_TIME, String.valueOf(consumerAppDO.getSubjectTokenExpiryTime()));
 
-            if (isAccessTokenClaimsSeparationFeatureEnabled()) {
-                addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
-                        IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED,
-                        String.valueOf(consumerAppDO.isAccessTokenClaimsSeparationEnabled()));
-            }
-
             addToBatchForOIDCPropertyAdd(processedClientId, spTenantId, prepStmtAddOIDCProperty,
                     HYBRID_FLOW_ENABLED,
                     String.valueOf(consumerAppDO.isHybridFlowEnabled()));
@@ -1963,13 +1949,6 @@ public class OAuthAppDAO {
         String subjectTokenExpiryTime = getFirstPropertyValue(spOIDCProperties, SUBJECT_TOKEN_EXPIRY_TIME);
         if (subjectTokenExpiryTime != null) {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
-        }
-
-        String isAccessTokenClaimsSeparationEnabled = getFirstPropertyValue(spOIDCProperties,
-                IS_ACCESS_TOKEN_CLAIMS_SEPARATION_ENABLED);
-        if (isAccessTokenClaimsSeparationEnabled != null) {
-            oauthApp.setAccessTokenClaimsSeparationEnabled(
-                    Boolean.parseBoolean(isAccessTokenClaimsSeparationEnabled));
         }
 
         boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,

@@ -2948,6 +2948,25 @@ public class OAuth2UtilTest {
         };
     }
 
+    @DataProvider(name = "isAppVersionAllowedDataProvider")
+    public Object[][] isAppVersionAllowedDataProvider() {
+
+        return new Object[][]{
+                {"v0.0.0", "v1.0.0", false},
+                {"v1.0.0", "v1.0.0", true},
+                {"v2.0.0", "v1.0.0", true},
+                {"v0.0.0", "v2.0.0", false},
+                {"v1.0.0", "v2.0.0", false},
+                {"v2.0.0", "v2.0.0", true},
+        };
+    }
+
+    @Test(dataProvider = "isAppVersionAllowedDataProvider")
+    public void testIsAppVersionAllowed(String appVersion, String allowedVersions, boolean expected) {
+
+        assertEquals(OAuth2Util.isAppVersionAllowed(appVersion, allowedVersions), expected);
+    }
+
     private void setPrivateField(Object object, String fieldName, Object value) throws Exception {
 
         Field field = object.getClass().getDeclaredField(fieldName);

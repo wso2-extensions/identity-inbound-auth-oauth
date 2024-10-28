@@ -396,8 +396,6 @@ public class OAuth2Util {
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
             ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
-    public static final String ALLOWED_VERSION_TO_STOP_USING_APP_OWNER_FOR_TOKEN_IDENTIFICATION = "v1.0.0";
-
     private OAuth2Util() {
 
     }
@@ -5645,16 +5643,15 @@ public class OAuth2Util {
     }
 
     /**
-     * Compare the app version with allowed minimum version.
+     * Compare the app version with allowed minimum app version.
      *
      * @param appVersion App version.
-     * @return True if the app version is greater than or equal to the allowed minimum version.
+     * @return True if the app version is greater than or equal to the allowed minimum app version.
      */
-    public static boolean isAllowedToStopUsingAppOwnerForTokenIdentification(String appVersion) {
+    public static boolean isAppVersionAllowed(String appVersion, String allowedAppVersion) {
 
         String[] appVersionDigits = appVersion.substring(1).split("\\.");
-        String[] allowedVersionDigits = ALLOWED_VERSION_TO_STOP_USING_APP_OWNER_FOR_TOKEN_IDENTIFICATION.substring(1)
-                .split("\\.");
+        String[] allowedVersionDigits = allowedAppVersion.substring(1).split("\\.");
 
         for (int i = 0; i < appVersionDigits.length; i++) {
             if (appVersionDigits[i].equals(allowedVersionDigits[i])) {

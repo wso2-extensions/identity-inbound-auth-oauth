@@ -50,6 +50,7 @@ public class DeviceErrorCodes {
         public static final String SLOW_DOWN = "Forbidden";
         public static final String AUTHORIZATION_PENDING = "Precondition required";
         public static final String EXPIRED_TOKEN = "Forbidden";
+        public static final String NOT_EXIST = "The provided device code is not registered or is invalid.";
 
     }
 }
