@@ -415,11 +415,6 @@
                 <artifactId>gson</artifactId>
                 <version>${com.google.code.gson.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.google.auto.service</groupId>
-                <artifactId>auto-service</artifactId>
-                <version>${com.google.auto.service.version}</version>
-            </dependency>
             <!-- To validate json structures against json schemas like 'draft 2020-12' -->
             <dependency>
                 <groupId>io.vertx</groupId>
@@ -1052,7 +1047,6 @@
         <net.minidev.accessors-smart.version>2.4.7</net.minidev.accessors-smart.version>
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
-        <com.google.auto.service.version>1.1.1</com.google.auto.service.version>
         <vertx.json.schema.version>4.5.10</vertx.json.schema.version>
 
         <!--Maven Plugin Version-->

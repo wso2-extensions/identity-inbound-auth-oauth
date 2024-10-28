@@ -41,8 +41,8 @@ import java.util.stream.Collectors;
  * <p> Example usage:
  * <pre> {@code
  * // Get a specific provider by type
- * AuthorizationDetailsProviderFactory.getInstance()
- *     .getProviderByType("customer_information")
+ * AuthorizationDetailsProcessorFactory.getInstance()
+ *     .getAuthorizationDetailsProcessorByType("customer_information")
  *     .ifPresentOrElse(
  *         p -> log.debug("Provider for type " + type + ": " + p.getClass().getName()),
  *         () -> log.debug("No provider found for type " + type)
