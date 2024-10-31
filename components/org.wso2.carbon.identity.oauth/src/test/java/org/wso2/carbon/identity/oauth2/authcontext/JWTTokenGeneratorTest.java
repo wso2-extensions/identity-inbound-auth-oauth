@@ -33,6 +33,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -46,7 +47,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -163,16 +163,16 @@ public class JWTTokenGeneratorTest {
             addSampleOauth2Application();
             ClaimCache claimsLocalCache = ClaimCache.getInstance();
             setPrivateField(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
-            Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
-            publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
+            Map<String, Certificate> publicCerts = new ConcurrentHashMap<>();
+            publicCerts.put("-1234", ReadCertStoreSampleUtil.createKeyStore(getClass())
                     .getCertificate("wso2carbon"));
             OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
             when(realmService.getTenantManager()).thenReturn(tenantManager);
-            setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
-            Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
-            privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
+            setFinalStatic(IdentityKeyStoreResolver.class.getDeclaredField("publicCerts"), publicCerts);
+            Map<String, Key> privateKeys = new ConcurrentHashMap<>();
+            privateKeys.put("-1234", ReadCertStoreSampleUtil.createKeyStore(getClass())
                     .getKey("wso2carbon", "wso2carbon".toCharArray()));
-            setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
+            setFinalStatic(IdentityKeyStoreResolver.class.getDeclaredField("privateKeys"), privateKeys);
 
             accessToken.setTokenType("Bearer");
             oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
