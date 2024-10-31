@@ -10,9 +10,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
+import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 
 import java.text.ParseException;
 
@@ -22,7 +26,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class AuthorizationGrantCacheTest {
+public class AuthorizationGrantCacheTest extends IdentityBaseTest {
 
     @Mock
     private AccessTokenDAO accessTokenDAO;
@@ -31,6 +35,9 @@ public class AuthorizationGrantCacheTest {
 
     @Mock
     private OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory;
+
+    @Mock
+    private AuthorizationCodeDAO authorizationCodeDAO;
 
     @Mock
     private SessionDataStore sessionDataStore;
@@ -49,7 +56,8 @@ public class AuthorizationGrantCacheTest {
 
         try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
              MockedStatic<JWTParser> mockedJwtParser = mockStatic(JWTParser.class);
-             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class)) {
+             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
+             MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
 
             mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(
                     mockedOAuthTokenPersistenceFactory);
@@ -61,6 +69,8 @@ public class AuthorizationGrantCacheTest {
                 JWTClaimsSet claimsSetMock = mock(JWTClaimsSet.class);
 
                 if (isInvalidJWTToken) {
+                    mockedIdentityUtil.when(() -> IdentityUtil.isTokenLoggable(
+                            IdentityConstants.IdentityTokens.ACCESS_TOKEN)).thenReturn(true);
                     when(JWTParser.parse(accessToken)).thenThrow(new ParseException("Invalid JWT", 0));
                 } else {
                     mockedJwtParser.when(() -> JWTParser.parse(accessToken)).thenReturn(jwtMock);
@@ -108,5 +118,33 @@ public class AuthorizationGrantCacheTest {
                 {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false},
                 {"fail.Store.TokenId", "jwtId", "jwtId", true, false, true}
         };
+    }
+
+    @Test
+    public void testGetValueFromCacheByCode() throws IdentityOAuth2Exception {
+        String authCode = "authCode";
+        String codeId = "codeId";
+        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(authCode);
+        AuthorizationGrantCacheEntry expectedEntry = new AuthorizationGrantCacheEntry();
+        expectedEntry.setCodeId(codeId);
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
+             MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
+
+            mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
+            when(sessionDataStore.getSessionData(codeId, "AuthorizationGrantCache")).thenReturn(expectedEntry);
+            mockedIdentityUtil.when(() -> IdentityUtil.isTokenLoggable(
+                    IdentityConstants.IdentityTokens.AUTHORIZATION_CODE)).thenReturn(true);
+
+            mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).
+                    thenReturn(mockedOAuthTokenPersistenceFactory);
+            when(mockedOAuthTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(authorizationCodeDAO);
+            when(authorizationCodeDAO.getCodeIdByAuthorizationCode(authCode)).thenReturn(codeId);
+
+            AuthorizationGrantCacheEntry result = cache.getValueFromCacheByCode(key);
+
+            assertEquals(expectedEntry, result);
+        }
     }
 }
