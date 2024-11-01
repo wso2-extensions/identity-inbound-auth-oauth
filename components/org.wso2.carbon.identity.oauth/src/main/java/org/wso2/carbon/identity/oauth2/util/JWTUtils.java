@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -54,6 +55,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -297,6 +299,16 @@ public class JWTUtils {
             try {
                 if (log.isDebugEnabled()) {
                     log.debug("Getting signing tenant domain from OAuth app.");
+                }
+                // Check if the OAuth application is a sub-organization application. Based on that we can define what
+                // is the tenant that signed the JWT. In this case the signing tenant is the root organization.
+                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
+                        accessTokenDO.getConsumerKey(), appTenantDomain).getSpProperties();
+                if (serviceProviderProperties != null && Arrays.stream(serviceProviderProperties)
+                        .anyMatch(property -> "isSubOrgApp".equals(property.getName())
+                                && Boolean.parseBoolean(property.getValue()))) {
+                    return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 }
                 return OAuth2Util.getTenantDomainOfOauthApp(accessTokenDO.getConsumerKey());
             } catch (InvalidOAuthClientException e) {

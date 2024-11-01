@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -251,6 +252,18 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
             int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                try {
+                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(applicationResidentOrgId);
+                    appTenantId = OAuth2Util.getTenantId(tenantDomain);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                            + applicationResidentOrgId, e);
+                }
+            }
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                     insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
@@ -276,8 +289,6 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     insertTokenPrepStmt.setInt(21, appTenantId);
                 }
             }
-            insertTokenPrepStmt.executeUpdate();
-
             String accessTokenId = accessTokenDO.getTokenId();
             addScopePrepStmt = connection.prepareStatement(sqlAddScopes);
 

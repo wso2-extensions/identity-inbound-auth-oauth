@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
@@ -783,10 +784,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthAppDO oAuthAppDO;
         String consumerKey = existingAccessTokenDO.getConsumerKey();
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            }
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client_id : " + consumerKey,
                     e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: ", e);
         }
 
         if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
@@ -830,7 +840,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuthAppDO getoAuthApp(String consumerKey) throws IdentityOAuth2Exception {
         OAuthAppDO oAuthAppBean;
         try {
-            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey);
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            }
+            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             if (log.isDebugEnabled()) {
                 log.debug("Service Provider specific expiry time enabled for application : " + consumerKey +
                         ". Application access token expiry time : " + oAuthAppBean.getApplicationAccessTokenExpiryTime()
@@ -839,6 +856,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+        } catch (OrganizationManagementException e) {
+            throw new RuntimeException("Error while resolving tenant domain from the organization id: ", e);
         }
         return oAuthAppBean;
     }
