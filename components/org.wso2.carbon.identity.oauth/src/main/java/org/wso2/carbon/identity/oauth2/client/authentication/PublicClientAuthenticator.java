@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -189,10 +189,11 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
 
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
 
+        // Inherit the main app's isPublicClient property for the shared app only in the API-based authentication flow.
         if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
             String organizationID = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
             if (StringUtils.isNotEmpty(organizationID)) {
-                return resolveBypassClientCredentialsProperty(clientId, tenantDomain);
+                return canBypassClientCredentialsForSharedApp(clientId, tenantDomain);
             }
         }
         return OAuth2Util.getAppInformationByClientId(clientId, tenantDomain).isBypassClientCredentials();
@@ -201,20 +202,20 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
     /**
      * Resolves the bypassClientCredentials property for the shared application for API Based Authentication.
      *
-     * @param sharedAppClientId     Client ID of the shared application.
-     * @param sharedAppTenantDomain Tenant domain of the shared application.
+     * @param clientId     Client ID of the shared application.
+     * @param tenantDomain Tenant domain of the shared application.
      * @return True if the main application bypasses client credentials; Else, returns the shared application's value.
      * @throws IdentityOAuth2Exception     Error while retrieving the OAuth application's information by client ID.
      * @throws InvalidOAuthClientException Error due to an invalid or non-existent client ID (consumer key).
      */
-    private boolean resolveBypassClientCredentialsProperty(String sharedAppClientId, String sharedAppTenantDomain)
+    private boolean canBypassClientCredentialsForSharedApp(String clientId, String tenantDomain)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(sharedAppClientId, sharedAppTenantDomain);
+        OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         try {
             String sharedApplicationID = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getApplicationResourceIDByInboundKey(sharedAppClientId,
-                            OAuthConstants.Scope.OAUTH2, sharedAppTenantDomain);
+                    .getApplicationResourceIDByInboundKey(clientId,
+                            OAuthConstants.Scope.OAUTH2, tenantDomain);
             String mainApplicationID = OAuth2ServiceComponentHolder.getApplicationMgtService()
                     .getMainAppId(sharedApplicationID);
             int mainAppTenantId = OAuth2ServiceComponentHolder.getApplicationMgtService()
@@ -229,10 +230,10 @@ public class PublicClientAuthenticator extends AbstractOAuthClientAuthenticator 
             }
         } catch (IdentityApplicationManagementException e) {
             log.error("Failed to retrieve main application details for the shared application with client ID: "
-                    + sharedAppClientId + " to resolve the isBypassClientCredentials property.", e);
+                    + clientId + " to resolve the isBypassClientCredentials property.", e);
         } catch (IdentityOAuthAdminException e) {
             log.error("Failed to retrieve OAuth app data for the main application " +
-                    "associated with the shared application with client ID: " + sharedAppClientId +
+                    "associated with the shared application with client ID: " + clientId +
                     " to resolve the isBypassClientCredentials property.", e);
         }
         return oAuthAppDO.isBypassClientCredentials();

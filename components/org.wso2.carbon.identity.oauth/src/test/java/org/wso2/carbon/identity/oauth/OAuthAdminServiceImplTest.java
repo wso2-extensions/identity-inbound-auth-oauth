@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -96,6 +96,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 
 public class OAuthAdminServiceImplTest {
@@ -474,12 +475,13 @@ public class OAuthAdminServiceImplTest {
     public void testGetOAuthApplicationDataByAppName() throws Exception {
 
         String appName = "some-app-name";
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
 
         // Create oauth application data.
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
         try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                 (mock, context) -> {
-                    when(mock.getAppInformationByAppName(appName)).thenReturn(app);
+                    when(mock.getAppInformationByAppName(appName, SUPER_TENANT_ID)).thenReturn(app);
                 })) {
 
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -493,15 +495,18 @@ public class OAuthAdminServiceImplTest {
     public void testGetOAuthApplicationDataByAppNameException(String exception) throws Exception {
 
         String appName = "some-app-name";
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
 
         try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                 (mock, context) -> {
                     switch (exception) {
                         case "InvalidOAuthClientException":
-                            when(mock.getAppInformationByAppName(appName)).thenThrow(InvalidOAuthClientException.class);
+                            when(mock.getAppInformationByAppName(appName, SUPER_TENANT_ID))
+                                    .thenThrow(InvalidOAuthClientException.class);
                             break;
                         case "IdentityOAuth2Exception":
-                            when(mock.getAppInformationByAppName(appName)).thenThrow(IdentityOAuth2Exception.class);
+                            when(mock.getAppInformationByAppName(appName, SUPER_TENANT_ID))
+                                    .thenThrow(IdentityOAuth2Exception.class);
                     }
                 })) {
 
