@@ -608,7 +608,7 @@ public class OAuth2ServiceComponentHolder {
 
     public void removeJWTAccessTokenClaimProvider(JWTAccessTokenClaimProvider accessTokenClaimProvider) {
 
-        jwtAccessTokenClaimProviders.add(accessTokenClaimProvider);
+        jwtAccessTokenClaimProviders.remove(accessTokenClaimProvider);
     }
 
     /**
