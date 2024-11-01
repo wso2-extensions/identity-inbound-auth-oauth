@@ -244,9 +244,12 @@ public class AuthorizationGrantCache extends
                 JWT parsedJwtToken = JWTParser.parse(keyValue);
                 keyValue = parsedJwtToken.getJWTClaimsSet().getJWTID();
             } catch (ParseException e) {
-                if (log.isDebugEnabled() && IdentityUtil.isTokenLoggable(
-                        IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                    log.debug("Error while getting JWTID from token: " + keyValue, e);
+                if (log.isDebugEnabled()) {
+                    if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                        log.debug("Error while getting JWTID from token: " + keyValue, e);
+                    } else {
+                        log.debug("Error while getting JWTID from token");
+                    }
                 }
             }
         }

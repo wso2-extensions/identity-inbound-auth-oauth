@@ -82,10 +82,9 @@ public class AuthorizationGrantCacheTest {
                 when(accessTokenDAO.getTokenIdByAccessToken(jwtId != null ? jwtId : accessToken)).thenReturn(tokenId);
             }
 
-            // Mock SessionDataStore static instance and return a mock session data store
+            // Mock SessionDataStore static instance and return a mock session data store.
             mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
 
-            // Mock SessionDataStore return for session data (from getFromSessionStore)
             AuthorizationGrantCacheEntry mockCacheEntry = new AuthorizationGrantCacheEntry();
             mockCacheEntry.setTokenId(tokenId);
 
@@ -94,10 +93,10 @@ public class AuthorizationGrantCacheTest {
             AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(accessToken);
             AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
 
-            // Verify the token ID returned from the DAO is as expected
+            // Verify the token ID returned from the DAO is as expected.
             assertEquals(tokenId, result.getTokenId());
 
-            // Verify that the JWT token was parsed and the correct claim was retrieved if it was a JWT
+            // Verify that the JWT token was parsed and the correct claim was retrieved if it was a JWT.
             if (isJwtToken && !isInvalidJWTToken) {
                 verify(accessTokenDAO).getTokenIdByAccessToken(jwtId);
             } else {
@@ -108,6 +107,7 @@ public class AuthorizationGrantCacheTest {
 
     @DataProvider(name = "replaceFromTokenIdDataProvider")
     public Object[][] getReplaceFromTokenIdData() {
+
         return new Object[][]{
                 {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false, false},
                 {"nonJWTAccessToken", null, "nonJWTTokenId", false, false, false},
@@ -118,6 +118,7 @@ public class AuthorizationGrantCacheTest {
 
     @Test
     public void testGetValueFromCacheByCode() throws IdentityOAuth2Exception {
+
         String authCode = "authCode";
         String codeId = "codeId";
         AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(authCode);
