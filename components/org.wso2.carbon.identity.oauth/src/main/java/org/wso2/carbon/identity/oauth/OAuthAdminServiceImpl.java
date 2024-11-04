@@ -42,7 +42,9 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -1102,8 +1104,23 @@ public class OAuthAdminServiceImpl {
         addScopePreValidation(scope);
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
+                .getClaimMetadataManagementService();
         try {
+            List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
+                    tenantDomain);
+            List<String> oidcClaimsMappedToScopes = Arrays.asList(scope.getClaim());
+            for (ExternalClaim oidcClaim : oidcDialectClaims) {
+                if (oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI())) {
+                    claimService.updateExternalClaim(oidcClaim, tenantDomain);
+                }
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
+        } catch (ClaimMetadataException e) {
+            IdentityOAuth2Exception identityOAuth2Exception = new IdentityOAuth2Exception(String.format(
+                    "Error while inserting OIDC scope: %s in tenant: %s", scope.getName(), tenantDomain), e);
+            throw handleErrorWithExceptionType(identityOAuth2Exception.getMessage(), identityOAuth2Exception);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while inserting OIDC scope: %s, %s",
                     scope.getName(), e.getMessage()), e);
@@ -1269,13 +1286,27 @@ public class OAuthAdminServiceImpl {
     public void updateScope(ScopeDTO updatedScope) throws IdentityOAuthAdminException {
 
         updateScopePreValidation(updatedScope);
-        // Check whether a scope exists with the provided scope name which to be deleted.
+        // Check whether a scope exists with the provided scope name which to be updated.
         validateScopeExistence(updatedScope.getName());
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
+                .getClaimMetadataManagementService();
         try {
-            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    updateScope(updatedScope, tenantId);
+            List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
+                    tenantDomain);
+            List<String> oidcClaimsMappedToScopes = Arrays.asList(updatedScope.getClaim());
+            for (ExternalClaim oidcClaim : oidcDialectClaims) {
+                if (oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI())) {
+                    claimService.updateExternalClaim(oidcClaim, tenantDomain);
+                }
+            }
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().updateScope(updatedScope, tenantId);
+        } catch (ClaimMetadataException e) {
+            IdentityOAuth2Exception identityOAuth2Exception = new IdentityOAuth2Exception(String.format(
+                    "Error while updating the scope: %s in tenant: %s", updatedScope.getName(), tenantId), e);
+            throw handleErrorWithExceptionType(identityOAuth2Exception.getMessage(), identityOAuth2Exception);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while updating the scope: %s in tenant: %s",
                     updatedScope.getName(), tenantId), e);
