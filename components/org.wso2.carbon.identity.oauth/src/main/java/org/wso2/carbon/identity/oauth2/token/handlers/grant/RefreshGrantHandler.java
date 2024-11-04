@@ -82,7 +82,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
@@ -242,7 +241,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(validationBean.getScope());
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                 validationBean.getAccessTokenExtendedAttributes());
-        if (isNotBlank(validationBean.getTokenBindingReference()) && !NONE
+        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
                 .equals(validationBean.getTokenBindingReference())) {
             Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
                     .getTokenBindingMgtDAO()
@@ -281,7 +280,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private static String getSessionContextIdentifier(String key) {
 
         String sessionContextIdentifier = null;
-        if (isNotBlank(key)) {
+        if (StringUtils.isNotBlank(key)) {
             AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(key);
             AuthorizationGrantCacheEntry cacheEntry =
                     AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
@@ -790,7 +789,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
                     .getAccessToken());
 
-            if (isNotBlank(accessTokenBean.getTokenId())) {
+            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
                 grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
             } else {
                 grantCacheEntry.setTokenId(null);
@@ -875,7 +874,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private boolean isRenewRefreshToken(String renewRefreshToken) {
 
-        if (isNotBlank(renewRefreshToken)) {
+        if (StringUtils.isNotBlank(renewRefreshToken)) {
             if (log.isDebugEnabled()) {
                 log.debug("Reading the Oauth application specific renew " +
                         "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
