@@ -67,6 +67,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AU
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AZP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.IDP_SESSION_KEY;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.NONCE;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.SESSION_IDENTIFIER;
 
 /**
  * Default IDToken generator for the OpenID Connect Implementation.
@@ -173,6 +174,9 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
             if (!OAuthConstants.GrantTypes.PASSWORD.equalsIgnoreCase(
                     tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getGrantType())) {
                 idpSessionKey = getIdpSessionKey(accessToken);
+                if (idpSessionKey == null && tokenReqMsgCtxt.getProperty(SESSION_IDENTIFIER) != null) {
+                    idpSessionKey = tokenReqMsgCtxt.getProperty(SESSION_IDENTIFIER).toString();
+                }
             }
         }
 
@@ -280,7 +284,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (ArrayUtils.isNotEmpty(amrValueArray)) {
             amrValues = Arrays.asList(amrValueArray);
         }
-        long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
+        long idTremoving session extending okenLifeTimeInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         if (log.isDebugEnabled()) {

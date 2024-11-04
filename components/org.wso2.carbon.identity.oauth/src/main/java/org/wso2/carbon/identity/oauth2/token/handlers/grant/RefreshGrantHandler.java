@@ -82,6 +82,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
@@ -96,6 +97,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStrin
 public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     public static final String PREV_ACCESS_TOKEN = "previousAccessToken";
+    public static final String SESSION_IDENTIFIER = "sessionIdentifier";
     public static final int LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT = 10;
     public static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
@@ -240,7 +242,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(validationBean.getScope());
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                 validationBean.getAccessTokenExtendedAttributes());
-        if (StringUtils.isNotBlank(validationBean.getTokenBindingReference()) && !NONE
+        if (isNotBlank(validationBean.getTokenBindingReference()) && !NONE
                 .equals(validationBean.getTokenBindingReference())) {
             Optional<TokenBinding> tokenBindingOptional = OAuthTokenPersistenceFactory.getInstance()
                     .getTokenBindingMgtDAO()
@@ -251,6 +253,47 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
+
+        /*
+        Add the session id from the last access token to OAuthTokenReqMessageContext. First check whether the
+        session Id can be resolved from the authorization grant cache. If not resolve the session id from the token
+        id session id mapping in the token binding table. Here we are assigning the session id of the refreshed
+        token as same as the previously issued access token.
+        */
+        String sessionId = getSessionContextIdentifier(validationBean.getAccessToken());
+        if (sessionId == null) {
+            String oldTokenId = validationBean.getTokenId();
+            sessionId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getSessionIdentifierByTokenId(oldTokenId);
+        }
+        if (sessionId != null) {
+            tokReqMsgCtx.addProperty(SESSION_IDENTIFIER, sessionId);
+        }
+    }
+
+    /**
+     * Return session context identifier from authorization grant cache. For authorization code flow, we mapped it
+     * against auth_code. For refresh key grant, we map the cache against the accesstoken.
+     *
+     * @param key Authorization code or accesstoken.
+     * @return SessionContextIdentifier.
+     */
+    private static String getSessionContextIdentifier(String key) {
+
+        String sessionContextIdentifier = null;
+        if (isNotBlank(key)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(key);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+            if (cacheEntry != null) {
+                sessionContextIdentifier = cacheEntry.getSessionContextIdentifier();
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Found session context identifier: %s for the obtained authorization code",
+                            sessionContextIdentifier));
+                }
+            }
+        }
+        return sessionContextIdentifier;
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
@@ -747,7 +790,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(accessTokenBean
                     .getAccessToken());
 
-            if (StringUtils.isNotBlank(accessTokenBean.getTokenId())) {
+            if (isNotBlank(accessTokenBean.getTokenId())) {
                 grantCacheEntry.setTokenId(accessTokenBean.getTokenId());
             } else {
                 grantCacheEntry.setTokenId(null);
@@ -832,7 +875,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     private boolean isRenewRefreshToken(String renewRefreshToken) {
 
-        if (StringUtils.isNotBlank(renewRefreshToken)) {
+        if (isNotBlank(renewRefreshToken)) {
             if (log.isDebugEnabled()) {
                 log.debug("Reading the Oauth application specific renew " +
                         "refresh token value as " + renewRefreshToken + " from the IDN_OIDC_PROPERTY table");
