@@ -82,7 +82,6 @@ public interface AccessTokenDAO {
 
     }
 
-
     /**
      * Get session identifier by token identifier.
      *

@@ -284,7 +284,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         if (ArrayUtils.isNotEmpty(amrValueArray)) {
             amrValues = Arrays.asList(amrValueArray);
         }
-        long idTremoving session extending okenLifeTimeInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
+        long idTokenLifeTimeInMillis = getIDTokenExpiryInMillis(oAuthAppDO);
         long currentTimeInMillis = Calendar.getInstance().getTimeInMillis();
 
         if (log.isDebugEnabled()) {
