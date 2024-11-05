@@ -272,9 +272,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     /**
      * Return session context identifier from authorization grant cache. For authorization code flow, we mapped it
-     * against auth_code. For refresh key grant, we map the cache against the accesstoken.
+     * against auth_code. For refresh token grant, we map the cache against the access token.
      *
-     * @param key Authorization code or accesstoken.
+     * @param key Authorization code or access token.
      * @return SessionContextIdentifier.
      */
     private static String getSessionContextIdentifier(String key) {
