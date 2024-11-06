@@ -272,7 +272,7 @@ public class OAuthAdminServiceImpl {
     /**
      * Get OAuth application data by the application name and tenant ID.
      *
-     * @param appName OAuth application name.
+     * @param appName  OAuth application name.
      * @param tenantID Tenant ID associated with the OAuth application.
      * @return <code>OAuthConsumerAppDTO</code> with application information.
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.

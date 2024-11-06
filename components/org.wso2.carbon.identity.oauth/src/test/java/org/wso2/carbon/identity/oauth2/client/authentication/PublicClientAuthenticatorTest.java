@@ -48,6 +48,7 @@ import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -82,13 +83,7 @@ public class PublicClientAuthenticatorTest {
     @Mock
     private ApplicationManagementService mockedApplicationManagementService;
 
-    @Mock
-    private OAuth2ServiceComponentHolder mockedInstance;
-
     private MockedStatic<IdentityUtil> identityUtil;
-    private MockedStatic<OAuth2Util> oAuth2Util;
-    private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic;
-    private MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic;
 
     @BeforeMethod
     public void setUp() {
@@ -100,26 +95,21 @@ public class PublicClientAuthenticatorTest {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
         );
         identityUtil = mockStatic(IdentityUtil.class);
-        oAuth2ServiceComponentHolderMockedStatic = mockStatic(OAuth2ServiceComponentHolder.class);
-        oAuthServerConfigurationMockedStatic = mockStatic(OAuthServerConfiguration.class);
         identityUtil.when(IdentityUtil::getIdentityConfigDirPath)
                 .thenReturn(System.getProperty("user.dir")
                         + File.separator + "src"
                         + File.separator + "test"
                         + File.separator + "resources"
                         + File.separator + "conf");
-        oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
+        OAuth2ServiceComponentHolder.getInstance().setApplicationMgtService(mockedApplicationManagementService);
+        OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(mockedOAuthAdminService);
         publicClientSupportedGrantTypes.add(GRANT_TYPE);
-        oAuth2Util = mockStatic(OAuth2Util.class);
     }
 
     @AfterMethod
     public void tearDown() {
 
         identityUtil.close();
-        oAuth2Util.close();
-        oAuth2ServiceComponentHolderMockedStatic.close();
-        oAuthServerConfigurationMockedStatic.close();
     }
 
     @Test
@@ -142,20 +132,24 @@ public class PublicClientAuthenticatorTest {
     @Test(dataProvider = "testCanAuthenticateData")
     public void testCanAuthenticate(String headerName, String headerValue, HashMap<String, List> bodyContent,
                                     boolean publicClient, boolean canHandle,
-                                    List<String> publicClientSupportedGrantTypes) throws Exception {
+                                    List<String> publicClientSupportedGrantTypes) {
 
-        OAuthAppDO appDO = new OAuthAppDO();
-        appDO.setBypassClientCredentials(publicClient);
-        appDO.setApplicationName(APPLICATION_NAME);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthServerConfiguration>
+                     oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class)) {
 
-        when(mockedServerConfig.getPublicClientSupportedGrantTypesList())
-                .thenReturn(publicClientSupportedGrantTypes);
-        lenient().when(mockedHttpServletRequest.getHeader(headerName)).thenReturn(headerValue);
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID, SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(appDO);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
+            when(mockedServerConfig.getPublicClientSupportedGrantTypesList())
+                    .thenReturn(publicClientSupportedGrantTypes);
 
-        assertEquals(publicClientAuthenticator.canAuthenticate(mockedHttpServletRequest, bodyContent, new
-                OAuthClientAuthnContext()), canHandle, "Expected can authenticate evaluation not received");
+            OAuthAppDO appDO = new OAuthAppDO();
+            appDO.setBypassClientCredentials(publicClient);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
+            lenient().when(mockedHttpServletRequest.getHeader(headerName)).thenReturn(headerValue);
+
+            assertEquals(publicClientAuthenticator.canAuthenticate(mockedHttpServletRequest, bodyContent,
+                    new OAuthClientAuthnContext()), canHandle, "Expected can authenticate evaluation not received");
+        }
     }
 
     /**
@@ -274,25 +268,31 @@ public class PublicClientAuthenticatorTest {
                                                             boolean isPublicClientParent, boolean canHandle)
             throws Exception {
 
-        OAuthAppDO appDO = new OAuthAppDO();
-        appDO.setBypassClientCredentials(isPublicClient);
-        appDO.setApplicationName(APPLICATION_NAME);
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthServerConfiguration>
+                     oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class)) {
 
-        OAuthConsumerAppDTO mainOAuthAppDO = new OAuthConsumerAppDTO();
-        mainOAuthAppDO.setBypassClientCredentials(isPublicClientParent);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
+            when(mockedServerConfig.getPublicClientSupportedGrantTypesList())
+                    .thenReturn(publicClientSupportedGrantTypes);
 
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(CLIENT_ID, SUPER_TENANT_DOMAIN_NAME))
-                .thenReturn(appDO);
-        oAuth2Util.when(() -> OAuth2Util.isApiBasedAuthenticationFlow(mockedHttpServletRequest)).thenReturn(true);
-        when(mockedServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(publicClientSupportedGrantTypes);
-        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(mockedInstance);
-        when(OAuth2ServiceComponentHolder.getApplicationMgtService()).thenReturn(mockedApplicationManagementService);
-        lenient().when(mockedInstance.getOAuthAdminService()).thenReturn(mockedOAuthAdminService);
-        lenient().when(mockedOAuthAdminService.getOAuthApplicationDataByAppName(APPLICATION_NAME, 0))
-                .thenReturn(mainOAuthAppDO);
-        lenient().when(mockedHttpServletRequest.getHeader(SIMPLE_CASE_AUTHORIZATION_HEADER)).thenReturn(null);
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            oAuthAppDO.setBypassClientCredentials(isPublicClient);
+            oAuthAppDO.setApplicationName(APPLICATION_NAME);
 
-        assertEquals(publicClientAuthenticator.canAuthenticate(mockedHttpServletRequest, bodyContent,
-                new OAuthClientAuthnContext()), canHandle, "Expected authenticate evaluation not received");
+            OAuthConsumerAppDTO mainOAuthAppDO = new OAuthConsumerAppDTO();
+            mainOAuthAppDO.setBypassClientCredentials(isPublicClientParent);
+
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                    .thenReturn(oAuthAppDO);
+            oAuth2Util.when(() -> OAuth2Util.isApiBasedAuthenticationFlow(mockedHttpServletRequest))
+                    .thenReturn(true);
+            lenient().when(mockedOAuthAdminService.getOAuthApplicationDataByAppName(APPLICATION_NAME, 0))
+                    .thenReturn(mainOAuthAppDO);
+            lenient().when(mockedHttpServletRequest.getHeader(SIMPLE_CASE_AUTHORIZATION_HEADER)).thenReturn(null);
+
+            assertEquals(publicClientAuthenticator.canAuthenticate(mockedHttpServletRequest, bodyContent,
+                    new OAuthClientAuthnContext()), canHandle, "Expected authenticate evaluation not received");
+        }
     }
 }
