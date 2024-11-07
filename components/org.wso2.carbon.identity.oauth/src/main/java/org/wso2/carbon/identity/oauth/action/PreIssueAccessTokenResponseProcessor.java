@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.action;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.ActionExecutionLogConstants;
@@ -80,8 +81,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     @Override
     public ActionExecutionStatus<Success> processSuccessResponse(Map<String, Object> eventContext, Event event,
-                                                                 ActionInvocationSuccessResponse
-                                                                         actionInvocationSuccessResponse)
+                                                        ActionInvocationSuccessResponse actionInvocationSuccessResponse)
             throws ActionExecutionResponseProcessorException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
@@ -201,9 +201,9 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     private boolean isServerError(String errorCode) {
 
-        return (errorCode.equalsIgnoreCase("internal_server_error".trim()) ||
-                errorCode.equalsIgnoreCase("server_error".trim()) ||
-                errorCode.equalsIgnoreCase("500"));
+        return (errorCode.equalsIgnoreCase("internal_server_error") ||
+                errorCode.equalsIgnoreCase("server_error") ||
+                errorCode.equalsIgnoreCase(String.valueOf(HttpStatus.SC_INTERNAL_SERVER_ERROR)));
     }
 
     @Override

@@ -145,7 +145,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
 
         ActionExecutionStatus<?> executionStatus = executePreIssueAccessTokenActions(validationBean, tokReqMsgCtx);
-        // TODO: Remove the null check for the executionStatus once the unit tests are onboarded.
+
         if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
                 executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
             return getFailureOrErrorResponseDTO(executionStatus);
