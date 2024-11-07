@@ -81,7 +81,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     @Override
     public ActionExecutionStatus<Success> processSuccessResponse(Map<String, Object> eventContext, Event event,
-                                                        ActionInvocationSuccessResponse actionInvocationSuccessResponse)
+                                                                 ActionInvocationSuccessResponse
+                                                                         actionInvocationSuccessResponse)
             throws ActionExecutionResponseProcessorException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
@@ -163,9 +164,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     @Override
-    public ActionExecutionStatus<Failure> processFailureResponse(Map<String, Object> eventContext,
-                                                        Event actionEvent,
-                                                        ActionInvocationFailureResponse failureResponse) throws
+    public ActionExecutionStatus<Failure> processFailureResponse(Map<String, Object> eventContext, Event actionEvent,
+                                                                 ActionInvocationFailureResponse failureResponse) throws
             ActionExecutionResponseProcessorException {
 
         handleInvalidErrorCodes(failureResponse.getFailureReason());
