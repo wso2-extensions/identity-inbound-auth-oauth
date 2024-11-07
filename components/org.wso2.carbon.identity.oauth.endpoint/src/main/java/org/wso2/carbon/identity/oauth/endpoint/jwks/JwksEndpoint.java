@@ -30,15 +30,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
-import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
-import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.security.KeyStore;
 import java.security.cert.Certificate;
@@ -79,22 +79,21 @@ public class JwksEndpoint {
 
         try {
             final KeyStore keystore;
-
+            List<CertificateInfo> certificateInfoList = new ArrayList<>();
             if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(tenantDomain)) {
-                keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(
-                        tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(MultitenantConstants.SUPER_TENANT_ID);
+                keystore = keyStoreManager.getPrimaryKeyStore();
             } else {
                 try {
                     int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
                     IdentityTenantUtil.initializeRegistry(tenantId);
                     FrameworkUtils.startTenantFlow(tenantDomain);
-                    keystore = IdentityKeyStoreResolver.getInstance().getKeyStore(
-                            tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+                    KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+                    keystore = keyStoreManager.getKeyStore(generateKSNameFromDomainName(tenantDomain));
                 } finally {
                     FrameworkUtils.endTenantFlow();
                 }
             }
-            List<CertificateInfo> certificateInfoList = new ArrayList<>();
             Enumeration enumeration = keystore.aliases();
             while (enumeration.hasMoreElements()) {
                 String alias = (String) enumeration.nextElement();
@@ -249,6 +248,16 @@ public class JwksEndpoint {
             log.error(errorMesage);
         }
         return errorMesage;
+    }
+
+    /**
+     * This method generates the key store file name from the Domain Name.
+     *
+     * @return key store file name
+     */
+    private String generateKSNameFromDomainName(String tenantDomain) {
+
+        return KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
     }
 
     /**
