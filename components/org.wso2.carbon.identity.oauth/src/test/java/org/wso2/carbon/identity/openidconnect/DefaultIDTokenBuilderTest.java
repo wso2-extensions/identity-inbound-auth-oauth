@@ -74,10 +74,9 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
-import org.wso2.carbon.identity.secret.mgt.core.IdPSecretsProcessor;
-import org.wso2.carbon.identity.secret.mgt.core.SecretsProcessor;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
+import org.wso2.carbon.idp.mgt.util.IdPSecretsProcessor;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.io.InputStream;
@@ -155,9 +154,7 @@ public class DefaultIDTokenBuilderTest {
         configuration.put("OAuth.OpenIDConnect.IDTokenIssuerID", "https://localhost:9443/oauth2/token");
         configuration.put(OAuthConstants.MTLS_HOSTNAME, "https://mtls.localhost:9443/");
         setPrivateStaticField(IdentityUtil.class, "configuration", configuration);
-        SecretsProcessor<IdentityProvider> identityProviderSecretsProcessor = mock(
-                IdPSecretsProcessor.class);
-        IdpMgtServiceComponentHolder.getInstance().setIdPSecretsProcessorService(identityProviderSecretsProcessor);
+        IdPSecretsProcessor identityProviderSecretsProcessor = mock(IdPSecretsProcessor.class);
         when(identityProviderSecretsProcessor.encryptAssociatedSecrets(any())).thenAnswer(
                 invocation -> invocation.getArguments()[0]);
         when(identityProviderSecretsProcessor.decryptAssociatedSecrets(any())).thenAnswer(
