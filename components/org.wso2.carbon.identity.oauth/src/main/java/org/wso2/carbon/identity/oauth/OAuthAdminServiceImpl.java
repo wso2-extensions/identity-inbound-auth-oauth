@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -259,16 +259,31 @@ public class OAuthAdminServiceImpl {
     /**
      * Get OAuth application data by the application name.
      *
-     * @param appName OAuth application name
-     * @return <code>OAuthConsumerAppDTO</code> with application information
+     * @param appName OAuth application name.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
      */
     public OAuthConsumerAppDTO getOAuthApplicationDataByAppName(String appName) throws IdentityOAuthAdminException {
 
+        int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        return getOAuthApplicationDataByAppName(appName, tenantID);
+    }
+
+    /**
+     * Get OAuth application data by the application name and tenant ID.
+     *
+     * @param appName  OAuth application name.
+     * @param tenantID Tenant ID associated with the OAuth application.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
+     * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
+     */
+    public OAuthConsumerAppDTO getOAuthApplicationDataByAppName(String appName, int tenantID)
+            throws IdentityOAuthAdminException {
+
         OAuthConsumerAppDTO dto;
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
-            OAuthAppDO app = dao.getAppInformationByAppName(appName);
+            OAuthAppDO app = dao.getAppInformationByAppName(appName, tenantID);
             if (app != null) {
                 dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
@@ -276,10 +291,12 @@ public class OAuthAdminServiceImpl {
             }
             return dto;
         } catch (InvalidOAuthClientException e) {
-            String msg = "Cannot find a valid OAuth client with application name: " + appName;
+            String msg = "Cannot find a valid OAuth client with application name: " + appName
+                    + " in tenant: " + tenantID;
             throw handleClientError(INVALID_OAUTH_CLIENT, msg);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while retrieving the app information by app name: " + appName, e);
+            throw handleError("Error while retrieving the app information by app name: " + appName
+                    + " in tenant: " + tenantID, e);
         }
     }
 
