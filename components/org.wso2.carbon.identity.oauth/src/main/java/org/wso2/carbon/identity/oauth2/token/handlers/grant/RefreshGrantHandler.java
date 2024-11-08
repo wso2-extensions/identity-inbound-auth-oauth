@@ -191,8 +191,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         accessTokenResponse.setError(true);
         if (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED) {
             Failure failureResponse = (Failure) executionStatus.getResponse();
-            accessTokenResponse.setErrorCode(failureResponse.getReason());
-            accessTokenResponse.setErrorMsg(failureResponse.getDescription());
+            accessTokenResponse.setErrorCode(failureResponse.getFailureReason());
+            accessTokenResponse.setErrorMsg(failureResponse.getFailureDescription());
         } else if (executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR) {
             Error errorResponse = (Error) executionStatus.getResponse();
             accessTokenResponse.setErrorCode(errorResponse.getErrorMessage());
