@@ -38,23 +38,26 @@ import javax.servlet.http.HttpServletRequest;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TYPE;
 
 /**
- * Event handler to support cross protocol logout.
+ * This class handles logout events for OpenID Connect (OIDC) sessions in WSO2 Identity Server.
+ * The handler performs necessary session termination tasks, including retrieving the OPBS
+ * (OpenID Provider Browser State) cookie and removing the associated session state.
+ *
  */
 public class OIDCLogoutEventHandler extends AbstractEventHandler {
 
-    private static final Log log = LogFactory.getLog(OIDCLogoutEventHandler.class);
-    private static final String COMMON_AUTH_CALLER_PATH = "commonAuthCallerPath";
+    private static final Log LOG = LogFactory.getLog(OIDCLogoutEventHandler.class);
+    private static final String OIDC_LOGOUT_EVENT_HANDLER = "OIDCLogoutEventHandler";
 
     @Override
     public void handleEvent(Event event) throws IdentityEventException {
 
-        if (log.isDebugEnabled()) {
-            log.debug(event.getEventName() + " event received to OIDCLogoutEventHandler.");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug(event.getEventName() + " event received to " + OIDC_LOGOUT_EVENT_HANDLER);
         }
 
         if (isLogoutInitiatedFromOIDCApp(event)) {
-            if (log.isDebugEnabled()) {
-                log.debug("This is triggered from a OIDC service provider. Hence this request will not be handled "
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("This is triggered from a OIDC service provider. Hence this request will not be handled "
                         + "by OIDCLogoutServlet");
             }
             return;
@@ -62,8 +65,8 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         if (StringUtils.equals(event.getEventName(), EventName.SESSION_TERMINATE.name())) {
             String opbsCookieId = getopbsCookieId(event);
             if (StringUtils.isNotEmpty(opbsCookieId)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("OPBS cookie with value " + opbsCookieId + " found. " +
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("OPBS cookie with value " + opbsCookieId + " found. " +
                             "Initiating session termination.");
                 }
                 HttpServletRequest request = getHttpRequestFromEvent(event);
@@ -76,8 +79,8 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
                 LogoutRequestSender.getInstance().sendLogoutRequests(opbsCookieId, tenantDomain);
                 OIDCSessionManagementUtil.getSessionManager().removeOIDCSessionState(opbsCookieId, tenantDomain);
             } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("There is no valid OIDC based service provider in the session to be terminated by " +
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("There is no valid OIDC based service provider in the session to be terminated by " +
                             "the OIDCLogoutEventHandler.");
                 }
             }
@@ -87,22 +90,17 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
     @Override
     public String getName() {
 
-        return "OIDCLogoutEventHandler";
+        return OIDC_LOGOUT_EVENT_HANDLER;
     }
 
     private boolean isLogoutInitiatedFromOIDCApp(Event event) {
 
         HttpServletRequest request = getHttpRequestFromEvent(event);
-        if (request != null) {
-            if (StringUtils.equals(request.getParameter(TYPE), FrameworkConstants.RequestType.CLAIM_TYPE_OIDC)) {
-                /* If a logout request is triggered from an OIDC app then the OIDCLogoutServlet
-                and OIDCLogoutEventHandler both are triggered and the logout request is handled in both
-                places. https://github.com/wso2/product-is/issues/6418
-                */
-                return true;
-            }
-        }
-        return false;
+        /* If a logout request is triggered from an OIDC app then the OIDCLogoutServlet
+        and OIDCLogoutEventHandler both are triggered and the logout request is handled in both
+        places. https://github.com/wso2/product-is/issues/6418
+        */
+        return request != null && FrameworkConstants.RequestType.CLAIM_TYPE_OIDC.equals(request.getParameter(TYPE));
     }
 
     private String getopbsCookieId(Event event) {
@@ -115,8 +113,8 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
         }
         if (StringUtils.isBlank(opbsCookie)) {
             // If opbscookie is not found in the request, get from session context.
-            if (log.isDebugEnabled()) {
-                log.debug("HttpServletRequest object is not found in the event. Hence getting opbs cookie from the " +
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("HttpServletRequest object is not found in the event. Hence getting opbs cookie from the " +
                         "session context.");
             }
             opbsCookie = getOpbsCookieFromContext(event);
@@ -152,9 +150,7 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
                     (SessionContext) event.getEventProperties().get(EventProperty.SESSION_CONTEXT);
             return (String) sessionContext.getProperty(OIDCSessionConstants.OPBS_COOKIE_ID);
         }
-        if (log.isDebugEnabled()) {
-            log.debug("Since the session context is not found in the event, Could not get the opbs cookie value");
-        }
+        LOG.debug("Since the session context is not found in the event, Could not get the opbs cookie value");
         return null;
     }
 
@@ -171,8 +167,8 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
                     (SessionContext) event.getEventProperties().get(EventProperty.SESSION_CONTEXT);
             return (String) sessionContext.getProperty(FrameworkUtils.TENANT_DOMAIN);
         }
-        if (log.isDebugEnabled()) {
-            log.debug("Since the session context is not found in the event, Could not get the tenant domain from " +
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Since the session context is not found in the event, Could not get the tenant domain from " +
                     "session context.");
         }
         return null;
@@ -181,16 +177,5 @@ public class OIDCLogoutEventHandler extends AbstractEventHandler {
     private HttpServletRequest getHttpRequestFromEvent(Event event) {
 
         return (HttpServletRequest) event.getEventProperties().get(EventProperty.REQUEST);
-    }
-
-    private boolean hasOPBSCookieValue(Cookie opbsCookie) {
-
-        String opbsCookieValue = null;
-
-        if (opbsCookie != null) {
-            opbsCookieValue = opbsCookie.getValue();
-        }
-
-        return StringUtils.isNotBlank(opbsCookieValue);
     }
 }

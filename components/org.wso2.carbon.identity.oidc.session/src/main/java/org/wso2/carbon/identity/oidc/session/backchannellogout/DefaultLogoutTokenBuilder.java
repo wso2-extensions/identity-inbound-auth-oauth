@@ -70,7 +70,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getResidentIdpEnti
  */
 public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
-    private static final Log log = LogFactory.getLog(DefaultLogoutTokenBuilder.class);
+    private static final Log LOG = LogFactory.getLog(DefaultLogoutTokenBuilder.class);
     private OAuthServerConfiguration config = null;
     private JWSAlgorithm signatureAlgorithm = null;
     private static final String OPENID_IDP_ENTITY_ID = "IdPEntityId";
@@ -85,6 +85,7 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
     }
 
     @Override
+    @Deprecated
     public Map<String, String> buildLogoutToken(HttpServletRequest request)
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
@@ -102,8 +103,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     try {
                         oAuthAppDO = getOAuthAppDO(clientID);
                     } catch (InvalidOAuthClientException e) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("The application with client id: " + clientID
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("The application with client id: " + clientID
                                     + " does not exists. This application may be deleted after"
                                     + " this session is created. So skipping it in logout token list.", e);
                         }
@@ -154,8 +155,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         try {
             oAuthAppDO = getOAuthAppDO(clientID);
         } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("The application with client id: " + clientID
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("The application with client id: " + clientID
                         + " does not exists. This application may be deleted after"
                         + " this session is created. So skipping it in logout token list.", e);
             }
@@ -169,8 +170,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     getSigningTenantDomain(oAuthAppDO)).serialize();
             logoutTokenList.put(logoutToken, backChannelLogoutUrl);
 
-            if (log.isDebugEnabled()) {
-                log.debug("Logout token created for the client: " + clientID);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Logout token created for the client: " + clientID);
             }
         }
     }
@@ -231,21 +232,21 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                     JWT decryptedIDToken = OIDCSessionManagementUtil.decryptWithRSA(tenantDomain, idToken);
                     clientId = OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
                 } catch (ParseException e) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Error in extracting the client ID from the ID token : " + idToken);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Error in extracting the client ID from the ID token : " + idToken);
                     }
                 }
                 return clientId;
             }
             clientId = getClientIdFromIDTokenHint(idToken);
         } else {
-            log.debug("IdTokenHint is not found in the request ");
+            LOG.debug("IdTokenHint is not found in the request ");
             return null;
         }
         if (validateIdTokenHint(clientId, idToken)) {
             return clientId;
         } else {
-            log.debug("Id Token is not valid");
+            LOG.debug("Id Token is not valid");
             return null;
         }
     }
@@ -309,16 +310,6 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
         String sidClaim = sessionState.getSidClaim();
         return sidClaim;
-    }
-
-    private IdentityProvider getResidentIdp(String tenantDomain) throws IdentityOAuth2Exception {
-
-        try {
-            return IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
-        } catch (IdentityProviderManagementException e) {
-            String errorMsg = String.format(ERROR_GET_RESIDENT_IDP, tenantDomain);
-            throw new IdentityOAuth2Exception(errorMsg, e);
-        }
     }
 
     /**
@@ -428,8 +419,8 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
             try {
                 clientId = extractClientFromIdToken(idTokenHint);
             } catch (ParseException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Error while decoding the ID Token Hint: " + idTokenHint, e);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error while decoding the ID Token Hint: " + idTokenHint, e);
                 }
             }
         }
@@ -482,12 +473,12 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error occurred while validating id token signature.", e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error occurred while validating id token signature.", e);
             }
             return false;
         } catch (Exception e) {
-            log.error("Error occurred while validating id token signature.", e);
+            LOG.error("Error occurred while validating id token signature.", e);
             return false;
         }
     }
