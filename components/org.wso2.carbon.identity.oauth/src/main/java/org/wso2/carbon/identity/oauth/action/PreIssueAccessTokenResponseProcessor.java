@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.action;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.ActionExecutionLogConstants;
@@ -28,15 +29,23 @@ import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcesso
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionResponseProcessorException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationErrorResponse;
+import org.wso2.carbon.identity.action.execution.model.ActionInvocationFailureResponse;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessResponse;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
+import org.wso2.carbon.identity.action.execution.model.Error;
+import org.wso2.carbon.identity.action.execution.model.ErrorStatus;
 import org.wso2.carbon.identity.action.execution.model.Event;
+import org.wso2.carbon.identity.action.execution.model.FailedStatus;
+import org.wso2.carbon.identity.action.execution.model.Failure;
 import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
+import org.wso2.carbon.identity.action.execution.model.Success;
+import org.wso2.carbon.identity.action.execution.model.SuccessStatus;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
 import org.wso2.carbon.identity.oauth.action.model.OperationExecutionResult;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -71,8 +80,9 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     @Override
-    public ActionExecutionStatus processSuccessResponse(Map<String, Object> eventContext, Event event,
-                                                        ActionInvocationSuccessResponse actionInvocationSuccessResponse)
+    public ActionExecutionStatus<Success> processSuccessResponse(Map<String, Object> eventContext, Event event,
+                                                                 ActionInvocationSuccessResponse
+                                                                         actionInvocationSuccessResponse)
             throws ActionExecutionResponseProcessorException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
@@ -110,7 +120,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
         updateTokenMessageContext(tokenMessageContext, responseAccessToken);
 
-        return new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, eventContext);
+        return new SuccessStatus.Builder().setResponseContext(eventContext).build();
     }
 
     private void logOperationExecutionResults(ActionType actionType,
@@ -154,14 +164,63 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     @Override
-    public ActionExecutionStatus processErrorResponse(Map<String, Object> map, Event event,
-                                                      ActionInvocationErrorResponse actionInvocationErrorResponse)
+    public ActionExecutionStatus<Failure> processFailureResponse(Map<String, Object> eventContext, Event actionEvent,
+                                                                 ActionInvocationFailureResponse failureResponse) throws
+            ActionExecutionResponseProcessorException {
+
+        handleInvalidErrorCodes(failureResponse.getFailureReason());
+        return new FailedStatus(new Failure(failureResponse.getFailureReason(),
+                failureResponse.getFailureDescription()));
+    }
+
+    /**
+     * This method validates the failedReason attribute in the FAILED status.
+     * @param errorCode
+     * @throws ActionExecutionResponseProcessorException
+     */
+    private void handleInvalidErrorCodes(String errorCode) throws ActionExecutionResponseProcessorException {
+
+        // According to the current API contract server_error is considered as an invalid value for the failureReason
+        // attribute.
+        if (isServerError(errorCode)) {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        ActionExecutionLogConstants.ACTION_EXECUTION_COMPONENT_ID,
+                        ActionExecutionLogConstants.ActionIDs.VALIDATE_ACTION_RESPONSE);
+                diagLogBuilder
+                        .resultMessage("Invalid value for failedReason attribute at FAILED state.")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                        .resultStatus(DiagnosticLog.ResultStatus.FAILED)
+                        .build();
+                LoggerUtils.triggerDiagnosticLogEvent(diagLogBuilder);
+            }
+            throw new ActionExecutionResponseProcessorException("FAILED status should not be used to process" +
+                    " server errors.");
+        }
+    }
+
+    private boolean isServerError(String errorCode) {
+
+        return (errorCode.equalsIgnoreCase("internal_server_error") ||
+                errorCode.equalsIgnoreCase("server_error") ||
+                errorCode.equalsIgnoreCase(String.valueOf(HttpStatus.SC_INTERNAL_SERVER_ERROR)));
+    }
+
+    @Override
+    public ActionExecutionStatus<Error> processErrorResponse(Map<String, Object> map, Event event,
+                                                             ActionInvocationErrorResponse
+                                                                     actionInvocationErrorResponse)
             throws ActionExecutionResponseProcessorException {
 
-        //todo: need to implement to process the error so that if a processable error is received
-        // it is communicated to the client.
-        // we will look into this as we go along with other extension types validating the way to model this.
-        return null;
+        /*
+         * Client and server errors that occur when calling the service implementing the extension are reported
+         * as Internal_Server_Error.
+         * The error description could be utilized to offer additional context by passing along the
+         * original error returned by the service implementing the extension.
+         * However, currently this value is not propagated by the endpoint to comply with OAuth specification.
+         */
+        return new ErrorStatus(new Error(OAuth2ErrorCodes.SERVER_ERROR,
+                actionInvocationErrorResponse.getErrorDescription()));
     }
 
     private void updateTokenMessageContext(OAuthTokenReqMessageContext tokenMessageContext,
