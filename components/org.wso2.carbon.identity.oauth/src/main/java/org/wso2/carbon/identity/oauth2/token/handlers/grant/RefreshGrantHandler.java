@@ -812,8 +812,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                             Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
                 }
             } catch (ActionExecutionException e) {
-                // If error ignore and proceed
-                log.error("Error while executing pre issue access token action", e);
+                throw new IdentityOAuth2Exception("Error occurred while executing pre issue access token actions.", e);
             }
         }
         return executionStatus;
