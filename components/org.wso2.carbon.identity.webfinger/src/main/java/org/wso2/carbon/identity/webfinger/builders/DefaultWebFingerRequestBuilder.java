@@ -42,7 +42,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class DefaultWebFingerRequestBuilder implements WebFingerRequestBuilder {
 
-    private static final Log log = LogFactory.getLog(DefaultWebFingerRequestBuilder.class);
+    private static final Log LOG = LogFactory.getLog(DefaultWebFingerRequestBuilder.class);
 
     @Override
     public WebFingerRequest buildRequest(HttpServletRequest request) throws WebFingerEndpointException {
@@ -59,7 +59,7 @@ public class DefaultWebFingerRequestBuilder implements WebFingerRequestBuilder {
         webFingerRequest.setResource(resource);
 
         if (StringUtils.isBlank(resource)) {
-            log.warn("Can't normalize null or empty URI: " + resource);
+            LOG.warn("Can't normalize null or empty URI: " + resource);
             throw new WebFingerEndpointException(WebFingerConstants.ERROR_CODE_INVALID_RESOURCE, "Null or empty URI.");
 
         } else {

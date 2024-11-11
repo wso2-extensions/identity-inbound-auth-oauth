@@ -41,6 +41,4 @@ public class WebLink {
     public void setRel(String rel) {
         this.rel = rel;
     }
-
-
 }
