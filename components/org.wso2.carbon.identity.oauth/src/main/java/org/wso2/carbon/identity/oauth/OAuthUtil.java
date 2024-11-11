@@ -690,7 +690,7 @@ public final class OAuthUtil {
                                 authorizationCode.getAuthorizationCode())));
                 OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                         .updateAuthorizationCodeState(authorizationCode.getAuthorizationCode(),
-                                OAuthConstants.AuthorizationCodeState.REVOKED);
+                                authorizationCode.getAuthzCodeId(), OAuthConstants.AuthorizationCodeState.REVOKED);
             }
         } catch (IdentityOAuth2Exception e) {
             String errorMsg = "Error occurred while revoking authorization codes for user: " + username;

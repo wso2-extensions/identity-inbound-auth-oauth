@@ -282,7 +282,7 @@ public class AuthorizationCodeDAOImplTest {
                     .thenAnswer(
                             (Answer<Void>) invocation -> null);
             authorizationCodeDAO.updateAuthorizationCodeState(authzCodeDO1.getAuthorizationCode(),
-                    OAuthConstants.AuthorizationCodeState.REVOKED);
+                    authzCodeDO1.getAuthzCodeId(), OAuthConstants.AuthorizationCodeState.REVOKED);
             Set<String> availableAuthzCodes = new HashSet<>();
             availableAuthzCodes.add(authzCode2);
 

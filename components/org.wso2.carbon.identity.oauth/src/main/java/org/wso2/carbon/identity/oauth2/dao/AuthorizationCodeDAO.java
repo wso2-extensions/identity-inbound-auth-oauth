@@ -66,6 +66,8 @@ public interface AuthorizationCodeDAO {
     AuthorizationCodeValidationResult validateAuthorizationCode(String consumerKey, String authorizationKey)
             throws IdentityOAuth2Exception;
 
+    void updateAuthorizationCodeState(String authzCode, String codeId, String newState) throws IdentityOAuth2Exception;
+
     void updateAuthorizationCodeState(String authzCode, String newState) throws IdentityOAuth2Exception;
 
     void deactivateAuthorizationCode(AuthzCodeDO authzCodeDO) throws

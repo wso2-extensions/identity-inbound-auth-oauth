@@ -1543,12 +1543,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeUpdate();
 
-                // To revoke request objects which have persisted against the access token.
-                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
+
                 if (isTokenCleanupFeatureEnabled) {
                     oldTokenCleanupObject.cleanupTokenByTokenValue(
                             getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]), connection);
+                    /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                        Hence, invoke the event listener to revoke the request objects.*/
+                    if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                        OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
+                                TOKEN_STATE_REVOKED);
+                    }
                 }
             } catch (SQLException e) {
                 // IdentityDatabaseUtil.rollbackTransaction(connection);
