@@ -48,7 +48,7 @@ import javax.ws.rs.core.HttpHeaders;
  */
 public class ClaimProviderImpl implements ClaimProvider {
 
-    private static final Log log = LogFactory.getLog(ClaimProviderImpl.class);
+    private static final Log LOG = LogFactory.getLog(ClaimProviderImpl.class);
 
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext,
@@ -61,15 +61,11 @@ public class ClaimProviderImpl implements ClaimProvider {
         if (previousSession == null) {
             // If there is no previous browser session, generate new sid value.
             claimValue = UUID.randomUUID().toString();
-            if (log.isDebugEnabled()) {
-                log.debug("sid claim is generated for auth request. ");
-            }
+            LOG.debug("sid claim is generated for auth request.");
         } else {
             // Previous browser session exists, get sid claim from OIDCSessionState.
             claimValue = previousSession.getSidClaim();
-            if (log.isDebugEnabled()) {
-                log.debug("sid claim is found in the session state");
-            }
+            LOG.debug("sid claim is found in the session state.");
         }
         additionalClaims.put(OAuthConstants.OIDCClaims.SESSION_ID_CLAIM, claimValue);
         oAuth2AuthorizeRespDTO.setOidcSessionId(claimValue);
@@ -104,16 +100,12 @@ public class ClaimProviderImpl implements ClaimProvider {
                 claimValue = previousSession.getSidClaim();
             }
         } else {
-            if (log.isDebugEnabled()) {
-                log.debug("AccessCode is null. Possibly a back end grant");
-            }
+            LOG.debug("AccessCode is null. Possibly a back end grant");
             return additionalClaims;
         }
 
         if (claimValue != null) {
-            if (log.isDebugEnabled()) {
-                log.debug("sid claim is found in the session state");
-            }
+            LOG.debug("sid claim is found in the session state");
             additionalClaims.put("sid", claimValue);
         }
         return additionalClaims;
@@ -122,7 +114,7 @@ public class ClaimProviderImpl implements ClaimProvider {
     /**
      * Return previousSessionState using opbs cookie.
      *
-     * @param oAuthAuthzReqMessageContext
+     * @param oAuthAuthzReqMessageContext OAuthAuthzReqMessageContext.
      * @return OIDCSession state
      */
     private OIDCSessionState getSessionState(OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
@@ -131,10 +123,9 @@ public class ClaimProviderImpl implements ClaimProvider {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (OIDCSessionConstants.OPBS_COOKIE_ID.equals(cookie.getName())) {
-                    OIDCSessionState previousSessionState = OIDCSessionManagementUtil.getSessionManager()
+                    return OIDCSessionManagementUtil.getSessionManager()
                             .getOIDCSessionState(cookie.getValue(), oAuthAuthzReqMessageContext.
                                     getAuthorizationReqDTO().getLoggedInTenantDomain());
-                    return previousSessionState;
                 }
             }
         }
