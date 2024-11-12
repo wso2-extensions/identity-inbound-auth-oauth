@@ -32,6 +32,7 @@ package org.wso2.carbon.identity.oauth2.model;
 public class TokenIssuerDO {
 
     private String tokenType;
+    private String accessTokenType;
     private String tokenImplClass;
     private boolean persistAccessTokenAlias;
 
@@ -49,12 +50,44 @@ public class TokenIssuerDO {
     public TokenIssuerDO() {
     }
 
+    /**
+     * @deprecated Use {@link #getAccessTokenType()} instead.
+     */
+    @Deprecated
     public String getTokenType() {
         return tokenType;
     }
 
+    /**
+     * @deprecated Use {@link #setAccessTokenType(String)} instead.
+     */
+    @Deprecated
     public void setTokenType(String tokenType) {
         this.tokenType = tokenType;
+    }
+
+    /**
+     * Get the token issuer name.
+     * @return the token issuer name
+     */
+    public String getTokenIssuerName() {
+        return tokenType;
+    }
+
+    /**
+     * Set the token issuer name.
+     * @param tokenIssuerName the token issuer name to set
+     */
+    public void setTokenIssuerName(String tokenIssuerName) {
+        this.tokenType = tokenIssuerName;
+    }
+
+    public String getAccessTokenType() {
+        return accessTokenType;
+    }
+
+    public void setAccessTokenType(String accessTokenType) {
+        this.accessTokenType = accessTokenType;
     }
 
     public String getTokenImplClass() {
