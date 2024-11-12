@@ -98,6 +98,7 @@ import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStrin
 public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
     public static final String PREV_ACCESS_TOKEN = "previousAccessToken";
+    public static final String SESSION_IDENTIFIER = "sessionIdentifier";
     public static final int LAST_ACCESS_TOKEN_RETRIEVAL_LIMIT = 10;
     public static final int ALLOWED_MINIMUM_VALIDITY_PERIOD = 1000;
     public static final String DEACTIVATED_ACCESS_TOKEN = "DeactivatedAccessToken";
@@ -274,6 +275,47 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
+
+        /*
+        Add the session id from the last access token to OAuthTokenReqMessageContext. First check whether the
+        session Id can be resolved from the authorization grant cache. If not resolve the session id from the token
+        id session id mapping in the token binding table. Here we are assigning the session id of the refreshed
+        token as same as the previously issued access token.
+        */
+        String sessionId = getSessionContextIdentifier(validationBean.getAccessToken());
+        if (sessionId == null) {
+            String oldTokenId = validationBean.getTokenId();
+            sessionId = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getSessionIdentifierByTokenId(oldTokenId);
+        }
+        if (sessionId != null) {
+            tokReqMsgCtx.addProperty(SESSION_IDENTIFIER, sessionId);
+        }
+    }
+
+    /**
+     * Return session context identifier from authorization grant cache. For authorization code flow, we mapped it
+     * against auth_code. For refresh token grant, we map the cache against the access token.
+     *
+     * @param key Authorization code or access token.
+     * @return SessionContextIdentifier.
+     */
+    private static String getSessionContextIdentifier(String key) {
+
+        String sessionContextIdentifier = null;
+        if (StringUtils.isNotBlank(key)) {
+            AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(key);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+            if (cacheEntry != null) {
+                sessionContextIdentifier = cacheEntry.getSessionContextIdentifier();
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Found session context identifier: %s for the obtained authorization code",
+                            sessionContextIdentifier));
+                }
+            }
+        }
+        return sessionContextIdentifier;
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
