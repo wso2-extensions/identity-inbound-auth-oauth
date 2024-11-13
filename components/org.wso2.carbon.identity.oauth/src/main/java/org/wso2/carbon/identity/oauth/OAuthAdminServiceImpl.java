@@ -1008,7 +1008,6 @@ public class OAuthAdminServiceImpl {
                 // We only trigger the access token claims migration if the following conditions are met.
                 // 1. The AT claims separation is enabled at server level.
                 // 2. The AT claims separation is not enabled at app level.
-                // 3. The access token claims are empty.
                 try {
                     if (!isAccessTokenClaimsSeparationEnabledForApp(oAuthAppDO.getOauthConsumerKey(), tenantDomain)) {
                         // Add requested claims as access token claims.
