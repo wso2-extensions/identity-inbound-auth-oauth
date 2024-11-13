@@ -103,9 +103,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
 
-    private static final boolean renewWithoutRevokingExistingEnabled = Boolean.parseBoolean(IdentityUtil.
-            getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
-
     @Override
     public void init() throws IdentityOAuth2Exception {
         callbackManager = new OAuthCallbackManager();
@@ -192,7 +189,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             based on the config.
             */
             boolean isJWTAndRenewEnabled = (JWT.equalsIgnoreCase(tokenIssuerName) || JWT.equalsIgnoreCase(tokenType))
-                    && renewWithoutRevokingExistingEnabled;
+                    && getRenewWithoutRevokingExistingStatus();
             boolean isGrantTypeAllowed = OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
                     .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType());
 
@@ -244,6 +241,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, true,
                     oauthTokenIssuer);
         }
+    }
+
+    private boolean getRenewWithoutRevokingExistingStatus() {
+
+        return Boolean.parseBoolean(IdentityUtil.
+                getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
+
     }
 
     private void setDetailsToMessageContext(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingToken) {
@@ -1242,7 +1246,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
 
         if (JWT.equalsIgnoreCase(tokenIssuerName) || JWT.equalsIgnoreCase(tokenType)) {
-            if (renewWithoutRevokingExistingEnabled && tokReqMsgCtx != null && (tokReqMsgCtx.getTokenBinding() == null
+            if (getRenewWithoutRevokingExistingStatus() && tokReqMsgCtx != null
+                    && (tokReqMsgCtx.getTokenBinding() == null
                     || StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference()))) {
                 if (OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
                         .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
