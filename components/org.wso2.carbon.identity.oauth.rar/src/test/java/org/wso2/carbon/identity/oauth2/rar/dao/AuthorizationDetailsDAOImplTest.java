@@ -18,12 +18,15 @@
 
 package org.wso2.carbon.identity.oauth2.rar.dao;
 
+import org.apache.commons.lang3.StringUtils;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.api.resource.mgt.util.AuthorizationDetailsTypesUtil;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsCodeDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
@@ -35,6 +38,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -48,6 +52,7 @@ import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_DB_NAM
 import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TENANT_ID;
 import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TOKEN_ID;
 import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TYPE;
+import static org.wso2.carbon.identity.oauth2.rar.util.TestDAOUtils.closeMockedStatic;
 
 /**
  * Test class for {@link AuthorizationDetailsDAO}.
@@ -55,6 +60,7 @@ import static org.wso2.carbon.identity.oauth2.rar.util.TestConstants.TEST_TYPE;
 public class AuthorizationDetailsDAOImplTest {
 
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtilMock;
+    private MockedStatic<AuthorizationDetailsTypesUtil> authorizationDetailsTypesUtilMock;
     private AuthorizationDetailsDAO uut;
 
     @BeforeClass
@@ -62,22 +68,21 @@ public class AuthorizationDetailsDAOImplTest {
         this.uut = new AuthorizationDetailsDAOImpl();
         TestDAOUtils.initializeDataSource(TEST_DB_NAME, TestDAOUtils.getFilePath("h2.sql"));
         this.identityDatabaseUtilMock = Mockito.mockStatic(IdentityDatabaseUtil.class);
+        this.authorizationDetailsTypesUtilMock = Mockito.mockStatic(AuthorizationDetailsTypesUtil.class);
     }
 
     @AfterClass
     public void tearDown() throws SQLException {
 
-        if (this.identityDatabaseUtilMock != null && !this.identityDatabaseUtilMock.isClosed()) {
-            this.identityDatabaseUtilMock.close();
-        }
+        closeMockedStatic(this.identityDatabaseUtilMock);
+        closeMockedStatic(this.authorizationDetailsTypesUtilMock);
     }
 
     @BeforeMethod
     public void setUpBeforeMethod() throws SQLException {
 
-        this.identityDatabaseUtilMock
-                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
+        this.mockIdentityDatabaseUtil();
+        this.mockAuthorizationDetailsTypesUtil(true);
     }
 
     @Test
@@ -85,9 +90,7 @@ public class AuthorizationDetailsDAOImplTest {
 
         assertEquals(0, this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID).size());
 
-        this.identityDatabaseUtilMock
-                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
+        this.mockIdentityDatabaseUtil();
 
         AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
         testAuthorizationDetail.setType(TEST_TYPE);
@@ -114,13 +117,43 @@ public class AuthorizationDetailsDAOImplTest {
     }
 
     @Test(priority = 2)
+    public void testUpdateUserConsentedAuthorizationDetails() throws SQLException {
+
+        final String identifier = UUID.randomUUID().toString();
+        Set<AuthorizationDetailsConsentDTO> existingConsentDTOs =
+                this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID);
+
+        this.mockIdentityDatabaseUtil();
+
+        AuthorizationDetailsConsentDTO existingDTO = existingConsentDTOs.iterator().next();
+        Assert.assertTrue(StringUtils.isEmpty(existingDTO.getAuthorizationDetail().getIdentifier()));
+
+        AuthorizationDetail authorizationDetailToUpdate = existingDTO.getAuthorizationDetail();
+        authorizationDetailToUpdate.setIdentifier(identifier);
+
+        AuthorizationDetailsConsentDTO consentDTO = new AuthorizationDetailsConsentDTO(existingDTO.getConsentId(),
+                authorizationDetailToUpdate, existingDTO.isConsentActive(), existingDTO.getTenantId());
+
+        int[] result = uut.updateUserConsentedAuthorizationDetails(Collections.singleton(consentDTO));
+        assertEquals(1, result.length);
+
+        this.mockIdentityDatabaseUtil();
+
+        Set<AuthorizationDetailsConsentDTO> updatedConsentDTOs =
+                this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID);
+        AuthorizationDetailsConsentDTO updatedDto = updatedConsentDTOs.iterator().next();
+
+        assertEquals(existingConsentDTOs.size(), updatedConsentDTOs.size());
+        assertEquals(existingDTO.getAuthorizationDetail().getType(), updatedDto.getAuthorizationDetail().getType());
+        assertEquals(identifier, updatedDto.getAuthorizationDetail().getIdentifier());
+    }
+
+    @Test(dependsOnMethods = "testUpdateUserConsentedAuthorizationDetails")
     public void testDeleteUserConsentedAuthorizationDetails() throws SQLException {
 
         assertEquals(1, uut.deleteUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID));
 
-        this.identityDatabaseUtilMock
-                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
+        this.mockIdentityDatabaseUtil();
 
         assertEquals(0, this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID).size());
     }
@@ -129,9 +162,7 @@ public class AuthorizationDetailsDAOImplTest {
     public void testAddAccessTokenAuthorizationDetails() throws SQLException {
         assertEquals(0, this.uut.getAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID).size());
 
-        this.identityDatabaseUtilMock
-                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
+        this.mockIdentityDatabaseUtil();
 
         AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
         testAuthorizationDetail.setType(TEST_TYPE);
@@ -161,9 +192,7 @@ public class AuthorizationDetailsDAOImplTest {
     public void testDeleteAccessTokenAuthorizationDetails() throws SQLException {
         assertEquals(1, uut.deleteAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID));
 
-        this.identityDatabaseUtilMock
-                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
+        this.mockIdentityDatabaseUtil();
 
         assertEquals(0, this.uut.getAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID).size());
     }
@@ -172,9 +201,7 @@ public class AuthorizationDetailsDAOImplTest {
     public void testAddOAuth2CodeAuthorizationDetails() throws SQLException {
         assertEquals(0, this.uut.getOAuth2CodeAuthorizationDetails(TEST_CODE_ID, TEST_TENANT_ID).size());
 
-        this.identityDatabaseUtilMock
-                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
-                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
+        this.mockIdentityDatabaseUtil();
 
         AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
         testAuthorizationDetail.setType(TEST_TYPE);
@@ -236,5 +263,49 @@ public class AuthorizationDetailsDAOImplTest {
     public void shouldReturnNull_whenUserIdOrAppIdInvalid() throws SQLException {
 
         assertNull(this.uut.getConsentIdByUserIdAndAppId("invalid_user_id", "invalid_app_id", TEST_TENANT_ID));
+    }
+
+    @Test
+    public void testUserConsentedAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException {
+
+        this.mockAuthorizationDetailsTypesUtil(false);
+
+        assertEquals(0, this.uut.addUserConsentedAuthorizationDetails(Collections.emptySet()).length);
+        assertEquals(0, this.uut.updateUserConsentedAuthorizationDetails(Collections.emptySet()).length);
+        assertEquals(0, this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID).size());
+        assertEquals(-1, this.uut.deleteUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID));
+    }
+
+    @Test
+    public void testAccessTokenAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException {
+
+        this.mockAuthorizationDetailsTypesUtil(false);
+
+        assertEquals(0, uut.addAccessTokenAuthorizationDetails(Collections.emptySet()).length);
+        assertEquals(0, this.uut.getAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID).size());
+        assertEquals(-1, this.uut.deleteAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID));
+    }
+
+    @Test
+    public void testOAuth2CodeAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException {
+
+        this.mockAuthorizationDetailsTypesUtil(false);
+
+        assertEquals(0, uut.addOAuth2CodeAuthorizationDetails(Collections.emptySet()).length);
+        assertEquals(0, this.uut.getOAuth2CodeAuthorizationDetails(TEST_AUTHORIZATION_CODE, TEST_TENANT_ID).size());
+    }
+
+    private void mockAuthorizationDetailsTypesUtil(boolean isRichAuthorizationRequestsEnabled) {
+
+        this.authorizationDetailsTypesUtilMock
+                .when(AuthorizationDetailsTypesUtil::isRichAuthorizationRequestsDisabled)
+                .thenReturn(!isRichAuthorizationRequestsEnabled);
+    }
+
+    private void mockIdentityDatabaseUtil() throws SQLException {
+
+        this.identityDatabaseUtilMock
+                .when(() -> IdentityDatabaseUtil.getDBConnection(any(Boolean.class)))
+                .thenReturn(TestDAOUtils.getConnection(TEST_DB_NAME));
     }
 }

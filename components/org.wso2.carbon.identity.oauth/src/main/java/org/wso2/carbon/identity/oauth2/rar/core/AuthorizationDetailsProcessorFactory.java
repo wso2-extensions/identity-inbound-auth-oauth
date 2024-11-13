@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -122,11 +123,16 @@ public class AuthorizationDetailsProcessorFactory {
 
         final String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
-            return OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsTypeManager()
-                    .getAuthorizationDetailsTypes(StringUtils.EMPTY, tenantDomain)
-                    .stream()
-                    .map(AuthorizationDetailsType::getType)
-                    .collect(Collectors.toUnmodifiableSet());
+
+            final List<AuthorizationDetailsType> authorizationDetailsTypes = OAuth2ServiceComponentHolder.getInstance()
+                    .getAuthorizationDetailsTypeManager().getAuthorizationDetailsTypes(StringUtils.EMPTY, tenantDomain);
+
+            if (authorizationDetailsTypes != null) {
+                return authorizationDetailsTypes
+                        .stream()
+                        .map(AuthorizationDetailsType::getType)
+                        .collect(Collectors.toUnmodifiableSet());
+            }
         } catch (APIResourceMgtException e) {
             if (log.isDebugEnabled()) {
                 log.debug(String.format("Error occurred while retrieving supported authorization details types " +

@@ -59,6 +59,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -221,7 +223,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     /**
      * Build and return a string to be used as a lock for synchronous token issuance for refresh token grant type.
      *
-     * @param tokReqMsgCtx        OAuthTokenReqMessageContext
+     * @param tokReqMsgCtx OAuthTokenReqMessageContext
      * @return A string to be used as a lock for synchronous token issuance for refresh token grant type.
      */
     public String buildSyncLockString(OAuthTokenReqMessageContext tokReqMsgCtx) {
@@ -253,7 +255,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
-        super.setRARPropertiesForTokenGeneration(tokReqMsgCtx);
+        this.setRARPropertiesForTokenGeneration(tokReqMsgCtx, validationBean);
     }
 
     private boolean validateRefreshTokenInRequest(OAuth2AccessTokenReqDTO tokenReq,
@@ -893,5 +895,32 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
 
         return OAuth2ServiceComponentHolder.getInstance().getRefreshTokenGrantProcessor();
+    }
+
+    /**
+     * Sets the RAR properties for token generation.
+     * <p> It retrieves the token authorization details based on the provided OAuth token request context. </p>
+     *
+     * @param oAuthTokenReqMessageContext Context of the OAuth token request message.
+     * @param validationBean              Refresh token validation data.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving authorization details.
+     */
+    private void setRARPropertiesForTokenGeneration(final OAuthTokenReqMessageContext oAuthTokenReqMessageContext,
+                                                      final RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving token authorization details for user: "
+                    + oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableMaskedUserId());
+        }
+
+        final int tenantId =
+                OAuth2Util.getTenantId(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+
+        AuthorizationDetails tokenAuthorizationDetails = super.authorizationDetailsService
+                .getAccessTokenAuthorizationDetails(validationBean.getTokenId(), tenantId);
+
+        oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
+                .getTrimmedAuthorizationDetails(tokenAuthorizationDetails));
     }
 }

@@ -58,7 +58,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -433,7 +432,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     existingTokenBean.getTokenId(), true);
         }
 
-        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx)) {
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx.getAuthorizationDetails())) {
             this.authorizationDetailsService.replaceAccessTokenAuthorizationDetails(existingTokenBean.getTokenId(),
                     existingTokenBean, tokReqMsgCtx);
         }
@@ -1238,44 +1237,5 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             return false;
         }
         return tokReqMsgCtx.getAuthorizedUser().isFederatedUser();
-    }
-
-    /**
-     * Sets the Rich Authorization Requests (RAR) properties for token generation.
-     * It retrieves the user-consented authorization details or fallback to code authorization details
-     * based on the provided OAuth token request context.
-     *
-     * @param oAuthTokenReqMessageContext Context of the OAuth token request message.
-     * @throws IdentityOAuth2Exception If an error occurs while retrieving authorization details.
-     */
-    protected void setRARPropertiesForTokenGeneration(final OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
-            throws IdentityOAuth2Exception {
-
-        final int tenantId =
-                OAuth2Util.getTenantId(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
-
-        if (log.isDebugEnabled()) {
-            log.debug("Retrieving user consented authorization details for user: "
-                    + oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableMaskedUserId());
-        }
-
-        AuthorizationDetails authorizationDetails = this.authorizationDetailsService
-                .getUserConsentedAuthorizationDetails(
-                        oAuthTokenReqMessageContext.getAuthorizedUser(),
-                        oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
-                        tenantId);
-
-        // Fallback to code authorization details if user consent is unavailable
-        if (authorizationDetails == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("No user consent is available. Fetching authorization details for code: " +
-                        oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode());
-            }
-
-            authorizationDetails = this.authorizationDetailsService.getAuthorizationCodeAuthorizationDetails(
-                    oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode(), tenantId);
-        }
-        oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
-                .getTrimmedAuthorizationDetails(authorizationDetails));
     }
 }

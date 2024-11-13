@@ -25,11 +25,9 @@ import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
@@ -75,7 +73,7 @@ public class AuthorizationDetailsUtils {
      */
     public static boolean isRichAuthorizationRequest(final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
 
-        return isRichAuthorizationRequest(oAuthAuthzReqMessageContext.getAuthorizationDetails());
+        return isRichAuthorizationRequest(oAuthAuthzReqMessageContext.getRequestedAuthorizationDetails());
     }
 
     /**
@@ -313,7 +311,7 @@ public class AuthorizationDetailsUtils {
      */
     public static AuthorizationDetails getTrimmedAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
-        if (authorizationDetails != null) {
+        if (!isEmpty(authorizationDetails)) {
             authorizationDetails.stream().forEach(authorizationDetail -> {
                 authorizationDetail.setId(null);
                 authorizationDetail.setDescription(null);
@@ -368,31 +366,6 @@ public class AuthorizationDetailsUtils {
             return URLDecoder.decode(encodedAuthorizationDetails, StandardCharsets.UTF_8);
         }
         return StringUtils.EMPTY;
-    }
-
-    public static void setRARPropertiesToAuthzRequestContext(
-            final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) throws IdentityOAuth2Exception {
-
-        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = oAuthAuthzReqMessageContext.getAuthorizationReqDTO();
-        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2AuthorizeReqDTO)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Request is not a rich authorization request. " +
-                        "Skips adding authorization details to OAuthAuthzReqMessageContext");
-            }
-            return;
-        }
-
-        final AuthorizationDetails authorizationDetails = OAuth2ServiceComponentHolder.getInstance()
-                .getAuthorizationDetailsService()
-                .getUserConsentedAuthorizationDetails(
-                        oAuth2AuthorizeReqDTO.getUser(),
-                        oAuth2AuthorizeReqDTO.getConsumerKey(),
-                        IdentityTenantUtil.getTenantId(oAuth2AuthorizeReqDTO.getTenantDomain())
-                );
-
-        if (authorizationDetails != null) {
-            oAuthAuthzReqMessageContext.setAuthorizationDetails(authorizationDetails);
-        }
     }
 
     /**

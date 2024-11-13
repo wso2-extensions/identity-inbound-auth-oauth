@@ -154,11 +154,11 @@ public class ProviderConfigBuilder {
         providerConfig.setMtlsTokenEndpoint(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl());
         providerConfig.setMtlsPushedAuthorizationRequestEndpoint(OAuth2Util.OAuthURL.getOAuth2MTLSParEPUrl());
 
-        final Set<String> supportedTypes = AuthorizationDetailsProcessorFactory.getInstance()
+        final Set<String> authorizationDetailTypes = AuthorizationDetailsProcessorFactory.getInstance()
                 .getSupportedAuthorizationDetailTypes();
-        if (supportedTypes != null && !supportedTypes.isEmpty()) {
-            final int size = supportedTypes.size();
-            providerConfig.setAuthorizationDetailsTypesSupported(supportedTypes.toArray(new String[size]));
+        if (authorizationDetailTypes != null && !authorizationDetailTypes.isEmpty()) {
+            //final int size = supportedTypes.size();
+            providerConfig.setAuthorizationDetailsTypesSupported(authorizationDetailTypes.toArray(String[]::new));
         }
         return providerConfig;
     }

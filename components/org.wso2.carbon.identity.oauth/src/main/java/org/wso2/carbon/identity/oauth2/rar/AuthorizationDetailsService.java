@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.rar;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -47,8 +48,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.getAuthorizationDetailsConsentDTOs;
 import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.getAuthorizationDetailsTypesMap;
+import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.isEmpty;
 import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.isRichAuthorizationRequest;
 
 /**
@@ -94,14 +95,15 @@ public class AuthorizationDetailsService {
     public AuthorizationDetailsService(final AuthorizationDetailsProcessorFactory authorizationDetailsProcessorFactory,
                                        final AuthorizationDetailsDAO authorizationDetailsDAO) {
 
-        this.authorizationDetailsDAO = Objects
-                .requireNonNull(authorizationDetailsDAO, "AuthorizationDetailsDAO must not be null");
+        this.authorizationDetailsDAO =
+                Objects.requireNonNull(authorizationDetailsDAO, "AuthorizationDetailsDAO must not be null");
         this.authorizationDetailsProcessorFactory = Objects.requireNonNull(authorizationDetailsProcessorFactory,
                 "AuthorizationDetailsProviderFactory must not be null");
     }
 
     /**
-     * Stores user-consented authorization details.
+     * Persists or updates user-consented authorization details. If previously stored authorization details are found,
+     * they are updated with the new information.
      *
      * @param authenticatedUser                 The authenticated user.
      * @param clientId                          The client ID.
@@ -109,9 +111,9 @@ public class AuthorizationDetailsService {
      * @param userConsentedAuthorizationDetails User consented authorization details.
      * @throws OAuthSystemException if an error occurs while storing user consented authorization details.
      */
-    public void storeUserConsentedAuthorizationDetails(final AuthenticatedUser authenticatedUser, final String clientId,
-                                                       final OAuth2Parameters oAuth2Parameters,
-                                                       final AuthorizationDetails userConsentedAuthorizationDetails)
+    public void storeOrUpdateUserConsentedAuthorizationDetails(
+            final AuthenticatedUser authenticatedUser, final String clientId, final OAuth2Parameters oAuth2Parameters,
+            final AuthorizationDetails userConsentedAuthorizationDetails)
             throws OAuthSystemException {
 
         if (!isRichAuthorizationRequest(oAuth2Parameters)) {
@@ -121,19 +123,48 @@ public class AuthorizationDetailsService {
 
         try {
             final int tenantId = OAuth2Util.getTenantId(oAuth2Parameters.getTenantDomain());
-            final Optional<String> consentId = this.getConsentId(authenticatedUser, clientId, tenantId);
+            final Optional<String> optConsentId = this.getConsentId(authenticatedUser, clientId, tenantId);
 
-            if (consentId.isPresent()) {
-                final AuthorizationDetails trimmedAuthorizationDetails = AuthorizationDetailsUtils
-                        .getTrimmedAuthorizationDetails(userConsentedAuthorizationDetails);
-
-                final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs =
-                        getAuthorizationDetailsConsentDTOs(consentId.get(), trimmedAuthorizationDetails, tenantId);
-
-                this.authorizationDetailsDAO.addUserConsentedAuthorizationDetails(authorizationDetailsConsentDTOs);
+            if (!optConsentId.isPresent()) {
                 if (log.isDebugEnabled()) {
-                    log.debug("User consented authorization details stored successfully. consentId: " +
-                            consentId.get());
+                    log.debug(String.format("Unable to find a consent for userId %s and appId %s",
+                            authenticatedUser.getLoggableMaskedUserId(), clientId));
+                }
+                return;
+            }
+
+            final String consentId = optConsentId.get();
+            final Set<AuthorizationDetailsConsentDTO> authorizationDetailsToBeUpdated = new HashSet<>();
+            final Set<AuthorizationDetailsConsentDTO> authorizationDetailsToBeAdded = new HashSet<>();
+
+            final AuthorizationDetails trimmedAuthorizationDetails = AuthorizationDetailsUtils
+                    .getTrimmedAuthorizationDetails(userConsentedAuthorizationDetails);
+            final Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType =
+                    getAuthorizationDetailsTypesMap(this.getUserConsentedAuthorizationDetails(consentId, tenantId));
+
+            // Determine new authorization details to add or update based on the existing user consent
+            trimmedAuthorizationDetails.stream().forEach(authorizationDetail -> {
+                final AuthorizationDetailsConsentDTO authorizationDetailsConsentDTO =
+                        new AuthorizationDetailsConsentDTO(consentId, authorizationDetail, true, tenantId);
+
+                if (isUserConsentedAuthorizationDetailsType(authorizationDetail, consentedAuthorizationDetailsByType)) {
+                    authorizationDetailsToBeUpdated.add(authorizationDetailsConsentDTO);
+                } else {
+                    authorizationDetailsToBeAdded.add(authorizationDetailsConsentDTO);
+                }
+            });
+
+            if (CollectionUtils.isNotEmpty(authorizationDetailsToBeUpdated)) {
+                this.authorizationDetailsDAO.updateUserConsentedAuthorizationDetails(authorizationDetailsToBeUpdated);
+                if (log.isDebugEnabled()) {
+                    log.debug("User consented authorization details updated. consentId: " + consentId);
+                }
+            }
+
+            if (CollectionUtils.isNotEmpty(authorizationDetailsToBeAdded)) {
+                this.authorizationDetailsDAO.addUserConsentedAuthorizationDetails(authorizationDetailsToBeAdded);
+                if (log.isDebugEnabled()) {
+                    log.debug("User consented authorization details stored. consentId: " + consentId);
                 }
             }
         } catch (SQLException | IdentityOAuth2Exception e) {
@@ -192,7 +223,7 @@ public class AuthorizationDetailsService {
             final AuthorizationDetails userConsentedAuthorizationDetails) throws OAuthSystemException {
 
         this.deleteUserConsentedAuthorizationDetails(authenticatedUser, clientId, oAuth2Parameters);
-        this.storeUserConsentedAuthorizationDetails(authenticatedUser, clientId, oAuth2Parameters,
+        this.storeOrUpdateUserConsentedAuthorizationDetails(authenticatedUser, clientId, oAuth2Parameters,
                 userConsentedAuthorizationDetails);
     }
 
@@ -212,7 +243,7 @@ public class AuthorizationDetailsService {
             return true;
         }
 
-        return this.getConsentRequiredAuthorizationDetails(authenticatedUser, oAuth2Parameters).getDetails().isEmpty();
+        return isEmpty(this.getConsentRequiredAuthorizationDetails(authenticatedUser, oAuth2Parameters));
     }
 
     public AuthorizationDetails getConsentRequiredAuthorizationDetails(final AuthenticatedUser authenticatedUser,
@@ -224,8 +255,8 @@ public class AuthorizationDetailsService {
             return new AuthorizationDetails();
         }
 
-        final Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType =
-                this.getUserConsentedAuthorizationDetailsByType(authenticatedUser, oAuth2Parameters);
+        Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType = getAuthorizationDetailsTypesMap(
+                this.getUserConsentedAuthorizationDetails(authenticatedUser, oAuth2Parameters));
 
         final Set<AuthorizationDetail> consentRequiredAuthorizationDetails = new HashSet<>();
         oAuth2Parameters.getAuthorizationDetails().stream()
@@ -234,14 +265,6 @@ public class AuthorizationDetailsService {
                 .forEach(consentRequiredAuthorizationDetails::add);
 
         return new AuthorizationDetails(consentRequiredAuthorizationDetails);
-    }
-
-    private Map<String, Set<AuthorizationDetail>> getUserConsentedAuthorizationDetailsByType(
-            final AuthenticatedUser authenticatedUser, final OAuth2Parameters oAuth2Parameters)
-            throws IdentityOAuth2Exception {
-
-        return getAuthorizationDetailsTypesMap(
-                this.getUserConsentedAuthorizationDetails(authenticatedUser, oAuth2Parameters));
     }
 
     /**
@@ -258,15 +281,12 @@ public class AuthorizationDetailsService {
             final AuthorizationDetail requestedAuthorizationDetail,
             final Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType) {
 
-        final String requestedType = requestedAuthorizationDetail.getType();
-        if (!consentedAuthorizationDetailsByType.containsKey(requestedType)) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("User hasn't consented for the requested authorization details type '%s'.",
-                        requestedType));
-            }
+        if (!this.isUserConsentedAuthorizationDetailsType(requestedAuthorizationDetail,
+                consentedAuthorizationDetailsByType)) {
             return false;
         }
 
+        final String requestedType = requestedAuthorizationDetail.getType();
         final Optional<AuthorizationDetailsProcessor> optProcessor =
                 this.authorizationDetailsProcessorFactory.getAuthorizationDetailsProcessorByType(requestedType);
 
@@ -291,6 +311,20 @@ public class AuthorizationDetailsService {
         if (log.isDebugEnabled()) {
             log.debug(String.format("No AuthorizationDetailsProcessor implementation found for type: %s. " +
                     "Proceeding with user consent.", requestedType));
+        }
+        return false;
+    }
+
+    private boolean isUserConsentedAuthorizationDetailsType(
+            final AuthorizationDetail requestedAuthorizationDetail,
+            final Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType) {
+
+        if (consentedAuthorizationDetailsByType.containsKey(requestedAuthorizationDetail.getType())) {
+            return true;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("User hasn't consented for the requested authorization details type '%s'",
+                    requestedAuthorizationDetail.getType()));
         }
         return false;
     }
@@ -324,22 +358,28 @@ public class AuthorizationDetailsService {
             final AuthenticatedUser authenticatedUser, final String clientId, final int tenantId)
             throws IdentityOAuth2Exception {
 
+        final Optional<String> consentId = this.getConsentId(authenticatedUser, clientId, tenantId);
+        if (consentId.isPresent()) {
+            return this.getUserConsentedAuthorizationDetails(consentId.get(), tenantId);
+        }
+        return null;
+    }
+
+    public AuthorizationDetails getUserConsentedAuthorizationDetails(final String consentId, final int tenantId)
+            throws IdentityOAuth2Exception {
+
         try {
-            final Optional<String> consentId = this.getConsentId(authenticatedUser, clientId, tenantId);
-            if (consentId.isPresent()) {
-                final Set<AuthorizationDetail> consentedAuthorizationDetails = new HashSet<>();
-                this.authorizationDetailsDAO.getUserConsentedAuthorizationDetails(consentId.get(), tenantId)
-                        .stream()
-                        .filter(AuthorizationDetailsConsentDTO::isConsentActive)
-                        .map(AuthorizationDetailsConsentDTO::getAuthorizationDetail)
-                        .forEach(consentedAuthorizationDetails::add);
-                return new AuthorizationDetails(consentedAuthorizationDetails);
-            }
+            final Set<AuthorizationDetail> consentedAuthorizationDetails = new HashSet<>();
+            this.authorizationDetailsDAO.getUserConsentedAuthorizationDetails(consentId, tenantId)
+                    .stream()
+                    .filter(AuthorizationDetailsConsentDTO::isConsentActive)
+                    .map(AuthorizationDetailsConsentDTO::getAuthorizationDetail)
+                    .forEach(consentedAuthorizationDetails::add);
+            return new AuthorizationDetails(consentedAuthorizationDetails);
         } catch (SQLException e) {
             log.error("Error occurred while retrieving user consented authorization details. Caused by, ", e);
             throw new IdentityOAuth2Exception("Unable to retrieve user consented authorization details", e);
         }
-        return null;
     }
 
     /**
@@ -422,12 +462,13 @@ public class AuthorizationDetailsService {
                                                      final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuthAuthzReqMessageContext)) {
+        if (!isRichAuthorizationRequest(oAuthAuthzReqMessageContext.getApprovedAuthorizationDetails())) {
             log.debug("Request is not a rich authorization request. Skipping storage of token authorization details.");
             return;
         }
 
-        this.storeAccessTokenAuthorizationDetails(accessTokenDO, oAuthAuthzReqMessageContext.getAuthorizationDetails());
+        this.storeAccessTokenAuthorizationDetails(accessTokenDO,
+                oAuthAuthzReqMessageContext.getApprovedAuthorizationDetails());
     }
 
     /**
@@ -440,6 +481,10 @@ public class AuthorizationDetailsService {
     public void storeAccessTokenAuthorizationDetails(final AccessTokenDO accessTokenDO,
                                                      final AuthorizationDetails authorizationDetails)
             throws IdentityOAuth2Exception {
+
+        if (AuthorizationDetailsUtils.isEmpty(authorizationDetails)) {
+            return;
+        }
 
         try {
             final AuthorizationDetails trimmedAuthorizationDetails = AuthorizationDetailsUtils
@@ -498,8 +543,8 @@ public class AuthorizationDetailsService {
             throws IdentityOAuth2Exception {
 
         try {
-            this.authorizationDetailsDAO.deleteAccessTokenAuthorizationDetails(accessTokenId, tenantId);
-            if (log.isDebugEnabled()) {
+            int result = this.authorizationDetailsDAO.deleteAccessTokenAuthorizationDetails(accessTokenId, tenantId);
+            if (result > 0 && log.isDebugEnabled()) {
                 log.debug("Access token authorization details deleted successfully. accessTokenId: " + accessTokenId);
             }
         } catch (SQLException e) {
@@ -570,7 +615,7 @@ public class AuthorizationDetailsService {
 
             final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs =
                     AuthorizationDetailsUtils.getCodeAuthorizationDetailsDTOs(authzCodeDO,
-                            oAuthAuthzReqMessageContext.getAuthorizationDetails(), tenantId);
+                            oAuthAuthzReqMessageContext.getApprovedAuthorizationDetails(), tenantId);
 
             // Storing the authorization details.
             this.authorizationDetailsDAO.addOAuth2CodeAuthorizationDetails(authorizationDetailsCodeDTOs);
@@ -588,17 +633,17 @@ public class AuthorizationDetailsService {
     /**
      * Retrieves the authorization details associated with a given authorization code Id.
      *
-     * @param codeId   The authorization code ID.
+     * @param code     The authorization code.
      * @param tenantId The tenant ID.
      * @return The authorization code authorization details.
      * @throws IdentityOAuth2Exception If an error occurs while retrieving the details.
      */
-    public AuthorizationDetails getAuthorizationCodeAuthorizationDetails(final String codeId, final int tenantId)
+    public AuthorizationDetails getAuthorizationCodeAuthorizationDetails(final String code, final int tenantId)
             throws IdentityOAuth2Exception {
 
         try {
             final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs =
-                    this.authorizationDetailsDAO.getOAuth2CodeAuthorizationDetails(codeId, tenantId);
+                    this.authorizationDetailsDAO.getOAuth2CodeAuthorizationDetails(code, tenantId);
 
             final Set<AuthorizationDetail> codeAuthorizationDetails = new HashSet<>();
             authorizationDetailsCodeDTOs

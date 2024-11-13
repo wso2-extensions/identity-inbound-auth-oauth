@@ -1637,6 +1637,7 @@ public class OAuth2AuthzEndpoint {
                 oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
+        oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
         if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
@@ -1742,7 +1743,7 @@ public class OAuth2AuthzEndpoint {
                             clientId, oauth2Params, userConsentedAuthorizationDetails);
                 } else {
                     EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, false);
-                    authorizationDetailsService.storeUserConsentedAuthorizationDetails(loggedInUser,
+                    authorizationDetailsService.storeOrUpdateUserConsentedAuthorizationDetails(loggedInUser,
                             clientId, oauth2Params, userConsentedAuthorizationDetails);
                 }
             }
@@ -4894,14 +4895,13 @@ public class OAuth2AuthzEndpoint {
                     .getAuthorizationDetailsValidator()
                     .getValidatedAuthorizationDetails(oAuthAuthzReqMessageContext);
 
-            // update oAuth2Parameters with validated authorization details
-            oAuth2Parameters.setAuthorizationDetails(AuthorizationDetailsUtils
-                    .assignUniqueIDsToAuthorizationDetails(validatedAuthorizationDetails));
-
             // Update the authorization message context with validated authorization details
-            oAuthAuthzReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
+            oAuthAuthzReqMessageContext.setRequestedAuthorizationDetails(AuthorizationDetailsUtils
                     .assignUniqueIDsToAuthorizationDetails(validatedAuthorizationDetails));
             oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(oAuthAuthzReqMessageContext);
+
+            // update oAuth2Parameters with validated authorization details
+            oAuth2Parameters.setAuthorizationDetails(oAuthAuthzReqMessageContext.getRequestedAuthorizationDetails());
 
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(

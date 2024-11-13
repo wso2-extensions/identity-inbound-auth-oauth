@@ -57,7 +57,9 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     private Properties properties = new Properties();
 
-    private AuthorizationDetails authorizationDetails;
+    private AuthorizationDetails approvedAuthorizationDetails;
+
+    private AuthorizationDetails requestedAuthorizationDetails;
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -217,24 +219,46 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     }
 
     /**
-     * Retrieves the current authorization details.
+     * Retrieves the user approved authorization details.
      *
-     * @return the {@link AuthorizationDetails} instance representing the current authorization information.
+     * @return the {@link AuthorizationDetails} instance representing the approved authorization information.
      * If no authorization details are available, it will return {@code null}.
      */
-    public AuthorizationDetails getAuthorizationDetails() {
+    public AuthorizationDetails getApprovedAuthorizationDetails() {
 
-        return this.authorizationDetails;
+        return this.approvedAuthorizationDetails;
     }
 
     /**
-     * Sets the authorization details.
-     * This method updates the authorization details with the provided {@link AuthorizationDetails} instance.
+     * Sets the approved authorization details.
+     * This method updates the approved authorization details with the provided {@link AuthorizationDetails} instance.
      *
-     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     * @param approvedAuthorizationDetails the approved {@link AuthorizationDetails} to set.
      */
-    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+    public void setApprovedAuthorizationDetails(final AuthorizationDetails approvedAuthorizationDetails) {
 
-        this.authorizationDetails = authorizationDetails;
+        this.approvedAuthorizationDetails = approvedAuthorizationDetails;
+    }
+
+    /**
+     * Retrieves the requested authorization details.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the authorization information came in the request.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getRequestedAuthorizationDetails() {
+
+        return this.requestedAuthorizationDetails;
+    }
+
+    /**
+     * Sets the requested authorization details.
+     * This method updates the requested authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param requestedAuthorizationDetails the requested {@link AuthorizationDetails} to set.
+     */
+    public void setRequestedAuthorizationDetails(final AuthorizationDetails requestedAuthorizationDetails) {
+
+        this.requestedAuthorizationDetails = requestedAuthorizationDetails;
     }
 }

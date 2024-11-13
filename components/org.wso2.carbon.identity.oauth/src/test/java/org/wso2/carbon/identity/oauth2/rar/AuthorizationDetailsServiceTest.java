@@ -155,7 +155,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
     public void shouldNotAddUserConsentedAuthorizationDetails_ifNotRichAuthorizationRequest()
             throws OAuthSystemException, SQLException {
 
-        uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
+        uut.storeOrUpdateUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 new OAuth2Parameters(), authorizationDetails);
 
         verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anySet());
@@ -168,7 +168,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         final OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setAuthorizationDetails(authorizationDetails);
 
-        uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
+        uut.storeOrUpdateUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 oAuth2Parameters, authorizationDetails);
 
         verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anySet());
@@ -178,7 +178,10 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
     public void shouldAddUserConsentedAuthorizationDetails_ifRichAuthorizationRequest()
             throws OAuthSystemException, SQLException {
 
-        uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
+        when(this.authorizationDetailsDAOMock.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TENANT_ID))
+                .thenReturn(Collections.emptySet());
+
+        uut.storeOrUpdateUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 oAuth2Parameters, authorizationDetails);
 
         verify(authorizationDetailsDAOMock, times(1)).addUserConsentedAuthorizationDetails(anySet());
@@ -218,6 +221,8 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
     public void shouldReplaceUserConsentedAuthorizationDetails_ifRichAuthorizationRequest()
             throws OAuthSystemException, SQLException {
 
+        when(this.authorizationDetailsDAOMock.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TENANT_ID))
+                .thenReturn(Collections.emptySet());
         uut.replaceUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 oAuth2Parameters, authorizationDetails);
 
@@ -293,7 +298,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
             throws SQLException, IdentityOAuth2Exception {
 
         OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext = new OAuthAuthzReqMessageContext(null);
-        oAuthAuthzReqMessageContext.setAuthorizationDetails(authorizationDetails);
+        oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(authorizationDetails);
 
         uut.storeAccessTokenAuthorizationDetails(accessTokenDO, oAuthAuthzReqMessageContext);
 
@@ -398,7 +403,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
     public void shouldThrowOAuthSystemException_onUserConsentAuthorizationDetailsInsertionFailure()
             throws OAuthSystemException {
 
-        uut.storeUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
+        uut.storeOrUpdateUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID,
                 oAuth2Parameters, authorizationDetails);
     }
 

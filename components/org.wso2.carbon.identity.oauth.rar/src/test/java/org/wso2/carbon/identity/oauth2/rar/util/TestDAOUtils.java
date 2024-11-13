@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.rar.util;
 
 import org.apache.commons.dbcp.BasicDataSource;
 import org.apache.commons.lang.StringUtils;
+import org.mockito.MockedStatic;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
 
 import java.nio.file.Paths;
@@ -64,6 +65,13 @@ public class TestDAOUtils {
                     .toString();
         }
         return null;
+    }
+
+    public static void closeMockedStatic(final MockedStatic<?> mockedStatic) {
+
+        if (mockedStatic != null && !mockedStatic.isClosed()) {
+            mockedStatic.close();
+        }
     }
 
     /**

@@ -30,6 +30,8 @@ import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.wso2.carbon.identity.api.resource.mgt.util.AuthorizationDetailsTypesUtil.isRichAuthorizationRequestsDisabled;
+
 /**
  * Implements the {@link AuthorizationDetailsDAO} interface to manage rich authorization requests.
  *
@@ -42,17 +44,49 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
      * {@inheritDoc}
      */
     @Override
-    public int[] addUserConsentedAuthorizationDetails(
-            final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs) throws SQLException {
+    public int[] addUserConsentedAuthorizationDetails(final Set<AuthorizationDetailsConsentDTO> consentDTOs)
+            throws SQLException {
+
+        if (isRichAuthorizationRequestsDisabled()) {
+            return new int[0];
+        }
 
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.ADD_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
 
-            for (AuthorizationDetailsConsentDTO consentDTO : authorizationDetailsConsentDTOs) {
+            for (AuthorizationDetailsConsentDTO consentDTO : consentDTOs) {
                 ps.setString(1, consentDTO.getConsentId());
                 ps.setString(2, consentDTO.getAuthorizationDetail().toJsonString());
                 ps.setBoolean(3, consentDTO.isConsentActive());
+                ps.setString(4, consentDTO.getAuthorizationDetail().getType());
+                ps.setInt(5, consentDTO.getTenantId());
+                ps.setInt(6, consentDTO.getTenantId());
+                ps.addBatch();
+            }
+            return ps.executeBatch();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int[] updateUserConsentedAuthorizationDetails(final Set<AuthorizationDetailsConsentDTO> consentDTOs)
+            throws SQLException {
+
+        if (isRichAuthorizationRequestsDisabled()) {
+            return new int[0];
+        }
+
+        try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement ps =
+                     connection.prepareStatement(SQLQueries.UPDATE_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
+
+            for (AuthorizationDetailsConsentDTO consentDTO : consentDTOs) {
+                ps.setString(1, consentDTO.getAuthorizationDetail().toJsonString());
+                ps.setBoolean(2, consentDTO.isConsentActive());
+                ps.setString(3, consentDTO.getConsentId());
                 ps.setString(4, consentDTO.getAuthorizationDetail().getType());
                 ps.setInt(5, consentDTO.getTenantId());
                 ps.setInt(6, consentDTO.getTenantId());
@@ -70,6 +104,11 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
                                                                                     final int tenantId)
             throws SQLException {
 
+        final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs = new HashSet<>();
+        if (isRichAuthorizationRequestsDisabled()) {
+            return authorizationDetailsConsentDTOs;
+        }
+
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.GET_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
@@ -78,7 +117,6 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
             ps.setInt(2, tenantId);
             try (ResultSet rs = ps.executeQuery()) {
 
-                final Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs = new HashSet<>();
                 while (rs.next()) {
                     final String id = rs.getString(1);
                     final String typeId = rs.getString(2);
@@ -100,6 +138,10 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
     public int deleteUserConsentedAuthorizationDetails(final String consentId, final int tenantId)
             throws SQLException {
 
+        if (isRichAuthorizationRequestsDisabled()) {
+            return -1;
+        }
+
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.DELETE_OAUTH2_USER_CONSENTED_AUTHORIZATION_DETAILS)) {
@@ -114,13 +156,18 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
      * {@inheritDoc}
      */
     @Override
-    public int[] addAccessTokenAuthorizationDetails(final Set<AuthorizationDetailsTokenDTO>
-                                                            authorizationDetailsTokenDTOs) throws SQLException {
+    public int[] addAccessTokenAuthorizationDetails(final Set<AuthorizationDetailsTokenDTO> tokenDTOs)
+            throws SQLException {
+
+        if (isRichAuthorizationRequestsDisabled()) {
+            return new int[0];
+        }
+
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.ADD_OAUTH2_ACCESS_TOKEN_AUTHORIZATION_DETAILS)) {
 
-            for (AuthorizationDetailsTokenDTO tokenDTO : authorizationDetailsTokenDTOs) {
+            for (AuthorizationDetailsTokenDTO tokenDTO : tokenDTOs) {
                 ps.setString(1, tokenDTO.getAccessTokenId());
                 ps.setString(2, tokenDTO.getAuthorizationDetail().toJsonString());
                 ps.setString(3, tokenDTO.getAuthorizationDetail().getType());
@@ -140,6 +187,11 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
                                                                                 final int tenantId)
             throws SQLException {
 
+        final Set<AuthorizationDetailsTokenDTO> authorizationDetailsTokenDTO = new HashSet<>();
+        if (isRichAuthorizationRequestsDisabled()) {
+            return authorizationDetailsTokenDTO;
+        }
+
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.GET_OAUTH2_ACCESS_TOKEN_AUTHORIZATION_DETAILS)) {
@@ -148,7 +200,6 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
             ps.setInt(2, tenantId);
             try (ResultSet rs = ps.executeQuery()) {
 
-                final Set<AuthorizationDetailsTokenDTO> authorizationDetailsTokenDTO = new HashSet<>();
                 while (rs.next()) {
                     final String id = rs.getString(1);
                     final String typeId = rs.getString(2);
@@ -169,6 +220,10 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
     public int deleteAccessTokenAuthorizationDetails(final String accessTokenId, final int tenantId)
             throws SQLException {
 
+        if (isRichAuthorizationRequestsDisabled()) {
+            return -1;
+        }
+
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.DELETE_OAUTH2_ACCESS_TOKEN_AUTHORIZATION_DETAILS)) {
@@ -185,6 +240,10 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
     @Override
     public int[] addOAuth2CodeAuthorizationDetails(final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs)
             throws SQLException {
+
+        if (isRichAuthorizationRequestsDisabled()) {
+            return new int[0];
+        }
 
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
@@ -209,6 +268,11 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
     public Set<AuthorizationDetailsCodeDTO> getOAuth2CodeAuthorizationDetails(final String authorizationCode,
                                                                               final int tenantId) throws SQLException {
 
+        final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs = new HashSet<>();
+        if (isRichAuthorizationRequestsDisabled()) {
+            return authorizationDetailsCodeDTOs;
+        }
+
         try (final Connection connection = IdentityDatabaseUtil.getDBConnection(false);
              final PreparedStatement ps =
                      connection.prepareStatement(SQLQueries.GET_OAUTH2_CODE_AUTHORIZATION_DETAILS_BY_CODE)) {
@@ -217,7 +281,6 @@ public class AuthorizationDetailsDAOImpl implements AuthorizationDetailsDAO {
             ps.setInt(2, tenantId);
             try (ResultSet rs = ps.executeQuery()) {
 
-                final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs = new HashSet<>();
                 while (rs.next()) {
                     final String codeId = rs.getString(1);
                     final String typeId = rs.getString(2);

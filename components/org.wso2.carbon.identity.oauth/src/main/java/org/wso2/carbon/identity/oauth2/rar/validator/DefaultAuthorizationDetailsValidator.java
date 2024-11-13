@@ -399,9 +399,9 @@ public class DefaultAuthorizationDetailsValidator implements AuthorizationDetail
 
         if (!authorizedDetailsTypes.containsKey(type)) {
             if (log.isDebugEnabled()) {
-                log.debug("Ignoring unauthorized authorization details type: " + type);
+                log.debug("Request received for unauthorized authorization details type: " + type);
             }
-            return false;
+            throw new AuthorizationDetailsProcessingException(VALIDATION_FAILED_ERR_MSG);
         }
 
         if (this.authorizationDetailsSchemaValidator

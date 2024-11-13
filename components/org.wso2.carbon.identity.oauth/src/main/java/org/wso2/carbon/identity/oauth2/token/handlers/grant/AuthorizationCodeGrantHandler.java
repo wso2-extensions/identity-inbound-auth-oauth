@@ -49,6 +49,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -134,7 +136,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
         // keep the pre processed authz code as a OAuthTokenReqMessageContext property to avoid
         // calculating it again when issuing the access token.
         tokReqMsgCtx.addProperty(AUTHZ_CODE, tokenReq.getAuthorizationCode());
-        super.setRARPropertiesForTokenGeneration(tokReqMsgCtx);
+        this.setRARPropertiesForTokenGeneration(tokReqMsgCtx);
     }
 
     private boolean validateCallbackUrlFromRequest(String callbackUrlFromRequest,
@@ -671,5 +673,36 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             }
         }
         return null;
+    }
+
+    /**
+     * Configures RAR properties for token generation in the OAuth 2.0 flow.
+     * <p>
+     * It checks if authorization details were included in the authorization code request and whether the
+     * user has consented to these specific authorization details. Depending on user consent, it selects
+     * the appropriate authorization details to be included in the token response.
+     * </p>
+     *
+     * @param oAuthTokenReqMessageContext Context of the OAuth token request message.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving authorization details.
+     */
+    private void setRARPropertiesForTokenGeneration(final OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
+            throws IdentityOAuth2Exception {
+
+        final int tenantId =
+                OAuth2Util.getTenantId(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving user consented authorization details for user: "
+                    + oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableMaskedUserId());
+        }
+
+        final AuthorizationDetails authorizationCodeAuthorizationDetails = super.authorizationDetailsService
+                .getAuthorizationCodeAuthorizationDetails(
+                        oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getAuthorizationCode(),
+                        tenantId);
+
+        oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
+                .getTrimmedAuthorizationDetails(authorizationCodeAuthorizationDetails));
     }
 }

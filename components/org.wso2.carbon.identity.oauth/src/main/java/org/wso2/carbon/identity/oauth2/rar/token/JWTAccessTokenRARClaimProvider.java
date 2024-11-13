@@ -36,10 +36,10 @@ public class JWTAccessTokenRARClaimProvider implements JWTAccessTokenClaimProvid
         if (AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuthAuthzReqMessageContext)) {
             if (log.isDebugEnabled()) {
                 log.debug("Processing Rich Authorization Request in authorization flow. authorization_details: " +
-                        oAuthAuthzReqMessageContext.getAuthorizationDetails().toJsonString());
+                        oAuthAuthzReqMessageContext.getRequestedAuthorizationDetails().toJsonString());
             }
             additionalClaims.put(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS,
-                    oAuthAuthzReqMessageContext.getAuthorizationDetails().toSet());
+                    oAuthAuthzReqMessageContext.getApprovedAuthorizationDetails().toSet());
         }
         return additionalClaims;
     }

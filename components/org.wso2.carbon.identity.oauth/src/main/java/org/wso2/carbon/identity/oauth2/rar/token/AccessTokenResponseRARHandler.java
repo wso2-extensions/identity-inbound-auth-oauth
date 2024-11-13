@@ -38,8 +38,8 @@ public class AccessTokenResponseRARHandler implements AccessTokenResponseHandler
         if (isRichAuthorizationRequest(oAuthTokenReqMessageContext.getAuthorizationDetails())) {
 
             if (log.isDebugEnabled()) {
-                log.debug("Processing Rich Authorization Request in token flow. authorization_details: " +
-                        oAuthTokenReqMessageContext.getAuthorizationDetails().toJsonString());
+                log.debug("Adding authorization details into the token response: " + oAuthTokenReqMessageContext
+                        .getAuthorizationDetails().toReadableText());
             }
             additionalAttributes.put(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS,
                     oAuthTokenReqMessageContext.getAuthorizationDetails().toSet());

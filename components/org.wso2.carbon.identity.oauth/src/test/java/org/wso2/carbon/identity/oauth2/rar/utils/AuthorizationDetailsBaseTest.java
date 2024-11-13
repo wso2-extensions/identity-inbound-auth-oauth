@@ -86,7 +86,8 @@ public class AuthorizationDetailsBaseTest {
         authorizeReqDTO.setAuthorizationDetails(this.authorizationDetails);
 
         this.authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
-        this.authzReqMessageContext.setAuthorizationDetails(this.authorizationDetails);
+        this.authzReqMessageContext.setRequestedAuthorizationDetails(this.authorizationDetails);
+        this.authzReqMessageContext.setApprovedAuthorizationDetails(this.authorizationDetails);
 
         this.accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
         this.accessTokenReqDTO.setAuthorizationDetails(authorizationDetails);

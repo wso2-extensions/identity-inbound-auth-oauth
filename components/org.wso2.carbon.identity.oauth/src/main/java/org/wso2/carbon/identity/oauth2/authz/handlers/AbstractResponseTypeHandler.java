@@ -225,7 +225,7 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
         OAuth2AuthorizeReqDTO authorizationReqDTO = oauthAuthzMsgCtx.getAuthorizationReqDTO();
         respDTO.setCallbackURI(authorizationReqDTO.getCallbackUrl());
         respDTO.setScope(oauthAuthzMsgCtx.getApprovedScope());
-        respDTO.setAuthorizationDetails(oauthAuthzMsgCtx.getAuthorizationDetails());
+        respDTO.setAuthorizationDetails(oauthAuthzMsgCtx.getApprovedAuthorizationDetails());
         return respDTO;
     }
 

@@ -46,6 +46,18 @@ public interface AuthorizationDetailsDAO {
             throws SQLException;
 
     /**
+     * Updates user consented authorization details in the database.
+     *
+     * @param authorizationDetailsConsentDTOs A set of user consented authorization details DTOs.
+     *                                        {@link AuthorizationDetailsConsentDTO }
+     * @return An array of positive integers indicating the number of rows affected for each batch operation,
+     * or negative integers if any of the batch operations fail.
+     * @throws SQLException If a database access error occurs.
+     */
+    int[] updateUserConsentedAuthorizationDetails(Set<AuthorizationDetailsConsentDTO> authorizationDetailsConsentDTOs)
+            throws SQLException;
+
+    /**
      * Retrieves user consented authorization details from the database.
      *
      * @param consentId The ID of the consent.
@@ -114,7 +126,7 @@ public interface AuthorizationDetailsDAO {
      * Retrieves authorization code authorization details from the database.
      *
      * @param authorizationCode The value of the authorization code.
-     * @param tenantId      The tenant ID.
+     * @param tenantId          The tenant ID.
      * @return A set of authorization code authorization details DTOs.
      * @throws SQLException If a database access error occurs.
      */
