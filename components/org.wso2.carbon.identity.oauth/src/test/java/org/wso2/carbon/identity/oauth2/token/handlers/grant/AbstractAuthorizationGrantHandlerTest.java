@@ -27,8 +27,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.ActionExecutorService;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
-import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
+import org.wso2.carbon.identity.action.execution.model.SuccessStatus;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
@@ -105,7 +105,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
         MockitoAnnotations.initMocks(this);
         when(mockActionExecutionService.execute(any(ActionType.class), anyMap(), any())).thenReturn(
-                new ActionExecutionStatus(ActionExecutionStatus.Status.SUCCESS, null));
+                new SuccessStatus.Builder().build());
 
         authenticatedUser.setUserName("randomUser");
         authenticatedUser.setTenantDomain("Homeless");

@@ -84,6 +84,9 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
@@ -2105,13 +2108,26 @@ public class OAuth2Util {
 
         List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
         try {
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+            ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
+                    .getClaimMetadataManagementService();
+            List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
+                    tenantDomain);
+            Set<String> oidcClaimsMappedToScopes = scopeClaimsList.stream()
+                    .flatMap(scopeDTO -> Arrays.stream(scopeDTO.getClaim()))
+                    .collect(Collectors.toSet());
+            for (ExternalClaim oidcClaim : oidcDialectClaims) {
+                if (oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI())) {
+                    claimService.updateExternalClaim(oidcClaim, tenantDomain);
+                }
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().initScopeClaimMapping(tenantId,
                     scopeClaimsList);
         } catch (IdentityOAuth2ClientException e) {
             if (log.isDebugEnabled()) {
                 log.debug(e.getMessage(), e);
             }
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | ClaimMetadataException e) {
             log.error(e.getMessage(), e);
         }
     }

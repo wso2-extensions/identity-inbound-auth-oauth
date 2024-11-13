@@ -29,6 +29,8 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
+import org.wso2.carbon.identity.action.execution.model.Error;
+import org.wso2.carbon.identity.action.execution.model.Failure;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -449,7 +451,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         Timestamp timestamp = new Timestamp(new Date().getTime());
         updateMessageContextToCreateNewToken(tokReqMsgCtx, consumerKey, existingTokenBean, timestamp);
-        executePreIssueAccessTokenActions(tokReqMsgCtx);
+        ActionExecutionStatus<?> executionStatus = executePreIssueAccessTokenActions(tokReqMsgCtx);
+        if (executionStatus != null && (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED ||
+                executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR)) {
+            return getFailureOrErrorResponseDTO(executionStatus);
+        }
         AccessTokenDO newTokenBean = createNewTokenBean(tokReqMsgCtx, existingTokenBean, oauthTokenIssuer);
 
         /* Check whether the existing token needs to be expired and send the corresponding parameters to the
@@ -470,9 +476,26 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return createResponseWithTokenBean(newTokenBean, newTokenBean.getValidityPeriodInMillis(), scope);
     }
 
-    private void executePreIssueAccessTokenActions(OAuthTokenReqMessageContext tokenReqMessageContext)
-            throws IdentityOAuth2Exception {
+    private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus) {
 
+        OAuth2AccessTokenRespDTO accessTokenResponse = new OAuth2AccessTokenRespDTO();
+        accessTokenResponse.setError(true);
+        if (executionStatus.getStatus() == ActionExecutionStatus.Status.FAILED) {
+            Failure failureResponse = (Failure) executionStatus.getResponse();
+            accessTokenResponse.setErrorCode(failureResponse.getFailureReason());
+            accessTokenResponse.setErrorMsg(failureResponse.getFailureDescription());
+        } else if (executionStatus.getStatus() == ActionExecutionStatus.Status.ERROR) {
+            Error errorResponse = (Error) executionStatus.getResponse();
+            accessTokenResponse.setErrorCode(errorResponse.getErrorMessage());
+            accessTokenResponse.setErrorMsg(errorResponse.getErrorDescription());
+        }
+        return accessTokenResponse;
+    }
+
+    private ActionExecutionStatus<?> executePreIssueAccessTokenActions(
+            OAuthTokenReqMessageContext tokenReqMessageContext) throws IdentityOAuth2Exception {
+
+        ActionExecutionStatus<?> executionStatus = null;
         if (checkExecutePreIssueAccessTokensActions(tokenReqMessageContext)) {
 
             Map<String, Object> additionalProperties = new HashMap<>();
@@ -481,8 +504,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             mapInitializer.accept(additionalProperties);
 
             try {
-                ActionExecutionStatus executionStatus =
-                        OAuthComponentServiceHolder.getInstance().getActionExecutorService()
+                executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
                                 .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
                                         IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
                 if (log.isDebugEnabled()) {
@@ -493,10 +515,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                             Optional.ofNullable(executionStatus).isPresent() ? executionStatus.getStatus() : "NA"));
                 }
             } catch (ActionExecutionException e) {
-                // If error ignore and proceed
-                log.error("Error while executing pre issue access token action", e);
+                throw new IdentityOAuth2Exception("Error occurred while executing pre issue access token actions.", e);
             }
         }
+        return executionStatus;
     }
 
     private boolean checkExecutePreIssueAccessTokensActions(OAuthTokenReqMessageContext tokenReqMessageContext)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,9 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -257,16 +259,31 @@ public class OAuthAdminServiceImpl {
     /**
      * Get OAuth application data by the application name.
      *
-     * @param appName OAuth application name
-     * @return <code>OAuthConsumerAppDTO</code> with application information
+     * @param appName OAuth application name.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
      * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
      */
     public OAuthConsumerAppDTO getOAuthApplicationDataByAppName(String appName) throws IdentityOAuthAdminException {
 
+        int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        return getOAuthApplicationDataByAppName(appName, tenantID);
+    }
+
+    /**
+     * Get OAuth application data by the application name and tenant ID.
+     *
+     * @param appName  OAuth application name.
+     * @param tenantID Tenant ID associated with the OAuth application.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
+     * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
+     */
+    public OAuthConsumerAppDTO getOAuthApplicationDataByAppName(String appName, int tenantID)
+            throws IdentityOAuthAdminException {
+
         OAuthConsumerAppDTO dto;
         OAuthAppDAO dao = new OAuthAppDAO();
         try {
-            OAuthAppDO app = dao.getAppInformationByAppName(appName);
+            OAuthAppDO app = dao.getAppInformationByAppName(appName, tenantID);
             if (app != null) {
                 dto = OAuthUtil.buildConsumerAppDTO(app);
             } else {
@@ -274,10 +291,12 @@ public class OAuthAdminServiceImpl {
             }
             return dto;
         } catch (InvalidOAuthClientException e) {
-            String msg = "Cannot find a valid OAuth client with application name: " + appName;
+            String msg = "Cannot find a valid OAuth client with application name: " + appName
+                    + " in tenant: " + tenantID;
             throw handleClientError(INVALID_OAUTH_CLIENT, msg);
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while retrieving the app information by app name: " + appName, e);
+            throw handleError("Error while retrieving the app information by app name: " + appName
+                    + " in tenant: " + tenantID, e);
         }
     }
 
@@ -989,10 +1008,8 @@ public class OAuthAdminServiceImpl {
                 // We only trigger the access token claims migration if the following conditions are met.
                 // 1. The AT claims separation is enabled at server level.
                 // 2. The AT claims separation is not enabled at app level.
-                // 3. The access token claims are empty.
                 try {
-                    if (!isAccessTokenClaimsSeparationEnabledForApp(oAuthAppDO.getOauthConsumerKey(),
-                            tenantDomain) && oAuthAppDO.getAccessTokenClaims().length == 0) {
+                    if (!isAccessTokenClaimsSeparationEnabledForApp(oAuthAppDO.getOauthConsumerKey(), tenantDomain)) {
                         // Add requested claims as access token claims.
                         addAccessTokenClaims(oAuthAppDO, tenantDomain);
                     }
@@ -1085,8 +1102,23 @@ public class OAuthAdminServiceImpl {
         addScopePreValidation(scope);
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
+                .getClaimMetadataManagementService();
         try {
+            List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
+                    tenantDomain);
+            List<String> oidcClaimsMappedToScopes = Arrays.asList(scope.getClaim());
+            for (ExternalClaim oidcClaim : oidcDialectClaims) {
+                if (oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI())) {
+                    claimService.updateExternalClaim(oidcClaim, tenantDomain);
+                }
+            }
             OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().addScope(scope, tenantId);
+        } catch (ClaimMetadataException e) {
+            IdentityOAuth2Exception identityOAuth2Exception = new IdentityOAuth2Exception(String.format(
+                    "Error while inserting OIDC scope: %s in tenant: %s", scope.getName(), tenantDomain), e);
+            throw handleErrorWithExceptionType(identityOAuth2Exception.getMessage(), identityOAuth2Exception);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while inserting OIDC scope: %s, %s",
                     scope.getName(), e.getMessage()), e);
@@ -1252,13 +1284,27 @@ public class OAuthAdminServiceImpl {
     public void updateScope(ScopeDTO updatedScope) throws IdentityOAuthAdminException {
 
         updateScopePreValidation(updatedScope);
-        // Check whether a scope exists with the provided scope name which to be deleted.
+        // Check whether a scope exists with the provided scope name which to be updated.
         validateScopeExistence(updatedScope.getName());
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
+                .getClaimMetadataManagementService();
         try {
-            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    updateScope(updatedScope, tenantId);
+            List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
+                    tenantDomain);
+            List<String> oidcClaimsMappedToScopes = Arrays.asList(updatedScope.getClaim());
+            for (ExternalClaim oidcClaim : oidcDialectClaims) {
+                if (oidcClaimsMappedToScopes.contains(oidcClaim.getClaimURI())) {
+                    claimService.updateExternalClaim(oidcClaim, tenantDomain);
+                }
+            }
+            OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().updateScope(updatedScope, tenantId);
+        } catch (ClaimMetadataException e) {
+            IdentityOAuth2Exception identityOAuth2Exception = new IdentityOAuth2Exception(String.format(
+                    "Error while updating the scope: %s in tenant: %s", updatedScope.getName(), tenantId), e);
+            throw handleErrorWithExceptionType(identityOAuth2Exception.getMessage(), identityOAuth2Exception);
         } catch (IdentityOAuth2Exception e) {
             throw handleErrorWithExceptionType(String.format("Error while updating the scope: %s in tenant: %s",
                     updatedScope.getName(), tenantId), e);
