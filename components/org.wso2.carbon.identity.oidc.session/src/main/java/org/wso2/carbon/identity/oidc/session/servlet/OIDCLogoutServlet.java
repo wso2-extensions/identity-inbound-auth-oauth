@@ -1108,7 +1108,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             return OIDCSessionManagementUtil.extractClientIDFromDecryptedIDToken(decryptedIDToken);
         } else {
             if (!validateIdToken(idToken)) {
-                throw new IdentityOAuth2Exception(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN,
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_ID_TOKEN,
                         "ID token signature validation failed.");
             }
             return extractClientFromIdToken(idToken);
