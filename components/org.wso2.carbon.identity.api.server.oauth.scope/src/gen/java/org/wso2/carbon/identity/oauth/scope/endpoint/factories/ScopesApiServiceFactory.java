@@ -5,9 +5,9 @@ import org.wso2.carbon.identity.oauth.scope.endpoint.impl.ScopesApiServiceImpl;
 
 public class ScopesApiServiceFactory {
 
-    private final static ScopesApiService service = new ScopesApiServiceImpl();
+    private static final ScopesApiService SERVICE = new ScopesApiServiceImpl();
 
     public static ScopesApiService getScopesApi() {
-        return service;
+        return SERVICE;
     }
 }
