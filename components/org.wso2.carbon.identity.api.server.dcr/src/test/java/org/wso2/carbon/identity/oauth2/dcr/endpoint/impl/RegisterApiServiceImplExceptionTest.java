@@ -33,6 +33,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
@@ -40,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.TestUtil;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,11 +49,13 @@ import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
+@WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
 public class RegisterApiServiceImplExceptionTest {
 
@@ -70,12 +72,21 @@ public class RegisterApiServiceImplExceptionTest {
     ApplicationManagementService applicationManagementService;
 
     @Mock
-    DCRMService mockedDCRMService;
+    PrivilegedCarbonContext privilegedCarbonContext;
 
     MockedConstruction<ServiceTracker> mockedConstruction;
+    private MockedStatic<PrivilegedCarbonContext> mockedPrivilegedCarbonContext;
 
     @BeforeMethod
     public void setUp() throws Exception {
+
+        if (mockedPrivilegedCarbonContext != null) {
+            mockedPrivilegedCarbonContext.close();
+        }
+        mockedPrivilegedCarbonContext = mockStatic(PrivilegedCarbonContext.class);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getOSGiService(DCRMService.class, null)).thenReturn(mock(DCRMService.class));
 
         // Initializing variables.
         registerApiService = new RegisterApiServiceImpl();
@@ -104,7 +115,6 @@ public class RegisterApiServiceImplExceptionTest {
     public void testDeleteApplicationClientException() throws Exception {
 
         try {
-            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             registerApiService.deleteApplication("");
         } catch (DCRMEndpointException e) {
             assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
@@ -126,7 +136,6 @@ public class RegisterApiServiceImplExceptionTest {
     public void testGetApplicationClientException() throws Exception {
 
         try {
-            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             registerApiService.getApplication("");
         } catch (DCRMEndpointException e) {
             assertEquals(e.getResponse().getStatus(), Response.Status.BAD_REQUEST.getStatusCode());
@@ -155,7 +164,6 @@ public class RegisterApiServiceImplExceptionTest {
             registrationRequestDTO.setClientName("Test App");
             registrationRequestDTO.setGrantTypes(granttypes);
             registrationRequestDTO.setRedirectUris(redirectUris);
-            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             dcrDataHolder.when(DCRDataHolder::getInstance).thenReturn(dataHolder);
             lenient().when(dataHolder.getApplicationManagementService()).thenReturn(applicationManagementService);
 
@@ -180,7 +188,6 @@ public class RegisterApiServiceImplExceptionTest {
             registrationRequestDTO.setGrantTypes(granttypes);
             registrationRequestDTO.setRedirectUris(redirectUris);
 
-            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             dcrDataHolder.when(DCRDataHolder::getInstance).thenReturn(dataHolder);
             lenient().when(dataHolder.getApplicationManagementService()).thenReturn(applicationManagementService);
             lenient().when(applicationManagementService.getServiceProvider(any(String.class), any(String.class))).
@@ -218,7 +225,6 @@ public class RegisterApiServiceImplExceptionTest {
             updateRequestDTO.setClientName("Test App");
             updateRequestDTO.setGrantTypes(granttypes);
             updateRequestDTO.setRedirectUris(redirectUris);
-            DCRMUtils.setOAuth2DCRMService(mockedDCRMService);
             dcrDataHolder.when(DCRDataHolder::getInstance).thenReturn(dataHolder);
             lenient().when(dataHolder.getApplicationManagementService()).thenReturn(applicationManagementService);
 
