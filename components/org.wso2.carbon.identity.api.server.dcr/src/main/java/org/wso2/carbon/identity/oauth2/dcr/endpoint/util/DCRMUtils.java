@@ -45,17 +45,15 @@ public class DCRMUtils {
     private static final String NOT_FOUND_STATUS = "NOT_FOUND_";
     private static final String FORBIDDEN_STATUS = "FORBIDDEN_";
 
-    private static DCRMService oAuth2DCRMService = (DCRMService) PrivilegedCarbonContext
-            .getThreadLocalCarbonContext().getOSGiService(DCRMService.class, null);
+    private static class OAuth2DCRMServiceHolder {
 
-    public static void setOAuth2DCRMService(DCRMService oAuth2DCRMService) {
-
-        DCRMUtils.oAuth2DCRMService = oAuth2DCRMService;
+        private static final DCRMService SERVICE = (DCRMService) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(DCRMService.class, null);
     }
 
     public static DCRMService getOAuth2DCRMService() {
 
-        return oAuth2DCRMService;
+        return OAuth2DCRMServiceHolder.SERVICE;
     }
 
     public static ApplicationRegistrationRequest getApplicationRegistrationRequest(
