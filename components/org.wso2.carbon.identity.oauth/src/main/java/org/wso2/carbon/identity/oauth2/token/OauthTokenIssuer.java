@@ -99,4 +99,13 @@ public interface OauthTokenIssuer {
     default String issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
         return StringUtils.EMPTY;
     }
+
+    /**
+     * Default method to retrieve the access token type
+     *
+     * @return The type of the token (e.g., "JWT" or "Opaque").
+     */
+    default String getAccessTokenType() {
+        return "Opaque";
+    }
 }

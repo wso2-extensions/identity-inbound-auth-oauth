@@ -120,6 +120,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         signatureAlgorithm = mapSignatureAlgorithm(config.getSignatureAlgorithm());
     }
 
+    @Override
+    public String getAccessTokenType() {
+
+        return "JWT";
+    }
+
     /**
      * {@inheritDoc}
      */
