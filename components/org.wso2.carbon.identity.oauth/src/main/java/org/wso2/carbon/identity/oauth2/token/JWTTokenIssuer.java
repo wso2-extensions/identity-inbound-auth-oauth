@@ -123,7 +123,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     @Override
     public String getAccessTokenType() {
 
-        return "JWT";
+        return JWT_TYP_HEADER_VALUE;
     }
 
     /**

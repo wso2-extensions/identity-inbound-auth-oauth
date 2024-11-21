@@ -1241,7 +1241,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
-        String tokenType =  oauthTokenIssuer.getAccessTokenType();
+        String tokenType = oauthTokenIssuer.getAccessTokenType();
 
         if (JWT.equalsIgnoreCase(tokenType)) {
             if (getRenewWithoutRevokingExistingStatus()
