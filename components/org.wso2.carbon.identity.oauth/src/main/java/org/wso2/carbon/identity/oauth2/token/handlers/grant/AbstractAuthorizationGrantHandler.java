@@ -736,7 +736,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         return Boolean.parseBoolean(IdentityUtil.
                 getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
-
     }
 
     private String getNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, OauthTokenIssuer oauthTokenIssuer)
