@@ -51,6 +51,4 @@ class MessageContext {
     public void setResponse(WebFingerResponse response) {
         this.response = response;
     }
-
-
 }
