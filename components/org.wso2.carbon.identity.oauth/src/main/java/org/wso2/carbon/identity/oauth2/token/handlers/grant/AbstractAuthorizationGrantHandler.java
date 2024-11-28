@@ -59,6 +59,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -102,6 +104,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    protected AuthorizationDetailsService authorizationDetailsService;
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -111,6 +114,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             cacheEnabled = true;
             oauthCache = OAuthCache.getInstance();
         }
+        this.authorizationDetailsService = OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService();
     }
 
     @Override
@@ -456,6 +460,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     existingTokenBean.getTokenId(), true);
         }
 
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx.getAuthorizationDetails())) {
+            this.authorizationDetailsService.replaceAccessTokenAuthorizationDetails(existingTokenBean.getTokenId(),
+                    existingTokenBean, tokReqMsgCtx);
+        }
+
         setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
         return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
@@ -671,6 +680,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
         storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
                 existingTokenBean);
+        this.authorizationDetailsService
+                .storeOrReplaceAccessTokenAuthorizationDetails(newTokenBean, existingTokenBean, tokReqMsgCtx);
     }
 
     private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope, OauthTokenIssuer oauthTokenIssuer)
