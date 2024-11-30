@@ -16,6 +16,7 @@
 package org.wso2.carbon.identity.oauth2.authz;
 
 import org.apache.oltu.oauth2.common.error.OAuthError;
+import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -37,11 +38,13 @@ import org.wso2.carbon.identity.oauth2.TestUtil;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @WithCarbonHome
@@ -56,6 +59,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     private AuthorizationHandlerManager authorizationHandlerManager;
     private OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
     private ServiceProvider serviceProvider;
+    private MockedStatic<AuthzUtil> mockedAuthzUtil;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -70,12 +74,16 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         when(applicationManagementService.getServiceProviderByClientId(anyString(), anyString(), anyString()))
                 .thenReturn(serviceProvider);
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
+        mockedAuthzUtil = mockStatic(AuthzUtil.class);
+        mockedAuthzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
     }
 
     @AfterClass
     public void tearDown() {
 
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
+        mockedAuthzUtil.close();
+
     }
 
     @BeforeMethod
