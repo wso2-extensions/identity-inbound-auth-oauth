@@ -66,8 +66,7 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -86,7 +85,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -775,17 +773,18 @@ public final class OAuthUtil {
 
     /**
      * Get clientIds of associated application of an application role.
-     * @param role          Role object.
+     *
+     * @param role               Role basic info object.
      * @param authenticatedUser  Authenticated user.
      * @return Set of clientIds of associated applications.
      */
-    private static Set<String> getClientIdsOfAssociatedApplications(Role role, AuthenticatedUser authenticatedUser)
+    private static Set<String> getClientIdsOfAssociatedApplications(RoleBasicInfo role,
+                                                                    AuthenticatedUser authenticatedUser)
             throws UserStoreException {
 
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
-        List<String> associatedApplications = role.getAssociatedApplications().stream()
-                .map(AssociatedApplication::getId).collect(Collectors.toList());
+        List<String> associatedApplications = Collections.singletonList(role.getAudienceId());
         try {
             if (authenticatedUser.getUserResidentOrganization() != null) {
                 List<String> newAssociatedApplications = new ArrayList<>();
@@ -849,14 +848,14 @@ public final class OAuthUtil {
      * @param tenantDomain  Tenant domain.
      * @return Role.
      */
-    private static Role getRole(String roleId, String tenantDomain) throws UserStoreException {
+    private static RoleBasicInfo getRoleBasicInfo(String roleId, String tenantDomain) throws UserStoreException {
 
         try {
             RoleManagementService roleV2ManagementService =
                     OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
-            return roleV2ManagementService.getRole(roleId, tenantDomain);
+            return roleV2ManagementService.getRoleBasicInfoById(roleId, tenantDomain);
         } catch (IdentityRoleManagementException e) {
-            String errorMessage = "Error occurred while retrieving role of id : " + roleId;
+            String errorMessage = "Error occurred while retrieving basic role info of id : " + roleId;
             throw new UserStoreException(errorMessage, e);
         }
     }
@@ -1012,10 +1011,10 @@ public final class OAuthUtil {
 
         // Get details about the role to identify the audience and associated applications.
         Set<String> clientIds = null;
-        Role role = null;
+        RoleBasicInfo role = null;
         boolean getClientIdsFromUser = false;
         if (roleId != null) {
-            role = getRole(roleId, IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
+            role = getRoleBasicInfo(roleId, tenantDomain);
             if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
                 // Get clientIds of associated applications for the specific application role.
                 if (LOG.isDebugEnabled()) {
