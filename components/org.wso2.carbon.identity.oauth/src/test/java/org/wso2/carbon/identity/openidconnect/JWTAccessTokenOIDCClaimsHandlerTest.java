@@ -391,7 +391,8 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                 mockApplicationManagementService();
                 authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
                 UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
-                mockUserRealm(requestMsgCtx.getAuthorizationReqDTO().getUser().toString(), userRealm, identityTenantUtil);
+                mockUserRealm(requestMsgCtx.getAuthorizationReqDTO().getUser().toString(), userRealm,
+                        identityTenantUtil);
                 JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
                 JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                         oAuthServerConfiguration);
@@ -489,9 +490,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         jdbcPersistenceManager.when(JDBCPersistenceManager::getInstance).thenReturn(mockJdbcPersistenceManager);
         lenient().when(mockJdbcPersistenceManager.getDataSource()).thenReturn(dataSource);
 
-        JWTAccessTokenOIDCClaimsHandler jWTAccessTokenOIDCClaimsHandler =
-                new JWTAccessTokenOIDCClaimsHandler();
-        return jWTAccessTokenOIDCClaimsHandler;
+        return new JWTAccessTokenOIDCClaimsHandler();
     }
 
     private OAuthTokenReqMessageContext getTokenReqMessageContextForLocalUser() {
