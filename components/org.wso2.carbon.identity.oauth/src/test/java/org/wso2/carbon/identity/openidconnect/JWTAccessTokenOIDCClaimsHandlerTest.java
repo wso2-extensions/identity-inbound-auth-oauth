@@ -54,8 +54,10 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
@@ -364,6 +366,41 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         }
     }
 
+    @Test
+    public void testHandleCustomClaimsForOAuthAuthzReqMsgContext() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS)) {
+                identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
+                        getoAuthAppDO(jwtAccessTokenClaims));
+                Map<String, String> mappings = getOIDCtoLocalClaimsMapping();
+                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+                lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                        anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
+                OAuthAuthzReqMessageContext requestMsgCtx = getOAuthAuthzReqMessageContextForLocalUser();
+                mockApplicationManagementService();
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+                UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+                mockUserRealm(requestMsgCtx.getAuthorizationReqDTO().getUser().toString(), userRealm, identityTenantUtil);
+                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                        oAuthServerConfiguration);
+                assertNotNull(jwtClaimsSet);
+                assertFalse(jwtClaimsSet.getClaims().isEmpty());
+            }
+        }
+    }
+
     private static Map<String, String> getOIDCtoLocalClaimsMapping() {
 
         Map<String, String> mappings = new HashMap<>();
@@ -405,6 +442,26 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                                         MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
             throws IdentityOAuth2Exception {
 
+        JWTAccessTokenOIDCClaimsHandler jWTAccessTokenOIDCClaimsHandler =
+                getJwtAccessTokenOIDCClaimsHandler(jdbcPersistenceManager, oAuthServerConfiguration);
+        return jWTAccessTokenOIDCClaimsHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+    }
+
+    private JWTClaimsSet getJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder,
+                                        OAuthAuthzReqMessageContext requestMsgCtx,
+                                        MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager,
+                                        MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
+            throws IdentityOAuth2Exception {
+
+        JWTAccessTokenOIDCClaimsHandler jWTAccessTokenOIDCClaimsHandler =
+                getJwtAccessTokenOIDCClaimsHandler(jdbcPersistenceManager, oAuthServerConfiguration);
+        return jWTAccessTokenOIDCClaimsHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+    }
+
+    private JWTAccessTokenOIDCClaimsHandler getJwtAccessTokenOIDCClaimsHandler(
+            MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager,
+            MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration) {
+
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         DataSource dataSource = mock(DataSource.class);
@@ -434,7 +491,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
 
         JWTAccessTokenOIDCClaimsHandler jWTAccessTokenOIDCClaimsHandler =
                 new JWTAccessTokenOIDCClaimsHandler();
-        return jWTAccessTokenOIDCClaimsHandler.handleCustomClaims(jwtClaimsSetBuilder, requestMsgCtx);
+        return jWTAccessTokenOIDCClaimsHandler;
     }
 
     private OAuthTokenReqMessageContext getTokenReqMessageContextForLocalUser() {
@@ -515,4 +572,13 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         field.set(object, value);
     }
 
+    private OAuthAuthzReqMessageContext getOAuthAuthzReqMessageContextForLocalUser() {
+
+        OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();
+        oAuth2AuthorizeReqDTO.setTenantDomain(TENANT_DOMAIN);
+        oAuth2AuthorizeReqDTO.setConsumerKey(DUMMY_CLIENT_ID);
+        oAuth2AuthorizeReqDTO.setUser(getDefaultAuthenticatedLocalUser());
+
+        return new OAuthAuthzReqMessageContext(oAuth2AuthorizeReqDTO);
+    }
 }
