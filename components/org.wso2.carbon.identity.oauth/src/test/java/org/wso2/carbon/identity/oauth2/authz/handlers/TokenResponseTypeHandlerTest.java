@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -27,6 +28,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -38,14 +40,21 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Unit test covering TokenResponseTypeHandler class
  */
 @WithCarbonHome
 @WithRealmService(injectToSingletons = OAuthComponentServiceHolder.class)
-@WithH2Database(files = { "dbScripts/identity.sql" })
+@WithH2Database(files = { "dbScripts/identity.sql", "dbScripts/insert_local_idp.sql" })
 public class TokenResponseTypeHandlerTest {
 
     private static final String TEST_CLIENT_ID_1 = "SDSDSDS23131231";
@@ -57,6 +66,7 @@ public class TokenResponseTypeHandlerTest {
     public void setUp() throws Exception {
         OAuthEventInterceptor interceptor = Mockito.mock(OAuthEventInterceptor.class);
         OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(interceptor);
+        Mockito.clearAllCaches();
     }
 
     /**
@@ -105,10 +115,19 @@ public class TokenResponseTypeHandlerTest {
 
         new OAuthAppDAO().addOAuthApplication(oAuthAppDO);
 
-        OAuth2AuthorizeRespDTO auth2AuthorizeReqDTO = tokenResponseTypeHandler.
-                issue(authAuthzReqMessageContext);
-        Assert.assertNotNull(auth2AuthorizeReqDTO.getAccessToken());
-        Assert.assertTrue(auth2AuthorizeReqDTO.getValidityPeriod() > 1,
-                "Access Token should be valid, i.e. not expired.");
+        try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class);
+            MockedStatic<AuthzUtil> mockedAuthzUtil = mockStatic(AuthzUtil.class)) {
+
+            mockedAuthzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
+            AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
+            appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            doNothing().when(mockAppInfoCache).addToCache(anyString(), any(OAuthAppDO.class));
+
+            OAuth2AuthorizeRespDTO auth2AuthorizeReqDTO = tokenResponseTypeHandler.
+                    issue(authAuthzReqMessageContext);
+            Assert.assertNotNull(auth2AuthorizeReqDTO.getAccessToken());
+            Assert.assertTrue(auth2AuthorizeReqDTO.getValidityPeriod() > 1,
+                    "Access Token should be valid, i.e. not expired.");
+        }
     }
 }
