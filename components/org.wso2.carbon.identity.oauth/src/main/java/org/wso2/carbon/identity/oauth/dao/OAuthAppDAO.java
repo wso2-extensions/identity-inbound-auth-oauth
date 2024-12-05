@@ -212,6 +212,7 @@ public class OAuthAppDAO {
                         }
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
+                    consumerAppDO.setId(appId);
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     addAccessTokenClaims(connection, appId, consumerAppDO.getAccessTokenClaims());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
