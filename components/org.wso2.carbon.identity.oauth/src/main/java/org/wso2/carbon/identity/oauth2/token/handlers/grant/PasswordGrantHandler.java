@@ -388,16 +388,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
             }
-            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
-                    (tokenReq.getResourceOwnerUsername()))) {
-                throw new IdentityOAuth2Exception("Authentication failed for " + tenantAwareUserName);
-            }
-            username = tokenReq.getResourceOwnerUsername();
-            if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-                // For tenant qualified urls, no need to send fully qualified username in response.
-                username = tenantAwareUserName;
-            }
-            throw new IdentityOAuth2Exception("Authentication failed for " + username);
+
+            throw new IdentityOAuth2Exception("Authentication failed");
         } catch (UserStoreClientException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
@@ -435,7 +427,7 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             if (log.isDebugEnabled()) {
                 log.debug(message, e);
             }
-            throw new IdentityOAuth2Exception(message);
+            throw new IdentityOAuth2Exception("Authentication failed");
         } finally {
             UserCoreUtil.removeUserMgtContextInThreadLocal();
             if (log.isDebugEnabled()) {
