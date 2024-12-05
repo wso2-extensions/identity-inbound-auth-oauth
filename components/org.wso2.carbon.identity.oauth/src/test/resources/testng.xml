@@ -199,6 +199,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtilTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandlerTest"/>
         </classes>
     </test>
 </suite>
