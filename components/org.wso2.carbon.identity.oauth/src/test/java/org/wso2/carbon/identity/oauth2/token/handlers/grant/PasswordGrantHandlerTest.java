@@ -22,6 +22,8 @@ import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
@@ -48,6 +50,9 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -57,6 +62,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
 
 public class PasswordGrantHandlerTest {
@@ -64,6 +70,7 @@ public class PasswordGrantHandlerTest {
     private OAuthTokenReqMessageContext tokReqMsgCtx;
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private ApplicationManagementService applicationManagementService;
+    private FileBasedConfigurationBuilder fileBasedConfigurationBuilder;
     private ServiceProvider serviceProvider;
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
     private RealmService realmService;
@@ -81,6 +88,7 @@ public class PasswordGrantHandlerTest {
         tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         applicationManagementService = mock(ApplicationManagementService.class);
+        fileBasedConfigurationBuilder = mock(FileBasedConfigurationBuilder.class);
         serviceProvider = mock(ServiceProvider.class);
         oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
         realmService = mock(RealmService.class);
@@ -108,7 +116,18 @@ public class PasswordGrantHandlerTest {
              MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);
              MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigBuilder = mockStatic(
+                     FileBasedConfigurationBuilder.class)) {
+
+            fileBasedConfigBuilder.when(FileBasedConfigurationBuilder::getInstance)
+                    .thenReturn(fileBasedConfigurationBuilder);
+            AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
+            Map<String, String> parameterMap = new HashMap<>();
+            parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+            basicAuthenticatorConfig.setParameterMap(parameterMap);
+            when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
+                    basicAuthenticatorConfig);
 
             when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
             when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn(username + "wso2.com");
@@ -191,7 +210,18 @@ public class PasswordGrantHandlerTest {
              MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigBuilder = mockStatic(
+                     FileBasedConfigurationBuilder.class)) {
+
+            fileBasedConfigBuilder.when(FileBasedConfigurationBuilder::getInstance)
+                    .thenReturn(fileBasedConfigurationBuilder);
+            AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
+            Map<String, String> parameterMap = new HashMap<>();
+            parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+            basicAuthenticatorConfig.setParameterMap(parameterMap);
+            when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
+                    basicAuthenticatorConfig);
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfiguration);
             when(serverConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
