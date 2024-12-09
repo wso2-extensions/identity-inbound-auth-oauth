@@ -58,7 +58,6 @@
         <module>components/org.wso2.carbon.identity.oauth.scope.endpoint</module>
         <module>components/org.wso2.carbon.identity.webfinger</module>
         <module>components/org.wso2.carbon.identity.api.server.dcr</module>
-        <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
         <module>components/org.wso2.carbon.identity.oauth.client.authn.filter</module>
         <module>components/org.wso2.carbon.identity.oauth.ciba</module>
         <module>components/org.wso2.carbon.identity.client.attestation.filter</module>
@@ -66,7 +65,6 @@
         <module>features/org.wso2.carbon.identity.oauth.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.server.feature</module>
         <module>features/org.wso2.carbon.identity.oauth.ui.feature</module>
-        <module>features/org.wso2.carbon.identity.oauth.dcr.server.feature</module>
     </modules>
 
     <dependencyManagement>
