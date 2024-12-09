@@ -572,11 +572,6 @@
                 <version>${jackson-databind.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.springframework</groupId>
-                <artifactId>spring-web</artifactId>
-                <version>${spring-web.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>io.swagger</groupId>
                 <artifactId>swagger-jaxrs</artifactId>
                 <version>${swagger-jaxrs.version}</version>
@@ -1044,7 +1039,6 @@
         <!--Swagger Dependency Version-->
         <jackson-databind.version>2.16.1</jackson-databind.version>
         <com.fasterxml.jackson.version>2.16.1</com.fasterxml.jackson.version>
-        <spring-web.version>4.3.29.RELEASE</spring-web.version>
         <swagger-jaxrs.version>1.6.2</swagger-jaxrs.version>
         <com.fasterxml.jackson.databind.version.range>[2.13.0, 3.0.0)</com.fasterxml.jackson.databind.version.range>
 
@@ -1062,7 +1056,6 @@
         <jose4j.version>0.9.5</jose4j.version>
         <!--SAML component version for test-->
         <carbon.identity.sso.saml.version>5.7.0</carbon.identity.sso.saml.version>
-        <spring-context.version>5.1.1.RELEASE</spring-context.version>
 
         <!-- Pax Logging Version -->
         <pax.logging.api.version>1.10.1</pax.logging.api.version>
