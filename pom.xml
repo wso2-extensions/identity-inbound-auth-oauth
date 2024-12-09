@@ -55,7 +55,6 @@
         <module>components/org.wso2.carbon.identity.oidc.dcr</module>
         <module>components/org.wso2.carbon.identity.discovery</module>
         <module>components/org.wso2.carbon.identity.api.server.oauth.scope</module>
-        <module>components/org.wso2.carbon.identity.oauth.scope.endpoint</module>
         <module>components/org.wso2.carbon.identity.webfinger</module>
         <module>components/org.wso2.carbon.identity.api.server.dcr</module>
         <module>components/org.wso2.carbon.identity.oauth.dcr.endpoint</module>
