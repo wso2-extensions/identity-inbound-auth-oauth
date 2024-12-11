@@ -136,7 +136,6 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
@@ -144,7 +143,6 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -276,34 +274,10 @@ public class OAuth2AuthzEndpoint {
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
-    private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
-
-    private static ScopeMetadataService scopeMetadataService;
-
     private static DeviceAuthService deviceAuthService;
     private static final String AUTH_SERVICE_RESPONSE = "authServiceResponse";
     private static final String IS_API_BASED_AUTH_HANDLED = "isApiBasedAuthHandled";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
-
-    public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
-
-        return openIDConnectClaimFilter;
-    }
-
-    public static void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
-
-        OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
-    }
-
-    public static ScopeMetadataService getScopeMetadataService() {
-
-        return scopeMetadataService;
-    }
-
-    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
-
-        OAuth2AuthzEndpoint.scopeMetadataService = scopeMetadataService;
-    }
 
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
@@ -3407,7 +3381,8 @@ public class OAuth2AuthzEndpoint {
 
         // Get the claims uri list of all the requested scopes. Eg:- country, email.
         List<String> claimListOfScopes =
-                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
+                OAuth2AuthzServiceHolder.getOpenIdClaimFilterImpl().getClaimsFilteredByOIDCScopes(
+                        oauth2Params.getScopes(), spTenantDomain);
 
         List<String> essentialRequestedClaims = new ArrayList<>();
 

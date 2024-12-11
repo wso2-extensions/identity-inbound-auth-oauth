@@ -118,14 +118,17 @@ public class OIDCDiscoveryEndpointTest {
         threadLocalPropertiesField.setAccessible(true);
         threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
 
-        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class);
+             MockedStatic<OIDCDiscoveryServiceHolder> oidcDiscoveryServiceHolder =
+                mockStatic(OIDCDiscoveryServiceHolder.class)) {
             endpointUtil.when(EndpointUtil::getOIDCService).thenReturn(defaultOIDCProcessor);
             lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
                     .thenReturn(oidProviderConfigResponse);
             lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
             lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
                     .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            oidcDiscoveryEndpoint.setOidProviderResponseBuilder(new OIDProviderJSONResponseBuilder());
+            oidcDiscoveryServiceHolder.when(OIDCDiscoveryServiceHolder::getOIDProviderResponseBuilder)
+                    .thenReturn(new OIDProviderJSONResponseBuilder());
             Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
             Assert.assertEquals(expectedResponse, response.getStatus());
             threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);

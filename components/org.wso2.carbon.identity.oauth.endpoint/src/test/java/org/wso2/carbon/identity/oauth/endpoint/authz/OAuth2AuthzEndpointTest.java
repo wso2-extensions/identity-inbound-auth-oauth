@@ -43,6 +43,7 @@ import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.Answer;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -53,6 +54,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
@@ -254,7 +256,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Mock
     OIDCSessionManager oidcSessionManager;
 
-
     @Mock
     OAuthMessage oAuthMessage;
 
@@ -284,6 +285,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
+
+    @Mock
+    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
 
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
@@ -335,7 +339,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
             // ignore
         }
         try {
-            createOAuthApp(INACTIVE_CLIENT_ID_VALUE, "dummySecret", USERNAME, INACTIVE_APP_NAME, "INACTIVE");
+            createOAuthApp(INACTIVE_CLIENT_ID_VALUE, "dummySecret", USERNAME, INACTIVE_APP_NAME,
+                    "INACTIVE");
         } catch (JdbcSQLIntegrityConstraintViolationException e) {
             // ignore
         }
@@ -350,7 +355,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @BeforeMethod
     public void setUpMethod() {
 
-        initMocks(this);
+        MockitoAnnotations.openMocks(this);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         mockDatabase(identityDatabaseUtil);
         IdentityEventService identityEventService = mock(IdentityEventService.class);
@@ -367,7 +372,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @AfterMethod
     public void tearDownMethod() {
 
-        identityDatabaseUtil.close();
+        if (identityDatabaseUtil != null) {
+            identityDatabaseUtil.close();
+        }
     }
 
     @DataProvider(name = "providePostParams")
@@ -920,8 +927,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<OpenIDConnectUserRPStore> openIDConnectUserRPStore =
                          mockStatic(OpenIDConnectUserRPStore.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
+                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
+                         mockStatic(PrivilegedCarbonContext.class);) {
 
+                privilegedCarbonContext.when(
+                        PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockedPrivilegedCarbonContext);
+                when(mockedPrivilegedCarbonContext.getOSGiService(OpenIDConnectClaimFilterImpl.class, null))
+                        .thenReturn(openIDConnectClaimFilter);
                 when(authCookie.getValue()).thenReturn("dummyValue");
                 frameworkUtils.when(() -> FrameworkUtils.getAuthCookie(any())).thenReturn(authCookie);
                 frameworkUtils.when(() -> FrameworkUtils.startTenantFlow(anyString())).thenAnswer(invocation -> null);
@@ -939,7 +952,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 when(openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(any(), anyString())).thenReturn(
                         Arrays.asList(
                                 "country"));
-                OAuth2AuthzEndpoint.setOpenIDConnectClaimFilter(openIDConnectClaimFilter);
 
                 Set<ExternalClaim> mappings = new HashSet<>();
                 ExternalClaim claim = new ExternalClaim(OIDC_DIALECT, "country", "http://wso2.org/country");
@@ -1645,7 +1657,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 oAuth2Util.when(() -> OAuth2Util.getServiceProvider(CLIENT_ID_VALUE)).thenReturn(new ServiceProvider());
                 mockApplicationManagementService();
-                frameworkUtils.when(()-> FrameworkUtils.startTenantFlow(anyString())).thenAnswer(invocation -> null);
+                frameworkUtils.when(() -> FrameworkUtils.startTenantFlow(anyString())).thenAnswer(invocation -> null);
                 frameworkUtils.when(FrameworkUtils::endTenantFlow).thenAnswer(invocation -> null);
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
@@ -1943,8 +1955,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                                         , anyString()))
                         .thenReturn("sessionStateValue");
                 oidcSessionManagementUtil.when(
-                                () -> OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(),
-                                        isNull())).thenCallRealMethod();
+                        () -> OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(),
+                                isNull())).thenCallRealMethod();
 
                 sessionDataCache.when(SessionDataCache::getInstance).thenReturn(mockSessionDataCache);
                 SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
@@ -2675,11 +2687,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         endpointUtil.when(EndpointUtil::getOAuthServerConfiguration).thenReturn(mockOAuthServerConfiguration);
         endpointUtil.when(() -> EndpointUtil.getUserConsentURL(any(OAuth2Parameters.class),
-                        anyString(), anyString(), any(OAuthMessage.class), anyString())).thenReturn(USER_CONSENT_URL);
+                anyString(), anyString(), any(OAuthMessage.class), anyString())).thenReturn(USER_CONSENT_URL);
 
         endpointUtil.when(EndpointUtil::getRequestObjectService).thenReturn(requestObjectService);
         endpointUtil.when(() -> EndpointUtil.getLoginPageURL(anyString(), anyString(), anyBoolean(),
-                        anyBoolean(), anySet(), anyMap(), any())).thenReturn(LOGIN_PAGE_URL);
+                anyBoolean(), anySet(), anyMap(), any())).thenReturn(LOGIN_PAGE_URL);
         EndpointUtil.setOAuthAdminService(oAuthAdminService);
         EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
 

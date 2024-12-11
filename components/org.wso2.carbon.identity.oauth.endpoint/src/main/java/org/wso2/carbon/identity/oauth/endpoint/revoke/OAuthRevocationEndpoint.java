@@ -69,9 +69,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEA
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_CACHE_CONTROL_NO_STORE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_RESP_HEADER_VAL_PRAGMA_NO_CACHE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.extractCredentialsFromAuthzHeader;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getRealmInfo;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2Service;
 
 /**
  * Rest implementation for oauth revocation endpoint.

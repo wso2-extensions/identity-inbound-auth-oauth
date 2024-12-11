@@ -77,11 +77,11 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_MODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.SCOPE;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getParAuthService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSPTenantDomainFromClientId;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getParAuthService;
 
 /**
  * REST implementation for OAuth2 PAR endpoint.
