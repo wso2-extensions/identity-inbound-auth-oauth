@@ -934,8 +934,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 privilegedCarbonContext.when(
                         PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockedPrivilegedCarbonContext);
                 when(mockedPrivilegedCarbonContext.getOSGiService(OpenIDConnectClaimFilterImpl.class, null))
-                .thenReturn(mock(OpenIDConnectClaimFilterImpl.class)).
-                        thenReturn(openIDConnectClaimFilter);
+                        .thenReturn(openIDConnectClaimFilter);
                 when(authCookie.getValue()).thenReturn("dummyValue");
                 frameworkUtils.when(() -> FrameworkUtils.getAuthCookie(any())).thenReturn(authCookie);
                 frameworkUtils.when(() -> FrameworkUtils.startTenantFlow(anyString())).thenAnswer(invocation -> null);
@@ -953,7 +952,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 when(openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(any(), anyString())).thenReturn(
                         Arrays.asList(
                                 "country"));
-//                OAuth2AuthzEndpoint.setOpenIDConnectClaimFilter(openIDConnectClaimFilter);
 
                 Set<ExternalClaim> mappings = new HashSet<>();
                 ExternalClaim claim = new ExternalClaim(OIDC_DIALECT, "country", "http://wso2.org/country");
