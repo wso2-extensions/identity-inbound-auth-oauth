@@ -18,11 +18,19 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
+import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
@@ -32,17 +40,40 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+
+@WithCarbonHome
+@Listeners(MockitoTestNGListener.class)
 public class DCRMUtilsTest {
 
     private List<String> redirectUris = new ArrayList<>();
     private List<String> grantTypes = new ArrayList<>();
     private final String clientName = "Application";
 
+    @Mock
+    PrivilegedCarbonContext privilegedCarbonContext;
+
+    private MockedStatic<PrivilegedCarbonContext> mockedPrivilegedCarbonContext;
+
     @BeforeMethod
     public void setUp() throws Exception {
 
+        mockedPrivilegedCarbonContext = mockStatic(PrivilegedCarbonContext.class);
+        when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService(DCRMService.class, null))
+                .thenReturn(mock(DCRMService.class));
+
         redirectUris.add("https://op.certification.openid.net:60845/authz_cb");
         grantTypes.add("authorization_code");
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedPrivilegedCarbonContext.close();
     }
 
     @Test
