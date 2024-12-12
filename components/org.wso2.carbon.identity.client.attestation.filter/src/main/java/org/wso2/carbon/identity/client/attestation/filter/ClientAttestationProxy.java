@@ -115,7 +115,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
                     // Attestation validation should be performed only if API-based authentication is enabled.
                     if (serviceProvider.isAPIBasedAuthenticationEnabled()) {
                         // Validate the attestation header and obtain client attestation context
-                        clientAttestationContext = ClientAttestationServiceHolder.getInstance()
+                        clientAttestationContext = ClientAttestationServiceHolder
                                 .getClientAttestationService().validateAttestation(attestationHeader,
                                         serviceProvider.getApplicationResourceId(),
                                         IdentityTenantUtil.resolveTenantDomain());
@@ -265,7 +265,7 @@ public class ClientAttestationProxy extends AbstractPhaseInterceptor<Message> {
 
         ServiceProvider serviceProvider;
         try {
-            serviceProvider = ClientAttestationServiceHolder.getInstance().getApplicationManagementService()
+            serviceProvider = ClientAttestationServiceHolder.getApplicationManagementService()
                     .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
         } catch (IdentityApplicationManagementClientException e) {
             throw new WebApplicationException(
