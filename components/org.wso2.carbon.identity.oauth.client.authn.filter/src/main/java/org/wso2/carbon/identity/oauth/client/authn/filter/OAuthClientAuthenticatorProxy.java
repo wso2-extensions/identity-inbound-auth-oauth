@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.core.persistence.DBConnectionException;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -51,23 +50,12 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
     private static final List<String> PROXY_ENDPOINT_LIST = Arrays.asList("/oauth2/token", "/oauth2/revoke",
             "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par", "/oauth2/authorize");
-    private OAuthClientAuthnService oAuthClientAuthnService;
     private static final String SLASH = "/";
 
     public OAuthClientAuthenticatorProxy() {
 
         // Since the body is consumed and body parameters are available at this phase we use "PRE_INVOKE"
         super(Phase.PRE_INVOKE);
-    }
-
-    public OAuthClientAuthnService getOAuthClientAuthnService() {
-
-        return oAuthClientAuthnService;
-    }
-
-    public void setOAuthClientAuthnService(OAuthClientAuthnService oAuthClientAuthnService) {
-
-        this.oAuthClientAuthnService = oAuthClientAuthnService;
     }
 
     /**
@@ -82,8 +70,8 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
         HttpServletRequest request = ((HttpServletRequest) message.get(HTTP_REQUEST));
         if (canHandle(message)) {
             try {
-                OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService
-                        .authenticateClient(request, bodyContentParams);
+                OAuthClientAuthnContext oAuthClientAuthnContext = OAuthClientAuthnServiceFactory
+                        .getOAuthClientAuthnService().authenticateClient(request, bodyContentParams);
                 if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
                     /* If the previous authenticator is not engaged it means that either client authentication
                     flow failed or no supported authenticaiton mechanism was found.If the error details are already
