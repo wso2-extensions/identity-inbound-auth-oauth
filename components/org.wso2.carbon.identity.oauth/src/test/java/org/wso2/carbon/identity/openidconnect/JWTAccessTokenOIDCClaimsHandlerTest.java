@@ -237,6 +237,28 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
     }
 
     @Test
+    public void testHandleCustomClaimsWithoutJWTAccessTokenClaimsForOAuthAuthzReqMsgContext() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class)) {
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
+                        getoAuthAppDO(new String[0]));
+                OAuthAuthzReqMessageContext requestMsgCtx = getOAuthAuthzReqMessageContextForLocalUser();
+                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                        oAuthServerConfiguration);
+                assertNotNull(jwtClaimsSet);
+                assertTrue(jwtClaimsSet.getClaims().isEmpty());
+            }
+        }
+    }
+
+    @Test
     public void testHandleCustomClaimsWithoutRegisteredOIDCClaimsForOAuthTokenReqMsgContext() throws Exception {
 
         try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
@@ -251,6 +273,30 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
                         getoAuthAppDO(jwtAccessTokenClaims));
                 OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                        oAuthServerConfiguration);
+                assertNotNull(jwtClaimsSet);
+                assertTrue(jwtClaimsSet.getClaims().isEmpty());
+            }
+        }
+    }
+
+    @Test
+    public void testHandleCustomClaimsWithoutRegisteredOIDCClaimsForOAuthAuthzReqMsgContext() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class)) {
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(this.mockClaimMetadataHandler);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
+                        getoAuthAppDO(jwtAccessTokenClaims));
+                OAuthAuthzReqMessageContext requestMsgCtx = getOAuthAuthzReqMessageContextForLocalUser();
                 JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
                 JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                         oAuthServerConfiguration);
@@ -286,6 +332,42 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                 authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
                 UserRealm userRealm = getUserRealmWithUserClaims(new HashMap<>());
                 mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
+                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                        oAuthServerConfiguration);
+                assertNotNull(jwtClaimsSet);
+                assertTrue(jwtClaimsSet.getClaims().isEmpty());
+            }
+        }
+    }
+
+    @Test
+    public void testHandleCustomClaimsWithoutUserClaimsForOAuthAuthzReqMsgContext() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class)) {
+                identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
+                        getoAuthAppDO(jwtAccessTokenClaims));
+                Map<String, String> mappings = getOIDCtoLocalClaimsMapping();
+                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+                lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                        anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
+                OAuthAuthzReqMessageContext requestMsgCtx = getOAuthAuthzReqMessageContextForLocalUser();
+                mockApplicationManagementService();
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+                UserRealm userRealm = getUserRealmWithUserClaims(new HashMap<>());
+                mockUserRealm(requestMsgCtx.getAuthorizationReqDTO().getUser().toString(), userRealm,
+                        identityTenantUtil);
                 JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
                 JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                         oAuthServerConfiguration);
