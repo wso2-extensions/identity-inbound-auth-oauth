@@ -99,7 +99,7 @@ public class OIDCDiscoveryEndpoint {
         String response;
         OIDCProcessor processor = EndpointUtil.getOIDCService();
         try {
-            OIDProviderResponseBuilder responseBuilder = getOidProviderResponseBuilder();
+            OIDProviderResponseBuilder responseBuilder = OIDCDiscoveryServiceHolder.getOIDProviderResponseBuilder();
             response = responseBuilder.getOIDProviderConfigString(processor.getResponse(request, tenant));
         } catch (OIDCDiscoveryEndPointException e) {
             Response.ResponseBuilder errorResponse = Response.status(processor.handleError(e));
@@ -117,10 +117,5 @@ public class OIDCDiscoveryEndpoint {
     public void setOidProviderResponseBuilder(OIDProviderResponseBuilder oidProviderResponseBuilder) {
 
         this.oidProviderResponseBuilder = oidProviderResponseBuilder;
-    }
-
-    public OIDProviderResponseBuilder getOidProviderResponseBuilder() {
-
-        return this.oidProviderResponseBuilder;
     }
 }
