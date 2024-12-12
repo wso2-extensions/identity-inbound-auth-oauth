@@ -33,7 +33,6 @@ import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.device.model.DeviceFlowDO;
@@ -63,12 +62,6 @@ public class UserAuthenticationEndpoint {
     public static final String INVALID_CODE_ERROR_KEY = "invalid.code";
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private DeviceFlowDO deviceFlowDO = new DeviceFlowDO();
-    private DeviceAuthService deviceAuthService;
-
-    public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
-
-        this.deviceAuthService = deviceAuthService;
-    }
 
     @POST
     @Path("/")
@@ -89,10 +82,10 @@ public class UserAuthenticationEndpoint {
                 return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
             DeviceFlowDO deviceFlowDODetails =
-                    deviceAuthService.getDetailsByUserCode(userCode);
+                    DeviceServiceHolder.getDeviceAuthService().getDetailsByUserCode(userCode);
             if (!isExpiredUserCode(deviceFlowDODetails)) {
                 String clientId = deviceFlowDODetails.getConsumerKey();
-                deviceAuthService.setAuthenticationStatus(userCode);
+                DeviceServiceHolder.getDeviceAuthService().setAuthenticationStatus(userCode);
                 CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
                 commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
                 commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);

@@ -31,6 +31,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -148,6 +149,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     public void tearDown() throws Exception {
 
         cleanData();
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @BeforeMethod
@@ -198,7 +200,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                          mockStatic(DeviceFlowPersistenceFactory.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+                 MockedStatic<DeviceServiceHolder> deviceServiceHolder = mockStatic(DeviceServiceHolder.class);) {
 
                 deviceFlowPersistenceFactory.when(
                         DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
@@ -225,8 +228,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 lenient().when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
                         any(HttpServletResponse.class))).thenReturn(response);
                 DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                deviceServiceHolder.when(DeviceServiceHolder::getDeviceAuthService).thenReturn(deviceAuthService);
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
                 setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
                 response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
                 Assert.assertNotNull(response1);
@@ -282,7 +285,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                          mockStatic(DeviceFlowPersistenceFactory.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+                 MockedStatic<DeviceServiceHolder> deviceServiceHolder = mockStatic(DeviceServiceHolder.class);) {
 
                 deviceFlowPersistenceFactory.when(
                         DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
@@ -310,8 +314,10 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                         any(HttpServletResponse.class))).
                         thenReturn(response);
                 DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                deviceServiceHolder.when(DeviceServiceHolder::getDeviceAuthService).thenReturn(deviceAuthService);
+
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
+
                 setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
                 response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
                 if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
@@ -356,7 +362,9 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                          mockStatic(DeviceFlowPersistenceFactory.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+                 MockedStatic<DeviceServiceHolder> deviceServiceHolder = mockStatic(DeviceServiceHolder.class);) {
+
                 deviceFlowPersistenceFactory.when(
                         DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
                 when(mockDeviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
@@ -381,9 +389,11 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
                 lenient().when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
                                 any(HttpServletResponse.class))).thenReturn(response);
+
                 DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                deviceServiceHolder.when(DeviceServiceHolder::getDeviceAuthService).thenReturn(deviceAuthService);
+
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
                 setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
                 response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
                 if (expectedValue == HttpServletResponse.SC_ACCEPTED) {

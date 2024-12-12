@@ -34,6 +34,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -96,6 +97,9 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     HttpServletRequest request;
+
+    @Mock
+    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
 
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String TEST_URL = "testURL";
@@ -194,7 +198,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
              MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
                      mockStatic(DeviceFlowPersistenceFactory.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
+                     mockStatic(OAuthServerConfiguration.class);
+             MockedStatic<DeviceServiceHolder> deviceServiceHolder = mockStatic(DeviceServiceHolder.class);) {
             DeviceEndpoint deviceEndpoint = spy(new DeviceEndpoint());
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
@@ -212,7 +217,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
             oAuthClientAuthnContext.setAuthenticated(status);
             lenient().when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
             DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-            deviceEndpoint.setDeviceAuthService(deviceAuthService);
+            deviceServiceHolder.when(DeviceServiceHolder::getDeviceAuthService).thenReturn(deviceAuthService);
 
             lenient().when(httpServletRequest.getParameter(anyString())).thenReturn(clientId);
             lenient().when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT))
