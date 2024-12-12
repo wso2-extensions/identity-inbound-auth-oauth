@@ -5,10 +5,10 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.impl.RegisterApiServiceImpl;
 
 public class RegisterApiServiceFactory {
 
-   private final static RegisterApiService service = new RegisterApiServiceImpl();
+   private static final RegisterApiService SERVICE = new RegisterApiServiceImpl();
 
    public static RegisterApiService getRegisterApi()
    {
-      return service;
+      return SERVICE;
    }
 }
