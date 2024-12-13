@@ -21,7 +21,6 @@ package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -29,7 +28,7 @@ import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -97,9 +96,9 @@ public class OIDCDiscoveryEndpoint {
     private Response getResponse(HttpServletRequest request, String tenant) {
 
         String response;
-        OIDCProcessor processor = UtilServiceHolder.getOIDCService();
+        OIDCProcessor processor = OIDCProviderServiceFactory.getOIDCService();
         try {
-            OIDProviderResponseBuilder responseBuilder = OIDCDiscoveryServiceHolder.getOIDProviderResponseBuilder();
+            OIDProviderResponseBuilder responseBuilder = OIDCDiscoveryServiceFactory.getOIDProviderResponseBuilder();
             response = responseBuilder.getOIDProviderConfigString(processor.getResponse(request, tenant));
         } catch (OIDCDiscoveryEndPointException e) {
             Response.ResponseBuilder errorResponse = Response.status(processor.handleError(e));
@@ -111,11 +110,5 @@ public class OIDCDiscoveryEndpoint {
         }
         Response.ResponseBuilder responseBuilder = Response.status(HttpServletResponse.SC_OK);
         return responseBuilder.entity(response).build();
-    }
-
-    @Autowired
-    public void setOidProviderResponseBuilder(OIDProviderResponseBuilder oidProviderResponseBuilder) {
-
-        this.oidProviderResponseBuilder = oidProviderResponseBuilder;
     }
 }
