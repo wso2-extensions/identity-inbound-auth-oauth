@@ -36,7 +36,7 @@ import org.wso2.carbon.utils.DiagnosticLog;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2Service;
 
 /**
  * This class validate the OAuth request state.

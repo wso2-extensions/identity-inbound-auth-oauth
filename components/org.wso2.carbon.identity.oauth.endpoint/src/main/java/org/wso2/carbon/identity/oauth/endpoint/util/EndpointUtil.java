@@ -44,7 +44,6 @@ import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
-import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationRequest;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -62,19 +61,13 @@ import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
-import org.wso2.carbon.identity.discovery.OIDCProcessor;
-import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
-import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
-import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -86,16 +79,12 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClien
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
-import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
-import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
-import org.wso2.carbon.identity.oauth2.OAuth2Service;
-import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -106,20 +95,15 @@ import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
 import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
-import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
-import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
-import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -157,6 +141,10 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2ScopeService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuthAdminService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuthServerConfiguration;
+import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getScopeMetadataService;
 import static org.wso2.carbon.identity.oauth.par.common.ParConstants.PRE_HANDLE_PAR_REQUEST;
 import static org.wso2.carbon.identity.oauth.par.common.ParConstants.REQUEST_HEADERS;
 import static org.wso2.carbon.identity.oauth.par.common.ParConstants.REQUEST_PARAMETERS;
@@ -185,152 +173,13 @@ public class EndpointUtil {
     private static final String REQUEST_URI = "request_uri";
     private static final String NOT_AVAILABLE = "N/A";
     private static final String UNKNOWN_ERROR = "unknown_error";
-    private static OAuth2Service oAuth2Service;
-    private static OAuth2ScopeService oAuth2ScopeService;
-    private static OAuthAdminServiceImpl oAuthAdminService;
-    private static ScopeMetadataService scopeMetadataService;
-    private static SSOConsentService ssoConsentService;
-    private static OAuthServerConfiguration oauthServerConfiguration;
-    private static RequestObjectService requestObjectService;
-    private static CibaAuthServiceImpl cibaAuthService;
-    private static ParAuthService parAuthService;
-    private static IdpManager idpManager;
     private static final String ALLOW_ADDITIONAL_PARAMS_FROM_ERROR_URL = "OAuth.AllowAdditionalParamsFromErrorUrl";
     private static final String KEEP_OIDC_SCOPES_IN_CONSENT_URL = "OAuth.KeepOIDCScopesInConsentURL";
     private static final String IDP_ENTITY_ID = "IdPEntityId";
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
-    public static void setIdpManager(IdpManager idpManager) {
-
-        EndpointUtil.idpManager = idpManager;
-    }
-
-    public static void setOAuth2Service(OAuth2Service oAuth2Service) {
-
-        EndpointUtil.oAuth2Service = oAuth2Service;
-    }
-
-    public static void setOAuth2ScopeService(OAuth2ScopeService oAuth2ScopeService) {
-
-        EndpointUtil.oAuth2ScopeService = oAuth2ScopeService;
-    }
-
-    public static void setOAuthAdminService(OAuthAdminServiceImpl oAuthAdminService) {
-
-        EndpointUtil.oAuthAdminService = oAuthAdminService;
-    }
-
-    public static void setSSOConsentService(SSOConsentService ssoConsentService) {
-
-        EndpointUtil.ssoConsentService = ssoConsentService;
-    }
-
-    public static void setOauthServerConfiguration(OAuthServerConfiguration oauthServerConfiguration) {
-
-        EndpointUtil.oauthServerConfiguration = oauthServerConfiguration;
-    }
-
-    public static void setRequestObjectService(RequestObjectService requestObjectService) {
-
-        EndpointUtil.requestObjectService = requestObjectService;
-    }
-
-    public static ScopeMetadataService getScopeMetadataService() {
-
-        return scopeMetadataService;
-    }
-
-    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
-
-        EndpointUtil.scopeMetadataService = scopeMetadataService;
-    }
-
     private EndpointUtil() {
 
-    }
-
-    /**
-     * Returns the registered {@code {@link SSOConsentService}} instance
-     *
-     * @return
-     */
-    public static SSOConsentService getSSOConsentService() {
-
-        return ssoConsentService;
-    }
-
-    /**
-     * Returns the {@code DefaultWebFingerProcessor} instance
-     *
-     * @return DefaultWebFingerProcessor
-     */
-    public static DefaultWebFingerProcessor getWebFingerService() {
-
-        return (DefaultWebFingerProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (WebFingerProcessor.class, null);
-    }
-
-    /**
-     * Returns the {@code OIDCProviderRequestBuilder} instance
-     *
-     * @return DefaultOIDCProviderRequestBuilder
-     */
-    public static DefaultOIDCProviderRequestBuilder getOIDProviderRequestValidator() {
-
-        return (DefaultOIDCProviderRequestBuilder) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (OIDCProviderRequestBuilder.class, null);
-    }
-
-    /**
-     * Returns the {@code DefaultOIDCProcessor} instance
-     *
-     * @return DefaultOIDCProcessor
-     */
-    public static DefaultOIDCProcessor getOIDCService() {
-
-        return (DefaultOIDCProcessor) PrivilegedCarbonContext.getThreadLocalCarbonContext().getOSGiService
-                (OIDCProcessor.class, null);
-    }
-
-    /**
-     * Returns the {@code RequestObjectService} instance
-     *
-     * @return RequestObjectService
-     */
-    public static RequestObjectService getRequestObjectService() {
-
-        return requestObjectService;
-    }
-
-    /**
-     * Returns the {@code OAuth2Service} instance
-     *
-     * @return OAuth2Service
-     */
-    public static OAuth2Service getOAuth2Service() {
-
-        return oAuth2Service;
-    }
-
-    /**
-     * Returns the {@code OAuthServerConfiguration} instance
-     *
-     * @return OAuthServerConfiguration
-     */
-    public static OAuthServerConfiguration getOAuthServerConfiguration() {
-
-        return oauthServerConfiguration;
-    }
-
-    /**
-     * Returns the {@code OAuthServerConfiguration} instance
-     *
-     * @return OAuth2TokenValidationService
-     */
-    public static OAuth2TokenValidationService getOAuth2TokenValidationService() {
-
-        return (OAuth2TokenValidationService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getOSGiService(OAuth2TokenValidationService.class, null);
     }
 
     /**
@@ -922,7 +771,7 @@ public class EndpointUtil {
     private static String getScopeMetadataQueryParam(Set<String> scopes, String tenantDomain) {
 
         try {
-            List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(tenantDomain);
+            List<String> oidcScopeList = getOAuthAdminService().getRegisteredOIDCScope(tenantDomain);
             List<String> nonOidcScopeList = new ArrayList<>();
             oidcScopeList.retainAll(scopes);
             nonOidcScopeList.addAll(scopes.stream().filter(scope ->
@@ -931,7 +780,7 @@ public class EndpointUtil {
             if (nonOidcScopeList.isEmpty()) {
                 return null;
             }
-            List<OAuth2Resource> scopesMetaData = scopeMetadataService.getMetadata(nonOidcScopeList);
+            List<OAuth2Resource> scopesMetaData = getScopeMetadataService().getMetadata(nonOidcScopeList);
             String scopeMetadata = new Gson().toJson(scopesMetaData);
             return "scopeMetadata=" + URLEncoder.encode(scopeMetadata, UTF_8);
         } catch (Exception e) {
@@ -1067,7 +916,7 @@ public class EndpointUtil {
         }
         String userId = getUserIdOfAuthenticatedUser(user);
         String appId = getAppIdFromClientId(oAuth2Parameters.getClientId());
-        return oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(userId, appId,
+        return getOAuth2ScopeService().hasUserProvidedConsentForAllRequestedScopes(userId, appId,
                 IdentityTenantUtil.getTenantId(user.getTenantDomain()), scopesToBeConsented);
     }
 
@@ -1107,25 +956,25 @@ public class EndpointUtil {
                         log.debug("Overriding existing consents of the user : " + userId + " for application : " +
                                 appId);
                     }
-                    oAuth2ScopeService.addUserConsentForApplication(userId, appId,
+                    getOAuth2ScopeService().addUserConsentForApplication(userId, appId,
                             IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                             userApprovedScopes, null);
                 } else {
-                    boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
+                    boolean isUserConsentExist = getOAuth2ScopeService().isUserHasAnExistingConsentForApp(
                             userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                     if (isUserConsentExist) {
                         if (log.isDebugEnabled()) {
                             log.debug("Updating existing consents of the user : " + userId + " for application : " +
                                     appId);
                         }
-                        oAuth2ScopeService.updateUserConsentForApplication(userId, appId,
+                        getOAuth2ScopeService().updateUserConsentForApplication(userId, appId,
                                 IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                                 userApprovedScopes, null);
                     } else {
                         if (log.isDebugEnabled()) {
                             log.debug("Adding new consent to the user : " + userId + " for application : " + appId);
                         }
-                        oAuth2ScopeService.addUserConsentForApplication(userId, appId,
+                        getOAuth2ScopeService().addUserConsentForApplication(userId, appId,
                                 IdentityTenantUtil.getTenantId(user.getTenantDomain()),
                                 userApprovedScopes, null);
                     }
@@ -1165,7 +1014,7 @@ public class EndpointUtil {
 
     private static List<String> getOIDCScopeNames() throws IdentityOAuthAdminException {
 
-        return Arrays.asList(ArrayUtils.nullToEmpty(oAuthAdminService.getScopeNames()));
+        return Arrays.asList(ArrayUtils.nullToEmpty(getOAuthAdminService().getScopeNames()));
     }
 
     /**
@@ -1192,7 +1041,7 @@ public class EndpointUtil {
         List<String> requestedOIDCScopes = new ArrayList<>();
         try {
             // Get registered OIDC scopes.
-            List<String> oidcScopeList = oAuthAdminService.getRegisteredOIDCScope(params.getTenantDomain());
+            List<String> oidcScopeList = getOAuthAdminService().getRegisteredOIDCScope(params.getTenantDomain());
             for (String scope : allowedScopes) {
                 if (oidcScopeList.contains(scope)) {
                     requestedOIDCScopes.add(scope.toLowerCase());
@@ -1222,7 +1071,7 @@ public class EndpointUtil {
                 /* If DropUnregisteredScopes scopes config is enabled then any unregistered scopes(excluding internal
                  scopes and allowed scopes) will be dropped. Therefore, they will not be shown in the user consent
                  screen.*/
-                if (oauthServerConfiguration.isDropUnregisteredScopes()) {
+                if (getOAuthServerConfiguration().isDropUnregisteredScopes()) {
                     if (log.isDebugEnabled()) {
                         log.debug("DropUnregisteredScopes config is enabled. Attempting to drop unregistered scopes.");
                     }
@@ -1234,7 +1083,7 @@ public class EndpointUtil {
                     allowedRegisteredScopes.addAll(allowedScopes);
                 } else {
                     // Get registered OIDC scopes.
-                    String[] oidcScopes = oAuthAdminService.getScopeNames();
+                    String[] oidcScopes = getOAuthAdminService().getScopeNames();
                     List<String> oidcScopeList = new ArrayList<>(Arrays.asList(oidcScopes));
                     for (String scope : allowedScopes) {
                         if (!oidcScopeList.contains(scope)) {
@@ -1265,7 +1114,7 @@ public class EndpointUtil {
             if (user != null && !isPromptContainsConsent(params)) {
                 String userId = getUserIdOfAuthenticatedUser(user);
                 String appId = getAppIdFromClientId(params.getClientId());
-                OAuth2ScopeConsentResponse existingUserConsent = oAuth2ScopeService.getUserConsentForApp(
+                OAuth2ScopeConsentResponse existingUserConsent = getOAuth2ScopeService().getUserConsentForApp(
                         userId, appId, IdentityTenantUtil.getTenantId(user.getTenantDomain()));
                 if (existingUserConsent != null) {
                     if (CollectionUtils.isNotEmpty(existingUserConsent.getApprovedScopes())) {
@@ -1327,7 +1176,7 @@ public class EndpointUtil {
 
         Set<String> requestedScopes = new HashSet<>(params.getScopes());
         Set<String> registeredScopes = getRegisteredScopes(requestedScopes, params.getTenantDomain());
-        List<String> allowedScopesFromConfig = oauthServerConfiguration.getAllowedScopes();
+        List<String> allowedScopesFromConfig = getOAuthServerConfiguration().getAllowedScopes();
         Set<String> filteredScopes = new HashSet<>();
 
         // Filtering allowed scopes.
@@ -1360,7 +1209,8 @@ public class EndpointUtil {
         try {
             String requestedScopesStr = StringUtils.join(requestedScopes, " ");
             Set<String> registeredScopes = new HashSet<>();
-            Set<Scope> registeredScopeSet = oAuth2ScopeService.getScopes(null, null, true, requestedScopesStr);
+            Set<Scope> registeredScopeSet = getOAuth2ScopeService().getScopes(null, null,
+                    true, requestedScopesStr);
             registeredScopeSet.forEach(scope -> registeredScopes.add(scope.getName()));
             if (!AuthzUtil.isLegacyAuthzRuntime()) {
                 List<String> registeredAPIScopes = getRegisteredAPIScopes(requestedScopes, tenantDomain);
@@ -1544,7 +1394,7 @@ public class EndpointUtil {
      */
     public static void validateOauthApplication(String consumerKey) throws InvalidApplicationClientException {
 
-        String appState = EndpointUtil.getOAuth2Service().getOauthApplicationState(consumerKey);
+        String appState = UtilServiceHolder.getOAuth2Service().getOauthApplicationState(consumerKey);
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -1805,36 +1655,6 @@ public class EndpointUtil {
         if (isNotBlank(name) && isNotBlank(value)) {
             map.put(name, value);
         }
-    }
-
-    public static CibaAuthServiceImpl getCibaAuthService() {
-
-        return cibaAuthService;
-    }
-
-    public static void setCibaAuthService(CibaAuthServiceImpl cibaAuthService) {
-
-        EndpointUtil.cibaAuthService = cibaAuthService;
-    }
-
-    /**
-     * Get instance of parAuthService.
-     *
-     * @return parAuthService
-     */
-    public static ParAuthService getParAuthService() {
-
-        return parAuthService;
-    }
-
-    /**
-     * Set instance of parAuthService.
-     *
-     * @param parAuthService parAuthService
-     */
-    public static void setParAuthService(ParAuthService parAuthService) {
-
-        EndpointUtil.parAuthService = parAuthService;
     }
 
     /**
