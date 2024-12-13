@@ -18,6 +18,10 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
@@ -25,22 +29,28 @@ import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
 import org.wso2.carbon.identity.webfinger.WebFingerProcessor;
 import org.wso2.carbon.idp.mgt.IdpManager;
 
+import java.util.List;
+
 /**
  * Service holder for managing instances of OAuth2 related services.
  */
 public class UtilServiceHolder {
+
+    private static final Log LOG = LogFactory.getLog(UtilServiceHolder.class);
 
     private static class IdpManagerServiceHolder {
 
@@ -86,8 +96,39 @@ public class UtilServiceHolder {
 
     private static class ScopeMetadataServiceHolder {
 
-        private static final ScopeMetadataService SERVICE = (ScopeMetadataService) PrivilegedCarbonContext
-                .getThreadLocalCarbonContext().getOSGiService(ScopeMetadataService.class, null);
+        private static final ScopeMetadataService SERVICE = setScopeMetadataService();
+    }
+
+    private static ScopeMetadataService setScopeMetadataService() {
+
+        ScopeMetadataService scopeMetadataService = getScopeMetadataServiceFromConfig();
+        if (scopeMetadataService != null) {
+            return scopeMetadataService;
+        }
+
+        // Get the OSGi services registered for ScopeService interface.
+        List<Object> scopeServices = PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiServices(ScopeMetadataService.class, null);
+        if (scopeServices != null && !scopeServices.isEmpty()) {
+            if (CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME) {
+                for (Object scopeService : scopeServices) {
+                    if (scopeService instanceof OAuth2ScopeService) {
+                        scopeMetadataService = (ScopeMetadataService) scopeService;
+                    }
+                }
+            } else {
+                for (Object scopeService : scopeServices) {
+                    if (scopeService instanceof APIResourceBasedScopeMetadataService) {
+                        scopeMetadataService = (APIResourceBasedScopeMetadataService) scopeService;
+                    }
+                }
+            }
+        }
+
+        if (scopeMetadataService == null) {
+            throw new IllegalStateException("ScopeMetadataService is not available from OSGi context.");
+        }
+        return scopeMetadataService;
     }
 
     private static class WebfingerServiceHolder {
@@ -119,7 +160,7 @@ public class UtilServiceHolder {
     private static class CibaAuthServiceImplServiceHolder {
 
             private static final CibaAuthServiceImpl SERVICE = (CibaAuthServiceImpl) PrivilegedCarbonContext
-                    .getThreadLocalCarbonContext().getOSGiService(CibaAuthServiceImpl.class, null);
+                    .getThreadLocalCarbonContext().getOSGiService(CibaAuthService.class, null);
     }
 
     private static class ParAuthServiceHolder {
@@ -238,5 +279,33 @@ public class UtilServiceHolder {
             throw new IllegalStateException("CibaAuthServiceImpl is not available from OSGi context.");
         }
         return CibaAuthServiceImplServiceHolder.SERVICE;
+    }
+
+    private static ScopeMetadataService getScopeMetadataServiceFromConfig() {
+
+        String scopeMetadataServiceClassName = OAuthServerConfiguration.getInstance()
+                .getScopeMetadataExtensionImpl();
+        if (scopeMetadataServiceClassName != null) {
+            try {
+                String className = StringUtils.trimToEmpty(scopeMetadataServiceClassName);
+                Class<?> clazz = Class.forName(className);
+                Object obj = clazz.newInstance();
+                if (obj instanceof ScopeMetadataService) {
+                    return (ScopeMetadataService) obj;
+                } else {
+                    LOG.error(scopeMetadataServiceClassName + " is not an instance of " +
+                            ScopeMetadataService.class.getName());
+                }
+            } catch (ClassNotFoundException e) {
+                LOG.error("ClassNotFoundException while trying to find class " + scopeMetadataServiceClassName);
+            } catch (InstantiationException e) {
+                LOG.error("InstantiationException while trying to instantiate class " +
+                        scopeMetadataServiceClassName);
+            } catch (IllegalAccessException e) {
+                LOG.error("IllegalAccessException while trying to instantiate class " +
+                        scopeMetadataServiceClassName);
+            }
+        }
+        return null;
     }
 }
