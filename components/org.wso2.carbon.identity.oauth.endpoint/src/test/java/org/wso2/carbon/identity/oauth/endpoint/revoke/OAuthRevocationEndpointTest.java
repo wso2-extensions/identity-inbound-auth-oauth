@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth.endpoint.revoke;
 
 import org.apache.axiom.util.base64.Base64Utils;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
@@ -220,7 +222,8 @@ public class OAuthRevocationEndpointTest {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
-             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class)) {
             MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<>();
             ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
             parameterMap.add(TOKEN_PARAM, token);
@@ -239,7 +242,7 @@ public class OAuthRevocationEndpointTest {
             HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<>());
             when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
 
-            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
+            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
 
             final OAuthRevocationRequestDTO[] revokeReqDTO;
             revokeReqDTO = new OAuthRevocationRequestDTO[1];
