@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl;
@@ -324,7 +325,8 @@ public class OAuth2CibaEndpointTest {
                         "suBggOdBCjn1NyprpJoEg"});
 
         try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
                     .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -365,8 +367,8 @@ public class OAuth2CibaEndpointTest {
 
             mockServiceURLBuilder(serviceURLBuilder);
 
-            endpointUtil.when(EndpointUtil::getCibaAuthService).thenReturn(authService);
-            endpointUtil.when(EndpointUtil::getCibaAuthService).thenReturn(authService);
+            utilServiceHolder.when(UtilServiceHolder::getCibaAuthService).thenReturn(authService);
+            utilServiceHolder.when(UtilServiceHolder::getCibaAuthService).thenReturn(authService);
             when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
 
             CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
