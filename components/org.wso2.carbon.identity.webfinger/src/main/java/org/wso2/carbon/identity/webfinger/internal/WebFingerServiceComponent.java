@@ -43,7 +43,7 @@ import javax.servlet.Servlet;
         immediate = true
 )
 public class WebFingerServiceComponent {
-    private static final Log log = LogFactory.getLog(WebFingerServiceComponent.class);
+    private static final Log LOG = LogFactory.getLog(WebFingerServiceComponent.class);
 
     protected void activate(ComponentContext context) {
         try {
@@ -51,9 +51,8 @@ public class WebFingerServiceComponent {
             WebFingerProcessor webFingerProcessor = DefaultWebFingerProcessor.getInstance();
             bundleContext.registerService(WebFingerProcessor.class.getName(), webFingerProcessor, null);
             WebFingerServiceComponentHolder.setWebFingerProcessor(webFingerProcessor);
-            if (log.isDebugEnabled()) {
-                log.debug("OpenID WebFinger bundle is activated.");
-            }
+            LOG.debug("OpenID WebFinger bundle is activated.");
+
 
             // Register OpenID Connect WebFinger servlet
             HttpService httpService = WebFingerServiceComponentHolder.getHttpService();
@@ -63,11 +62,11 @@ public class WebFingerServiceComponent {
                 httpService.registerServlet("/.well-known/webfinger", webFingerServlet, null, null);
             } catch (Exception e) {
                 String errMsg = "Error when registering Web Finger Servlet via the HttpService.";
-                log.error(errMsg, e);
+                LOG.error(errMsg, e);
                 throw new RuntimeException(errMsg, e);
             }
         } catch (Throwable e) {
-            log.error("Error while activating the WebFingerServiceComponent", e);
+            LOG.error("Error while activating the WebFingerServiceComponent", e);
         }
     }
 
@@ -79,16 +78,14 @@ public class WebFingerServiceComponent {
             unbind = "unsetRealmService"
     )
     protected void setRealmService(RealmService realmService) {
-        if (log.isDebugEnabled()) {
-            log.info("Setting the Realm Service");
-        }
+
+        LOG.info("Setting the Realm Service");
         WebFingerServiceComponentHolder.setRealmService(realmService);
     }
 
     protected void unsetRealmService(RealmService realmService) {
-        if (log.isDebugEnabled()) {
-            log.info("Unsetting the Realm Service");
-        }
+
+        LOG.info("Unsetting the Realm Service");
         WebFingerServiceComponentHolder.setRealmService(null);
     }
 
@@ -100,16 +97,14 @@ public class WebFingerServiceComponent {
             unbind = "unsetHttpService"
     )
     protected void setHttpService(HttpService httpService) {
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP Service is set in the OpenID Connect WebFinger bundle");
-        }
+
+        LOG.debug("HTTP Service is set in the OpenID Connect WebFinger bundle");
         WebFingerServiceComponentHolder.setHttpService(httpService);
     }
 
     protected void unsetHttpService(HttpService httpService) {
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP Service is unset in the OpenID Connect WebFinger bundle");
-        }
+
+        LOG.debug("HTTP Service is unset in the OpenID Connect WebFinger bundle");
         WebFingerServiceComponentHolder.setHttpService(null);
     }
 }
