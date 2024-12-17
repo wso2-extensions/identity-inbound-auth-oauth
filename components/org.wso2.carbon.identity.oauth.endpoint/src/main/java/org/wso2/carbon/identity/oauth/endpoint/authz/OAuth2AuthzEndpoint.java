@@ -1420,6 +1420,8 @@ public class OAuth2AuthzEndpoint {
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
         // Adding federated tokens come with the authentication result of the authorization call.
         addFederatedTokensToSessionCache(oAuthMessage, authnResult);
+        // Adding federated user claims come with the authentication result to resolve access token claims in
+        // federated flow.
         addUnfilteredFederatedUserClaimsToSessionCache(oAuthMessage, authnResult);
     }
 
