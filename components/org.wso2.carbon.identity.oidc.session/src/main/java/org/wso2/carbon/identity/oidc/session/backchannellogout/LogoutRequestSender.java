@@ -51,7 +51,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class LogoutRequestSender {
 
-    private static final Log log = LogFactory.getLog(LogoutRequestSender.class);
+    private static final Log LOG = LogFactory.getLog(LogoutRequestSender.class);
     private static ExecutorService threadPool = Executors.newFixedThreadPool(2);
     private static LogoutRequestSender instance = new LogoutRequestSender();
     private static final String LOGOUT_TOKEN = "logout_token";
@@ -85,7 +85,7 @@ public class LogoutRequestSender {
         if (opbsCookie != null) {
             sendLogoutRequests(opbsCookie.getValue());
         } else {
-            log.error("No opbscookie exists in the request");
+            LOG.error("No opbscookie exists in the request");
         }
     }
 
@@ -118,11 +118,8 @@ public class LogoutRequestSender {
             for (Map.Entry<String, String> logoutTokenMap : logoutTokenList.entrySet()) {
                 String logoutToken = logoutTokenMap.getKey();
                 String bcLogoutUrl = logoutTokenMap.getValue();
+                LOG.debug("A logoutReqSenderTask will be assigned to the thread pool");
                 threadPool.submit(new LogoutReqSenderTask(logoutToken, bcLogoutUrl));
-                if (log.isDebugEnabled()) {
-                    log.debug("A logoutReqSenderTask is assigned to the thread pool");
-
-                }
             }
         }
     }
@@ -140,10 +137,10 @@ public class LogoutRequestSender {
             DefaultLogoutTokenBuilder logoutTokenBuilder = new DefaultLogoutTokenBuilder();
             logoutTokenList = logoutTokenBuilder.buildLogoutToken(opbsCookie, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
+            LOG.error("Error while initializing " + DefaultLogoutTokenBuilder.class, e);
         } catch (InvalidOAuthClientException e) {
-            if (log.isDebugEnabled()) {
-                log.debug("Error while obtaining logout token list for the obpsCookie: " + opbsCookie +
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error while obtaining logout token list for the obpsCookie: " + opbsCookie +
                                 "& tenant domain: " + tenantDomain, e);
             }
         }
@@ -169,8 +166,8 @@ public class LogoutRequestSender {
         @Override
         public void run() {
 
-            if (log.isDebugEnabled()) {
-                log.debug("Starting backchannel logout request to: " + backChannelLogouturl);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Starting backchannel logout request to: " + backChannelLogouturl);
             }
 
             List<NameValuePair> logoutReqParams = new ArrayList<NameValuePair>();
@@ -194,15 +191,15 @@ public class LogoutRequestSender {
                 try {
                     httpPost.setEntity(new UrlEncodedFormEntity(logoutReqParams));
                 } catch (UnsupportedEncodingException e) {
-                    log.error("Error while sending logout token", e);
+                    LOG.error("Error while sending logout token", e);
                 }
                 HttpResponse response = httpClient.execute(httpPost);
-                if (log.isDebugEnabled()) {
-                    log.debug("Backchannel logout response: " + response.getStatusLine());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Backchannel logout response: " + response.getStatusLine());
                 }
 
             } catch (IOException e) {
-                log.error("Error sending logout requests to: " + backChannelLogouturl, e);
+                LOG.error("Error sending logout requests to: " + backChannelLogouturl, e);
             }
         }
     }

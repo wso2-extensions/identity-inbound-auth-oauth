@@ -212,6 +212,7 @@ public class OAuthAppDAO {
                         }
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
+                    consumerAppDO.setId(appId);
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     addAccessTokenClaims(connection, appId, consumerAppDO.getAccessTokenClaims());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
@@ -674,12 +675,18 @@ public class OAuthAppDAO {
         return oauthAppList.toArray(new OAuthAppDO[oauthAppList.size()]);
     }
 
-    public OAuthAppDO getAppInformationByAppName(String appName) throws
-            InvalidOAuthClientException, IdentityOAuth2Exception {
-        OAuthAppDO oauthApp;
+    public OAuthAppDO getAppInformationByAppName(String appName)
+            throws InvalidOAuthClientException, IdentityOAuth2Exception {
 
+        int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
+        return getAppInformationByAppName(appName, tenantID);
+    }
+
+    public OAuthAppDO getAppInformationByAppName(String appName, int tenantID)
+            throws InvalidOAuthClientException, IdentityOAuth2Exception {
+
+        OAuthAppDO oauthApp;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
-            int tenantID = CarbonContext.getThreadLocalCarbonContext().getTenantId();
             String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_BY_APP_NAME_WITH_PKCE;
 
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {

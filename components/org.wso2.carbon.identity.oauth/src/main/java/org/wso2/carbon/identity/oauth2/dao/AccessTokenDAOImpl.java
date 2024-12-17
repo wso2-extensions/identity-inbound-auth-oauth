@@ -1265,6 +1265,37 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         return tokenIds;
     }
 
+    /**
+     * Get the session identifier of the given token ID.
+     *
+     * @param tokenId Token ID
+     * @throws IdentityOAuth2Exception
+     * @return
+     */
+    public String getSessionIdentifierByTokenId(String tokenId) throws IdentityOAuth2Exception {
+
+        String sql = SQLQueries.RETRIEVE_SESSION_ID_BY_TOKEN_ID;
+        Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+        PreparedStatement prepStmt = null;
+        String sessionId = null;
+        try {
+            prepStmt = connection.prepareStatement(sql);
+            prepStmt.setString(1, tokenId);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    sessionId = resultSet.getString("TOKEN_BINDING_VALUE");
+                }
+            }
+        } catch (SQLException e) {
+            String errorMsg = "Error occurred while retrieving 'session id' for " +
+                    "token id : " + tokenId;
+            throw new IdentityOAuth2Exception(errorMsg, e);
+        } finally {
+            IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
+        }
+        return sessionId;
+    }
+
     public void updateAccessTokenState(String tokenId, String tokenState) throws IdentityOAuth2Exception {
         updateAccessTokenState(tokenId, tokenState, null);
     }
