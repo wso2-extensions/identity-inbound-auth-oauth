@@ -94,6 +94,7 @@
             <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheKeyTest"/>
             <class name="org.wso2.carbon.identity.oauth2.cache.JWKSCacheTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AccessContextTokenDOTest"/>
+            <class name="org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImplTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthContextTokenDOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.ScopeMgtDAOTest"/>
             <class name="org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImplTest"/>
@@ -200,6 +201,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandlerTest"/>
         </classes>
     </test>
 </suite>

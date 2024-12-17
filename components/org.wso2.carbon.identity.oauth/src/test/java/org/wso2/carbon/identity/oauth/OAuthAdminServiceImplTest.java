@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -37,6 +37,9 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -49,6 +52,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthAppRevocationRequestDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
+import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
@@ -59,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
@@ -94,9 +99,15 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
+import static org.testng.Assert.assertThrows;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 public class OAuthAdminServiceImplTest {
 
@@ -474,12 +485,13 @@ public class OAuthAdminServiceImplTest {
     public void testGetOAuthApplicationDataByAppName() throws Exception {
 
         String appName = "some-app-name";
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
 
         // Create oauth application data.
         OAuthAppDO app = buildDummyOAuthAppDO("some-user-name");
         try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                 (mock, context) -> {
-                    when(mock.getAppInformationByAppName(appName)).thenReturn(app);
+                    when(mock.getAppInformationByAppName(appName, SUPER_TENANT_ID)).thenReturn(app);
                 })) {
 
             OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
@@ -493,15 +505,18 @@ public class OAuthAdminServiceImplTest {
     public void testGetOAuthApplicationDataByAppNameException(String exception) throws Exception {
 
         String appName = "some-app-name";
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
 
         try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                 (mock, context) -> {
                     switch (exception) {
                         case "InvalidOAuthClientException":
-                            when(mock.getAppInformationByAppName(appName)).thenThrow(InvalidOAuthClientException.class);
+                            when(mock.getAppInformationByAppName(appName, SUPER_TENANT_ID))
+                                    .thenThrow(InvalidOAuthClientException.class);
                             break;
                         case "IdentityOAuth2Exception":
-                            when(mock.getAppInformationByAppName(appName)).thenThrow(IdentityOAuth2Exception.class);
+                            when(mock.getAppInformationByAppName(appName, SUPER_TENANT_ID))
+                                    .thenThrow(IdentityOAuth2Exception.class);
                     }
                 })) {
 
@@ -1176,5 +1191,118 @@ public class OAuthAdminServiceImplTest {
         Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
         method.setAccessible(true);
         return method.invoke(object, params);
+    }
+
+    @Test(dataProvider = "addScopeDataProvider")
+    public void testAddScope(ScopeDTO scope, List<ExternalClaim> oidcDialectClaims) throws Exception {
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedOAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            ScopeClaimMappingDAO scopeClaimMappingDAO = mock(ScopeClaimMappingDAO.class);
+
+            mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(mockTokenPersistenceFactory);
+            mockedOAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockServiceComponentHolder);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(SUPER_TENANT_ID))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+            when(mockTokenPersistenceFactory.getScopeClaimMappingDAO()).thenReturn(scopeClaimMappingDAO);
+            doNothing().when(scopeClaimMappingDAO).addScope(scope, SUPER_TENANT_ID);
+            when(mockServiceComponentHolder.getClaimMetadataManagementService()).thenReturn(claimService);
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME)).thenReturn(oidcDialectClaims);
+
+            OAuthAdminServiceImpl service = new OAuthAdminServiceImpl();
+            service.addScope(scope);
+            verify(scopeClaimMappingDAO, times(1)).addScope(any(), anyInt());
+            verify(claimService, times(2)).updateExternalClaim(any(), anyString());
+
+            ClaimMetadataException claimMetadataException = new ClaimMetadataException("error");
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(claimMetadataException);
+            assertThrows(IdentityOAuthAdminException.class, () -> service.addScope(scope));
+        }
+    }
+
+    @Test(dataProvider = "addScopeDataProvider")
+    public void testUpdateScope(ScopeDTO scope, List<ExternalClaim> oidcDialectClaims) throws Exception {
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2ServiceComponentHolder> mockedOAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class)) {
+
+            OAuth2ServiceComponentHolder mockServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+            OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            ClaimMetadataManagementService claimService = mock(ClaimMetadataManagementService.class);
+            ScopeClaimMappingDAO scopeClaimMappingDAO = mock(ScopeClaimMappingDAO.class);
+
+            mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(mockTokenPersistenceFactory);
+            mockedOAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                    .thenReturn(mockServiceComponentHolder);
+
+            PrivilegedCarbonContext.startTenantFlow();
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(SUPER_TENANT_ID);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(SUPER_TENANT_ID))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+            when(mockTokenPersistenceFactory.getScopeClaimMappingDAO()).thenReturn(scopeClaimMappingDAO);
+            doNothing().when(scopeClaimMappingDAO).addScope(scope, SUPER_TENANT_ID);
+            when(scopeClaimMappingDAO.isScopeExist(any(), anyInt())).thenReturn(true);
+            when(mockServiceComponentHolder.getClaimMetadataManagementService()).thenReturn(claimService);
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME)).thenReturn(oidcDialectClaims);
+
+            OAuthAdminServiceImpl service = new OAuthAdminServiceImpl();
+            service.updateScope(scope);
+            verify(scopeClaimMappingDAO, times(1)).updateScope(any(), anyInt());
+            verify(claimService, times(2)).updateExternalClaim(any(), anyString());
+
+            ClaimMetadataException claimMetadataException = new ClaimMetadataException("error");
+            when(claimService.getExternalClaims(OIDC_DIALECT, SUPER_TENANT_DOMAIN_NAME))
+                    .thenThrow(claimMetadataException);
+            assertThrows(IdentityOAuthAdminException.class, () -> service.addScope(scope));
+        }
+    }
+
+    @DataProvider(name = "addScopeDataProvider")
+    public Object[][] addScopeDataProvider() {
+
+        ScopeDTO scope = new ScopeDTO();
+        scope.setName("dummy_claim");
+        scope.setDisplayName("Dummy Claim");
+        scope.setDescription("Dummy Claim Description");
+        scope.setClaim(new String[] {
+                "http://wso2.org/oidc/claim/email",
+                "http://wso2.org/oidc/claim/profile"
+        });
+        List<ExternalClaim> oidcDialectClaims = new ArrayList<>();
+
+        ExternalClaim claim1 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/email", "http://wso2.org/claims/emailaddress");
+        ExternalClaim claim2 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/profile", "http://wso2.org/claims/url");
+        ExternalClaim claim3 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/first_name", "http://wso2.org/claims/givenname");
+        ExternalClaim claim4 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/last_name", "http://wso2.org/claims/lastname");
+        ExternalClaim claim5 = new ExternalClaim("http://wso2.org/oidc",
+                "http://wso2.org/oidc/claim/phone_number", "http://wso2.org/claims/mobile");
+
+        oidcDialectClaims.add(claim1);
+        oidcDialectClaims.add(claim2);
+        oidcDialectClaims.add(claim3);
+        oidcDialectClaims.add(claim4);
+        oidcDialectClaims.add(claim5);
+
+        return new Object[][]{
+                {scope, oidcDialectClaims}
+        };
     }
 }

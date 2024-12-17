@@ -130,7 +130,7 @@ public class ApiAuthnHandler {
                         message.setContext(buildMessageContext(authenticatorData.getMessage().getContext()));
                     }
                     message.setContext(buildMessageContext(authenticatorData.getMessage().getContext()));
-
+                    messages.add(message);
                 }
             }
         }

@@ -82,6 +82,18 @@ public interface AccessTokenDAO {
 
     }
 
+    /**
+     * Get session identifier by token identifier.
+     *
+     * @param tokenId Token identifier.
+     * @return Session identifier.
+     * @throws IdentityOAuth2Exception
+     */
+    default String getSessionIdentifierByTokenId(String tokenId) throws IdentityOAuth2Exception {
+
+        return null;
+    }
+
     Set<AccessTokenDO> getAccessTokens(String consumerKey, AuthenticatedUser userName,
                                        String userStoreDomain, boolean includeExpired) throws IdentityOAuth2Exception;
 
