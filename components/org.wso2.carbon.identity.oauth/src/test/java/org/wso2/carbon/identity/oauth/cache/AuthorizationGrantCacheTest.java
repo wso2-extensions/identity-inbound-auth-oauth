@@ -160,4 +160,30 @@ public class AuthorizationGrantCacheTest {
             assertEquals(expectedEntry, result);
         }
     }
+
+    @Test
+    public void testGetValueFromCacheByToken() throws IdentityOAuth2Exception {
+        String accessToken = "accessToken";
+        String tokenId = "tokenId";
+        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(accessToken);
+        AuthorizationGrantCacheEntry expectedEntry = new AuthorizationGrantCacheEntry();
+        expectedEntry.setTokenId(tokenId);
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
+             MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
+
+            mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
+            when(sessionDataStore.getSessionData(tokenId, "AuthorizationGrantCache")).thenReturn(expectedEntry);
+
+            mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).
+                    thenReturn(mockedOAuthTokenPersistenceFactory);
+            when(mockedOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(accessTokenDAO);
+            when(accessTokenDAO.getTokenIdByAccessToken(accessToken)).thenReturn(tokenId);
+
+            AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
+
+            assertEquals(expectedEntry, result);
+        }
+    }
 }
