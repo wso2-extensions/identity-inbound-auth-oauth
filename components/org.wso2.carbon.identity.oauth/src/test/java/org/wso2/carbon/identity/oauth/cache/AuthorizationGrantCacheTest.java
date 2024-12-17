@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.cache;
 import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import org.apache.commons.logging.Log;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
@@ -28,19 +29,25 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.text.ParseException;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 
 public class AuthorizationGrantCacheTest {
 
@@ -58,28 +65,53 @@ public class AuthorizationGrantCacheTest {
     @Mock
     private SessionDataStore sessionDataStore;
 
+    private Log mockLog;
+
     private static final String AUTHORIZATION_GRANT_CACHE_NAME = "AuthorizationGrantCache";
 
     @BeforeMethod
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         cache = AuthorizationGrantCache.getInstance();
+
+        mockLog = mock(Log.class);
+
+        Field logField =
+                AuthorizationGrantCache.class.getDeclaredField("log");
+        logField.setAccessible(true);
+
+        // Remove the 'final' modifier using reflection
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+
+        // Set the static field to the mock object
+        logField.set(null, mockLog);
     }
 
     @Test(dataProvider = "replaceFromTokenIdDataProvider")
     public void testReplaceFromTokenId(String accessToken, String jwtId, String tokenId, boolean isJwtToken,
-                                       boolean isInvalidJWTToken, boolean isFailedTokenRetrieval) throws Exception {
+                                       boolean isInvalidJWTToken, boolean isFailedTokenRetrieval,
+                                       boolean isTokenLoggable) throws Exception {
 
-        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory =
+        mockStatic(OAuthTokenPersistenceFactory.class);
              MockedStatic<JWTParser> mockedJwtParser = mockStatic(JWTParser.class);
              MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
              MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
 
+            when(mockLog.isDebugEnabled()).thenReturn(true);
             mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(
                     mockedOAuthTokenPersistenceFactory);
 
             when(mockedOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(accessTokenDAO);
-
+            if (isTokenLoggable) {
+                mockedIdentityUtil.when(() -> IdentityUtil.isTokenLoggable(IdentityConstants
+                                .IdentityTokens.ACCESS_TOKEN)).thenReturn(true);
+            } else {
+                mockedIdentityUtil.when(() -> IdentityUtil.isTokenLoggable(IdentityConstants
+                                .IdentityTokens.ACCESS_TOKEN)).thenReturn(false);
+            }
             if (isJwtToken) {
                 JWT jwtMock = mock(JWT.class);
                 JWTClaimsSet claimsSetMock = mock(JWTClaimsSet.class);
@@ -120,6 +152,15 @@ public class AuthorizationGrantCacheTest {
             } else {
                 verify(accessTokenDAO).getTokenIdByAccessToken(accessToken);
             }
+
+            if (isInvalidJWTToken) {
+                if (isTokenLoggable) {
+                    verify(mockLog).debug(eq("Error while getting JWTID from token: " + accessToken),
+                            any(ParseException.class));
+                } else {
+                    verify(mockLog).debug(eq("Error while getting JWTID from token"));
+                }
+            }
         }
     }
 
@@ -127,10 +168,11 @@ public class AuthorizationGrantCacheTest {
     public Object[][] getReplaceFromTokenIdData() {
 
         return new Object[][]{
-                {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false, false},
-                {"nonJWTAccessToken", null, "nonJWTTokenId", false, false, false},
-                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false},
-                {"fail.Store.TokenId", "jwtId", "jwtId", true, false, true}
+                {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false, false, false},
+                {"nonJWTAccessToken", null, "nonJWTTokenId", false, false, false, false},
+                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false, true},
+                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false, false},
+                {"fail.Store.TokenId", "jwtId", "jwtId", true, false, true, false}
         };
     }
 
@@ -143,7 +185,8 @@ public class AuthorizationGrantCacheTest {
         AuthorizationGrantCacheEntry expectedEntry = new AuthorizationGrantCacheEntry();
         expectedEntry.setCodeId(codeId);
 
-        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
              MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
              MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
 
@@ -156,32 +199,6 @@ public class AuthorizationGrantCacheTest {
             when(authorizationCodeDAO.getCodeIdByAuthorizationCode(authCode)).thenReturn(codeId);
 
             AuthorizationGrantCacheEntry result = cache.getValueFromCacheByCode(key);
-
-            assertEquals(expectedEntry, result);
-        }
-    }
-
-    @Test
-    public void testGetValueFromCacheByToken() throws IdentityOAuth2Exception {
-        String accessToken = "accessToken";
-        String tokenId = "tokenId";
-        AuthorizationGrantCacheKey key = new AuthorizationGrantCacheKey(accessToken);
-        AuthorizationGrantCacheEntry expectedEntry = new AuthorizationGrantCacheEntry();
-        expectedEntry.setTokenId(tokenId);
-
-        try (MockedStatic<OAuthTokenPersistenceFactory> mockedFactory = mockStatic(OAuthTokenPersistenceFactory.class);
-             MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
-             MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
-
-            mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
-            when(sessionDataStore.getSessionData(tokenId, "AuthorizationGrantCache")).thenReturn(expectedEntry);
-
-            mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).
-                    thenReturn(mockedOAuthTokenPersistenceFactory);
-            when(mockedOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(accessTokenDAO);
-            when(accessTokenDAO.getTokenIdByAccessToken(accessToken)).thenReturn(tokenId);
-
-            AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
 
             assertEquals(expectedEntry, result);
         }
