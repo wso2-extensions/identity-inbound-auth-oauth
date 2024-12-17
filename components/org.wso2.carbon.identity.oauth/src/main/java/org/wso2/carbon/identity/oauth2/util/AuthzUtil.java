@@ -255,7 +255,13 @@ public class AuthzUtil {
 
         // Application id is not required for basic authentication flow.
         List<String> roleIds = getUserRoles(authenticatedUser, null);
-        List<String> permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
+        String tenantDomain = authenticatedUser.getTenantDomain();
+        if (StringUtils.isNotBlank(authenticatedUser.getAccessingOrganization()) &&
+                !authenticatedUser.getAccessingOrganization().
+                        equals(authenticatedUser.getUserResidentOrganization())) {
+            tenantDomain = getAccessingTenantDomain(authenticatedUser);
+        }
+        List<String> permissions = getAssociatedScopesForRoles(roleIds, tenantDomain);
         if (OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
             // Handling backward compatibility for previous access level.
             List<String> internalScopes = getInternalScopes(authenticatedUser.getTenantDomain());
