@@ -419,6 +419,7 @@ public class DCRMService {
                 AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
                 associatedRolesConfig.setAllowedAudience(updateRequest.getExtAllowedAudience().toLowerCase());
                 sp.setAssociatedRolesConfig(associatedRolesConfig);
+                updateServiceProvider(sp, tenantDomain, applicationOwner);
             }
         } catch (IdentityOAuthClientException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA, e.getMessage(), e);
