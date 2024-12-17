@@ -422,6 +422,37 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
+     * Add unfiltered federated user claims to session cache.
+     *
+     * @param oAuthMessage         The OAuthMessage with the session data cache entry.
+     * @param authenticationResult The authentication result of authorization call.
+     */
+    private void addUnfilteredFederatedUserClaimsToSessionCache(OAuthMessage oAuthMessage,
+                                                  AuthenticationResult authenticationResult) {
+
+        if (!(authenticationResult.getProperty(FrameworkConstants.UNFILTERED_LOCAL_CLAIM_VALUES) instanceof Map)) {
+            return;
+        }
+        Map<String, String> unfilteredFederatedUserClaims = (Map<String, String>) authenticationResult
+                .getProperty(FrameworkConstants.UNFILTERED_LOCAL_CLAIM_VALUES);
+
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
+        if (sessionDataCacheEntry == null || unfilteredFederatedUserClaims.isEmpty()) {
+            return;
+        }
+        Map<ClaimMapping, String> unfilteredFederatedUserAttributes = new HashMap<>();
+        unfilteredFederatedUserClaims.forEach(
+                (key, value) -> unfilteredFederatedUserAttributes.put(ClaimMapping.build(key, key, null,
+                        false), value));
+        sessionDataCacheEntry.setUnfilteredFederatedUserClaims(unfilteredFederatedUserAttributes);
+        if (log.isDebugEnabled() && authenticationResult.getSubject() != null) {
+            log.debug("Added the unfiltered federated user claims to the session data cache. " +
+                    "Session context identifier: " + sessionDataCacheEntry.getSessionContextIdentifier()
+                    + " for the user: " + authenticationResult.getSubject().getLoggableMaskedUserId());
+        }
+    }
+
+    /**
      * This method creates a list of FederatedTokenDO objects from the list of FederatedToken objects.
      *
      * @param federatedTokens List of FederatedToken objects to be transformed as a list of FederatedTokenDO.
@@ -1389,6 +1420,7 @@ public class OAuth2AuthzEndpoint {
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
         // Adding federated tokens come with the authentication result of the authorization call.
         addFederatedTokensToSessionCache(oAuthMessage, authnResult);
+        addUnfilteredFederatedUserClaimsToSessionCache(oAuthMessage, authnResult);
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2143,6 +2175,11 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
         authorizationGrantCacheEntry.setFederatedTokens(sessionDataCacheEntry.getFederatedTokens());
         sessionDataCacheEntry.setFederatedTokens(null);
+        Map<ClaimMapping, String> unfilteredFederatedUserAttributes =  sessionDataCacheEntry.
+                getUnfilteredFederatedUserAttributes();
+        if (unfilteredFederatedUserAttributes != null) {
+            authorizationGrantCacheEntry.setUnfilteredFederatedUserAttributes(unfilteredFederatedUserAttributes);
+        }
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
@@ -3785,6 +3822,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setState(oauth2Params.getState());
         authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
         authzReqDTO.setRequestedSubjectId(oauth2Params.getRequestedSubjectId());
+        authzReqDTO.setUnfilteredFederatedUserAttributes(sessionDataCacheEntry.getUnfilteredFederatedUserAttributes());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
@@ -4520,6 +4558,10 @@ public class OAuth2AuthzEndpoint {
         DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
+        if (sessionDataCacheEntry.getUnfilteredFederatedUserAttributes() != null) {
+            cacheEntry.setUnfilteredFederatedUserAttributes(sessionDataCacheEntry
+                    .getUnfilteredFederatedUserAttributes());
+        }
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }
 

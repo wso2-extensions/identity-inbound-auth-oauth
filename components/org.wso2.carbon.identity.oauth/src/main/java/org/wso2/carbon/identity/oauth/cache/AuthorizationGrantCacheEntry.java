@@ -66,6 +66,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private boolean hasNonOIDCClaims;
 
+    private Map<ClaimMapping, String> unfilteredFederatedUserAttributes;
+
     /*
         OIDC sub claim. This should be formatted based on the Service Provider configurations to append
         userStoreDomain and tenantDomain.
@@ -389,5 +391,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setPreIssueAccessTokenActionsExecuted(boolean preIssueAccessTokenActionsExecuted) {
 
         isPreIssueAccessTokenActionsExecuted = preIssueAccessTokenActionsExecuted;
+    }
+
+    public Map<ClaimMapping, String> getUnfilteredFederatedUserAttributes() {
+
+        return unfilteredFederatedUserAttributes;
+    }
+
+    public void setUnfilteredFederatedUserAttributes(
+            Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
+
+        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
     }
 }

@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
@@ -53,6 +54,7 @@ public class SessionDataCacheEntry extends CacheEntry {
 
     private Map<String, Serializable> endpointParams = new HashMap<>();
     private List<FederatedTokenDO> federatedTokens;
+    private Map<ClaimMapping, String> unfilteredFederatedUserAttributes;
 
     public OAuthAuthzReqMessageContext getAuthzReqMsgCtx() {
         return authzReqMsgCtx;
@@ -171,5 +173,15 @@ public class SessionDataCacheEntry extends CacheEntry {
     public void setFederatedTokens(List<FederatedTokenDO> federatedTokens) {
 
         this.federatedTokens = federatedTokens;
+    }
+
+    public Map<ClaimMapping, String> getUnfilteredFederatedUserAttributes() {
+
+        return unfilteredFederatedUserAttributes;
+    }
+
+    public void setUnfilteredFederatedUserClaims(Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
+
+        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
     }
 }

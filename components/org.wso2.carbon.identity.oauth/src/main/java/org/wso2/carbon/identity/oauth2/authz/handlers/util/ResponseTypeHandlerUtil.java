@@ -487,6 +487,11 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
+        if (authorizeReqDTO.getUnfilteredFederatedUserAttributes() != null) {
+            authorizationGrantCacheEntry.setUnfilteredFederatedUserAttributes(
+                    authorizeReqDTO.getUnfilteredFederatedUserAttributes());
+        }
+
         authorizationGrantCacheEntry
                 .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
