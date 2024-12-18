@@ -232,6 +232,7 @@ public class OAuthServerConfiguration {
     private String defaultIdTokenEncryptionMethod = "A128GCM";
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
+    private boolean userInfoMultiValueSupportEnabled = true;
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
@@ -1562,6 +1563,16 @@ public class OAuthServerConfiguration {
 
     public String getUserInfoJWTSignatureAlgorithm() {
         return userInfoJWTSignatureAlgorithm;
+    }
+
+    /**
+     * Returns whether multi value support is enabled for userinfo response.
+     *
+     * @return True if multi value support is enabled for userinfo response.
+     */
+    public boolean getUserInfoMultiValueSupportEnabled() {
+
+        return userInfoMultiValueSupportEnabled;
     }
 
     public String getConsumerDialectURI() {
@@ -3486,6 +3497,12 @@ public class OAuthServerConfiguration {
                                 getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM))
                                 .getText().trim();
             }
+            OMElement userInfoMultiValueSupportEnabledElem = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED));
+            if (userInfoMultiValueSupportEnabledElem != null) {
+                userInfoMultiValueSupportEnabled = Boolean.parseBoolean(
+                        userInfoMultiValueSupportEnabledElem.getText().trim());
+            }
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
@@ -4113,6 +4130,8 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER =
                 "UserInfoEndpointResponseBuilder";
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
+        public static final String OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED =
+                "UserInfoMultiValueSupportEnabled";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
