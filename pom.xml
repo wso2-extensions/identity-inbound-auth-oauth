@@ -666,6 +666,11 @@
                 <version>${tomcat.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.httpcomponents.wso2</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>${httpcore.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>javax.ws.rs-api</artifactId>
                 <version>${javax.ws.rs-api.version}</version>
@@ -1016,6 +1021,7 @@
         <tomcat.version>9.0.96</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
+        <httpcore.version>4.3.3.wso2v1</httpcore.version>
         <org.apache.cxf.version>3.5.9</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
