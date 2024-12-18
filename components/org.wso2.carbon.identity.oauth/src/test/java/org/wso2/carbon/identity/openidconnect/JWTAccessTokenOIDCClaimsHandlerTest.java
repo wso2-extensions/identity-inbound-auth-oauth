@@ -451,7 +451,7 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                         TestConstants.CLAIM_VALUE2);
                 AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new
                         AuthorizationGrantCacheEntry();
-                authorizationGrantCacheEntry.setUnfilteredFederatedUserAttributes(federatedUserAttributes);
+                authorizationGrantCacheEntry.setMappedRemoteClaims(federatedUserAttributes);
                 mockAuthorizationGrantCache(authorizationGrantCacheEntry, authorizationGrantCache);
 
                 UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);

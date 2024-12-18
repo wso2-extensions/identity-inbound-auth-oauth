@@ -487,9 +487,9 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
-        if (authorizeReqDTO.getUnfilteredFederatedUserAttributes() != null) {
-            authorizationGrantCacheEntry.setUnfilteredFederatedUserAttributes(
-                    authorizeReqDTO.getUnfilteredFederatedUserAttributes());
+        if (authorizeReqDTO.getMappedRemoteClaims() != null) {
+            authorizationGrantCacheEntry.setMappedRemoteClaims(
+                    authorizeReqDTO.getMappedRemoteClaims());
         }
 
         authorizationGrantCacheEntry

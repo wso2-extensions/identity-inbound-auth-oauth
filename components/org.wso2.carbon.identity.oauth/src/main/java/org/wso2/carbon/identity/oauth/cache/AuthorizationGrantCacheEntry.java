@@ -66,7 +66,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private boolean hasNonOIDCClaims;
 
-    private Map<ClaimMapping, String> unfilteredFederatedUserAttributes;
+    private Map<ClaimMapping, String> mappedRemoteClaims;
 
     /*
         OIDC sub claim. This should be formatted based on the Service Provider configurations to append
@@ -393,14 +393,14 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
         isPreIssueAccessTokenActionsExecuted = preIssueAccessTokenActionsExecuted;
     }
 
-    public Map<ClaimMapping, String> getUnfilteredFederatedUserAttributes() {
+    public Map<ClaimMapping, String> getMappedRemoteClaims() {
 
-        return unfilteredFederatedUserAttributes;
+        return mappedRemoteClaims;
     }
 
-    public void setUnfilteredFederatedUserAttributes(
-            Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
+    public void setMappedRemoteClaims(
+            Map<ClaimMapping, String> mappedRemoteClaims) {
 
-        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
+        this.mappedRemoteClaims = mappedRemoteClaims;
     }
 }

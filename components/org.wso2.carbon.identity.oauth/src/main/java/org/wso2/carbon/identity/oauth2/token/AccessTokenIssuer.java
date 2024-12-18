@@ -623,9 +623,9 @@ public class AccessTokenIssuer {
             Map<ClaimMapping, String> userAttributes = cacheEntry.getUserAttributes();
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     new AuthorizationGrantCacheEntry(userAttributes);
-            if (cacheEntry.getUnfilteredFederatedUserAttributes() != null) {
-                authorizationGrantCacheEntry.setUnfilteredFederatedUserAttributes(cacheEntry
-                        .getUnfilteredFederatedUserAttributes());
+            if (cacheEntry.getMappedRemoteClaims() != null) {
+                authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
+                        .getMappedRemoteClaims());
             }
             return Optional.of(authorizationGrantCacheEntry);
         }

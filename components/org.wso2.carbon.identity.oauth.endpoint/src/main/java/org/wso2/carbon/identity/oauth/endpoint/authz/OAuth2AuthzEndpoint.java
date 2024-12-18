@@ -422,31 +422,30 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Add unfiltered federated user claims to session cache.
+     * Add mapped remote claims to session cache.
      *
      * @param oAuthMessage         The OAuthMessage with the session data cache entry.
      * @param authenticationResult The authentication result of authorization call.
      */
-    private void addUnfilteredFederatedUserClaimsToSessionCache(OAuthMessage oAuthMessage,
+    private void addMappedRemoteClaimsToSessionCache(OAuthMessage oAuthMessage,
                                                   AuthenticationResult authenticationResult) {
 
-        if (!(authenticationResult.getProperty(FrameworkConstants.UNFILTERED_LOCAL_CLAIM_VALUES) instanceof Map)) {
+        Optional<Map<String, String>> mappedRemoteClaims = authenticationResult.getMappedRemoteClaims();
+        if (!mappedRemoteClaims.isPresent()) {
             return;
         }
-        Map<String, String> unfilteredFederatedUserClaims = (Map<String, String>) authenticationResult
-                .getProperty(FrameworkConstants.UNFILTERED_LOCAL_CLAIM_VALUES);
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
-        if (sessionDataCacheEntry == null || unfilteredFederatedUserClaims.isEmpty()) {
+        if (sessionDataCacheEntry == null || mappedRemoteClaims.get().isEmpty()) {
             return;
         }
-        Map<ClaimMapping, String> unfilteredFederatedUserAttributes = new HashMap<>();
-        unfilteredFederatedUserClaims.forEach(
-                (key, value) -> unfilteredFederatedUserAttributes.put(ClaimMapping.build(key, key, null,
+        Map<ClaimMapping, String> mappedRemoteClaimsMap = new HashMap<>();
+        mappedRemoteClaims.get().forEach(
+                (key, value) -> mappedRemoteClaimsMap.put(ClaimMapping.build(key, key, null,
                         false), value));
-        sessionDataCacheEntry.setUnfilteredFederatedUserClaims(unfilteredFederatedUserAttributes);
+        sessionDataCacheEntry.setMappedRemoteClaims(mappedRemoteClaimsMap);
         if (log.isDebugEnabled() && authenticationResult.getSubject() != null) {
-            log.debug("Added the unfiltered federated user claims to the session data cache. " +
+            log.debug("Added the mapped remote claims to the session data cache. " +
                     "Session context identifier: " + sessionDataCacheEntry.getSessionContextIdentifier()
                     + " for the user: " + authenticationResult.getSubject().getLoggableMaskedUserId());
         }
@@ -1420,9 +1419,9 @@ public class OAuth2AuthzEndpoint {
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
         // Adding federated tokens come with the authentication result of the authorization call.
         addFederatedTokensToSessionCache(oAuthMessage, authnResult);
-        // Adding federated user claims come with the authentication result to resolve access token claims in
+        // Adding mapped remoted claims come with the authentication result to resolve access token claims in
         // federated flow.
-        addUnfilteredFederatedUserClaimsToSessionCache(oAuthMessage, authnResult);
+        addMappedRemoteClaimsToSessionCache(oAuthMessage, authnResult);
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2177,10 +2176,9 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
         authorizationGrantCacheEntry.setFederatedTokens(sessionDataCacheEntry.getFederatedTokens());
         sessionDataCacheEntry.setFederatedTokens(null);
-        Map<ClaimMapping, String> unfilteredFederatedUserAttributes =  sessionDataCacheEntry.
-                getUnfilteredFederatedUserAttributes();
-        if (unfilteredFederatedUserAttributes != null) {
-            authorizationGrantCacheEntry.setUnfilteredFederatedUserAttributes(unfilteredFederatedUserAttributes);
+        Map<ClaimMapping, String> mappedRemoteClaims =  sessionDataCacheEntry.getMappedRemoteClaims();
+        if (mappedRemoteClaims != null) {
+            authorizationGrantCacheEntry.setMappedRemoteClaims(mappedRemoteClaims);
         }
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
@@ -3824,7 +3822,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setState(oauth2Params.getState());
         authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
         authzReqDTO.setRequestedSubjectId(oauth2Params.getRequestedSubjectId());
-        authzReqDTO.setUnfilteredFederatedUserAttributes(sessionDataCacheEntry.getUnfilteredFederatedUserAttributes());
+        authzReqDTO.setMappedRemoteClaims(sessionDataCacheEntry.getMappedRemoteClaims());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
@@ -4560,9 +4558,9 @@ public class OAuth2AuthzEndpoint {
         DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
-        if (sessionDataCacheEntry.getUnfilteredFederatedUserAttributes() != null) {
-            cacheEntry.setUnfilteredFederatedUserAttributes(sessionDataCacheEntry
-                    .getUnfilteredFederatedUserAttributes());
+        if (sessionDataCacheEntry.getMappedRemoteClaims() != null) {
+            cacheEntry.setMappedRemoteClaims(sessionDataCacheEntry
+                    .getMappedRemoteClaims());
         }
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }

@@ -479,7 +479,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 DeviceAuthorizationGrantCache.getInstance().getValueFromCache(cacheKey);
         if (fetchFederatedUserAttributes) {
-            return cacheEntry == null ? Collections.emptyMap() : cacheEntry.getUnfilteredFederatedUserAttributes();
+            return cacheEntry == null ? Collections.emptyMap() : cacheEntry.getMappedRemoteClaims();
         }
         return cacheEntry == null ? Collections.emptyMap() : cacheEntry.getUserAttributes();
     }
@@ -487,7 +487,8 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     /**
      * Get user attributes cached against the authorization code.
      *
-     * @param authorizationCode Authorization Code
+     * @param authorizationCode            Authorization Code
+     * @param fetchFederatedUserAttributes Flag to indicate whether to fetch federated user attributes.
      * @return User attributes cached against the authorization code
      */
     private Map<ClaimMapping, String> getUserAttributesFromCacheUsingCode(String authorizationCode,
@@ -504,7 +505,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         AuthorizationGrantCacheEntry cacheEntry =
                 AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
         if (fetchFederatedUserAttributes) {
-            return cacheEntry == null ? new HashMap<>() : cacheEntry.getUnfilteredFederatedUserAttributes();
+            return cacheEntry == null ? new HashMap<>() : cacheEntry.getMappedRemoteClaims();
         }
         return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
     }
@@ -584,7 +585,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Map<ClaimMapping, String> userAttributes = authenticatedUser.getUserAttributes();
         // Since this is a federated flow we are retrieving the federated user attributes as well.
         Map<ClaimMapping, String> federatedUserAttributes =
-                oAuth2AuthorizeReqDTO.getUnfilteredFederatedUserAttributes();
+                oAuth2AuthorizeReqDTO.getMappedRemoteClaims();
         userClaimsMappedToOIDCDialect = getOIDCClaimMapFromUserAttributes(userAttributes);
         Map<String, Object> federatedUserClaimsMappedToOIDCDialect =
                 getUserClaimsInOIDCDialectFromFederatedUserAttributes(authzReqMessageContext.getAuthorizationReqDTO()
@@ -641,10 +642,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
                     String localClaimURI = claimMapping.getLocalClaim().getClaimUri();
                     String oidcClaimUri = oidcToLocalClaimMappings.entrySet().stream()
                             .filter(entry -> entry.getValue().equals(localClaimURI))
-                            .map(Map.Entry::getKey)
-                            .findFirst()
-                            .orElse(null);
-
+                            .map(Map.Entry::getKey).findFirst().orElse(null);
                     if (oidcClaimUri != null) {
                         userClaimsInOidcDialect.put(oidcClaimUri, claimValue);
                         if (log.isDebugEnabled() &&
@@ -717,7 +715,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
                 .getValueFromCacheByToken(cacheKey);
         if (fetchFederatedUserAttributes) {
-            return cacheEntry == null ? new HashMap<>() : cacheEntry.getUnfilteredFederatedUserAttributes();
+            return cacheEntry == null ? new HashMap<>() : cacheEntry.getMappedRemoteClaims();
         }
         return cacheEntry == null ? new HashMap<>() : cacheEntry.getUserAttributes();
     }

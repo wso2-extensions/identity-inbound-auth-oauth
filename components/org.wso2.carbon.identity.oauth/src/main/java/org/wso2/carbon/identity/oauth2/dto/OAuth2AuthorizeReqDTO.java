@@ -63,7 +63,7 @@ public class OAuth2AuthorizeReqDTO {
     private boolean isRequestObjectFlow;
     private String state;
     private String requestedSubjectId;
-    private Map<ClaimMapping, String> unfilteredFederatedUserAttributes;
+    private Map<ClaimMapping, String> mappedRemoteClaims;
 
     public String getRequestedSubjectId() {
 
@@ -307,14 +307,14 @@ public class OAuth2AuthorizeReqDTO {
         this.httpServletRequestWrapper = httpServletRequestWrapper;
     }
 
-    public Map<ClaimMapping, String> getUnfilteredFederatedUserAttributes() {
+    public Map<ClaimMapping, String> getMappedRemoteClaims() {
 
-        return unfilteredFederatedUserAttributes;
+        return mappedRemoteClaims;
     }
 
-    public void setUnfilteredFederatedUserAttributes(
-            Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
+    public void setMappedRemoteClaims(
+            Map<ClaimMapping, String> mappedRemoteClaims) {
 
-        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
+        this.mappedRemoteClaims = mappedRemoteClaims;
     }
 }

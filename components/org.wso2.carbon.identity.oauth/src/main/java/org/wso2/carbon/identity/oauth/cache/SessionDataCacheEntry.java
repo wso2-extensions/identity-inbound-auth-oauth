@@ -54,7 +54,7 @@ public class SessionDataCacheEntry extends CacheEntry {
 
     private Map<String, Serializable> endpointParams = new HashMap<>();
     private List<FederatedTokenDO> federatedTokens;
-    private Map<ClaimMapping, String> unfilteredFederatedUserAttributes;
+    private Map<ClaimMapping, String> mappedRemoteClaims;
 
     public OAuthAuthzReqMessageContext getAuthzReqMsgCtx() {
         return authzReqMsgCtx;
@@ -175,13 +175,13 @@ public class SessionDataCacheEntry extends CacheEntry {
         this.federatedTokens = federatedTokens;
     }
 
-    public Map<ClaimMapping, String> getUnfilteredFederatedUserAttributes() {
+    public Map<ClaimMapping, String> getMappedRemoteClaims() {
 
-        return unfilteredFederatedUserAttributes;
+        return mappedRemoteClaims;
     }
 
-    public void setUnfilteredFederatedUserClaims(Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
+    public void setMappedRemoteClaims(Map<ClaimMapping, String> mappedRemoteClaims) {
 
-        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
+        this.mappedRemoteClaims = mappedRemoteClaims;
     }
 }

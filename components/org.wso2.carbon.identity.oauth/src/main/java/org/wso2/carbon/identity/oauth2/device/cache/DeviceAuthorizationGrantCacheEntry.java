@@ -31,18 +31,11 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
     private static final long serialVersionUID = -3043225645166013281L;
 
     private Map<ClaimMapping, String> userAttributes;
-    private Map<ClaimMapping, String> unfilteredFederatedUserAttributes;
+    private Map<ClaimMapping, String> mappedRemoteClaims;
 
     public DeviceAuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
 
         this.userAttributes = userAttributes;
-    }
-
-    public DeviceAuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes,
-                                              Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
-
-        this.userAttributes = userAttributes;
-        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
     }
 
     /**
@@ -65,14 +58,14 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
         this.userAttributes = userAttributes;
     }
 
-    public Map<ClaimMapping, String> getUnfilteredFederatedUserAttributes() {
+    public Map<ClaimMapping, String> getMappedRemoteClaims() {
 
-        return unfilteredFederatedUserAttributes;
+        return mappedRemoteClaims;
     }
 
-    public void setUnfilteredFederatedUserAttributes(
-            Map<ClaimMapping, String> unfilteredFederatedUserAttributes) {
+    public void setMappedRemoteClaims(
+            Map<ClaimMapping, String> mappedRemoteClaims) {
 
-        this.unfilteredFederatedUserAttributes = unfilteredFederatedUserAttributes;
+        this.mappedRemoteClaims = mappedRemoteClaims;
     }
 }
