@@ -48,7 +48,9 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
+/**
+ * Unit tests for AuthorizationGrantCacheTest class.
+ */
 public class AuthorizationGrantCacheTest {
 
     @Mock
