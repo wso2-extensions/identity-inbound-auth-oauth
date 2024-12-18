@@ -124,6 +124,7 @@
             <class name="org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeysTest"/>
             <class name="org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProviderTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheTest"/>
         </classes>
     </test>
 
@@ -199,6 +200,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtilTest"/>
+            <class name="org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandlerTest"/>
         </classes>
     </test>
