@@ -32,6 +32,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
@@ -43,6 +44,7 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -51,15 +53,20 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
@@ -246,11 +253,19 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oauthServerConfigurationMock);
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
-                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(this.mockClaimMetadataHandler);
+                 MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class)) {
+                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+                lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                        anyString(), isNull(), anyString(), anyBoolean())).thenReturn(new HashMap<>());
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
                         getoAuthAppDO(jwtAccessTokenClaims));
+                mockApplicationManagementService();
                 OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForLocalUser();
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+                UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+                mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
                 JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
                 JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                         oAuthServerConfiguration);
@@ -402,6 +417,71 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         }
     }
 
+    @Test
+    public void testHandleClaimsForOAuthTokenReqMessageContextWithAuthorizationCode() throws Exception {
+
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager = mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler = mockStatic(ClaimMetadataHandler.class)) {
+            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oauthServerConfigurationMock);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS)) {
+                MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                        mockStatic(AuthorizationGrantCache.class);
+                identityUtil.when(IdentityUtil::isGroupsVsRolesSeparationImprovementsEnabled).thenReturn(true);
+                authzUtil.when(() -> AuthzUtil.getUserRoles(any(), anyString())).thenReturn(new ArrayList<>());
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(any(), any())).thenReturn(
+                        getoAuthAppDO(jwtAccessTokenClaims));
+                Map<String, String> mappings = getOIDCtoLocalClaimsMapping();
+                claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockClaimMetadataHandler);
+                lenient().when(mockClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                        anyString(), isNull(), anyString(), anyBoolean())).thenReturn(mappings);
+                Map<ClaimMapping, String> userAttributes = new HashMap<>();
+                OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(userAttributes);
+                requestMsgCtx.addProperty("AuthorizationCode", "dummyAuthorizationCode");
+                Map<ClaimMapping, String> federatedUserAttributes = new HashMap<>();
+                federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(LOCAL_COUNTRY_CLAIM_URI),
+                        TestConstants.CLAIM_VALUE1);
+                federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(LOCAL_EMAIL_CLAIM_URI),
+                        TestConstants.CLAIM_VALUE2);
+                AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new
+                        AuthorizationGrantCacheEntry();
+                authorizationGrantCacheEntry.setMappedRemoteClaims(federatedUserAttributes);
+                mockAuthorizationGrantCache(authorizationGrantCacheEntry, authorizationGrantCache);
+
+                UserRealm userRealm = getUserRealmWithUserClaims(USER_CLAIMS_MAP);
+                mockUserRealm(requestMsgCtx.getAuthorizedUser().toString(), userRealm, identityTenantUtil);
+                JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
+                JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
+                        oAuthServerConfiguration);
+                assertNotNull(jwtClaimsSet, "JWT Custom claim handling failed.");
+                assertFalse(jwtClaimsSet.getClaims().isEmpty(), "JWT custom claim handling failed");
+                Assert.assertEquals(jwtClaimsSet.getClaims().size(), 2,
+                        "Expected custom claims are not set.");
+                Assert.assertEquals(jwtClaimsSet.getClaim("email"), TestConstants.CLAIM_VALUE2,
+                        "OIDC claim email is not added with the JWT token");
+            }
+        }
+    }
+
+    private void mockAuthorizationGrantCache(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+                                             MockedStatic<AuthorizationGrantCache> authorizationGrantCache) {
+
+        AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+
+        if (authorizationGrantCacheEntry == null) {
+            authorizationGrantCacheEntry = mock(AuthorizationGrantCacheEntry.class);
+        }
+        authorizationGrantCache.when(AuthorizationGrantCache::getInstance).thenReturn(mockAuthorizationGrantCache);
+        lenient().when(mockAuthorizationGrantCache.getValueFromCacheByCode(any(AuthorizationGrantCacheKey.class))).
+                thenReturn(authorizationGrantCacheEntry);
+    }
+
     private static Map<String, String> getOIDCtoLocalClaimsMapping() {
 
         Map<String, String> mappings = new HashMap<>();
@@ -502,6 +582,38 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
         OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
         requestMsgCtx.setAuthorizedUser(getDefaultAuthenticatedLocalUser());
         return requestMsgCtx;
+    }
+
+    /**
+     * To get token request message context for federates user.
+     *
+     * @param userAttributes Relevant user attributes need to be added to authenticates user.
+     * @return relevant token request context for federated authenticated user.
+     */
+    private OAuthTokenReqMessageContext getTokenReqMessageContextForFederatedUser(Map<ClaimMapping,
+            String> userAttributes) {
+
+        OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        accessTokenReqDTO.setTenantDomain(TENANT_DOMAIN);
+        accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
+        OAuthTokenReqMessageContext requestMsgCtx = new OAuthTokenReqMessageContext(accessTokenReqDTO);
+        requestMsgCtx.addProperty(MultitenantConstants.TENANT_DOMAIN, TENANT_DOMAIN);
+        AuthenticatedUser authenticatedUser = getDefaultAuthenticatedUserFederatedUser();
+
+        if (userAttributes != null) {
+            authenticatedUser.setUserAttributes(userAttributes);
+        }
+        requestMsgCtx.setAuthorizedUser(authenticatedUser);
+        return requestMsgCtx;
+    }
+
+    private AuthenticatedUser getDefaultAuthenticatedUserFederatedUser() {
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserName(USER_NAME);
+        authenticatedUser.setUserId(StringUtils.EMPTY);
+        authenticatedUser.setFederatedUser(true);
+        return authenticatedUser;
     }
 
     private AuthenticatedUser getDefaultAuthenticatedLocalUser() {
