@@ -204,6 +204,7 @@
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImplTest"/>
             <class name="org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtilTest"/>
+            <class name="org.wso2.carbon.identity.openidconnect.JWTAccessTokenOIDCClaimsHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsServiceTest" />
             <class name="org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>

@@ -117,6 +117,8 @@ public final class OAuthConstants {
 
     public static final String READ_AMR_VALUE_FROM_IDP = "OAuth.ReplaceDefaultAMRValuesWithIDPSentValues";
 
+    public static final String OAUTH_APP = "OAuthAppDO";
+
     public static final String CNF = "cnf";
     public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
     public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";

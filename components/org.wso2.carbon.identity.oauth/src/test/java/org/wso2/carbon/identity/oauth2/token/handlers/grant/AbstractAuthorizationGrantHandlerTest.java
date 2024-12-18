@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.common.GrantType;
@@ -47,11 +49,17 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
+import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
 import java.util.Collections;
@@ -63,7 +71,9 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -142,6 +152,58 @@ public class AbstractAuthorizationGrantHandlerTest {
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
     }
 
+    @Test(dataProvider = "IssueWithRenewDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
+    public void testIssueWithRenewWithoutRevokingExistingEnabled
+            (boolean cacheEnabled, boolean cacheEntryAvailable, long cachedTokenValidity,
+             long cachedRefreshTokenValidity, long dbTokenValidity, long dbRefreshTokenValidity,
+             boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable, boolean isIDPIdColumnEnabled,
+             boolean setBindingReference) throws Exception {
+
+        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
+
+        Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
+        supportedGrantTypes.put("refresh_token", refreshGrantHandler);
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType(PASSWORD_GRANT);  // Ensure the grant type is valid for renewal
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
+
+        tokReqMsgCtx.addProperty("OAuthAppDO", oAuthAppDO);
+
+        TokenBinding tokenBinding = new TokenBinding();
+        if (setBindingReference) {
+            tokenBinding.setBindingReference("bindingReference");
+        }
+        tokReqMsgCtx.setTokenBinding(tokenBinding);
+
+        // Mocking static methods using try-with-resources
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class)) {
+
+            identityUtil.when(() -> IdentityUtil.getProperty(anyString()))
+                    .thenReturn(Boolean.TRUE.toString());
+
+            OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+            OAuthTokenPersistenceFactory persistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            when(persistenceFactory.getAccessTokenDAO()).thenReturn(new AccessTokenDAOImpl());
+
+            OauthTokenIssuer oauthTokenIssuer = mock(JWTTokenIssuer.class);
+            when(oauthTokenIssuer.getAccessTokenType()).thenReturn("jwt");
+            oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId)).thenReturn(oauthTokenIssuer);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId)).thenReturn(oAuthAppDO);
+
+            // Set allowed grant types (ensure PASSWORD_GRANT is allowed for renewal)
+            OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
+                    Collections.singletonList("password")); // This allows PASSWORD_GRANT
+
+            OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
+        }
+    }
+
     @DataProvider(name = "IssueDataProvider")
     public Object[][] issueDataProvider() {
         return new Object[][] {
@@ -172,6 +234,14 @@ public class AbstractAuthorizationGrantHandlerTest {
                 {true, false, 0L, 0L, 0L, 3600L, true, TOKEN_STATE_ACTIVE, true, false},
                 {true, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, true},
                 {false, true, 0L, 0L, -1L, 3600L, true, TOKEN_STATE_ACTIVE, true, false}};
+    }
+
+    @DataProvider(name = "IssueWithRenewDataProvider")
+    public Object[][] issueWithRenewDataProvider() {
+        return new Object[][]{
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true, true},
+                {true, true, 3600L, 3600L, 0L, 0L, false, TOKEN_STATE_ACTIVE, false, true, false}
+        };
     }
 
     @Test(dataProvider = "IssueDataProvider")

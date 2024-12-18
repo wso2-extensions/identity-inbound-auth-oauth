@@ -87,8 +87,20 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     public JWTClaimsSet handleCustomClaims(JWTClaimsSet.Builder builder, OAuthAuthzReqMessageContext request)
             throws IdentityOAuth2Exception {
 
-        // TODO : Implement this method for implicit flow and hybrid flow.
-        return builder.build();
+        /*
+          Handling the user attributes for the access token. There is no requirement of the consent
+          to manage user attributes for the access token.
+         */
+        String clientId = request.getAuthorizationReqDTO().getConsumerKey();
+        String spTenantDomain = getServiceProviderTenantDomain(request);
+        AuthenticatedUser authenticatedUser = request.getAuthorizationReqDTO().getUser();
+
+        Map<String, Object> claims = getAccessTokenUserClaims(authenticatedUser, clientId, spTenantDomain);
+        if (claims == null || claims.isEmpty()) {
+            return builder.build();
+        }
+        Map<String, Object> filteredClaims = handleClaimsFormat(claims, clientId, spTenantDomain);
+        return setClaimsToJwtClaimSet(builder, filteredClaims);
     }
 
     private Map<String, Object> getAccessTokenUserClaims(AuthenticatedUser authenticatedUser, String clientId,
@@ -298,4 +310,21 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
         return spTenantDomain;
     }
+
+    /**
+     * Retrieves the service provider tenant domain from the OAuthAuthzReqMessageContext.
+     *
+     * @param requestMsgCtx OAuthAuthzReqMessageContext containing the tenant domain.
+     * @return The tenant domain.
+     */
+    private String getServiceProviderTenantDomain(OAuthAuthzReqMessageContext requestMsgCtx) {
+
+        String spTenantDomain = (String) requestMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
+        // There are certain flows where tenant domain is not added as a message context property.
+        if (spTenantDomain == null) {
+            spTenantDomain = requestMsgCtx.getAuthorizationReqDTO().getTenantDomain();
+        }
+        return spTenantDomain;
+    }
+
 }

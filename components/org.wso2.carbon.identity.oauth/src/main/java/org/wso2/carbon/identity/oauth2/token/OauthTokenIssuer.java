@@ -24,6 +24,8 @@ import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
+import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenTypes.OPAQUE;
+
 /**
  * OAuth 2 access token issuer.
  */
@@ -98,5 +100,15 @@ public interface OauthTokenIssuer {
      */
     default String issueSubjectToken(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
         return StringUtils.EMPTY;
+    }
+
+    /**
+     * Default method to retrieve the access token type
+     *
+     * @return The type of the token (e.g., "JWT" or "Opaque").
+     */
+    default String getAccessTokenType() {
+
+        return OPAQUE;
     }
 }
