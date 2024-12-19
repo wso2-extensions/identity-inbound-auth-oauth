@@ -445,9 +445,9 @@ public class JWTAccessTokenOIDCClaimsHandlerTest {
                 OAuthTokenReqMessageContext requestMsgCtx = getTokenReqMessageContextForFederatedUser(userAttributes);
                 requestMsgCtx.addProperty("AuthorizationCode", "dummyAuthorizationCode");
                 Map<ClaimMapping, String> federatedUserAttributes = new HashMap<>();
-                federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(LOCAL_COUNTRY_CLAIM_URI),
+                federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("country"),
                         TestConstants.CLAIM_VALUE1);
-                federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping(LOCAL_EMAIL_CLAIM_URI),
+                federatedUserAttributes.put(SAML2BearerGrantHandlerTest.buildClaimMapping("email"),
                         TestConstants.CLAIM_VALUE2);
                 AuthorizationGrantCacheEntry authorizationGrantCacheEntry = new
                         AuthorizationGrantCacheEntry();
