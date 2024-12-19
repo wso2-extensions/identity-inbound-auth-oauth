@@ -82,10 +82,10 @@ public class UserAuthenticationEndpoint {
                 return Response.status(HttpServletResponse.SC_FOUND).location(URI.create(error)).build();
             }
             DeviceFlowDO deviceFlowDODetails =
-                    DeviceServiceHolder.getDeviceAuthService().getDetailsByUserCode(userCode);
+                    DeviceServiceFactory.getDeviceAuthService().getDetailsByUserCode(userCode);
             if (!isExpiredUserCode(deviceFlowDODetails)) {
                 String clientId = deviceFlowDODetails.getConsumerKey();
-                DeviceServiceHolder.getDeviceAuthService().setAuthenticationStatus(userCode);
+                DeviceServiceFactory.getDeviceAuthService().setAuthenticationStatus(userCode);
                 CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
                 commonAuthRequestWrapper.setParameter(Constants.CLIENT_ID, clientId);
                 commonAuthRequestWrapper.setParameter(Constants.RESPONSE_TYPE, Constants.RESPONSE_TYPE_DEVICE);

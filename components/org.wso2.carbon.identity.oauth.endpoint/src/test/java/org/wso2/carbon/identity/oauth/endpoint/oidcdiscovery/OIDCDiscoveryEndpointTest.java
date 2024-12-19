@@ -27,13 +27,13 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
-import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -63,6 +63,9 @@ public class OIDCDiscoveryEndpointTest {
 
     @Mock
     DefaultOIDCProcessor defaultOIDCProcessor;
+
+    @Mock
+    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
 
     private OIDCDiscoveryEndpoint oidcDiscoveryEndpoint;
     private Object identityUtilObj;
@@ -120,22 +123,24 @@ public class OIDCDiscoveryEndpointTest {
         threadLocalPropertiesField.setAccessible(true);
         threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
 
-        try (MockedStatic<OIDCDiscoveryServiceHolder> oidcDiscoveryServiceHolder =
-                mockStatic(OIDCDiscoveryServiceHolder.class);
-             MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
-                     mockStatic(OIDCProviderServiceFactory.class);) {
-            oidcProviderServiceFactory.when(OIDCProviderServiceFactory::getOIDCService)
+        try (MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = mockStatic(PrivilegedCarbonContext.class)) {
+            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(mockedPrivilegedCarbonContext);
+            lenient().when(mockedPrivilegedCarbonContext.getOSGiService(DefaultOIDCProcessor.class, null))
                     .thenReturn(defaultOIDCProcessor);
-            lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
-                    .thenReturn(oidProviderConfigResponse);
-            lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
-            lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
-                    .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            oidcDiscoveryServiceHolder.when(OIDCDiscoveryServiceHolder::getOIDProviderResponseBuilder)
-                    .thenReturn(new OIDProviderJSONResponseBuilder());
-            Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
-            Assert.assertEquals(expectedResponse, response.getStatus());
-            threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+            try (MockedStatic<OIDCDiscoveryServiceFactory> oidcDiscoveryServiceHolder =
+                         mockStatic(OIDCDiscoveryServiceFactory.class)) {
+                lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
+                        .thenReturn(oidProviderConfigResponse);
+                lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
+                lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
+                        .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                oidcDiscoveryServiceHolder.when(OIDCDiscoveryServiceFactory::getOIDProviderResponseBuilder)
+                        .thenReturn(new OIDProviderJSONResponseBuilder());
+                Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
+                Assert.assertEquals(expectedResponse, response.getStatus());
+                threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+            }
         }
     }
 

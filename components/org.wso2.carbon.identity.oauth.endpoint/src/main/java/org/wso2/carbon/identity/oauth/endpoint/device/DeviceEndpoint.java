@@ -97,7 +97,7 @@ public class DeviceEndpoint {
 
         String temporaryUserCode = GenerateKeys.getKey(OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength());
         long quantifier = GenerateKeys.getCurrentQuantifier();
-        return DeviceServiceHolder.getDeviceAuthService().generateDeviceResponse(deviceCode, temporaryUserCode,
+        return DeviceServiceFactory.getDeviceAuthService().generateDeviceResponse(deviceCode, temporaryUserCode,
                 quantifier, clientId, scopes);
     }
 

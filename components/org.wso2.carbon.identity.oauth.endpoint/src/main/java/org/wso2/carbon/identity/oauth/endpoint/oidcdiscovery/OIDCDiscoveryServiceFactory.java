@@ -24,19 +24,21 @@ import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 /**
  * Service holder for managing instances of OIDC Discovery related services.
  */
-public class OIDCDiscoveryServiceHolder {
+public class OIDCDiscoveryServiceFactory {
 
-    private static class OIDCProviderJSONResponseBuilderHolder {
+    private static final OIDProviderResponseBuilder SERVICE;
 
-        static final OIDProviderResponseBuilder SERVICE = (OIDProviderResponseBuilder) PrivilegedCarbonContext
+    static {
+        OIDProviderResponseBuilder oidProviderResponseBuilder = (OIDProviderResponseBuilder) PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiService(OIDProviderResponseBuilder.class, null);
+        if (oidProviderResponseBuilder == null) {
+            throw new IllegalStateException("OIDProviderResponseBuilder is not available from OSGi context.");
+        }
+        SERVICE = oidProviderResponseBuilder;
     }
 
     public static OIDProviderResponseBuilder getOIDProviderResponseBuilder() {
 
-        if (OIDCProviderJSONResponseBuilderHolder.SERVICE == null) {
-            throw new IllegalStateException("OIDProviderJSONResponseBuilder is not available from OSGi context.");
-        }
-        return OIDCProviderJSONResponseBuilderHolder.SERVICE;
+        return SERVICE;
     }
 }

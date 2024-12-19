@@ -98,7 +98,7 @@ public class OIDCDiscoveryEndpoint {
         String response;
         OIDCProcessor processor = OIDCProviderServiceFactory.getOIDCService();
         try {
-            OIDProviderResponseBuilder responseBuilder = OIDCDiscoveryServiceHolder.getOIDProviderResponseBuilder();
+            OIDProviderResponseBuilder responseBuilder = OIDCDiscoveryServiceFactory.getOIDProviderResponseBuilder();
             response = responseBuilder.getOIDProviderConfigString(processor.getResponse(request, tenant));
         } catch (OIDCDiscoveryEndPointException e) {
             Response.ResponseBuilder errorResponse = Response.status(processor.handleError(e));
