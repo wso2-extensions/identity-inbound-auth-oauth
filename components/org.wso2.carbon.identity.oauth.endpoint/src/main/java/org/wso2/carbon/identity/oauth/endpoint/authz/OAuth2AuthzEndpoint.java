@@ -1342,7 +1342,7 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        if (isOIDCRequest) {
+        if (isOIDCRequest && !Constants.RESPONSE_TYPE_DEVICE.equalsIgnoreCase(oauth2Params.getResponseType())) {
             String sessionStateParam = manageOIDCSessionState(oAuthMessage,
                     sessionState, oauth2Params, authenticatedUser.getAuthenticatedSubjectIdentifier(),
                     oAuthMessage.getSessionDataCacheEntry(), authorizationResponseDTO);
