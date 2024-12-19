@@ -25,7 +25,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -116,8 +116,9 @@ public class UserInfoISAccessTokenValidatorTest {
 
         prepareOAuth2TokenValidationService();
 
-        try (MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class)) {
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2TokenValidationService)
+        try (MockedStatic<OAuth2TokenValidatorServiceFactory> utilServiceHolder =
+                     mockStatic(OAuth2TokenValidatorServiceFactory.class)) {
+            utilServiceHolder.when(OAuth2TokenValidatorServiceFactory::getOAuth2TokenValidatorService)
                     .thenReturn(oAuth2TokenValidationService);
 
             OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator

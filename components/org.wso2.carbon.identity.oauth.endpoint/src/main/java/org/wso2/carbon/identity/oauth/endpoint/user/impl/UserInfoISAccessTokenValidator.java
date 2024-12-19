@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.user.UserInfoAccessTokenValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -61,7 +61,8 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
         accessToken.setTokenType("bearer");
         accessToken.setIdentifier(accessTokenIdentifier);
         dto.setAccessToken(accessToken);
-        OAuth2TokenValidationResponseDTO response = UtilServiceHolder.getOAuth2TokenValidationService().validate(dto);
+        OAuth2TokenValidationResponseDTO response = OAuth2TokenValidatorServiceFactory
+                .getOAuth2TokenValidatorService().validate(dto);
         AccessTokenDO accessTokenDO;
 
         // invalid access token

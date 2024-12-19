@@ -55,7 +55,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
@@ -266,7 +266,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+             MockedStatic<OAuth2ServiceFactory> oauth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
             MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
             ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
             Map<String, String> customResponseParameters = (Map<String, String>) customResponseParamObj;
@@ -298,7 +298,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                     }}));
 
             endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
+            oauth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
 
             lenient().when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(
                     oAuth2AccessTokenRespDTO);
@@ -388,7 +388,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+             MockedStatic<OAuth2ServiceFactory> oauth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
             ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
 
             Map<String, String[]> requestParams = new HashMap<>();
@@ -410,7 +410,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                     }}));
 
             endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
+            oauth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
 
             when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(
                     oAuth2AccessTokenRespDTO);
@@ -454,7 +454,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+             MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
             ResponseHeader[] responseHeaders = new ResponseHeader[]{null};
             Map<String, String[]> requestParams = new HashMap<>();
             requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{GrantType.CLIENT_CREDENTIALS.toString()});
@@ -476,7 +476,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                     }}));
 
             endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
+            oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
             mockOAuthServerConfiguration(oAuthServerConfiguration);
             Map<String, Class<? extends OAuthValidator<HttpServletRequest>>> grantTypeValidators = new Hashtable<>();
             grantTypeValidators.put(GrantType.CLIENT_CREDENTIALS.toString(), PasswordValidator.class);
@@ -524,7 +524,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
                      mockStatic(OAuthServerConfiguration.class);
              MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+             MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
             Map<String, String[]> requestParams = new HashMap<>();
             requestParams.put(OAuth.OAUTH_CLIENT_ID, new String[]{CLIENT_ID_VALUE});
             requestParams.put(OAuth.OAUTH_GRANT_TYPE, new String[]{grantType});
@@ -567,7 +567,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
             mockOAuthServerConfiguration(oAuthServerConfiguration);
             when(mockOAuthServerConfiguration.getSupportedGrantTypeValidators()).thenReturn(grantTypeValidators);
 
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
+            oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
             final Map<String, String> parametersSetToRequest = new HashMap<>();
             doAnswer(new Answer<Object>() {
                 @Override

@@ -33,7 +33,7 @@ import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -122,8 +122,10 @@ public class OIDCDiscoveryEndpointTest {
 
         try (MockedStatic<OIDCDiscoveryServiceHolder> oidcDiscoveryServiceHolder =
                 mockStatic(OIDCDiscoveryServiceHolder.class);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
-            utilServiceHolder.when(UtilServiceHolder::getOIDCService).thenReturn(defaultOIDCProcessor);
+             MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
+                     mockStatic(OIDCProviderServiceFactory.class);) {
+            oidcProviderServiceFactory.when(OIDCProviderServiceFactory::getOIDCService)
+                    .thenReturn(defaultOIDCProcessor);
             lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
                     .thenReturn(oidProviderConfigResponse);
             lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);

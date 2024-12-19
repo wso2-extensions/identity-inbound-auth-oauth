@@ -80,8 +80,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSPTenantDomainFromClientId;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2Service;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getParAuthService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.ParAuthServiceFactory.getParAuthService;
 
 /**
  * REST implementation for OAuth2 PAR endpoint.

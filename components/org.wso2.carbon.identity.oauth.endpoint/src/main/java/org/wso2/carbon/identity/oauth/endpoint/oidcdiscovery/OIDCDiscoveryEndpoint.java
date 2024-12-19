@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -96,7 +96,7 @@ public class OIDCDiscoveryEndpoint {
     private Response getResponse(HttpServletRequest request, String tenant) {
 
         String response;
-        OIDCProcessor processor = UtilServiceHolder.getOIDCService();
+        OIDCProcessor processor = OIDCProviderServiceFactory.getOIDCService();
         try {
             OIDProviderResponseBuilder responseBuilder = OIDCDiscoveryServiceHolder.getOIDProviderResponseBuilder();
             response = responseBuilder.getOIDProviderConfigString(processor.getResponse(request, tenant));

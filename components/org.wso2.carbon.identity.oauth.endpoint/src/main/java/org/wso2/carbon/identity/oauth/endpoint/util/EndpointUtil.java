@@ -79,6 +79,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClien
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -141,10 +142,10 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2ScopeService;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuthAdminService;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuthServerConfiguration;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getScopeMetadataService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory.getOAuthAdminService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory.getOAuthServerConfiguration;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFactory.getOAuth2ScopeService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.ScopeMetadataServiceFactory.getScopeMetadataService;
 import static org.wso2.carbon.identity.oauth.par.common.ParConstants.PRE_HANDLE_PAR_REQUEST;
 import static org.wso2.carbon.identity.oauth.par.common.ParConstants.REQUEST_HEADERS;
 import static org.wso2.carbon.identity.oauth.par.common.ParConstants.REQUEST_PARAMETERS;
@@ -1394,7 +1395,7 @@ public class EndpointUtil {
      */
     public static void validateOauthApplication(String consumerKey) throws InvalidApplicationClientException {
 
-        String appState = UtilServiceHolder.getOAuth2Service().getOauthApplicationState(consumerKey);
+        String appState = OAuth2ServiceFactory.getOAuth2Service().getOauthApplicationState(consumerKey);
 
         DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
         if (LoggerUtils.isDiagnosticLogsEnabled()) {

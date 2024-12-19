@@ -47,7 +47,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.ParAuthServiceFactory;
 import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
@@ -364,7 +365,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class, Mockito.CALLS_REAL_METHODS);
                  MockedStatic<OIDCRequestObjectUtil> oidcRequestObjectUtil = mockStatic(OIDCRequestObjectUtil.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class)) {
+                 MockedStatic<OAuth2ServiceFactory> oauth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);
+                 MockedStatic<ParAuthServiceFactory> parAuthServiceFactory = mockStatic(ParAuthServiceFactory.class)) {
 
                 identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
@@ -387,11 +389,11 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         .thenReturn(SERVER_BASE_PATH);
                 request.setAttribute(OAuthConstants.TRANSPORT_ENDPOINT_ADDRESS, PAR_EP_URL);
 
-                utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
+                oauth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
 
                 lenient().doCallRealMethod().when(oAuth2Service).validateInputParameters(request);
                 lenient().doCallRealMethod().when(oAuth2Service).validateClientInfo(any(OAuthParRequestWrapper.class));
-                utilServiceHolder.when(UtilServiceHolder::getParAuthService).thenReturn(parAuthService);
+                parAuthServiceFactory.when(ParAuthServiceFactory::getParAuthService).thenReturn(parAuthService);
                 if (testOAuthSystemException) {
                     endpointUtil.when(() -> EndpointUtil.getOAuthAuthzRequest(any()))
                             .thenThrow(new OAuthSystemException());

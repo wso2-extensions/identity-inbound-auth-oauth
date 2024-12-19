@@ -212,10 +212,10 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLogin
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuth2Service;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getOAuthServerConfiguration;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getRequestObjectService;
-import static org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder.getSSOConsentService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory.getOAuthServerConfiguration;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory.getRequestObjectService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.SSOConsentServiceFactory.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;

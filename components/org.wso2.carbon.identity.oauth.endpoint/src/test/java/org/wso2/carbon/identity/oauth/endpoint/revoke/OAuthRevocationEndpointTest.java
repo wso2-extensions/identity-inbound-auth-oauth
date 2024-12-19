@@ -41,7 +41,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth.endpoint.util.UtilServiceHolder;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
@@ -223,7 +223,7 @@ public class OAuthRevocationEndpointTest {
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
              MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class)) {
+             MockedStatic<OAuth2ServiceFactory> oauth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class)) {
             MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<>();
             ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
             parameterMap.add(TOKEN_PARAM, token);
@@ -242,7 +242,7 @@ public class OAuthRevocationEndpointTest {
             HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<>());
             when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
 
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(oAuth2Service);
+            oauth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
 
             final OAuthRevocationRequestDTO[] revokeReqDTO;
             revokeReqDTO = new OAuthRevocationRequestDTO[1];

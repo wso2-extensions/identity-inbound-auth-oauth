@@ -67,6 +67,15 @@ import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderRequestValidatorFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.WebFingerServiceFactory;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -283,7 +292,9 @@ public class EndpointUtilTest {
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
              MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigurationBuilder =
-                     mockStatic(FileBasedConfigurationBuilder.class);) {
+                     mockStatic(FileBasedConfigurationBuilder.class);
+             MockedStatic<OAuthServerConfigurationFactory> oAuthServerConfigurationFactory =
+                     mockStatic(OAuthServerConfigurationFactory.class)) {
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(mockedOAuthServerConfiguration);
 
@@ -292,12 +303,16 @@ public class EndpointUtilTest {
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
                  MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class);
-                 MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+                 MockedStatic<Oauth2ScopeServiceFactory> oauth2ScopeServiceFactory =
+                         mockStatic(Oauth2ScopeServiceFactory.class);
+                 MockedStatic<OAuthAdminServiceFactory> oAuthAdminServiceFactory =
+                         mockStatic(OAuthAdminServiceFactory.class)) {
 
-                utilServiceHolder.when(UtilServiceHolder::getOAuthServerConfiguration).thenReturn(
-                        mockedOAuthServerConfiguration);
+                oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
+                        .thenReturn(mockedOAuthServerConfiguration);
                 lenient().when(mockedOAuthServerConfiguration.isDropUnregisteredScopes()).thenReturn(false);
-                utilServiceHolder.when(UtilServiceHolder::getOAuth2ScopeService).thenReturn(oAuth2ScopeService);
+                oauth2ScopeServiceFactory.when(Oauth2ScopeServiceFactory::getOAuth2ScopeService)
+                        .thenReturn(oAuth2ScopeService);
                 lenient().when(oAuth2ScopeService.getUserConsentForApp(anyString(), anyString(), anyInt()))
                         .thenReturn(oAuth2ScopeConsentResponse);
 
@@ -341,7 +356,8 @@ public class EndpointUtilTest {
                             thenReturn(null);
                 }
 
-                utilServiceHolder.when(UtilServiceHolder::getOAuthAdminService).thenReturn(mockedOAuthAdminService);
+                oAuthAdminServiceFactory.when(OAuthAdminServiceFactory::getOAuthAdminService)
+                        .thenReturn(mockedOAuthAdminService);
                 lenient().when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
                 lenient().when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
                         .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
@@ -730,19 +746,22 @@ public class EndpointUtilTest {
         try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
                      mockStatic(PrivilegedCarbonContext.class);) {
             mockPrivilegedCarbonContext(privilegedCarbonContext);
-            assertTrue(UtilServiceHolder.getWebFingerService() instanceof DefaultWebFingerProcessor,
+            assertTrue(WebFingerServiceFactory.getWebFingerService() instanceof DefaultWebFingerProcessor,
                     "Retrieved incorrect WebFingerService");
-            assertTrue(UtilServiceHolder.getOIDProviderRequestValidator() instanceof DefaultOIDCProviderRequestBuilder,
+            assertTrue(OIDCProviderRequestValidatorFactory.getOIDProviderRequestValidator()
+                            instanceof DefaultOIDCProviderRequestBuilder,
                     "Retrieved incorrect OIDProviderRequestValidator");
-            assertTrue(UtilServiceHolder.getOIDCService() instanceof DefaultOIDCProcessor,
+            assertTrue(OIDCProviderServiceFactory.getOIDCService() instanceof DefaultOIDCProcessor,
                     "Retrieved incorrect OIDCService");
-            assertTrue(UtilServiceHolder.getOAuth2Service() instanceof OAuth2Service,
+            assertTrue(OAuth2ServiceFactory.getOAuth2Service() instanceof OAuth2Service,
                     "Retrieved incorrect OAuth2Service");
-            assertTrue(UtilServiceHolder.getOAuthServerConfiguration() instanceof OAuthServerConfiguration,
+            assertTrue(OAuthServerConfigurationFactory.getOAuthServerConfiguration()
+                            instanceof OAuthServerConfiguration,
                     "Retrieved incorrect OAuthServerConfiguration");
-            assertTrue(UtilServiceHolder.getOAuth2TokenValidationService() instanceof OAuth2TokenValidationService,
+            assertTrue(OAuth2TokenValidatorServiceFactory.getOAuth2TokenValidatorService()
+                            instanceof OAuth2TokenValidationService,
                     "Retrieved incorrect OAuth2TokenValidationService");
-            assertTrue(UtilServiceHolder.getRequestObjectService() instanceof RequestObjectService,
+            assertTrue(RequestObjectServiceFactory.getRequestObjectService() instanceof RequestObjectService,
                     "Retrieved incorrect RequestObjectService");
         }
     }
@@ -763,11 +782,12 @@ public class EndpointUtilTest {
 
         try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
                      mockStatic(PrivilegedCarbonContext.class);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+             MockedStatic<OAuthServerConfigurationFactory> oAuthServerConfigurationFactory =
+                     mockStatic(OAuthServerConfigurationFactory.class);) {
             mockPrivilegedCarbonContext(privilegedCarbonContext);
             setMockedOAuthServerConfiguration();
-            utilServiceHolder.when(UtilServiceHolder::getOAuthServerConfiguration).thenReturn(
-                    mockedOAuthServerConfiguration);
+            oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
+                    .thenReturn(mockedOAuthServerConfiguration);
             assertEquals(EndpointUtil.getUserInfoRequestValidator(), USER_INFO_REQUEST_VALIDATOR);
             assertEquals(EndpointUtil.getAccessTokenValidator(), USER_INFO_TOKEN_VALIDATOR);
             assertEquals(EndpointUtil.getUserInfoResponseBuilder(), USER_INFO_RESPONSE_BUILDER);
@@ -790,9 +810,9 @@ public class EndpointUtilTest {
     public void testValidateOauthApplication(String state, boolean diagnosticLogEnabled) {
 
         try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
-             MockedStatic<UtilServiceHolder> utilServiceHolder = mockStatic(UtilServiceHolder.class);) {
+             MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(diagnosticLogEnabled);
-            utilServiceHolder.when(UtilServiceHolder::getOAuth2Service).thenReturn(mockedOAuth2Service);
+            oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(mockedOAuth2Service);
             when(mockedOAuth2Service.getOauthApplicationState(anyString())).thenReturn(state);
 
             Response response;
