@@ -264,12 +264,12 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
     /**
      * Get oidc claims mapping.
      *
-     * @param federatedUserAttributed User attributes.
+     * @param federatedUserAttributes User attributes.
      * @param requestMsgCtx           Request Context.
      * @return User attributes Map.
      */
     private Map<String, Object> getOIDCClaimsFromFederatedUserAttributes(Map<ClaimMapping,
-            String> federatedUserAttributed, OAuthTokenReqMessageContext requestMsgCtx)
+            String> federatedUserAttributes, OAuthTokenReqMessageContext requestMsgCtx)
             throws IdentityOAuth2Exception {
 
         String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
@@ -283,24 +283,16 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
         // Get user claims in OIDC dialect.
         Map<String, String> userClaimsInOidcDialect = new HashMap<>();
-        if (MapUtils.isNotEmpty(federatedUserAttributed)) {
-            for (Map.Entry<ClaimMapping, String> userAttribute : federatedUserAttributed.entrySet()) {
+        if (MapUtils.isNotEmpty(federatedUserAttributes)) {
+            for (Map.Entry<ClaimMapping, String> userAttribute : federatedUserAttributes.entrySet()) {
                 ClaimMapping claimMapping = userAttribute.getKey();
-                String claimValue = userAttribute.getValue();
-                if (oidcToLocalClaimMappings.containsValue(claimMapping.getLocalClaim().getClaimUri())) {
-                    String localClaimURI = claimMapping.getLocalClaim().getClaimUri();
-                    String oidcClaimUri = oidcToLocalClaimMappings.entrySet().stream()
-                            .filter(entry -> entry.getValue().equals(localClaimURI))
-                            .map(Map.Entry::getKey)
-                            .findFirst()
-                            .orElse(null);
-
-                    if (oidcClaimUri != null) {
-                        userClaimsInOidcDialect.put(oidcClaimUri, claimValue.toString());
-                        if (log.isDebugEnabled() &&
-                                IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
-                            log.debug("Mapped claim: key - " + oidcClaimUri + " value - " + claimValue);
-                        }
+                String claimValue = userAttribute.getValue().toString();
+                String localClaimURI = claimMapping.getLocalClaim().getClaimUri();
+                if (oidcToLocalClaimMappings.containsKey(localClaimURI) && StringUtils.isNotBlank(claimValue)) {
+                    userClaimsInOidcDialect.put(localClaimURI, claimValue);
+                    if (log.isDebugEnabled() &&
+                            IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                        log.debug("Mapped claim: key - " + localClaimURI + " value - " + claimValue);
                     }
                 }
             }
@@ -638,17 +630,12 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
             for (Map.Entry<ClaimMapping, String> userAttribute : federatedUserAttr.entrySet()) {
                 ClaimMapping claimMapping = userAttribute.getKey();
                 String claimValue = userAttribute.getValue();
-                if (oidcToLocalClaimMappings.containsValue(claimMapping.getLocalClaim().getClaimUri())) {
-                    String localClaimURI = claimMapping.getLocalClaim().getClaimUri();
-                    String oidcClaimUri = oidcToLocalClaimMappings.entrySet().stream()
-                            .filter(entry -> entry.getValue().equals(localClaimURI))
-                            .map(Map.Entry::getKey).findFirst().orElse(null);
-                    if (oidcClaimUri != null && StringUtils.isNotBlank(claimValue)) {
-                        userClaimsInOidcDialect.put(oidcClaimUri, claimValue);
-                        if (log.isDebugEnabled() &&
-                                IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
-                            log.debug("Mapped claim: key - " + oidcClaimUri + " value - " + claimValue);
-                        }
+                String localClaimURI = claimMapping.getLocalClaim().getClaimUri();
+                if (oidcToLocalClaimMappings.containsKey(localClaimURI) && StringUtils.isNotBlank(claimValue)) {
+                    userClaimsInOidcDialect.put(localClaimURI, claimValue);
+                    if (log.isDebugEnabled() &&
+                            IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                        log.debug("Mapped claim: key - " + localClaimURI + " value - " + claimValue);
                     }
                 }
             }
