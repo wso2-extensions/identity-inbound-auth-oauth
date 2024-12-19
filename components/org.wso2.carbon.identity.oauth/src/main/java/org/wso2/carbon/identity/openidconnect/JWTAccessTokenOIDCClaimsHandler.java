@@ -643,7 +643,7 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
                     String oidcClaimUri = oidcToLocalClaimMappings.entrySet().stream()
                             .filter(entry -> entry.getValue().equals(localClaimURI))
                             .map(Map.Entry::getKey).findFirst().orElse(null);
-                    if (oidcClaimUri != null) {
+                    if (oidcClaimUri != null && StringUtils.isNotBlank(claimValue)) {
                         userClaimsInOidcDialect.put(oidcClaimUri, claimValue);
                         if (log.isDebugEnabled() &&
                                 IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
