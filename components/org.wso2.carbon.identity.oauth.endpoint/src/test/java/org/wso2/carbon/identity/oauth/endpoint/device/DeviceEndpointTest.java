@@ -34,6 +34,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -46,6 +47,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -69,6 +71,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * Use for unit tests in device end-point.
@@ -96,6 +99,9 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     HttpServletRequest request;
+
+    @Mock
+    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
 
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String TEST_URL = "testURL";
@@ -189,45 +195,52 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     public void testDevice(String clientId, int expectedStatus, boolean status)
             throws Exception {
 
-        try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
-             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
-                     mockStatic(DeviceFlowPersistenceFactory.class);
-             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            DeviceEndpoint deviceEndpoint = spy(new DeviceEndpoint());
-            mockOAuthServerConfiguration(oAuthServerConfiguration);
-
-            ServiceURLBuilder mockServiceURLBuilder = Mockito.mock(ServiceURLBuilder.class);
-            serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
-            ServiceURL mockServiceURL = Mockito.mock(ServiceURL.class);
-            lenient().when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
-            lenient().when(mockServiceURLBuilder.addParameter(anyString(), isNull())).thenReturn(mockServiceURLBuilder);
-            lenient().when(mockServiceURLBuilder.build()).thenReturn(mockServiceURL);
-            lenient().when(mockServiceURL.getAbsolutePublicURL())
-                    .thenReturn("http://localhost:9443/authenticationendpoint/device.do");
-
-            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-            oAuthClientAuthnContext.setClientId(clientId);
-            oAuthClientAuthnContext.setAuthenticated(status);
-            lenient().when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
+        try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
+                     mockStatic(PrivilegedCarbonContext.class)) {
             DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-            deviceEndpoint.setDeviceAuthService(deviceAuthService);
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockedPrivilegedCarbonContext);
+            when(mockedPrivilegedCarbonContext.getOSGiService(DeviceAuthServiceImpl.class, null))
+                    .thenReturn(deviceAuthService);
+            try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+                 MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
+                         mockStatic(DeviceFlowPersistenceFactory.class);
+                 MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
+                         mockStatic(OAuthServerConfiguration.class)) {
+                DeviceEndpoint deviceEndpoint = spy(new DeviceEndpoint());
+                mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-            lenient().when(httpServletRequest.getParameter(anyString())).thenReturn(clientId);
-            lenient().when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT))
-                    .thenReturn(oAuthClientAuthnContext);
+                ServiceURLBuilder mockServiceURLBuilder = Mockito.mock(ServiceURLBuilder.class);
+                serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
+                ServiceURL mockServiceURL = Mockito.mock(ServiceURL.class);
+                lenient().when(mockServiceURLBuilder.addPath(anyString())).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.addParameter(anyString(), isNull())).thenReturn(mockServiceURLBuilder);
+                lenient().when(mockServiceURLBuilder.build()).thenReturn(mockServiceURL);
+                lenient().when(mockServiceURL.getAbsolutePublicURL())
+                        .thenReturn("http://localhost:9443/authenticationendpoint/device.do");
 
-            Response response;
-            identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
-                    .thenReturn(TEST_URL);
-            deviceFlowPersistenceFactory.when(
-                    DeviceFlowPersistenceFactory::getInstance).thenReturn(this.deviceFlowPersistenceFactory);
-            lenient().when(this.deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
-            lenient().when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
-            response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<>(),
-                    httpServletResponse);
-            Assert.assertEquals(expectedStatus, response.getStatus());
+                OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+                oAuthClientAuthnContext.setClientId(clientId);
+                oAuthClientAuthnContext.setAuthenticated(status);
+                lenient().when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
+//                deviceServiceHolder.when(DeviceServiceFactory::getDeviceAuthService).thenReturn(deviceAuthService);
+
+                lenient().when(httpServletRequest.getParameter(anyString())).thenReturn(clientId);
+                lenient().when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT))
+                        .thenReturn(oAuthClientAuthnContext);
+
+                Response response;
+                identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
+                        .thenReturn(TEST_URL);
+                deviceFlowPersistenceFactory.when(
+                        DeviceFlowPersistenceFactory::getInstance).thenReturn(this.deviceFlowPersistenceFactory);
+                lenient().when(this.deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
+                lenient().when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
+                response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<>(),
+                        httpServletResponse);
+                Assert.assertEquals(expectedStatus, response.getStatus());
+            }
         }
     }
 

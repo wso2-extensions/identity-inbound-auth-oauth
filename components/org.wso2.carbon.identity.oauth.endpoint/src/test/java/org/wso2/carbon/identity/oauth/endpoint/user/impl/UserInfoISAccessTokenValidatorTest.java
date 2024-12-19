@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -25,7 +25,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -116,8 +116,10 @@ public class UserInfoISAccessTokenValidatorTest {
 
         prepareOAuth2TokenValidationService();
 
-        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
-            endpointUtil.when(EndpointUtil::getOAuth2TokenValidationService).thenReturn(oAuth2TokenValidationService);
+        try (MockedStatic<OAuth2TokenValidatorServiceFactory> utilServiceHolder =
+                     mockStatic(OAuth2TokenValidatorServiceFactory.class)) {
+            utilServiceHolder.when(OAuth2TokenValidatorServiceFactory::getOAuth2TokenValidatorService)
+                    .thenReturn(oAuth2TokenValidationService);
 
             OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator
                     .validateToken(accessTokenIdentifier);
