@@ -453,65 +453,65 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     public Object[][] provideParams() {
 
         return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"val1", "val2"},
-//                        SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
-//                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{"val1", "val2"},
+                        SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
+                        HttpServletResponse.SC_BAD_REQUEST, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE},
-//                        SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
-//                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {null, new String[]{""}, null, "true", "scope1", null, null, HttpServletResponse.SC_FOUND, null, null,
-//                        false},
-//
-//                {null, new String[]{""}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
-//                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE},
+                        SESSION_DATA_KEY_CONSENT_VALUE, "true", "scope1", SESSION_DATA_KEY_VALUE, null,
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {null, new String[]{""}, null, "true", "scope1", null, null, HttpServletResponse.SC_FOUND, null, null,
+                        false},
+
+                {null, new String[]{""}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
 
                 {null, new String[]{"invalidId"}, null, "false", "scope1", null, null, HttpServletResponse.SC_FOUND,
                         OAuth2ErrorCodes.INVALID_CLIENT, null, false},
 
-//                {null, new String[]{INACTIVE_CLIENT_ID_VALUE}, null, "false", "scope1", null, null,
-//                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_CLIENT, null, false},
-//
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
-//                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
-//                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {null, new String[]{CLIENT_ID_VALUE}, SESSION_DATA_KEY_CONSENT_VALUE, "false", "scope1",
-//                        SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
-//                        null, false},
-//
-//                {null, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-//                        null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null, null, false},
-//
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-//                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-//                        null, OAuthProblemException.error("error"), HttpServletResponse.SC_FOUND,
-//                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-//                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null,
-//                        false},
-//
-//                {null, new String[]{CLIENT_ID_VALUE}, null, "false", null, null, null, HttpServletResponse.SC_FOUND,
-//                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {AuthenticatorFlowStatus.INCOMPLETE, new String[]{CLIENT_ID_VALUE}, null, "false",
-//                        OAuthConstants.Scope.OPENID, null, null, HttpServletResponse.SC_FOUND,
-//                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {AuthenticatorFlowStatus.INCOMPLETE, null, null, "false", OAuthConstants.Scope.OPENID, null, null,
-//                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
-//
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-//                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
-//                        RESPONSE_MODE_FORM_POST, true},
-//
-//                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
-//                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
-//                        RESPONSE_MODE_FORM_POST, false}
+                {null, new String[]{INACTIVE_CLIENT_ID_VALUE}, null, "false", "scope1", null, null,
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_CLIENT, null, false},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, "invalidConsentCacheKey",
+                        "true", "scope1", SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {null, new String[]{CLIENT_ID_VALUE}, SESSION_DATA_KEY_CONSENT_VALUE, "false", "scope1",
+                        SESSION_DATA_KEY_VALUE, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
+                        null, false},
+
+                {null, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, new IOException(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR, null, null, false},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, OAuthProblemException.error("error"), HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, new IOException(), HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null,
+                        false},
+
+                {null, new String[]{CLIENT_ID_VALUE}, null, "false", null, null, null, HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {AuthenticatorFlowStatus.INCOMPLETE, new String[]{CLIENT_ID_VALUE}, null, "false",
+                        OAuthConstants.Scope.OPENID, null, null, HttpServletResponse.SC_FOUND,
+                        OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {AuthenticatorFlowStatus.INCOMPLETE, null, null, "false", OAuthConstants.Scope.OPENID, null, null,
+                        HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST, null, false},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
+                        RESPONSE_MODE_FORM_POST, true},
+
+                {AuthenticatorFlowStatus.SUCCESS_COMPLETED, new String[]{CLIENT_ID_VALUE}, null, "true", "scope1",
+                        null, null, HttpServletResponse.SC_FOUND, OAuth2ErrorCodes.INVALID_REQUEST,
+                        RESPONSE_MODE_FORM_POST, false}
         });
     }
 
