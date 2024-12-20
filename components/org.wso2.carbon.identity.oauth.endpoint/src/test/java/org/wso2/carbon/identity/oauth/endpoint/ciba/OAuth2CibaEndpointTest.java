@@ -29,12 +29,14 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
@@ -43,6 +45,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.CibaAuthServiceFactory;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CIBARequestObjectValidatorImpl;
@@ -99,7 +102,7 @@ public class OAuth2CibaEndpointTest {
     Response response;
 
     @Mock
-    CIBARequestObjectValidatorImpl cibaRequestObjectValidator;
+    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<OAuth2Util> oAuth2Util;
@@ -127,7 +130,7 @@ public class OAuth2CibaEndpointTest {
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-                          );
+        );
         oAuth2CibaEndpoint = new OAuth2CibaEndpoint();
 
         oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
@@ -322,63 +325,73 @@ public class OAuth2CibaEndpointTest {
                         "2M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiO" +
                         "iJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.Sx_MjjautinmOV9vvP8yhu" +
                         "suBggOdBCjn1NyprpJoEg"});
+        try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
+                     mockStatic(PrivilegedCarbonContext.class)) {
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockedPrivilegedCarbonContext);
+            when(mockedPrivilegedCarbonContext.getOSGiService(CibaAuthService.class, null))
+                    .thenReturn(authService);
 
-        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
-            loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
-            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
-                    .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+            try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+                 MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory =
+                         mockStatic(CibaAuthServiceFactory.class);) {
+                loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+                identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
+                        .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
 
-            when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(requestParams.keySet()));
-            when(httpServletRequest.getParameter(REQUEST_ATTRIBUTE)).thenReturn(
-                "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM6Ly9sb2Nh" +
-                        "bGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2hpbnQiOiJ2aXZlayI" +
-                        "sInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjExMjg3MTQyMTksImV4cCI6OTYyODcxNDIxOSwib" +
-                        "mJmIjoxMTI4NzE0MjE5LCJhY3IiOiI1Nzg4ODc4OCIsImp0aSI6IjlmZjg0NWI5LTIwYmYtNDAzMy05ZWQzLTNjY2M" +
-                        "2M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiO" +
-                        "iJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYXRpb24iOiJQYXlIZXJlIn19.Sx_MjjautinmOV9vvP8yhu" +
-                        "suBggOdBCjn1NyprpJoEg");
-            OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
-            oAuthClientAuthnContext.setAuthenticated(true);
-            oAuthClientAuthnContext.setClientId("ZzxmDqqK8YYfjtlOh9vw85qnNVoa");
-            when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
-                    oAuthClientAuthnContext);
+                when(httpServletRequest.getParameterNames()).thenReturn(Collections.enumeration(
+                        requestParams.keySet()));
+                when(httpServletRequest.getParameter(REQUEST_ATTRIBUTE)).thenReturn(
+                        "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJaenhtRHFxSzhZWWZqdGxPaDl2dzg1cW5OVm9hIiwiYXVkIjoiaHR0cHM" +
+                                "6Ly9sb2NhbGhvc3Q6OTQ0My9vYXV0aDIvY2liYSIsImJpbmRpbmdfbWVzc2FnZSI6InRyeSIsImxvZ2luX2" +
+                                "hpbnQiOiJ2aXZlayIsInNjb3BlIjoib3BlbmlkIHNjb3BlMSBzY29wZXgiLCJpYXQiOjExMjg3MTQyMTksI" +
+                                "mV4cCI6OTYyODcxNDIxOSwibmJmIjoxMTI4NzE0MjE5LCJhY3IiOiI1Nzg4ODc4OCIsImp0aSI6IjlmZjg0" +
+                                "NWI5LTIwYmYtNDAzMy05ZWQzLTNjY2M2M2Y1MjA0YyIsInRyYW5zYWN0aW9uX2NvbnRleHQiOnsidXNlciI" +
+                                "6InVzZXIiLCJhbW91bnQiOjEwMDAsInNob3AiOiJXU08yIENJQkEgREVNTyBDT05TT0xFIiwiYXBwbGljYX" +
+                                "Rpb24iOiJQYXlIZXJlIn19.Sx_MjjautinmOV9vvP8yhusuBggOdBCjn1NyprpJoEg");
+                OAuthClientAuthnContext oAuthClientAuthnContext = new OAuthClientAuthnContext();
+                oAuthClientAuthnContext.setAuthenticated(true);
+                oAuthClientAuthnContext.setClientId("ZzxmDqqK8YYfjtlOh9vw85qnNVoa");
+                when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT)).thenReturn(
+                        oAuthClientAuthnContext);
 
-            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn("super");
-            oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("super"))
-                    .thenReturn("https://localhost:9443/oauth2/ciba");
-            oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("scope1 scope2 openid");
-            when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
+                oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn("super");
+                oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("super"))
+                        .thenReturn("https://localhost:9443/oauth2/ciba");
+                oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("scope1 scope2 openid");
+                when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
 
-            OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
-            oAuthServerConfiguration.when(
-                    OAuthServerConfiguration::getInstance).thenReturn(oauthServerConfigurationMock);
+                OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
+                oAuthServerConfiguration.when(
+                        OAuthServerConfiguration::getInstance).thenReturn(oauthServerConfigurationMock);
 
-            RequestObjectValidator requestObjectValidator = spy(new CIBARequestObjectValidatorImpl());
-            when(oauthServerConfigurationMock.getCIBARequestObjectValidator()).thenReturn(requestObjectValidator);
-            doReturn(true).when(requestObjectValidator).validateSignature(any(), any());
+                RequestObjectValidator requestObjectValidator = spy(new CIBARequestObjectValidatorImpl());
+                when(oauthServerConfigurationMock.getCIBARequestObjectValidator()).thenReturn(requestObjectValidator);
+                doReturn(true).when(requestObjectValidator).validateSignature(any(), any());
 
-            RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
-            Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
-            requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
-            when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
+                RequestParamRequestObjectBuilder requestParamRequestObjectBuilder =
+                        new RequestParamRequestObjectBuilder();
+                Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
+                requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
+                when((oauthServerConfigurationMock.getRequestObjectBuilders())).thenReturn(requestObjectBuilderMap);
 
-            mockServiceURLBuilder(serviceURLBuilder);
+                mockServiceURLBuilder(serviceURLBuilder);
 
-            endpointUtil.when(EndpointUtil::getCibaAuthService).thenReturn(authService);
-            endpointUtil.when(EndpointUtil::getCibaAuthService).thenReturn(authService);
-            when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
+                cibaAuthServiceFactory.when(CibaAuthServiceFactory::getCibaAuthService).thenReturn(authService);
+                when(authService.generateAuthCodeResponse(any())).thenReturn(authCodeResponse);
 
-            CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
+                CibaAuthzHandler cibaAuthzHandler = new CibaAuthzHandler();
 
-            setInternalState(oAuth2CibaEndpoint, "cibaAuthzHandler", cibaAuthzHandler);
-            setInternalState(cibaAuthzHandler, "authzEndPoint", oAuth2AuthzEndpoint);
+                setInternalState(oAuth2CibaEndpoint, "cibaAuthzHandler", cibaAuthzHandler);
+                setInternalState(cibaAuthzHandler, "authzEndPoint", oAuth2AuthzEndpoint);
 
-            when(oAuth2AuthzEndpoint.authorize(any(), any())).thenReturn(response);
+                when(oAuth2AuthzEndpoint.authorize(any(), any())).thenReturn(response);
 
-            Response response =
-                    oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, new MultivaluedHashMap());
-            Assert.assertEquals(200, response.getStatus());
+                Response response =
+                        oAuth2CibaEndpoint.ciba(httpServletRequest, httpServletResponse, new MultivaluedHashMap());
+                Assert.assertEquals(200, response.getStatus());
+            }
         }
     }
 
@@ -387,6 +400,7 @@ public class OAuth2CibaEndpointTest {
         ServiceURLBuilder builder = new ServiceURLBuilder() {
 
             String path = "";
+
             @Override
             public ServiceURLBuilder addPath(String... strings) {
 

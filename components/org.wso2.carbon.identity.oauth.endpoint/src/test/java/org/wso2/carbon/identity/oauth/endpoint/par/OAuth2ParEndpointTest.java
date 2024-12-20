@@ -24,10 +24,14 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -36,6 +40,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -48,6 +54,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.par.core.OAuthParRequestWrapper;
+import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.par.model.ParAuthData;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
@@ -75,10 +82,14 @@ import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -106,6 +117,11 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     private ParAuthData parAuthData;
+
+    @Mock
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String APP_NAME = "myApp";
@@ -157,11 +173,28 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         mockDatabase(identityDatabaseUtil);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(OAuth2Service.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{oAuth2Service});
+                    }
+                    if (argumentCaptor.getValue().contains(ParAuthService.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{parAuthService});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
     }
 
     @AfterMethod
     public void tearDownAfterMethod() {
 
+        mockedConstruction.close();
         identityDatabaseUtil.close();
     }
 
@@ -190,7 +223,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
 
         Map<String, String[]> requestParams7 =
                 createRequestParamsMap(new String[]{CLIENT_ID_VALUE}, new String[]{"http://localhost:8080" +
-                                "/invalid-redirect"}, new String[]{RESPONSE_TYPE_CODE});
+                        "/invalid-redirect"}, new String[]{RESPONSE_TYPE_CODE});
 
         Map<String, String[]> requestParams8 = createRequestParamsMap(new String[]{CLIENT_ID_VALUE},
                 new String[]{APP_REDIRECT_URL}, new String[]{RESPONSE_TYPE_CODE});
@@ -350,8 +383,7 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
             throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                mockStatic(OAuthServerConfiguration.class)) {
-
+                     mockStatic(OAuthServerConfiguration.class)) {
             MultivaluedMap<String, String> paramMap = (MultivaluedMap<String, String>) paramMapObj;
             Map<String, String[]> requestParams = (Map<String, String[]>) requestParamsObj;
             OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oAuthClientAuthnContextObj;
@@ -385,11 +417,8 @@ public class OAuth2ParEndpointTest extends TestOAuthEndpointBase {
                         .thenReturn(SERVER_BASE_PATH);
                 request.setAttribute(OAuthConstants.TRANSPORT_ENDPOINT_ADDRESS, PAR_EP_URL);
 
-                endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
-
                 lenient().doCallRealMethod().when(oAuth2Service).validateInputParameters(request);
                 lenient().doCallRealMethod().when(oAuth2Service).validateClientInfo(any(OAuthParRequestWrapper.class));
-                endpointUtil.when(EndpointUtil::getParAuthService).thenReturn(parAuthService);
                 if (testOAuthSystemException) {
                     endpointUtil.when(() -> EndpointUtil.getOAuthAuthzRequest(any()))
                             .thenThrow(new OAuthSystemException());

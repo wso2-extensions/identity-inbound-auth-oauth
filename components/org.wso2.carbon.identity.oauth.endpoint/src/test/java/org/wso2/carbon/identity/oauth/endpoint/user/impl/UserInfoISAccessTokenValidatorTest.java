@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,14 +18,23 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
@@ -39,10 +48,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.HttpHeaders;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(MockitoTestNGListener.class)
@@ -50,8 +63,16 @@ public class UserInfoISAccessTokenValidatorTest {
 
     @Mock
     private HttpServletRequest httpServletRequest;
+
     @Mock
     private OAuth2TokenValidationService oAuth2TokenValidationService;
+
+    @Mock
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+
     private UserInforRequestDefaultValidator userInforRequestDefaultValidator;
     private UserInfoISAccessTokenValidator userInfoISAccessTokenValidator;
     private final String token = "ZWx1c3VhcmlvOnlsYWNsYXZl";
@@ -63,6 +84,31 @@ public class UserInfoISAccessTokenValidatorTest {
 
         userInforRequestDefaultValidator = new UserInforRequestDefaultValidator();
         userInfoISAccessTokenValidator = new UserInfoISAccessTokenValidator();
+    }
+
+    @BeforeMethod
+    public void setUp() {
+
+        initMocks(this);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(OAuth2TokenValidationService.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{oAuth2TokenValidationService});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedConstruction.close();
     }
 
     @Test
@@ -106,7 +152,7 @@ public class UserInfoISAccessTokenValidatorTest {
     @DataProvider
     public Object[][] getTokens() {
 
-        return new Object[][] {
+        return new Object[][]{
                 {"48544572-a796-3d42-a571-505bc609acd8"},
         };
     }
@@ -116,8 +162,10 @@ public class UserInfoISAccessTokenValidatorTest {
 
         prepareOAuth2TokenValidationService();
 
-        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
-            endpointUtil.when(EndpointUtil::getOAuth2TokenValidationService).thenReturn(oAuth2TokenValidationService);
+        try (MockedStatic<OAuth2TokenValidatorServiceFactory> utilServiceHolder =
+                     mockStatic(OAuth2TokenValidatorServiceFactory.class)) {
+            utilServiceHolder.when(OAuth2TokenValidatorServiceFactory::getOAuth2TokenValidatorService)
+                    .thenReturn(oAuth2TokenValidationService);
 
             OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator
                     .validateToken(accessTokenIdentifier);
