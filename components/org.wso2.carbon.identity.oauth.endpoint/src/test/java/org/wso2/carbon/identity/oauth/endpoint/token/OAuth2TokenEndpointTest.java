@@ -28,12 +28,16 @@ import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.apache.oltu.oauth2.common.validators.OAuthValidator;
 import org.h2.jdbc.JdbcSQLIntegrityConstraintViolationException;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -43,6 +47,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -84,10 +89,13 @@ import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -107,6 +115,11 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
     @Mock
     OAuth2AccessTokenRespDTO oAuth2AccessTokenRespDTO;
+
+    @Mock
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     private static final String SQL_ERROR = "sql_error";
     private static final String TOKEN_ERROR = "token_error";
@@ -163,12 +176,26 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
 
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         mockDatabase(identityDatabaseUtil);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(OAuth2Service.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{oAuth2Service});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
     }
 
     @AfterMethod
     public void tearDownAfterMethod() {
 
         identityDatabaseUtil.close();
+        mockedConstruction.close();
     }
 
     @DataProvider(name = "testIssueAccessTokenDataProvider")
@@ -387,8 +414,7 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                      mockStatic(OAuthServerConfiguration.class);
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
-             MockedStatic<OAuth2ServiceFactory> oauth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
+             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
             ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
 
             Map<String, String[]> requestParams = new HashMap<>();
@@ -410,7 +436,6 @@ public class OAuth2TokenEndpointTest extends TestOAuthEndpointBase {
                     }}));
 
             endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn(REALM);
-            oauth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
 
             when(oAuth2Service.issueAccessToken(any(OAuth2AccessTokenReqDTO.class))).thenReturn(
                     oAuth2AccessTokenRespDTO);

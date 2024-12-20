@@ -19,21 +19,26 @@
 package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 
 import org.junit.Assert;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
+import org.mockito.MockedConstruction;
 import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
+import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -46,8 +51,11 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * This class does unit test coverage for OIDCDiscoveryEndpoint class.
@@ -65,7 +73,9 @@ public class OIDCDiscoveryEndpointTest {
     DefaultOIDCProcessor defaultOIDCProcessor;
 
     @Mock
-    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     private OIDCDiscoveryEndpoint oidcDiscoveryEndpoint;
     private Object identityUtilObj;
@@ -76,6 +86,23 @@ public class OIDCDiscoveryEndpointTest {
         oidcDiscoveryEndpoint = new OIDCDiscoveryEndpoint();
         Class<?> clazz = IdentityUtil.class;
         identityUtilObj = clazz.newInstance();
+    }
+
+    @BeforeMethod
+    public void setUpMethod() {
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(OIDProviderResponseBuilder.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{defaultOIDCProcessor});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
     }
 
     @DataProvider(name = "provideDataForGetOIDProviderConfigurationTokenEndpoint")
@@ -123,25 +150,15 @@ public class OIDCDiscoveryEndpointTest {
         threadLocalPropertiesField.setAccessible(true);
         threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
 
-        try (MockedStatic<PrivilegedCarbonContext> mockedCarbonContext = mockStatic(PrivilegedCarbonContext.class)) {
-            mockedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
-                    .thenReturn(mockedPrivilegedCarbonContext);
-            lenient().when(mockedPrivilegedCarbonContext.getOSGiService(DefaultOIDCProcessor.class, null))
-                    .thenReturn(defaultOIDCProcessor);
-            try (MockedStatic<OIDCDiscoveryServiceFactory> oidcDiscoveryServiceHolder =
-                         mockStatic(OIDCDiscoveryServiceFactory.class)) {
-                lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
-                        .thenReturn(oidProviderConfigResponse);
-                lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
-                lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
-                        .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                oidcDiscoveryServiceHolder.when(OIDCDiscoveryServiceFactory::getOIDProviderResponseBuilder)
-                        .thenReturn(new OIDProviderJSONResponseBuilder());
-                Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
-                Assert.assertEquals(expectedResponse, response.getStatus());
-                threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
-            }
-        }
+        lenient().when(defaultOIDCProcessor.getResponse(any(HttpServletRequest.class), any(String.class)))
+                .thenReturn(oidProviderConfigResponse);
+        lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
+        lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
+                .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        Response response = oidcDiscoveryEndpoint.getOIDProviderConfiguration(tokenEp, httpServletRequest);
+        Assert.assertEquals(expectedResponse, response.getStatus());
+        threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+
     }
 
     private Map<String, Object> getSampleConfigMap() {

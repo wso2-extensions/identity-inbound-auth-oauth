@@ -3382,7 +3382,7 @@ public class OAuth2AuthzEndpoint {
 
         // Get the claims uri list of all the requested scopes. Eg:- country, email.
         List<String> claimListOfScopes =
-                OAuth2AuthzServiceHolder.getOpenIdClaimFilterImpl().getClaimsFilteredByOIDCScopes(
+                OAuth2AuthzServiceFactory.getOpenIdClaimFilterImpl().getClaimsFilteredByOIDCScopes(
                         oauth2Params.getScopes(), spTenantDomain);
 
         List<String> essentialRequestedClaims = new ArrayList<>();

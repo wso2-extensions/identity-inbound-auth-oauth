@@ -24,19 +24,21 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 /**
  * Service holder for managing instances of OAuth2 Authorization related services.
  */
-public class OAuth2AuthzServiceHolder {
+public class OAuth2AuthzServiceFactory {
 
-    private static class OpenIdConnectClaimFilterImplHolder {
+    private static final OpenIDConnectClaimFilterImpl SERVICE;
 
-        static final OpenIDConnectClaimFilterImpl SERVICE = (OpenIDConnectClaimFilterImpl) PrivilegedCarbonContext
+    static {
+         OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = (OpenIDConnectClaimFilterImpl) PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiService(OpenIDConnectClaimFilterImpl.class, null);
+            if (openIDConnectClaimFilter == null) {
+                throw new IllegalStateException("OpenIDConnectClaimFilterImpl is not available from OSGi context.");
+            }
+            SERVICE = openIDConnectClaimFilter;
     }
 
     public static OpenIDConnectClaimFilterImpl getOpenIdClaimFilterImpl() {
 
-        if (OpenIdConnectClaimFilterImplHolder.SERVICE == null) {
-            throw new IllegalStateException("OpenIDConnectClaimFilterImpl is not available from OSGi context.");
-        }
-        return OpenIdConnectClaimFilterImplHolder.SERVICE;
+        return SERVICE;
     }
 }
