@@ -23,6 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -130,7 +131,9 @@ public class DefaultOAuth2ScopeValidator {
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
         // When user is not accessing the resident organization, resolve the application id from the shared app table.
-        if (!AuthzUtil.isUserAccessingResidentOrganization(tokenReqMessageContext.getAuthorizedUser())) {
+        if (!AuthzUtil.isUserAccessingResidentOrganization(tokenReqMessageContext.getAuthorizedUser()) &&
+                StringUtils.isEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                        getApplicationResidentOrganizationId())) {
             String orgId = tokenReqMessageContext.getAuthorizedUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);

@@ -576,11 +576,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return respHeaders;
     }
 
-    private OAuthAppDO getOAuthApp(String clientId) throws IdentityOAuth2Exception {
+    private OAuthAppDO getOAuthApp(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: "
                     + clientId, e);
@@ -644,7 +644,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                               RefreshTokenValidationDataDO validationBean, OAuth2AccessTokenReqDTO tokenReq,
                               Timestamp timestamp) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId());
+        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
+                getTenantDomain());
         createTokens(accessTokenDO, tokReqMsgCtx);
         setRefreshTokenData(accessTokenDO, tokenReq, validationBean, oAuthAppDO, accessTokenDO.getRefreshToken(),
                 timestamp, tokReqMsgCtx);
@@ -864,7 +865,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                                             OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                refreshTokenValidationDataDO.getAuthorizedUser().getTenantDomain());
         String grantType = refreshTokenValidationDataDO.getGrantType();
 
         // Allow if refresh token is issued for token requests from following grant types and,
