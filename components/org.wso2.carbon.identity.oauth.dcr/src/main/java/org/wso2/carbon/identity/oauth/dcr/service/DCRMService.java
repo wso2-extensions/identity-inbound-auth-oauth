@@ -64,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.JWTSignatureValidationUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.lang.reflect.InvocationTargetException;
@@ -105,12 +106,12 @@ public class DCRMService {
      */
     public Application getApplication(String clientId) throws DCRMException {
 
-        validateRequestTenantDomain(clientId);
+        String tenantDomain = getTenantDomain();
+        validateRequestTenantDomain(clientId, tenantDomain);
         OAuthConsumerAppDTO consumerAppDTO = getApplicationById(
-                clientId, DCRMUtils.isApplicationRolePermissionRequired());
+                clientId, DCRMUtils.isApplicationRolePermissionRequired(), tenantDomain);
         // Get the jwksURI from the service provider.
         String applicationName = consumerAppDTO.getApplicationName();
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         ServiceProvider serviceProvider = getServiceProvider(applicationName, tenantDomain);
         String jwksURI = serviceProvider.getJwksUri();
         if (StringUtils.isNotEmpty(jwksURI)) {
@@ -156,7 +157,7 @@ public class DCRMService {
                     DCRMConstants.ErrorMessages.BAD_REQUEST_INSUFFICIENT_DATA, null);
         }
 
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = getTenantDomain();
         if (!isServiceProviderExist(clientName, tenantDomain)) {
             throw DCRMUtils.generateClientException(
                     DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_NAME, clientName);
@@ -203,10 +204,10 @@ public class DCRMService {
      */
     public void deleteApplication(String clientId) throws DCRMException {
 
-        validateRequestTenantDomain(clientId);
-        OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
+        String tenantDomain = getTenantDomain();
+        validateRequestTenantDomain(clientId, tenantDomain);
+        OAuthConsumerAppDTO appDTO = getApplicationById(clientId, tenantDomain);
         String applicationOwner = PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String spName;
         try {
             spName = DCRDataHolder.getInstance().getApplicationManagementService()
@@ -241,9 +242,9 @@ public class DCRMService {
      */
     public Application updateApplication(ApplicationUpdateRequest updateRequest, String clientId) throws DCRMException {
 
-        validateRequestTenantDomain(clientId);
-        OAuthConsumerAppDTO appDTO = getApplicationById(clientId);
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = getTenantDomain();
+        validateRequestTenantDomain(clientId, tenantDomain);
+        OAuthConsumerAppDTO appDTO = getApplicationById(clientId, tenantDomain);
         String applicationOwner = StringUtils.isNotBlank(updateRequest.getExtApplicationOwner()) ?
                 updateRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -426,7 +427,7 @@ public class DCRMService {
             throw DCRMUtils.generateServerException(
                     DCRMConstants.ErrorMessages.FAILED_TO_UPDATE_APPLICATION, clientId, e);
         }
-        OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId);
+        OAuthConsumerAppDTO oAuthConsumerAppDTO = getApplicationById(clientId, tenantDomain);
         // Setting the jwksURI to be sent in the response.
         oAuthConsumerAppDTO.setJwksURI(updateRequest.getJwksURI());
         Application application = buildResponse(oAuthConsumerAppDTO, tenantDomain);
@@ -489,12 +490,13 @@ public class DCRMService {
         return displayNameProperty.map(ServiceProviderProperty::getValue).orElse(null);
     }
 
-    private OAuthConsumerAppDTO getApplicationById(String clientId) throws DCRMException {
+    private OAuthConsumerAppDTO getApplicationById(String clientId, String tenantDomain) throws DCRMException {
 
-        return getApplicationById(clientId, true);
+        return getApplicationById(clientId, true, tenantDomain);
     }
 
-    private OAuthConsumerAppDTO getApplicationById(String clientId, boolean isApplicationRolePermissionRequired)
+    private OAuthConsumerAppDTO getApplicationById(String clientId, boolean isApplicationRolePermissionRequired,
+                                                   String tenantDomain)
             throws DCRMException {
 
         if (StringUtils.isEmpty(clientId)) {
@@ -504,7 +506,7 @@ public class DCRMService {
         }
 
         try {
-            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId, tenantDomain);
             if (dto == null || StringUtils.isEmpty(dto.getApplicationName())) {
                 throw DCRMUtils.generateClientException(
                         DCRMConstants.ErrorMessages.NOT_FOUND_APPLICATION_WITH_ID, clientId);
@@ -529,8 +531,7 @@ public class DCRMService {
         String applicationOwner = StringUtils.isNotBlank(registrationRequest.getExtApplicationOwner()) ?
                 registrationRequest.getExtApplicationOwner() :
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getUsername();
-
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = getTenantDomain();
 
         /*
          * ApplicationOwner will be null and a server error is thrown when creating an app, if the api authentication/
@@ -566,7 +567,7 @@ public class DCRMService {
         }
 
         if (StringUtils.isNotEmpty(registrationRequest.getConsumerKey()) && isClientIdExist(
-                registrationRequest.getConsumerKey())) {
+                registrationRequest.getConsumerKey(), tenantDomain)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.CONFLICT_EXISTING_CLIENT_ID,
                     registrationRequest.getConsumerKey());
         }
@@ -941,10 +942,10 @@ public class DCRMService {
      * @return true if application exists with the client id.
      * @throws DCRMException in case of failure.
      */
-    private boolean isClientIdExist(String clientId) throws DCRMException {
+    private boolean isClientIdExist(String clientId, String tenantDomain) throws DCRMException {
 
         try {
-            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId);
+            OAuthConsumerAppDTO dto = oAuthAdminService.getOAuthApplicationData(clientId, tenantDomain);
             return dto != null && StringUtils.isNotBlank(dto.getApplicationName());
         } catch (IdentityOAuthAdminException e) {
             if (e.getCause() instanceof InvalidOAuthClientException) {
@@ -1144,7 +1145,7 @@ public class DCRMService {
     private boolean isUserAuthorized(String clientId) throws DCRMServerException {
 
         try {
-            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String tenantDomain = getTenantDomain();
             String spName = DCRDataHolder.getInstance().getApplicationManagementService()
                     .getServiceProviderNameByClientId(clientId, DCRMConstants.OAUTH2, tenantDomain);
             String threadLocalUserName = CarbonContext.getThreadLocalCarbonContext().getUsername();
@@ -1176,10 +1177,10 @@ public class DCRMService {
      * @param clientId Consumer key of application.
      * @throws DCRMException DCRMException
      */
-    private void validateRequestTenantDomain(String clientId) throws DCRMException {
+    private void validateRequestTenantDomain(String clientId, String tenantDomain) throws DCRMException {
 
         try {
-            String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(clientId);
+            String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(clientId, tenantDomain);
             OAuth2Util.validateRequestTenantDomain(tenantDomainOfApp);
         } catch (InvalidOAuthClientException e) {
             throw new DCRMClientException(DCRMConstants.ErrorMessages.TENANT_DOMAIN_MISMATCH.getErrorCode(),
@@ -1274,5 +1275,22 @@ public class DCRMService {
             }
         }
         serviceProvider.setSpProperties(serviceProviderProperties);
+    }
+
+    private static String getTenantDomain() throws DCRMServerException {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = DCRDataHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw DCRMUtils.generateServerException(
+                        DCRMConstants.ErrorMessages.FAILED_TO_RESOLVE_TENANT_DOMAIN, applicationResidentOrgId, e);
+            }
+        }
+        return tenantDomain;
     }
 }
