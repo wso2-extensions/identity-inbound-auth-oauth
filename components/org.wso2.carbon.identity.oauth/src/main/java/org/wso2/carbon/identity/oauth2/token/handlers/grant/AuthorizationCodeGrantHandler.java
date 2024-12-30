@@ -550,7 +550,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private void markAsExpired(AuthzCodeDO authzCodeBean) throws IdentityOAuth2Exception {
 
         OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
-                .updateAuthorizationCodeState(authzCodeBean.getAuthorizationCode(),
+                .updateAuthorizationCodeState(authzCodeBean.getAuthorizationCode(), authzCodeBean.getAuthzCodeId(),
                         OAuthConstants.AuthorizationCodeState.EXPIRED);
         if (log.isDebugEnabled()) {
             log.debug("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() + " to expired");
@@ -594,8 +594,10 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     }
 
     private void revokeAuthorizationCode(AuthzCodeDO authzCodeBean) throws IdentityOAuth2Exception {
+
         OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO().updateAuthorizationCodeState(
-                authzCodeBean.getAuthorizationCode(), OAuthConstants.AuthorizationCodeState.REVOKED);
+                authzCodeBean.getAuthorizationCode(), authzCodeBean.getAuthzCodeId(),
+                OAuthConstants.AuthorizationCodeState.REVOKED);
         if (log.isDebugEnabled()) {
             log.debug("Changed state of authorization code : " + authzCodeBean.getAuthorizationCode() + " to revoked");
         }
