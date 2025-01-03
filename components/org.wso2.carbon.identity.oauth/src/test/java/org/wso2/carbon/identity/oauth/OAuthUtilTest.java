@@ -60,6 +60,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -285,6 +287,7 @@ public class OAuthUtilTest {
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
 
         boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
+        verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
         assertTrue(result, "Token revocation failed.");
     }
 
