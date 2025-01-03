@@ -18,15 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.fga;
 
-public class AccessControlFactory {
+import java.util.ArrayList;
 
-    private static FGAEngineHandler fgaEngineHandler;
+/**
+ * Interface for authorization using a FGA connector.
+ */
+public interface FGAuthorizationInterface {
 
-    public static FGAEngineHandler createServiceInstance() throws Exception {
-
-        if (fgaEngineHandler == null) {
-            fgaEngineHandler = new FGAEngineHandler();
-        }
-        return fgaEngineHandler;
-    }
+    ArrayList<String> getFGAuthorizedScopes(FGAuthzReqContext fgAuthzReqContext);
 }

@@ -41,7 +41,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
-import org.wso2.carbon.identity.oauth2.fga.*;
+import org.wso2.carbon.identity.oauth2.fga.AccessControlFactory;
+import org.wso2.carbon.identity.oauth2.fga.FGAuthzReqContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
@@ -109,23 +110,22 @@ public class DefaultOAuth2ScopeValidator {
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         boolean runFga = false;
-        List<String> fgaScopes = new ArrayList<>();
-        for (String scope: requestedScopes){
-            if (scope.contains("fga")){
+        ArrayList<String> fgaScopes = new ArrayList<>();
+        for (String scope: requestedScopes) {
+            if (scope.contains("fga")) {
                 fgaScopes.add(scope);
                 runFga = true;
             }
         }
-        if(runFga){
-            AccessControlHandler service = null;
-            List<String> results;
+        if (runFga) {
             try {
-                service = new AccessControlFactory().createInstance();
-                results = service.getAuthorized(fgaScopes,authzReqMessageContext.getAuthorizationReqDTO().getUser().getUserId());
+                FGAuthzReqContext reqContext = new FGAuthzReqContext(authzReqMessageContext);
+                reqContext.setRequestedScopes(fgaScopes);
+                authorizedScopes.addAll(AccessControlFactory.createServiceInstance()
+                        .getAuthorizationService().getFGAuthorizedScopes(reqContext));
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                LOG.error("An error occurred while trying to retrieve FGA service", e);
             }
-            authorizedScopes.addAll(results);
         }
         return authorizedScopes;
     }
@@ -172,23 +172,22 @@ public class DefaultOAuth2ScopeValidator {
             authorizedScopes.remove(OPENID_SCOPE);
         }
         boolean runFga = false;
-        List<String> fgaScopes = new ArrayList<>();
-        for (String scope: requestedScopes){
-            if (scope.contains("fga")){
+        ArrayList<String> fgaScopes = new ArrayList<>();
+        for (String scope: requestedScopes) {
+            if (scope.contains("fga")) {
                 fgaScopes.add(scope);
                 runFga = true;
             }
         }
-        if(runFga){
-            AccessControlHandler handler = null;
-            List<String> results;
+        if (runFga) {
             try {
-                handler = new AccessControlFactory().createInstance();
-                results = handler.getAuthorized(fgaScopes,tokenReqMessageContext.getAuthorizedUser().getUserId());
+                FGAuthzReqContext reqContext = new FGAuthzReqContext(tokenReqMessageContext);
+                reqContext.setRequestedScopes(fgaScopes);
+                authorizedScopes.addAll(AccessControlFactory.createServiceInstance()
+                        .getAuthorizationService().getFGAuthorizedScopes(reqContext));
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                LOG.error("An error occurred while trying to retrieve FGA service", e);
             }
-            authorizedScopes.addAll(results);
         }
         return authorizedScopes;
     }

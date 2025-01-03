@@ -53,6 +53,9 @@ import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth.listener.OAuthTokenSessionMappingEventHandler;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.fga.FGADataManagementInterface;
+import org.wso2.carbon.identity.oauth2.fga.FGASchemaManagementInterface;
+import org.wso2.carbon.identity.oauth2.fga.FGAuthorizationInterface;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
@@ -247,6 +250,99 @@ public class OAuthServiceComponent {
             log.debug("Un-setting oauth event interceptor proxy :" + oAuthEventInterceptor.getClass().getName());
         }
         OAuthComponentServiceHolder.getInstance().addOauthEventInterceptorProxy(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.fga.FGAuthorizationInterface",
+            service = FGAuthorizationInterface.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetFGAuthorizationInterface"
+    )
+    protected void setFGAuthorizationInterface(FGAuthorizationInterface authorizationInterface){
+        if (authorizationInterface == null) {
+            log.warn("Null FGA authorization service received, hence not registering");
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Setting FGA authorization service :" + authorizationInterface.getClass().getName());
+        }
+        log.info("Setting FGA authorization service :" + authorizationInterface.getClass().getName());
+        OAuthComponentServiceHolder.getInstance().addFGAuthorizationService(authorizationInterface);
+    }
+
+    protected void unsetFGAuthorizationInterface(FGAuthorizationInterface authorizationInterface){
+        if (authorizationInterface == null) {
+            log.warn("Null oauth FGA authorization service received, hence cannot unbind.");
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("unbinding FGA authorization service :" + authorizationInterface.getClass().getName());
+        }
+        log.info("unbinding FGA authorization service :" + authorizationInterface.getClass().getName());
+        OAuthComponentServiceHolder.getInstance().addFGAuthorizationService(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.fga.FGASchemaManagementInterface",
+            service = FGASchemaManagementInterface.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetFGASchemaManagementInterface"
+    )
+    protected void setFGASchemaManagementInterface(FGASchemaManagementInterface schemaManagementInterface){
+        if (schemaManagementInterface == null) {
+            log.warn("Null FGA Schema Management service received, hence not registering");
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Setting FGA Schema Management service :" + schemaManagementInterface.getClass().getName());
+        }
+        log.info("Setting FGA Schema Management service :" + schemaManagementInterface.getClass().getName());
+        OAuthComponentServiceHolder.getInstance().addFGASchemaManagementService(schemaManagementInterface);
+    }
+
+    protected void unsetFGASchemaManagementInterface(FGASchemaManagementInterface schemaManagementInterface){
+        if (schemaManagementInterface == null) {
+            log.warn("Null oauth FGA Schema Management service received, hence cannot unbind.");
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("unbinding FGA Schema Management service :" + schemaManagementInterface.getClass().getName());
+        }
+        log.info("unbinding FGA Schema Management service :" + schemaManagementInterface.getClass().getName());
+        OAuthComponentServiceHolder.getInstance().addFGASchemaManagementService(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.fga.FGADataManagementInterface",
+            service = FGADataManagementInterface.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetFGADataManagementInterface"
+    )
+    protected void setFGADataManagementInterface(FGADataManagementInterface dataManagementInterface){
+        if (dataManagementInterface == null) {
+            log.warn("Null FGA Data Management service received, hence not registering");
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Setting FGA Data Management service :" + dataManagementInterface.getClass().getName());
+        }
+        log.info("Setting FGA Data Management service :" + dataManagementInterface.getClass().getName());
+        OAuthComponentServiceHolder.getInstance().addFGADataManagementService(dataManagementInterface);
+    }
+
+    protected void unsetFGADataManagementInterface(FGADataManagementInterface dataManagementInterface){
+        if (dataManagementInterface == null) {
+            log.warn("Null oauth FGA Data Management service received, hence cannot unbind.");
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("unbinding FGA Data Management service :" + dataManagementInterface.getClass().getName());
+        }
+        log.info("unbinding FGA Data Management service :" + dataManagementInterface.getClass().getName());
+        OAuthComponentServiceHolder.getInstance().addFGADataManagementService(null);
     }
 
     @Reference(

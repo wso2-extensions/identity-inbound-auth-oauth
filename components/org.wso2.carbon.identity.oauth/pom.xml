@@ -381,6 +381,11 @@
             <artifactId>jose4j</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -496,7 +501,7 @@
                             !org.wso2.carbon.identity.oauth.rar.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
-                            org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                            org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
                         <DynamicImport-Package>*</DynamicImport-Package>
                         <ListenerManager-RequiredServices>
@@ -636,4 +641,3 @@
     </build>
 
 </project>
-
