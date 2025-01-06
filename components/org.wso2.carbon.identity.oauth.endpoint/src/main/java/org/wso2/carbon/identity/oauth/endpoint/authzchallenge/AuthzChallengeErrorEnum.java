@@ -1,6 +1,6 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge;
 
-public enum AuthzChallengeError {
+public enum AuthzChallengeErrorEnum {
 
     INVALID_REQUEST("invalid_request"),
     INVALID_CLIENT("invalid_client"),
@@ -11,18 +11,18 @@ public enum AuthzChallengeError {
     REDIRECT_TO_WEB("redirect_to_web");
 
 
-    private final String code;
+    private final String value;
 
-    AuthzChallengeError(String code) {
-        this.code = code;
+    AuthzChallengeErrorEnum(String value) {
+        this.value = value;
     }
 
-    public String getCode() {
-        return code;
+    public String getValue() {
+        return value;
     }
 
     @Override
     public String toString() {
-        return code;
+        return value;
     }
 }

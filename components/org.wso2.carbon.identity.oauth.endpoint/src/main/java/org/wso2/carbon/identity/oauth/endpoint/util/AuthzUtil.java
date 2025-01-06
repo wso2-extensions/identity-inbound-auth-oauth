@@ -117,6 +117,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
+import org.wso2.carbon.identity.oauth.endpoint.AuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
@@ -4518,13 +4519,22 @@ public class AuthzUtil {
                                 AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.message());
                     }
                 }
+                Object authResponse;
 
-                AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+                if (isAuthzChallenge) {
+                    authResponse = API_AUTHN_HANDLER.handleFirstPartyResponse(authServiceResponse);
+                } else {
+                    authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+                }
+
+                AuthResponseWrapper responseWrapper = new AuthResponseWrapper(authResponse);
+
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+
                 String jsonString = null;
                 try {
-                    jsonString = objectMapper.writeValueAsString(authResponse);
+                    jsonString = objectMapper.writeValueAsString(responseWrapper.getResponse());
                 } catch (JsonProcessingException e) {
                     throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
                             "Error while building JSON response.", e);

@@ -37,6 +37,8 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Message;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Param;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.StepTypeEnum;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.nio.charset.StandardCharsets;
@@ -75,6 +77,20 @@ public class ApiAuthnHandler {
         authResponse.setLinks(buildLinks());
 
         return authResponse;
+    }
+
+    public AuthzChallengeResponse handleFirstPartyResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
+
+        //TODO: Implement the logic to handle the response in specification's format.
+        AuthzChallengeResponse authzChallengeResponse = new AuthzChallengeResponse();
+        authzChallengeResponse.setAuth_session(authServiceResponse.getSessionDataKey());
+        authzChallengeResponse.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
+        authzChallengeResponse.setError_description("Provide required parameters given below");
+        authzChallengeResponse.setFlowStatus(authServiceResponse.getFlowStatus());
+        NextStep nextStep = buildNextStep(authServiceResponse);
+        authzChallengeResponse.setNextStep(nextStep);
+
+        return authzChallengeResponse;
     }
 
     private NextStep buildNextStep(AuthServiceResponse authServiceResponse) {

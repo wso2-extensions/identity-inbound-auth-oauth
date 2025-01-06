@@ -5,7 +5,7 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 public class AuthzChallengeErrorResponse {
 
     private String auth_session;
-    private AuthzChallengeError error;
+    private AuthzChallengeErrorEnum error;
     private String error_description;
     private String error_uri;
     private String request_uri;
@@ -16,7 +16,7 @@ public class AuthzChallengeErrorResponse {
 
     }
 
-    public AuthzChallengeErrorResponse(String auth_session, AuthzChallengeError error) {
+    public AuthzChallengeErrorResponse(String auth_session, AuthzChallengeErrorEnum error) {
         this.auth_session = auth_session;
         this.error = error;
     }
@@ -29,11 +29,11 @@ public class AuthzChallengeErrorResponse {
         this.auth_session = auth_session;
     }
 
-    public AuthzChallengeError getError() {
+    public AuthzChallengeErrorEnum getError() {
         return error;
     }
 
-    public void setError(AuthzChallengeError error) {
+    public void setError(AuthzChallengeErrorEnum error) {
         this.error = error;
     }
 }
