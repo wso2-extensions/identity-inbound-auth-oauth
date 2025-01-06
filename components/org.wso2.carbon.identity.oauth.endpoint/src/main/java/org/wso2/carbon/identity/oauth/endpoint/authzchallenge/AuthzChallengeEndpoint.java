@@ -192,7 +192,7 @@ public class AuthzChallengeEndpoint {
             }
             // Response for the API based authentication flow.
 //            if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
-                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
+                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, true);
 //            }
 
             return oauthResponse;
@@ -388,7 +388,7 @@ public class AuthzChallengeEndpoint {
                         return Response.status(HttpServletResponse.SC_FOUND)
                                 .location(AuthzUtil.buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
-                        return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
+                        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(responseWrapper.getContent()).build();
                     }
                 } else {
                     try {

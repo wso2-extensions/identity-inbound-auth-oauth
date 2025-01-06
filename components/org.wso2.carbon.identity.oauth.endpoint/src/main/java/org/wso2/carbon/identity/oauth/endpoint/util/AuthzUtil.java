@@ -4497,7 +4497,7 @@ public class AuthzUtil {
         request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
     }
 
-    public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse) {
+    public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse, boolean isAuthzChallenge) {
 
         // API based auth response transformation has already been handled no need for further handling.
         if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(IS_API_BASED_AUTH_HANDLED))) {
@@ -4530,7 +4530,11 @@ public class AuthzUtil {
                             "Error while building JSON response.", e);
                 }
                 oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                return Response.ok().entity(jsonString).build();
+                if (isAuthzChallenge) {
+                    return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+                } else {
+                    return Response.status(HttpServletResponse.SC_OK).entity(jsonString).build();
+                }
             } else {
                 List<Object> locationHeader = oauthResponse.getMetadata().get("Location");
                 if (CollectionUtils.isNotEmpty(locationHeader)) {
@@ -4549,7 +4553,12 @@ public class AuthzUtil {
                                     new SuccessCompleteAuthResponse(queryParams);
                             String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                            return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                            // Keeping the app native flow as it is.
+                            if (isAuthzChallenge) {
+                                return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonPayload).build();
+                            } else {
+                                return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                            }
                         } else {
                             /* At this point if the location header doesn't indicate a redirection to the client
                              we can assume it is an error scenario which redirects to the error page. Therefore,

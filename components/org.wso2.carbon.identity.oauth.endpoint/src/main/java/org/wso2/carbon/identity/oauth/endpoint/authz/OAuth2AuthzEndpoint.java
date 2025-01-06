@@ -191,7 +191,7 @@ public class OAuth2AuthzEndpoint {
             }
 
             if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
-                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
+                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, false);
             }
 
             return oauthResponse;
