@@ -25,7 +25,7 @@ import java.util.List;
 
 /**
  * The object which will contain context information which are passed through OAuth2 client authentication process.
- * All information related to client authentication will be avaialble in this context including the authentication
+ * All information related to client authentication will be available in this context including the authentication
  * status, authenticated client information and errors.
  */
 public class OAuthClientAuthnContext extends MessageContext {

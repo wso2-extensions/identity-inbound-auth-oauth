@@ -226,6 +226,11 @@
             <artifactId>org.wso2.carbon.identity.oauth.extension</artifactId>
             <scope>compile</scope>
         </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>-->
+<!--            <artifactId>org.wso2.carbon.identity.oauth</artifactId>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
 
     </dependencies>
 

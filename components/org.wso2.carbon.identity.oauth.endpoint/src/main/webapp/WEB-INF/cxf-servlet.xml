@@ -27,6 +27,7 @@
         <jaxrs:serviceBeans>
             <ref bean="authzEndpointBean"/>
             <ref bean="apiAuthnEndpointBean"/>
+            <ref bean="authChallengeEndpointBean"/>
             <ref bean="tokenEndpointBean"/>
             <ref bean="introspectionEndpointBean"/>
             <ref bean="revokeEndpointBean"/>
@@ -58,6 +59,7 @@
         <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
         <property name="scopeMetadataService" ref="scopeServiceFactoryBean"/>
     </bean>
+    <bean id="authChallengeEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint"/>
     <bean id="apiAuthnEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnEndpoint"/>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
     <bean id="introspectionEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpoint"/>
