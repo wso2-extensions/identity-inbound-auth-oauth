@@ -54,6 +54,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -225,6 +226,19 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
                     DeviceFlowPersistenceFactory::getInstance).thenReturn(this.deviceFlowPersistenceFactory);
             lenient().when(this.deviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
             lenient().when(deviceFlowDAO.checkClientIdExist(anyString())).thenReturn(status);
+
+            lenient().when(httpServletRequest.getParameterNames()).thenReturn(new Enumeration<String>() {
+                @Override
+                public boolean hasMoreElements() {
+                    return false;  // Return false to simulate no parameter names
+                }
+
+                @Override
+                public String nextElement() {
+                    return null;  // Return null as there's no next element
+                }
+            });
+
             response = deviceEndpoint.authorize(httpServletRequest, new MultivaluedHashMap<>(),
                     httpServletResponse);
             Assert.assertEquals(expectedStatus, response.getStatus());

@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticat
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -80,6 +81,9 @@ public class DeviceEndpoint {
         if (!oAuthClientAuthnContext.isAuthenticated()) {
             return handleErrorResponse(oAuthClientAuthnContext);
         }
+
+        // Wrap the request to avoid missing of request attributes.
+        request = new OAuthRequestWrapper(request, paramMap);
 
         try {
             validateRepeatedParams(request, paramMap);
