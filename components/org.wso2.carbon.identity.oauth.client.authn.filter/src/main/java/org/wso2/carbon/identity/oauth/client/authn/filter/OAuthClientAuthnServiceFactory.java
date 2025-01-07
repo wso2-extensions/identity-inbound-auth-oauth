@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,37 +18,29 @@
 
 package org.wso2.carbon.identity.oauth.client.authn.filter;
 
-import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
 
 /**
- * Factory Beans serves as a factory for creating other beans within the IOC container. This factory bean is used to
- * instantiate the OAuthClientAuthnService type of object inside the container.
+ * Factory class to get OAuthClientAuthnService OSGI service.
  */
-public class OAuthClientAuthnServiceFactory extends AbstractFactoryBean<OAuthClientAuthnService> {
+public class OAuthClientAuthnServiceFactory {
 
-    public OAuthClientAuthnService oAuthClientAuthnService;
+    private static final OAuthClientAuthnService SERVICE;
 
+    static {
+        OAuthClientAuthnService oAuthClientAuthnService = (OAuthClientAuthnService) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(OAuthClientAuthnService.class, null);
 
-    @Override
-    public Class<OAuthClientAuthnService> getObjectType() {
+        if (oAuthClientAuthnService == null) {
+            throw new IllegalStateException("OAuthClientAuthnService is not available from OSGI context.");
+        }
 
-        return OAuthClientAuthnService.class;
+        SERVICE = oAuthClientAuthnService;
     }
 
-    @Override
-    protected OAuthClientAuthnService createInstance() throws Exception {
+    public static OAuthClientAuthnService getOAuthClientAuthnService() {
 
-        if (this.oAuthClientAuthnService != null) {
-            return this.oAuthClientAuthnService;
-        } else {
-            OAuthClientAuthnService oAuthClientAuthnService = (OAuthClientAuthnService) PrivilegedCarbonContext
-                    .getThreadLocalCarbonContext().getOSGiService(OAuthClientAuthnService.class, null);
-            if (oAuthClientAuthnService != null) {
-                this.oAuthClientAuthnService = oAuthClientAuthnService;
-            }
-            return oAuthClientAuthnService;
-        }
+        return SERVICE;
     }
 }
