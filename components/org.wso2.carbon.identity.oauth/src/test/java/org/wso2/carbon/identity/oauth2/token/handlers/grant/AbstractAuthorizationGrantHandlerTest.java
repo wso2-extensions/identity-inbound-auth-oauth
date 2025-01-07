@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -59,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
@@ -104,6 +106,7 @@ public class AbstractAuthorizationGrantHandlerTest {
             "org.wso2.carbon.identity.oauth.callback.DefaultCallbackHandler";
     private static final String PASSWORD_GRANT = "password";
     private OAuthAppDO oAuthAppDO;
+    private MockedStatic<AuthzUtil> mockedAuthzUtil;
 
     @BeforeMethod
     public void setUp() throws IdentityOAuth2Exception, IdentityOAuthAdminException, ActionExecutionException {
@@ -144,12 +147,16 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         IdentityEventService identityEventService = mock(IdentityEventService.class);
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
+        Mockito.clearAllCaches();
+        mockedAuthzUtil = mockStatic(AuthzUtil.class);
+        mockedAuthzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
     }
 
     @AfterClass
     public void tearDown() {
 
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
+        mockedAuthzUtil.close();
     }
 
     @Test(dataProvider = "IssueWithRenewDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
