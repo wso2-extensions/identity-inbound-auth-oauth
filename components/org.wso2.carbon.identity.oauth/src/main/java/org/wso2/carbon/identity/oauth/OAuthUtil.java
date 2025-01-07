@@ -61,6 +61,7 @@ import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
@@ -70,6 +71,7 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.Tenant;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -754,6 +756,10 @@ public final class OAuthUtil {
                             .getUserAssociation(userId, accessingOrg).getAssociatedUserId();
                     authenticatedUser.setUserName(userId);
                     setOrganizationSSOUserDetails(authenticatedUser);
+                } else {
+                    Optional<String> parentUserStoreDomain = getUserStoreDomainOfParentUser(
+                            userId, accessingOrg, tenantDomain);
+                    parentUserStoreDomain.ifPresent(authenticatedUser::setUserStoreDomain);
                 }
                 return authenticatedUser;
             }
@@ -1333,5 +1339,44 @@ public final class OAuthUtil {
             }
         }
         return tokenEPAllowReusePvtKeyJwtTenantConfig;
+    }
+
+    /**
+     * Retrieves the user store domain of the parent user for a shared user in a specific organization.
+     *
+     * @param userId         ID of the shared user.
+     * @param accessingOrgId ID of the shared user's organization.
+     * @param tenantDomain   Tenant domain of the shared user.
+     * @return Optional containing the parent user's user store domain, or empty if not found.
+     * @throws OrganizationManagementException If an error occurs retrieving user association.
+     * @throws UserStoreException              If an error occurs retrieving the user store domain.
+     */
+    private static Optional<String> getUserStoreDomainOfParentUser(String userId, String accessingOrgId,
+                                                                   String tenantDomain)
+            throws OrganizationManagementException, UserStoreException {
+
+        UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
+                .getOrganizationUserSharingService()
+                .getUserAssociation(userId, accessingOrgId);
+
+        if (userAssociation == null || userAssociation.getAssociatedUserId() == null) {
+            return Optional.empty();
+        }
+        String parentUserId = userAssociation.getAssociatedUserId();
+
+        try {
+            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+            UserRealm userRealm = OAuthComponentServiceHolder.getInstance()
+                    .getRealmService()
+                    .getTenantUserRealm(tenantId);
+            UserStoreManager userStoreManager = (AbstractUserStoreManager) userRealm.getUserStoreManager();
+
+            return Optional.ofNullable(((AbstractUserStoreManager) userStoreManager)
+                    .getUser(parentUserId, null)
+                    .getUserStoreDomain());
+        } catch (org.wso2.carbon.user.api.UserStoreException e) {
+            throw new UserStoreException("Failed to retrieve the user store domain for the parent user with ID: "
+                    + parentUserId + " in tenant domain: " + tenantDomain, e);
+        }
     }
 }
