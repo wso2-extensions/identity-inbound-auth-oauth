@@ -31,9 +31,10 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.U
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
+import org.wso2.carbon.identity.application.common.model.InboundAuthenticationRequestConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants.StandardInboundProtocols;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -66,8 +67,7 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.AssociatedApplication;
-import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -86,7 +86,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -775,51 +774,43 @@ public final class OAuthUtil {
 
     /**
      * Get clientIds of associated application of an application role.
-     * @param role          Role object.
+     *
+     * @param role               Role basic info object.
      * @param authenticatedUser  Authenticated user.
      * @return Set of clientIds of associated applications.
      */
-    private static Set<String> getClientIdsOfAssociatedApplications(Role role, AuthenticatedUser authenticatedUser)
+    private static Optional<String> getClientIdOfAssociatedApplication(RoleBasicInfo role,
+                                                                       AuthenticatedUser authenticatedUser)
             throws UserStoreException {
 
         ApplicationManagementService applicationManagementService =
                 OAuthComponentServiceHolder.getInstance().getApplicationManagementService();
-        List<String> associatedApplications = role.getAssociatedApplications().stream()
-                .map(AssociatedApplication::getId).collect(Collectors.toList());
+        String associatedApplication = role.getAudienceId();
         try {
             if (authenticatedUser.getUserResidentOrganization() != null) {
-                List<String> newAssociatedApplications = new ArrayList<>();
-                for (String app : associatedApplications) {
-                    newAssociatedApplications.add(
-                            SharedAppResolveDAO.getMainApplication(app, authenticatedUser.getAccessingOrganization()));
-                }
-                associatedApplications = newAssociatedApplications;
+                associatedApplication = SharedAppResolveDAO.getMainApplication(
+                        associatedApplication, authenticatedUser.getAccessingOrganization());
             }
         } catch (IdentityOAuth2Exception e) {
             throw new UserStoreException("Error occurred while getting the main applications of the shared apps.", e);
         }
-        Set<String> clientIds = new HashSet<>();
-        associatedApplications.forEach(associatedApplication -> {
-            try {
-                ServiceProvider application = applicationManagementService
-                        .getApplicationByResourceId(associatedApplication, authenticatedUser.getTenantDomain());
-                if (application == null || application.getInboundAuthenticationConfig() == null) {
-                    return;
-                }
-                Arrays.stream(application.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs())
-                        .forEach(inboundAuthenticationRequestConfig -> {
-                            if (ApplicationConstants.StandardInboundProtocols.OAUTH2.equals(
-                                    inboundAuthenticationRequestConfig.getInboundAuthType())) {
-                                clientIds.add(inboundAuthenticationRequestConfig.getInboundAuthKey());
-                            }
-                        });
-            } catch (IdentityApplicationManagementException e) {
-                String errorMessage = "Error occurred while retrieving application of id : " +
-                        associatedApplication;
-                LOG.error(errorMessage);
+        try {
+            ServiceProvider application = applicationManagementService
+                    .getApplicationByResourceId(associatedApplication, authenticatedUser.getTenantDomain());
+            if (application != null && application.getInboundAuthenticationConfig() != null) {
+                InboundAuthenticationRequestConfig[] inboundAuthenticationRequestConfigs =
+                        application.getInboundAuthenticationConfig().getInboundAuthenticationRequestConfigs();
+                return Arrays.stream(inboundAuthenticationRequestConfigs)
+                        .filter(config -> StandardInboundProtocols.OAUTH2.equals(config.getInboundAuthType()))
+                        .map(InboundAuthenticationRequestConfig::getInboundAuthKey)
+                        .findFirst();
             }
-        });
-        return clientIds;
+        } catch (IdentityApplicationManagementException e) {
+            String errorMessage = "Error occurred while retrieving application of id : " +
+                    associatedApplication;
+            LOG.error(errorMessage);
+        }
+        return Optional.empty();
     }
 
     private static Set<String> filterClientIdsWithOrganizationAudience(List<String> clientIds, String tenantDomain) {
@@ -849,14 +840,14 @@ public final class OAuthUtil {
      * @param tenantDomain  Tenant domain.
      * @return Role.
      */
-    private static Role getRole(String roleId, String tenantDomain) throws UserStoreException {
+    private static RoleBasicInfo getRoleBasicInfo(String roleId, String tenantDomain) throws UserStoreException {
 
         try {
             RoleManagementService roleV2ManagementService =
                     OAuthComponentServiceHolder.getInstance().getRoleV2ManagementService();
-            return roleV2ManagementService.getRole(roleId, tenantDomain);
+            return roleV2ManagementService.getRoleBasicInfoById(roleId, tenantDomain);
         } catch (IdentityRoleManagementException e) {
-            String errorMessage = "Error occurred while retrieving role of id : " + roleId;
+            String errorMessage = "Error occurred while retrieving basic role info of id : " + roleId;
             throw new UserStoreException(errorMessage, e);
         }
     }
@@ -1011,18 +1002,19 @@ public final class OAuthUtil {
         }
 
         // Get details about the role to identify the audience and associated applications.
-        Set<String> clientIds = null;
-        Role role = null;
+        Set<String> clientIds = new HashSet<>();;
+        RoleBasicInfo role = null;
         boolean getClientIdsFromUser = false;
         if (roleId != null) {
-            role = getRole(roleId, IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
+            role = getRoleBasicInfo(roleId, tenantDomain);
             if (role != null && RoleConstants.APPLICATION.equals(role.getAudience())) {
                 // Get clientIds of associated applications for the specific application role.
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Get clientIds of associated applications for the application role: "
                             + role.getName());
                 }
-                clientIds = getClientIdsOfAssociatedApplications(role, authenticatedUser);
+                getClientIdOfAssociatedApplication(role, authenticatedUser)
+                        .ifPresent(clientIds::add);
             } else {
                 // Get all the distinct client Ids authorized by this user since this is an organization role.
                 if (LOG.isDebugEnabled()) {
