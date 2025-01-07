@@ -176,12 +176,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
         String tokenType = oauthTokenIssuer.getAccessTokenType();
 
-        if (isHashDisabled) {
-            existingTokenBean = getExistingToken(tokReqMsgCtx,
-                    getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
-                            tokenBindingReference, authorizedOrganization));
-        }
-
         /*
         This segment handles access token requests that neither require generating a new token
         nor renewing an existing one. Instead, it returns the existing token if it is still valid.
@@ -192,6 +186,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (!(JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
                 OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
                         .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()))) {
+
+            if (isHashDisabled) {
+                existingTokenBean = getExistingToken(tokReqMsgCtx,
+                        getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
+                                tokenBindingReference, authorizedOrganization));
+            }
 
             if (existingTokenBean != null && !accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
 
