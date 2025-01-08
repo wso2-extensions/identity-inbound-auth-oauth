@@ -142,7 +142,6 @@ import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
@@ -150,7 +149,6 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.OIDCRequestObjectUtil;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.CarbonUtils;
@@ -217,12 +215,13 @@ import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.USER_CONSENT_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getLoginPageURL;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuth2Service;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthAuthzRequest;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getOAuthServerConfiguration;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.retrieveStateForErrorURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory.getOAuth2Service;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory.getOAuthServerConfiguration;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory.getRequestObjectService;
+import static org.wso2.carbon.identity.oauth.endpoint.util.factory.SSOConsentServiceFactory.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
@@ -281,10 +280,6 @@ public class OAuth2AuthzEndpoint {
     private static final String OAUTH_RESPONSE_JSP_PAGE = "/oauth_response.jsp";
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
-
-    private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
-
-    private static ScopeMetadataService scopeMetadataService;
 
     private static DeviceAuthService deviceAuthService;
 
@@ -1024,9 +1019,11 @@ public class OAuth2AuthzEndpoint {
 
         if (hasPromptContainsConsent(oAuth2Parameters)) {
             // Ignore all previous consents and get consent required claims
-            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithoutExistingConsents(
+                    serviceProvider, user);
         } else {
-            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
+            return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(
+                    serviceProvider, user);
         }
     }
 
@@ -1166,7 +1163,7 @@ public class OAuth2AuthzEndpoint {
                 getOauth2Params(oAuthMessage).getApplicationName(), false,
                 oauth2Params.getClientId());
 
-        OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleUserConsentDenial(oauth2Params);
+        OAuthErrorDTO oAuthErrorDTO = getOAuth2Service().handleUserConsentDenial(oauth2Params);
         OAuthProblemException consentDenialException = buildConsentDenialException(oAuthErrorDTO);
 
         if (ResponseModeProvider.AuthResponseType.POST_RESPONSE.equals(responseModeProvider.getAuthResponseType())) {
@@ -1403,7 +1400,7 @@ public class OAuth2AuthzEndpoint {
                                                 AuthorizationResponseDTO authorizationResponseDTO)
             throws URISyntaxException {
 
-        OAuthErrorDTO oAuthErrorDTO = EndpointUtil.getOAuth2Service().handleAuthenticationFailure(oauth2Params);
+        OAuthErrorDTO oAuthErrorDTO = getOAuth2Service().handleAuthenticationFailure(oauth2Params);
         OAuthProblemException oauthException = buildOAuthProblemException(authnResult, oAuthErrorDTO);
         return handleFailedState(oAuthMessage, oauth2Params, oauthException, authorizationResponseDTO);
     }
@@ -2383,9 +2380,9 @@ public class OAuth2AuthzEndpoint {
             throws RequestObjectException {
 
         String sessionDataKey = params.getSessionDataKey();
-        if (EndpointUtil.getRequestObjectService() != null) {
+        if (getRequestObjectService() != null) {
             if (requestObject != null && MapUtils.isNotEmpty(requestObject.getRequestedClaims())) {
-                EndpointUtil.getRequestObjectService().addRequestObject(params.getClientId(), sessionDataKey,
+                getRequestObjectService().addRequestObject(params.getClientId(), sessionDataKey,
                         new ArrayList(requestObject.getRequestedClaims().values()));
                 params.setRequestObjectFlow(true);
             }
@@ -3498,16 +3495,17 @@ public class OAuth2AuthzEndpoint {
 
         // Get the claims uri list of all the requested scopes. Eg:- country, email.
         List<String> claimListOfScopes =
-                openIDConnectClaimFilter.getClaimsFilteredByOIDCScopes(oauth2Params.getScopes(), spTenantDomain);
+                OAuth2AuthzServiceFactory.getOpenIdClaimFilterImpl().getClaimsFilteredByOIDCScopes(
+                        oauth2Params.getScopes(), spTenantDomain);
 
         List<String> essentialRequestedClaims = new ArrayList<>();
 
         if (!isMandatory && oauth2Params.isRequestObjectFlow()) {
             // Get the requested claims came through request object.
-            List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
+            List<RequestedClaim> requestedClaimsOfIdToken = getRequestObjectService()
                     .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
 
-            List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
+            List<RequestedClaim> requestedClaimsOfUserInfo = getRequestObjectService()
                     .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
 
             // Get the list of id token's essential claims.
