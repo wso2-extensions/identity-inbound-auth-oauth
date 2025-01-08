@@ -311,6 +311,13 @@ public class DCRMService {
             }
             // Todo: validate version input. Create a function at app mgt.
             sp.setApplicationVersion(applicationVersion);
+            if (StringUtils.isNotEmpty(updateRequest.getExtAllowedAudience()) &&
+                    (updateRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)
+                            || updateRequest.getExtAllowedAudience().equalsIgnoreCase(APP_ROLE_AUDIENCE))) {
+                AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+                associatedRolesConfig.setAllowedAudience(updateRequest.getExtAllowedAudience().toLowerCase());
+                sp.setAssociatedRolesConfig(associatedRolesConfig);
+            }
             // Need to create a deep clone, since modifying the fields of the original object,
             // will modify the cached SP object.
             ServiceProvider clonedSP = cloneServiceProvider(sp);
@@ -414,14 +421,6 @@ public class DCRMService {
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
             oAuthAdminService.updateConsumerApplication(appDTO);
 
-            if (StringUtils.isNotEmpty(updateRequest.getExtAllowedAudience()) &&
-                    (updateRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)
-                            || updateRequest.getExtAllowedAudience().equalsIgnoreCase(APP_ROLE_AUDIENCE))) {
-                AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
-                associatedRolesConfig.setAllowedAudience(updateRequest.getExtAllowedAudience().toLowerCase());
-                sp.setAssociatedRolesConfig(associatedRolesConfig);
-                updateServiceProvider(sp, tenantDomain, applicationOwner);
-            }
         } catch (IdentityOAuthClientException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA, e.getMessage(), e);
         } catch (IdentityOAuthAdminException e) {
