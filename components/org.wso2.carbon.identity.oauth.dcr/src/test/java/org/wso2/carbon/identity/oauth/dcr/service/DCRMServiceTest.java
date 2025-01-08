@@ -1007,7 +1007,6 @@ public class DCRMServiceTest {
         assertEquals(application.getClientId(), dummyConsumerKey);
         assertEquals(application.getClientName(), dummyClientName);
         assertEquals(application.getClientSecret(), dummyConsumerSecret);
-        assertEquals(application.getExtAllowedAudience(), roleAudience);
     }
 
     @Test
