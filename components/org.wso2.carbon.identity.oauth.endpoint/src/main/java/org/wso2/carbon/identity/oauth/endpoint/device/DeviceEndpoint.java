@@ -37,7 +37,6 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequest
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.codegenerator.GenerateKeys;
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.device.util.DeviceFlowUtil;
@@ -61,12 +60,6 @@ import javax.ws.rs.core.Response;
 @InInterceptors(classes = OAuthClientAuthenticatorProxy.class)
 public class DeviceEndpoint {
     private static final Log log = LogFactory.getLog(DeviceEndpoint.class);
-    private DeviceAuthService deviceAuthService;
-
-    public void setDeviceAuthService(DeviceAuthService deviceAuthService) {
-
-        this.deviceAuthService = deviceAuthService;
-    }
 
     @POST
     @Path("/")
@@ -108,7 +101,8 @@ public class DeviceEndpoint {
 
         String temporaryUserCode = GenerateKeys.getKey(OAuthServerConfiguration.getInstance().getDeviceCodeKeyLength());
         long quantifier = GenerateKeys.getCurrentQuantifier();
-        return deviceAuthService.generateDeviceResponse(deviceCode, temporaryUserCode, quantifier, clientId, scopes);
+        return DeviceServiceFactory.getDeviceAuthService().generateDeviceResponse(deviceCode, temporaryUserCode,
+                quantifier, clientId, scopes);
     }
 
     private void validateRepeatedParams(HttpServletRequest request, MultivaluedMap<String, String> paramMap)
