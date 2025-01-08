@@ -148,21 +148,19 @@ public class AuthzChallengeEndpoint {
         }
 
         // Perform request authentication for API based auth flow.
-//        if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
-            OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
-            if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext);
-            }
+        OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
+        if (!oAuthClientAuthnContext.isAuthenticated()) {
+            return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext);
+        }
 
-            ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
-            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
-                return AuthzUtil.handleAttestationFailureResponse(clientAttestationContext);
-            }
+        ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
+        if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
+            return AuthzUtil.handleAttestationFailureResponse(clientAttestationContext);
+        }
 
-            if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
-                return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
-            }
-//        }
+        if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
+            return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
+        }
 
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
@@ -388,7 +386,7 @@ public class AuthzChallengeEndpoint {
                         return Response.status(HttpServletResponse.SC_FOUND)
                                 .location(AuthzUtil.buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
-                        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(responseWrapper.getContent()).build();
+                        return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(responseWrapper.getContent()).build();
                     }
                 } else {
                     try {

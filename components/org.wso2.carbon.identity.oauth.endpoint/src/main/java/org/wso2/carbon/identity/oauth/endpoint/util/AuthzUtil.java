@@ -4541,7 +4541,7 @@ public class AuthzUtil {
                 }
                 oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 if (isAuthzChallenge) {
-                    return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+                    return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonString).build();
                 } else {
                     return Response.status(HttpServletResponse.SC_OK).entity(jsonString).build();
                 }
@@ -4565,7 +4565,7 @@ public class AuthzUtil {
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             // Keeping the app native flow as it is.
                             if (isAuthzChallenge) {
-                                return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonPayload).build();
+                                return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonPayload).build();
                             } else {
                                 return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
                             }
