@@ -43,6 +43,9 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.GrantType;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthCallbackHandlerMetaData;
@@ -51,7 +54,9 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.TestConstants;
+import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -61,6 +66,7 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuerImpl;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -77,6 +83,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -477,6 +484,78 @@ public class AbstractAuthorizationGrantHandlerTest {
             throws IdentityOAuth2Exception {
         OAuthTokenReqMessageContext tokReqMsgCtx = (OAuthTokenReqMessageContext) tokenRequestMsgCtx;
         assertEquals(handler.isAuthorizedClient(tokReqMsgCtx), expectedValue);
+    }
+
+    @Test(dataProvider = "IssueExistingAccessTokensWithoutConsent")
+    public void testIssueExistingAccessTokensWithoutConsent(boolean idpIdColumnEnabled) throws Exception {
+
+        OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(idpIdColumnEnabled);
+
+        OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO = new OAuth2AccessTokenReqDTO();
+        oAuth2AccessTokenReqDTO.setClientId(clientId);
+        oAuth2AccessTokenReqDTO.setGrantType("client_credential");
+
+        AccessTokenDO existingAccessTokenDO = new AccessTokenDO();
+        existingAccessTokenDO.setAuthzUser(authenticatedUser);
+        existingAccessTokenDO.setScope(new String[]{"scope1", "scope2"});
+        existingAccessTokenDO.setAccessToken("existingAccessToken");
+        existingAccessTokenDO.setTokenState(TOKEN_STATE_ACTIVE);
+        existingAccessTokenDO.setConsumerKey(clientId);
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(oAuth2AccessTokenReqDTO);
+        authenticatedUser.setAccessingOrganization("orgabc");
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+        tokReqMsgCtx.setScope(new String[]{"scope1", "scope2"});
+
+        try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthTokenPersistenceFactory> factoryMock = mockStatic(OAuthTokenPersistenceFactory.class)) {
+
+            OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+
+            identityUtil.when(() -> IdentityUtil.getProperty(anyString())).thenReturn(Boolean.TRUE.toString());
+            identityUtil.when(() -> IdentityUtil.isTokenLoggable(anyString())).thenCallRealMethod();
+
+            OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuerImpl.class);
+            when(oauthTokenIssuer.getAccessTokenType()).thenReturn(OAuth2Constants.TokenTypes.OPAQUE);
+
+            oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId)).thenReturn(oauthTokenIssuer);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId)).thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.isOrganizationValidAndActive(anyString())).thenReturn(true);
+            oauth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenCallRealMethod();
+            oauth2Util.when(() -> OAuth2Util.getTokenPartitionedSqlByUserStore(anyString(), any()))
+                    .thenCallRealMethod();
+            oauth2Util.when(() -> OAuth2Util.getTokenExpireTimeMillis(eq(existingAccessTokenDO), eq(false)))
+                    .thenReturn(3600L);
+
+            OAuthCache mockOAuthCache = mock(OAuthCache.class);
+            handler.oauthCache = mockOAuthCache;
+            doNothing().when(mockOAuthCache).addToCache(any(OAuthCacheKey.class), any(CacheEntry.class));
+
+            OAuthTokenPersistenceFactory mockFactory = mock(OAuthTokenPersistenceFactory.class);
+            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+            factoryMock.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(mockFactory);
+            when(mockFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockAccessTokenDAO.getLatestAccessToken(
+                    eq(clientId),
+                    eq(authenticatedUser),
+                    eq(null),
+                    eq("scope1 scope2"),
+                    eq("NONE"),
+                    eq(false))).thenReturn(existingAccessTokenDO);
+
+            OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
+            assertNotNull(tokenRespDTO.getAccessToken());
+            assertEquals(tokenRespDTO.getAccessToken(), existingAccessTokenDO.getAccessToken());
+        }
+    }
+
+    @DataProvider(name = "IssueExistingAccessTokensWithoutConsent")
+    public Object[][] issueExistingAccessTokensWithoutConsent() {
+
+        return new Object[][]{
+                {true}, {false}
+        };
     }
 
     private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {
