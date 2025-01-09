@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.0.205</version>
+    <version>7.0.212-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -37,7 +37,7 @@
         <url>https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</url>
         <developerConnection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</developerConnection>
         <connection>scm:git:https://github.com/wso2-extensions/identity-inbound-auth-oauth.git</connection>
-        <tag>v7.0.205</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
@@ -938,7 +938,7 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.10.22</carbon.kernel.version>
+        <carbon.kernel.version>4.10.26</carbon.kernel.version>
         <carbon.kernel.feature.version>4.10.22</carbon.kernel.feature.version>
         <carbon.kernel.imp.pkg.version.range>[4.10.22, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>

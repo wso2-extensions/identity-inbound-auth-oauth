@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.dao;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -41,6 +42,8 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcess
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -85,6 +88,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     private static final String USER_STORE_DOMAIN = "USER_STORE_DOMAIN_NAME";
     private static final String TENANT_DOMAIN = "TENANT_DOMAIN";
     private static final String TENANT_DOMAIN_2 = "TENANT_DOMAIN_2";
+    private static final String TENANT_DOMAIN_2_ORG_ID = "1234-1234";
     private static final String CONSUMER_KEY = "ca19a540f544777860e44e75f605d927";
     private static final String CONSUMER_SECRET = "87n9a540f544777860e44e75f605d435";
     private static final String APP_NAME = "myApp";
@@ -137,6 +141,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
     @Mock
     OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
 
+    @Mock
+    OrganizationManager mockOrganizationManager;
+
     @BeforeClass
     public void setUp() throws Exception {
         initMocks(this);
@@ -167,6 +174,34 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
                 addOAuthApplication(appDO, TENANT_ID);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    @Test
+    public void testAddOAuthApplicationWithAppResidentOrgId() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            // Set the application resident organization id
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveTenantDomain(TENANT_DOMAIN_2_ORG_ID)).thenReturn(TENANT_DOMAIN_2);
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                addOAuthApplication(appDO, TENANT_ID_2);
             }
         } finally {
             resetPrivilegedCarbonContext();
@@ -287,6 +322,35 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             }
         } finally {
             resetPrivilegedCarbonContext();
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuthAdminException.class)
+    public void testAddOAuthApplicationWithAppResidentOrgIdAndWithExceptions() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveTenantDomain(TENANT_DOMAIN_2_ORG_ID)).
+                    thenThrow(new OrganizationManagementException("Error while resolving tenant domain."));
+            OAuthAppDO appDO = getDefaultOAuthAppDO();
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                new OAuthAppDAO().addOAuthApplication(appDO);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+            Mockito.reset(mockOrganizationManager);
         }
     }
 
@@ -1004,6 +1068,41 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @Test
+    public void testGetAppInformationByAppNameWithAppResidentOrgId() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                // Set the application resident organization id
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                        setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
+                oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                        .thenReturn(mockOAuthComponentServiceHolder);
+                when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+                when(mockOrganizationManager.resolveTenantDomain(TENANT_DOMAIN_2_ORG_ID)).thenReturn(TENANT_DOMAIN_2);
+
+                OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
+                new OAuthAppDAO().addOAuthApplication(oAuthAppDO);
+
+                OAuthAppDO actualAppDO = new OAuthAppDAO().getAppInformationByAppName(APP_NAME, TENANT_ID);
+                assertNotNull(actualAppDO);
+                assertEquals(actualAppDO.getApplicationName(), APP_NAME);
+                assertEquals(actualAppDO.getOauthConsumerKey(), CONSUMER_KEY);
+                assertEquals(actualAppDO.getOauthConsumerSecret(), CONSUMER_SECRET);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testGetAppInformationByAppNameWithExceptions() throws Exception {
 
@@ -1027,6 +1126,41 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
             }
         } finally {
             resetPrivilegedCarbonContext();
+        }
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class)
+    public void testGetAppInformationByAppNameWithAppResidentOrgIdAndWithException() throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            // Set the application resident organization id
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveTenantDomain(TENANT_DOMAIN_2_ORG_ID)).thenReturn(TENANT_DOMAIN_2);
+            try (Connection connection = getConnection(DB_NAME)) {
+
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO oAuthAppDO = getDefaultOAuthAppDO();
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                appDAO.addOAuthApplication(oAuthAppDO);
+
+                when(mockOrganizationManager.resolveTenantDomain(TENANT_DOMAIN_2_ORG_ID)).thenThrow(
+                        new OrganizationManagementException("Error while resolving tenant domain."));
+                appDAO.getAppInformationByAppName(APP_NAME, TENANT_ID);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+            Mockito.reset(mockOrganizationManager);
         }
     }
 

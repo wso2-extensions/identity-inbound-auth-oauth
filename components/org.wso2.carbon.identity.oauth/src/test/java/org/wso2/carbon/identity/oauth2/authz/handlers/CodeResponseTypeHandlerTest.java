@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.authz.handlers;
 
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -41,8 +43,10 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Test class covering CodeResponseTypeHandler
@@ -62,6 +66,7 @@ public class CodeResponseTypeHandlerTest {
 
     OAuthAuthzReqMessageContext authAuthzReqMessageContext;
     OAuth2AuthorizeReqDTO authorizationReqDTO;
+    private MockedStatic<AuthzUtil> mockedAuthzUtil;
 
     @BeforeClass
     public void init() throws IdentityOAuthAdminException {
@@ -69,6 +74,9 @@ public class CodeResponseTypeHandlerTest {
         IdentityEventService identityEventService = mock(IdentityEventService.class);
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
         new OAuthAppDAO().addOAuthApplication(getDefaultOAuthAppDO());
+        Mockito.clearAllCaches();
+        mockedAuthzUtil = mockStatic(AuthzUtil.class);
+        mockedAuthzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
     }
 
     @AfterClass
@@ -76,6 +84,7 @@ public class CodeResponseTypeHandlerTest {
 
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
         new OAuthAppDAO().removeConsumerApplication(TEST_CONSUMER_KEY);
+        mockedAuthzUtil.close();
     }
 
     @BeforeMethod

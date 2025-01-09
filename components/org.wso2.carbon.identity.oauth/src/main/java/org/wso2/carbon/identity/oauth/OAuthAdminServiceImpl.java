@@ -800,7 +800,7 @@ public class OAuthAdminServiceImpl {
             throw handleClientError(INVALID_REQUEST, errorMessage);
         }
 
-        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String tenantDomain = getAppTenantDomain();
 
         OAuthAppDAO dao = new OAuthAppDAO();
         OAuthAppDO oAuthAppDO;
@@ -2391,7 +2391,7 @@ public class OAuthAdminServiceImpl {
             try {
                 // Since the app owner sent in OAuthConsumerAppDTO is a valid one we set the appOwner to be
                 // the one sent in the OAuthConsumerAppDTO.
-                String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+                String tenantDomain = getAppTenantDomain();
                 Optional<User> maybeAppOwner = OAuthUtil.getUser(tenantDomain, tenantAwareAppOwnerInRequest);
                 if (maybeAppOwner.isPresent()) {
                     appOwner = new AuthenticatedUser(maybeAppOwner.get());
@@ -2924,5 +2924,22 @@ public class OAuthAdminServiceImpl {
         ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(consumerKey, tenantDomain);
         return OAuth2Util.isAppVersionAllowed(serviceProvider.getApplicationVersion(),
                 ApplicationConstants.ApplicationVersion.APP_VERSION_V2);
+    }
+
+    private static String getAppTenantDomain() throws IdentityOAuthAdminException {
+
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw handleError("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        return tenantDomain;
     }
 }
