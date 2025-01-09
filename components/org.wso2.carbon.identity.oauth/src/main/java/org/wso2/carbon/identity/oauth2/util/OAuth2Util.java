@@ -2441,7 +2441,8 @@ public class OAuth2Util {
 
         OAuthAppDO appDO;
         try {
-            appDO = getAppInformationByClientId(clientId);
+            String tenantDomain = getTenantDomain();
+            appDO = getAppInformationByClientId(clientId, tenantDomain);
         } catch (IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + clientId, e);
         }
@@ -2616,6 +2617,32 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId);
+        return getTenantDomainOfOauthApp(oAuthAppDO);
+    }
+
+    /**
+     * This is used to get the tenant domain of an application by clientId. Internally it uses the tenant present in
+     * the carbon context.
+     *
+     * @param clientId Consumer key of Application.
+     * @return Tenant Domain.
+     * @throws IdentityOAuth2Exception      Error while retrieving the application.
+     * @throws InvalidOAuthClientException  If an application not found for the given client ID.
+     */
+    public static String getTenantDomainOfOauthApp(String clientId, String tenantDomain)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
+                        appOrgId, e);
+            }
+        }
+        OAuthAppDO oAuthAppDO = getAppInformationByClientId(clientId, tenantDomain);
         return getTenantDomainOfOauthApp(oAuthAppDO);
     }
 
@@ -3864,9 +3891,9 @@ public class OAuth2Util {
     public static ServiceProvider getServiceProvider(String clientId) throws IdentityOAuth2Exception {
 
         ApplicationManagementService applicationMgtService = OAuth2ServiceComponentHolder.getApplicationMgtService();
-        String tenantDomain = null;
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
         try {
-            tenantDomain = getTenantDomainOfOauthApp(clientId);
+            tenantDomain = getTenantDomainOfOauthApp(clientId, tenantDomain);
             // Get the Service Provider.
             return applicationMgtService.getServiceProviderByClientId(
                     clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
@@ -4338,7 +4365,8 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
+                getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
@@ -4979,7 +5007,18 @@ public class OAuth2Util {
 
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
 
-            String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+            String tenantDomainFromContext = getTenantDomain();
+            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                    getApplicationResidentOrganizationId();
+            if (StringUtils.isNotBlank(appOrgId)) {
+                try {
+                    tenantDomainFromContext = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(appOrgId);
+                } catch (OrganizationManagementException e) {
+                    throw new InvalidOAuthClientException("Error while resolving tenant domain from organization id: "
+                            + appOrgId, e);
+                }
+            }
             if (!StringUtils.equals(tenantDomainFromContext, tenantDomainOfApp)) {
                 // This means the tenant domain sent in the request and app's tenant domain do not match.
                 if (log.isDebugEnabled()) {
@@ -5326,7 +5365,7 @@ public class OAuth2Util {
         if (!Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.ENABLE_FAPI))) {
             return false;
         }
-        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        String tenantDomain = getTenantDomain();
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         return oAuthAppDO.isFapiConformanceEnabled();
     }
@@ -5661,5 +5700,22 @@ public class OAuth2Util {
             }
         }
         return true;
+    }
+
+    private static String getTenantDomain() throws InvalidOAuthClientException {
+
+        String tenantDomain = IdentityTenantUtil.resolveTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new InvalidOAuthClientException("Error while resolving tenant domain from the organization " +
+                        "id: ", e);
+            }
+        }
+        return tenantDomain;
     }
 }

@@ -19,11 +19,13 @@
 package org.wso2.carbon.identity.oauth2.dto;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.servlet.http.Cookie;
@@ -62,6 +64,7 @@ public class OAuth2AuthorizeReqDTO {
     private boolean isRequestObjectFlow;
     private String state;
     private String requestedSubjectId;
+    private Map<ClaimMapping, String> mappedRemoteClaims;
     private AuthorizationDetails authorizationDetails;
 
     public String getRequestedSubjectId() {
@@ -304,6 +307,17 @@ public class OAuth2AuthorizeReqDTO {
     public void setHttpServletRequestWrapper(HttpServletRequestWrapper httpServletRequestWrapper) {
 
         this.httpServletRequestWrapper = httpServletRequestWrapper;
+    }
+
+    public Map<ClaimMapping, String> getMappedRemoteClaims() {
+
+        return mappedRemoteClaims;
+    }
+
+    public void setMappedRemoteClaims(
+            Map<ClaimMapping, String> mappedRemoteClaims) {
+
+        this.mappedRemoteClaims = mappedRemoteClaims;
     }
 
     /**

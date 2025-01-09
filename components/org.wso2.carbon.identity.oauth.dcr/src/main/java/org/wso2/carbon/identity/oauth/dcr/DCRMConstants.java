@@ -60,7 +60,8 @@ public class DCRMConstants {
         SIGNATURE_VALIDATION_FAILED("Signature validation failed for the software statement"),
         MANDATORY_SOFTWARE_STATEMENT("Mandatory software statement is missing"),
         FAILED_TO_READ_SSA("Error occurred while reading the software statement"),
-        ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes");
+        ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes"),
+        FAILED_TO_RESOLVE_TENANT_DOMAIN("Error while resolving tenant domain from the organization id: %s");
 
         private final String message;
         private final String errorCode;

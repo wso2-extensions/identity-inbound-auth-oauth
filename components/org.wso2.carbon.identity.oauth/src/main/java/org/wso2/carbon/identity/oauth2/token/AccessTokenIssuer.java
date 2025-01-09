@@ -658,7 +658,13 @@ public class AccessTokenIssuer {
                 DeviceAuthorizationGrantCache.getInstance().getValueFromCache(deviceCodeCacheKey);
         if (cacheEntry != null) {
             Map<ClaimMapping, String> userAttributes = cacheEntry.getUserAttributes();
-            return Optional.of(new AuthorizationGrantCacheEntry(userAttributes));
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    new AuthorizationGrantCacheEntry(userAttributes);
+            if (cacheEntry.getMappedRemoteClaims() != null) {
+                authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
+                        .getMappedRemoteClaims());
+            }
+            return Optional.of(authorizationGrantCacheEntry);
         }
         return Optional.empty();
     }

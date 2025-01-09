@@ -89,6 +89,24 @@ public class OAuthAdminService extends AbstractAdmin {
     }
 
     /**
+     * Get OAuth application data by the consumer key and tenant domain.
+     *
+     * @param consumerKey Consumer Key.
+     * @param tenantDomain Tenant Domain.
+     * @return <code>OAuthConsumerAppDTO</code> with application information.
+     * @throws IdentityOAuthAdminException Error when reading application information from persistence store.
+     */
+    public OAuthConsumerAppDTO getOAuthApplicationData(String consumerKey, String tenantDomain)
+            throws IdentityOAuthAdminException {
+
+        try {
+            return oAuthAdminServiceImpl.getOAuthApplicationData(consumerKey, tenantDomain);
+        } catch (IdentityOAuthAdminException ex) {
+            throw handleError(ex);
+        }
+    }
+
+    /**
      * Get OAuth application data by the application name.
      *
      * @param appName OAuth application name.

@@ -490,6 +490,11 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
+        if (authorizeReqDTO.getMappedRemoteClaims() != null) {
+            authorizationGrantCacheEntry.setMappedRemoteClaims(
+                    authorizeReqDTO.getMappedRemoteClaims());
+        }
+
         authorizationGrantCacheEntry
                 .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,

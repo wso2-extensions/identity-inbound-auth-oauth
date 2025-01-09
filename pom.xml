@@ -28,7 +28,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
     <artifactId>identity-inbound-auth-oauth</artifactId>
-    <version>7.0.200-SNAPSHOT</version>
+    <version>7.0.211-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>WSO2 Carbon OAuth module</name>
     <url>http://wso2.org</url>
@@ -208,11 +208,6 @@
             <dependency>
                 <groupId>org.wso2.carbon.identity.framework</groupId>
                 <artifactId>org.wso2.carbon.identity.application.common</artifactId>
-                <version>${carbon.identity.framework.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.wso2.carbon.identity.framework</groupId>
-                <artifactId>org.wso2.carbon.identity.entitlement</artifactId>
                 <version>${carbon.identity.framework.version}</version>
             </dependency>
             <dependency>
@@ -684,6 +679,16 @@
                 <version>${tomcat.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.httpcomponents.wso2</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>${httpcore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpcomponents-httpclient.wso2.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>javax.ws.rs-api</artifactId>
                 <version>${javax.ws.rs-api.version}</version>
@@ -946,15 +951,16 @@
         <apache.felix.scr.ds.annotations.version>1.2.4</apache.felix.scr.ds.annotations.version>
 
         <!-- Carbon kernel version -->
-        <carbon.kernel.version>4.10.22</carbon.kernel.version>
+        <carbon.kernel.version>4.10.26</carbon.kernel.version>
         <carbon.kernel.feature.version>4.10.22</carbon.kernel.feature.version>
         <carbon.kernel.imp.pkg.version.range>[4.10.22, 5.0.0)</carbon.kernel.imp.pkg.version.range>
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>7.6.8-SNAPSHOT</carbon.identity.framework.version>
+        <carbon.identity.framework.version>7.7.49</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.25.234, 8.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
+        <identity.oauth.xacml.version.range>[2.0.0, 3.0.0)</identity.oauth.xacml.version.range>
 
         <carbon.identity.organization.management.version>1.4.7
         </carbon.identity.organization.management.version>
@@ -1033,6 +1039,9 @@
         <tomcat.version>9.0.96</tomcat.version>
         <tomcat.wso2.imp.pkg.version.range>[9.0.0, 9.5.0)</tomcat.wso2.imp.pkg.version.range>
 
+        <httpcore.version>4.3.3.wso2v1</httpcore.version>
+        <httpcore.version.osgi.import.range>[4.3.0, 5.0.0)</httpcore.version.osgi.import.range>
+        <httpcomponents-httpclient.wso2.version>4.3.6.wso2v2</httpcomponents-httpclient.wso2.version>
         <org.apache.cxf.version>3.5.9</org.apache.cxf.version>
         <encoder.wso2.version>1.2.0.wso2v1</encoder.wso2.version>
         <json-simple.version>1.1.wso2v1</json-simple.version>
@@ -1046,7 +1055,7 @@
         <net.minidev.accessors-smart.version>2.4.7</net.minidev.accessors-smart.version>
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
-        <vertx.json.schema.version>4.5.10</vertx.json.schema.version>
+        <vertx.json.schema.version>4.5.11</vertx.json.schema.version>
 
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>
