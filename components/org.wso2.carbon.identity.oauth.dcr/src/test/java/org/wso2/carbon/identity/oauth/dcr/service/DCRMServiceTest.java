@@ -108,6 +108,7 @@ public class DCRMServiceTest {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
+    private static final String ORG_ROLE_AUDIENCE = "organization";
 
     @Mock
     private OAuthConsumerAppDTO dto;
@@ -1007,6 +1008,7 @@ public class DCRMServiceTest {
         assertEquals(application.getClientId(), dummyConsumerKey);
         assertEquals(application.getClientName(), dummyClientName);
         assertEquals(application.getClientSecret(), dummyConsumerSecret);
+        assertEquals(application.getExtAllowedAudience(), roleAudience);
     }
 
     @Test
