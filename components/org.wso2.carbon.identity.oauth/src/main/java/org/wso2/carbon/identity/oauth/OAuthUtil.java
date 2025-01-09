@@ -715,7 +715,7 @@ public final class OAuthUtil {
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
-        authenticatedUser.setUserName(username);
+        authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(username));
         boolean isOrganization;
         try {
             isOrganization = OrganizationManagementUtil.isOrganization(tenantDomain);
