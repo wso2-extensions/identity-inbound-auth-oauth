@@ -75,11 +75,6 @@
             <type>war</type>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-            <artifactId>org.wso2.carbon.identity.oauth.scope.endpoint</artifactId>
-            <type>war</type>
-        </dependency>
-        <dependency>
             <groupId>org.wso2.identity.apps</groupId>
             <artifactId>authentication-portal</artifactId>
             <type>war</type>
@@ -144,15 +139,6 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
                                     <destFileName>oauth2.war</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
-                                    <artifactId>org.wso2.carbon.identity.oauth.scope.endpoint</artifactId>
-                                    <version>${project.version}</version>
-                                    <type>war</type>
-                                    <overWrite>true</overWrite>
-                                    <outputDirectory>${basedir}/src/main/resources/</outputDirectory>
-                                    <destFileName>api#identity#oauth2#v1.0.war</destFileName>
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
