@@ -310,13 +310,24 @@ public class DCRMService {
                 sp.setJwksUri(updateRequest.getJwksURI());
             }
             // Todo: validate version input. Create a function at app mgt.
-            sp.setApplicationVersion(applicationVersion);
-            // Need to create a deep clone, since modifying the fields of the original object,
-            // will modify the cached SP object.
-            ServiceProvider clonedSP = cloneServiceProvider(sp);
-            clonedSP.setApplicationName(clientName);
-            updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
+            if (StringUtils.isNotBlank(applicationVersion)) {
+                sp.setApplicationVersion(applicationVersion);
+            }
         }
+        if (StringUtils.isNotEmpty(updateRequest.getExtAllowedAudience()) &&
+                (updateRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)
+                        || updateRequest.getExtAllowedAudience().equalsIgnoreCase(APP_ROLE_AUDIENCE))) {
+            AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+            associatedRolesConfig.setAllowedAudience(updateRequest.getExtAllowedAudience().toLowerCase());
+            sp.setAssociatedRolesConfig(associatedRolesConfig);
+        }
+        // Need to create a deep clone, since modifying the fields of the original object,
+        // will modify the cached SP object.
+        ServiceProvider clonedSP = cloneServiceProvider(sp);
+        if (StringUtils.isNotEmpty(clientName)) {
+            clonedSP.setApplicationName(clientName);
+        }
+        updateServiceProvider(clonedSP, tenantDomain, applicationOwner);
 
         // Update application
         try {
@@ -413,14 +424,6 @@ public class DCRMService {
             appDTO.setPkceSupportPlain(updateRequest.isExtPkceSupportPlain());
             appDTO.setBypassClientCredentials(updateRequest.isExtPublicClient());
             oAuthAdminService.updateConsumerApplication(appDTO);
-
-            if (StringUtils.isNotEmpty(updateRequest.getExtAllowedAudience()) &&
-                    (updateRequest.getExtAllowedAudience().equalsIgnoreCase(ORG_ROLE_AUDIENCE)
-                            || updateRequest.getExtAllowedAudience().equalsIgnoreCase(APP_ROLE_AUDIENCE))) {
-                AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
-                associatedRolesConfig.setAllowedAudience(updateRequest.getExtAllowedAudience().toLowerCase());
-                sp.setAssociatedRolesConfig(associatedRolesConfig);
-            }
         } catch (IdentityOAuthClientException e) {
             throw new DCRMClientException(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA, e.getMessage(), e);
         } catch (IdentityOAuthAdminException e) {
