@@ -554,6 +554,11 @@ public class TokenResponseTypeHandler extends AbstractResponseTypeHandler {
             authorizationGrantCacheEntry.setMaxAge(authorizeReqDTO.getMaxAge());
         }
 
+        if (authorizeReqDTO.getMappedRemoteClaims() != null) {
+            authorizationGrantCacheEntry.setMappedRemoteClaims(
+                    authorizeReqDTO.getMappedRemoteClaims());
+        }
+
         ClaimMapping key = new ClaimMapping();
         Claim claimOfKey = new Claim();
         claimOfKey.setClaimUri(OAuth2Util.SUB);

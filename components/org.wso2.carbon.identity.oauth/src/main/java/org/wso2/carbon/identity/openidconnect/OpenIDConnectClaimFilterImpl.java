@@ -61,6 +61,7 @@ import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.ActionIDs.ISSUE_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.APP_ROLES;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.EMAIL_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
@@ -137,6 +138,7 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
             handleAddressClaim(claimsToBeReturned, addressScopeClaims);
         }
         handleRolesClaim(claimsToBeReturned);
+        handleApplicationRolesClaim(claimsToBeReturned);
         handleUpdateAtClaim(claimsToBeReturned);
         handlePhoneNumberVerifiedClaim(claimsToBeReturned);
         handleEmailVerifiedClaim(claimsToBeReturned);
@@ -498,6 +500,23 @@ public class OpenIDConnectClaimFilterImpl implements OpenIDConnectClaimFilter {
                 }
             }
             returnClaims.put(ROLES, StringUtils.join(roles, multiAttributeSeparator));
+        }
+    }
+
+    private void handleApplicationRolesClaim(Map<String, Object> returnClaims) {
+
+        if (returnClaims.containsKey(APP_ROLES) && IdentityUtil.isGroupsVsRolesSeparationImprovementsEnabled()
+                && returnClaims.get(APP_ROLES) instanceof String) {
+            String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
+            List<String> roles = Arrays.asList(returnClaims.get(APP_ROLES).toString().split(multiAttributeSeparator));
+
+            for (String role : roles) {
+                if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {
+                    String domainRemovedRole = UserCoreUtil.removeDomainFromName(role);
+                    roles.set(roles.indexOf(role), domainRemovedRole);
+                }
+            }
+            returnClaims.put(APP_ROLES, StringUtils.join(roles, multiAttributeSeparator));
         }
     }
 

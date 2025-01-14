@@ -395,6 +395,36 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
+     * Add mapped remote claims to session cache.
+     *
+     * @param oAuthMessage         The OAuthMessage with the session data cache entry.
+     * @param authenticationResult The authentication result of authorization call.
+     */
+    private void addMappedRemoteClaimsToSessionCache(OAuthMessage oAuthMessage,
+                                                  AuthenticationResult authenticationResult) {
+
+        Optional<Map<String, String>> mappedRemoteClaims = authenticationResult.getMappedRemoteClaims();
+        if (!mappedRemoteClaims.isPresent()) {
+            return;
+        }
+
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
+        if (sessionDataCacheEntry == null || mappedRemoteClaims.get().isEmpty()) {
+            return;
+        }
+        Map<ClaimMapping, String> mappedRemoteClaimsMap = new HashMap<>();
+        mappedRemoteClaims.get().forEach(
+                (key, value) -> mappedRemoteClaimsMap.put(ClaimMapping.build(key, key, null,
+                        false), value));
+        sessionDataCacheEntry.setMappedRemoteClaims(mappedRemoteClaimsMap);
+        if (log.isDebugEnabled() && authenticationResult.getSubject() != null) {
+            log.debug("Added the mapped remote claims to the session data cache. " +
+                    "Session context identifier: " + sessionDataCacheEntry.getSessionContextIdentifier()
+                    + " for the user: " + authenticationResult.getSubject().getLoggableMaskedUserId());
+        }
+    }
+
+    /**
      * This method creates a list of FederatedTokenDO objects from the list of FederatedToken objects.
      *
      * @param federatedTokens List of FederatedToken objects to be transformed as a list of FederatedTokenDO.
@@ -507,9 +537,7 @@ public class OAuth2AuthzEndpoint {
         if (oAuthMessage.getSessionDataCacheEntry() != null) {
             params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
         }
-        if (log.isDebugEnabled()) {
-            log.debug("Server error occurred while performing authorization", e);
-        }
+        log.error("Server error occurred while performing authorization", e);
         OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
                 "Server error occurred while performing authorization");
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
@@ -520,13 +548,14 @@ public class OAuth2AuthzEndpoint {
             throws URISyntaxException {
 
         if (OAuth2ErrorCodes.SERVER_ERROR.equals(e.getErrorCode())) {
-            if (log.isDebugEnabled()) {
-                log.debug("Server error occurred while performing authorization", e);
-            }
+            log.error("Server error occurred while performing authorization", e);
             OAuthProblemException ex = OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR,
                     "Server error occurred while performing authorization");
             return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
                     EndpointUtil.getErrorRedirectURL(request, ex, null))).build();
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Invalid authorization request", e);
         }
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(EndpointUtil.getErrorPageURL(request,
                 e.getErrorCode(), OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
@@ -1365,6 +1394,9 @@ public class OAuth2AuthzEndpoint {
                 authnResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
         // Adding federated tokens come with the authentication result of the authorization call.
         addFederatedTokensToSessionCache(oAuthMessage, authnResult);
+        // Adding mapped remoted claims come with the authentication result to resolve access token claims in
+        // federated flow.
+        addMappedRemoteClaimsToSessionCache(oAuthMessage, authnResult);
     }
 
     private void updateAuthTimeInSessionDataCacheEntry(OAuthMessage oAuthMessage) {
@@ -2119,6 +2151,10 @@ public class OAuth2AuthzEndpoint {
         authorizationGrantCacheEntry.setRequestObjectFlow(isRequestObjectFlow);
         authorizationGrantCacheEntry.setFederatedTokens(sessionDataCacheEntry.getFederatedTokens());
         sessionDataCacheEntry.setFederatedTokens(null);
+        Map<ClaimMapping, String> mappedRemoteClaims =  sessionDataCacheEntry.getMappedRemoteClaims();
+        if (mappedRemoteClaims != null) {
+            authorizationGrantCacheEntry.setMappedRemoteClaims(mappedRemoteClaims);
+        }
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
 
@@ -3762,6 +3798,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setState(oauth2Params.getState());
         authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
         authzReqDTO.setRequestedSubjectId(oauth2Params.getRequestedSubjectId());
+        authzReqDTO.setMappedRemoteClaims(sessionDataCacheEntry.getMappedRemoteClaims());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
@@ -4497,6 +4534,10 @@ public class OAuth2AuthzEndpoint {
         DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
+        if (sessionDataCacheEntry.getMappedRemoteClaims() != null) {
+            cacheEntry.setMappedRemoteClaims(sessionDataCacheEntry
+                    .getMappedRemoteClaims());
+        }
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }
 

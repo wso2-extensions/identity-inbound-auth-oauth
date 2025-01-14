@@ -157,6 +157,16 @@ public class OAuthAppDAO {
 
         AuthenticatedUser appOwner = consumerAppDO.getAppOwner();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appOrgId);
+            } catch (OrganizationManagementException e) {
+                throw handleError("Error occurred while resolving tenant domain for organization id: "
+                        + appOrgId, e);
+            }
+        }
         int spTenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         String userStoreDomain = appOwner.getUserStoreDomain();
         if (!isDuplicateApplication(appOwner.getUserName(), spTenantId, userStoreDomain, consumerAppDO)) {
@@ -212,6 +222,7 @@ public class OAuthAppDAO {
                         }
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
+                    consumerAppDO.setId(appId);
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     addAccessTokenClaims(connection, appId, consumerAppDO.getAccessTokenClaims());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
@@ -686,6 +697,18 @@ public class OAuthAppDAO {
 
         OAuthAppDO oauthApp;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(appOrgId)) {
+                try {
+                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(appOrgId);
+                    tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for " +
+                            "organization id: " + appOrgId, e);
+                }
+            }
             String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_BY_APP_NAME_WITH_PKCE;
 
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
@@ -877,6 +900,18 @@ public class OAuthAppDAO {
         prepStmt.setString(11, oauthAppDO.getAppOwner().getUserStoreDomain());
         prepStmt.setString(12, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
         prepStmt.setInt(13, IdentityTenantUtil.getLoginTenantId());
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appOrgId)) {
+            try {
+                String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appOrgId);
+                prepStmt.setInt(13, IdentityTenantUtil.getTenantId(tenantDomain));
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for " +
+                        "organization id: " + appOrgId, e);
+            }
+        }
     }
 
     private void setValuesToStatementWithPKCENoOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt)

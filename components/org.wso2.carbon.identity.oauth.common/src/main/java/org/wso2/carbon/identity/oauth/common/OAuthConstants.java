@@ -117,6 +117,8 @@ public final class OAuthConstants {
 
     public static final String READ_AMR_VALUE_FROM_IDP = "OAuth.ReplaceDefaultAMRValuesWithIDPSentValues";
 
+    public static final String OAUTH_APP = "OAuthAppDO";
+
     public static final String CNF = "cnf";
     public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
     public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
@@ -579,6 +581,7 @@ public final class OAuthConstants {
         public static final String EMAIL_VERIFIED = "email_verified";
         public static final String ADDRESS = "address";
         public static final String ROLES = "roles";
+        public static final String APP_ROLES = "application_roles";
         public static final String CUSTOM = "custom";
         public static final String AZP = "azp";
         public static final String AUTH_TIME = "auth_time";

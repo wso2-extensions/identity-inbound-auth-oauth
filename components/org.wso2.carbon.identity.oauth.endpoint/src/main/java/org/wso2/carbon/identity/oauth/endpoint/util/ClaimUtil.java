@@ -190,7 +190,10 @@ public class ClaimUtil {
                                         continue;
                                     }
                                 }
-                                if (isMultiValuedAttribute(oidcClaimUri, claimValue)) {
+                                boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration
+                                        .getInstance().getUserInfoMultiValueSupportEnabled();
+                                if (isMultiValueSupportEnabledForUserinfoResponse &&
+                                        isMultiValuedAttribute(oidcClaimUri, claimValue)) {
                                     String[] attributeValues = processMultiValuedAttribute(claimValue);
                                     mappedAppClaims.put(oidcClaimUri, attributeValues);
                                 } else {

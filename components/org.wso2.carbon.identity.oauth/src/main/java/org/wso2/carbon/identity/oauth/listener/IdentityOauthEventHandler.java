@@ -490,23 +490,24 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             throws IdentityEventException {
 
         try {
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            UserStoreManager userStoreManager = getUserStoreManager(tenantId);
-
-            String userName;
             if (CollectionUtils.isNotEmpty(userIDList)) {
+                int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
+                UserStoreManager userStoreManager = getUserStoreManager(tenantId);
+
                 for (String userId : userIDList) {
                     try {
-                        userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
+                        String userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
                         if (userName == null) {
                             log.warn("User name is null for user id: " + userId + ". Hence skipping " +
                                     "token revocation and session termination processes.");
                             continue;
                         }
+                        UserStoreManager userStoreManagerOfUser = getUserStoreManagerOfUser(
+                                userStoreManager, userName);
                         OAuth2ServiceComponentHolder.getInstance()
                                 .getRevocationProcessor()
-                                .revokeTokens(userName, userStoreManager, roleId);
-                        OAuthUtil.removeUserClaimsFromCache(userName, userStoreManager);
+                                .revokeTokens(userName, userStoreManagerOfUser, roleId);
+                        OAuthUtil.removeUserClaimsFromCache(userName, userStoreManagerOfUser);
                     } catch (UserSessionException e) {
                         String errorMsg = "Error occurred while revoking access token for user Id: " + userId;
                         log.error(errorMsg, e);
@@ -519,5 +520,23 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
             log.error(errorMsg, e);
             throw new IdentityEventException(errorMsg, e);
         }
+    }
+
+    /**
+     * Get the user store manager of the user.
+     *
+     * @param userStoreManager User store manager.
+     * @param userName         Username of the user.
+     * @return User store manager of the user.
+     */
+    private UserStoreManager getUserStoreManagerOfUser(UserStoreManager userStoreManager, String userName) {
+
+        String userStoreDomainOfUser = IdentityUtil.extractDomainFromName(userName);
+        UserStoreManager secondaryUserStoreManager = userStoreManager.getSecondaryUserStoreManager(
+                userStoreDomainOfUser);
+        if (secondaryUserStoreManager == null) {
+            return userStoreManager;
+        }
+        return secondaryUserStoreManager;
     }
 }

@@ -18,11 +18,13 @@
 
 package org.wso2.carbon.identity.oauth2.dao;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OldAccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -30,6 +32,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 
 /**
  * This is DAO class for cleaning old Tokens. When new tokens is generated ,refreshed or revoked old access token
@@ -98,8 +102,22 @@ public class OldTokensCleanDAO {
             oldAccessTokenObject.setSubjectIdentifier(resultSet.getString(17));
             oldAccessTokenObject.setAccessTokenHash(resultSet.getString(18));
             oldAccessTokenObject.setRefreshTokenHash(resultSet.getString(19));
+            String tokenBindingRef = resultSet.getString(20);
+            if (StringUtils.isNotBlank(tokenBindingRef)) {
+                TokenBinding tokenBinding = new TokenBinding();
+                tokenBinding.setBindingReference(tokenBindingRef);
+                oldAccessTokenObject.setTokenBinding(tokenBinding);
+            }
+
+            String isConsentedToken = resultSet.getString(21);
+            if (StringUtils.isNotEmpty(isConsentedToken)) {
+                oldAccessTokenObject.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
+            }
+
+            oldAccessTokenObject.setAuthorizedOrganizationId(resultSet.getString(22));
+
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-                oldAccessTokenObject.setIdpId(resultSet.getInt(20));
+                oldAccessTokenObject.setIdpId(resultSet.getInt(23));
             }
         }
         if (OAuthServerConfiguration.getInstance().useRetainOldAccessTokens()) {
@@ -138,8 +156,16 @@ public class OldTokensCleanDAO {
         insertintoaudittable.setString(18, oldAccessTokenDAO.getAccessTokenHash());
         insertintoaudittable.setString(19, oldAccessTokenDAO.getRefreshTokenHash());
         insertintoaudittable.setTimestamp(20, new Timestamp(System.currentTimeMillis()));
+        if (oldAccessTokenDAO.getTokenBinding() != null && StringUtils
+                .isNotBlank(oldAccessTokenDAO.getTokenBinding().getBindingReference())) {
+            insertintoaudittable.setString(21, oldAccessTokenDAO.getTokenBinding().getBindingReference());
+        } else {
+            insertintoaudittable.setString(21, NONE);
+        }
+        insertintoaudittable.setString(22, Boolean.toString(oldAccessTokenDAO.isConsentedToken()));
+        insertintoaudittable.setString(23, oldAccessTokenDAO.getAuthorizedOrganizationId());
         if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
-            insertintoaudittable.setInt(21, oldAccessTokenDAO.getIdpId());
+            insertintoaudittable.setInt(24, oldAccessTokenDAO.getIdpId());
         }
         insertintoaudittable.execute();
         if (log.isDebugEnabled()) {

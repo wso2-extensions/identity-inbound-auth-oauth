@@ -66,6 +66,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private boolean hasNonOIDCClaims;
 
+    private Map<ClaimMapping, String> mappedRemoteClaims;
+
     /*
         OIDC sub claim. This should be formatted based on the Service Provider configurations to append
         userStoreDomain and tenantDomain.
@@ -389,5 +391,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setPreIssueAccessTokenActionsExecuted(boolean preIssueAccessTokenActionsExecuted) {
 
         isPreIssueAccessTokenActionsExecuted = preIssueAccessTokenActionsExecuted;
+    }
+
+    public Map<ClaimMapping, String> getMappedRemoteClaims() {
+
+        return mappedRemoteClaims;
+    }
+
+    public void setMappedRemoteClaims(
+            Map<ClaimMapping, String> mappedRemoteClaims) {
+
+        this.mappedRemoteClaims = mappedRemoteClaims;
     }
 }

@@ -81,10 +81,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT;
 
 /**
  * Abstract authorization grant handler.
@@ -171,6 +174,29 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
             AccessTokenDO existingTokenBean = null;
+
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
+            String tokenType = oauthTokenIssuer.getAccessTokenType();
+
+            /*
+            Check if the token type is JWT and renew without revoking existing tokens is enabled.
+            Additionally, ensure that the grant type used for the token request is allowed to renew without revoke,
+            based on the config.
+            */
+            if (JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
+                    OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                            .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
+                /*
+                If the application does not have a token binding type (i.e., no specific binding type is set),
+                binding reference will be randomly generated UUID, in that case we can generate a new access token
+                without looking up the existing tokens in the token table.
+                */
+                if (oAuthAppDO.getTokenBindingType() == null) {
+                    return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean,
+                            false, oauthTokenIssuer);
+                }
+            }
+
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
                         getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
@@ -706,6 +732,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
     }
 
+    private boolean getRenewWithoutRevokingExistingStatus() {
+
+        return Boolean.parseBoolean(IdentityUtil.
+                getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
+    }
+
     private String getNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, OauthTokenIssuer oauthTokenIssuer)
             throws IdentityOAuth2Exception {
         try {
@@ -1137,7 +1169,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled();
     }
 
-    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx, AccessTokenDO existingTokenBean) {
+    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx, AccessTokenDO existingTokenBean)
+            throws IdentityOAuth2Exception {
 
         if (cacheEnabled) {
             String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
@@ -1174,18 +1207,68 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      * @param tokReqMsgCtx OAuthTokenReqMessageContext.
      * @return token binding reference.
      */
-    protected String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    protected String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
 
-        if (tokReqMsgCtx.getTokenBinding() == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Token binding data is null.");
+        /**
+         * If OAuth.JWT.RenewTokenWithoutRevokingExisting is enabled from configurations, and current token
+         * binding is null,then we will add a new token binding (request binding) to the token binding with
+         * a value of a random UUID.
+         * The purpose of this new token binding type is to add a random value to the token binding so that
+         * "User, Application, Scope, Binding" combination will be unique for each token.
+         * Previously, if a token issue request come for the same combination of "User, Application, Scope, Binding",
+         * the existing JWT token will be revoked and issue a new token. but with this way, we can issue new tokens
+         * without revoking the old ones.
+         *
+         * Add following configuration to deployment.toml file to enable this feature.
+         *     [oauth.jwt.renew_token_without_revoking_existing]
+         *     enable = true
+         *
+         * By default, the allowed grant type for this feature is "client_credentials". If you need to enable for
+         * other grant types, add the following configuration to deployment.toml file.
+         *     [oauth.jwt.renew_token_without_revoking_existing]
+         *     enable = true
+         *     allowed_grant_types = ["client_credentials","password", ...]
+         */
+        String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        OauthTokenIssuer oauthTokenIssuer;
+
+        try {
+            oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
+        }
+
+        String tokenType = oauthTokenIssuer.getAccessTokenType();
+
+        if (JWT.equalsIgnoreCase(tokenType)) {
+            if (getRenewWithoutRevokingExistingStatus()
+                    && tokReqMsgCtx != null && (tokReqMsgCtx.getTokenBinding() == null
+                    || StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference()))) {
+                if (OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                        .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
+                    return UUID.randomUUID().toString();
+                }
+                return NONE;
             }
+        }
+        return getExistingTokenBindingReference(tokReqMsgCtx);
+    }
+
+    /**
+     * Retrieves the existing token binding reference if available, otherwise returns NONE.
+     *
+     * @param tokReqMsgCtx OAuthTokenReqMessageContext.
+     * @return token binding reference.
+     */
+    private String getExistingTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx == null || tokReqMsgCtx.getTokenBinding() == null) {
             return NONE;
         }
-        if (StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference())) {
-            return NONE;
-        }
-        return tokReqMsgCtx.getTokenBinding().getBindingReference();
+        String bindingReference = tokReqMsgCtx.getTokenBinding().getBindingReference();
+        return StringUtils.isBlank(bindingReference) ? NONE : bindingReference;
     }
 
     /**
