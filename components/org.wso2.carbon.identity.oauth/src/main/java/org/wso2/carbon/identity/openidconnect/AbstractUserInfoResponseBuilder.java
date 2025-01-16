@@ -95,10 +95,17 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
     private void handleRolesClaim(Map<String, Object> filteredUserClaims) {
 
         // This check is added for the backward compatibility of userinfo response.
-        if (OAuthServerConfiguration.getInstance().getUserInfoInternalPrefixedRolesClaimEnabled()) {
+        if (OAuthServerConfiguration.getInstance().getUserInfoInternalPrefixedRolesClaimAllowed()) {
+            return;
+        }
+
+        if (!(filteredUserClaims.get(ROLES) instanceof String[])) {
             return;
         }
         String[] roles = (String[]) filteredUserClaims.get(ROLES);
+        if (roles == null) {
+            return;
+        }
         for (int i = 0; i < roles.length; i++) {
             String role = roles[i];
             if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {

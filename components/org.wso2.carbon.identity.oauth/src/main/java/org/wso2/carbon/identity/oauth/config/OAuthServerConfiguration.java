@@ -233,7 +233,7 @@ public class OAuthServerConfiguration {
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
-    private boolean userInfoInternalPrefixedRolesClaimEnabled = true;
+    private boolean userInfoInternalPrefixedRolesClaimAllowed = true;
 
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
@@ -1582,9 +1582,9 @@ public class OAuthServerConfiguration {
      *
      * @return True if Internal prefix value should be appended for the role claim of userinfo response.
      */
-    public boolean getUserInfoInternalPrefixedRolesClaimEnabled() {
+    public boolean getUserInfoInternalPrefixedRolesClaimAllowed() {
 
-        return userInfoInternalPrefixedRolesClaimEnabled;
+        return userInfoInternalPrefixedRolesClaimAllowed;
     }
 
     public String getConsumerDialectURI() {
@@ -3518,10 +3518,10 @@ public class OAuthServerConfiguration {
 
             OMElement userInfoInternalPrefixedRolesClaim = openIDConnectConfigElem
                     .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
-                            .OPENID_CONNECT_USERINFO_INTERNAL_PREFIXED_ROLE_CLAIM_ENABLED));
+                            .OPENID_CONNECT_USERINFO_INTERNAL_PREFIXED_ROLE_CLAIM_ALLOWED));
             if (userInfoInternalPrefixedRolesClaim != null) {
-                userInfoInternalPrefixedRolesClaimEnabled = Boolean.parseBoolean(
-                        userInfoInternalPrefixedRolesClaim.getText().trim());
+                userInfoInternalPrefixedRolesClaimAllowed =
+                        Boolean.parseBoolean(userInfoInternalPrefixedRolesClaim.getText().trim());
             }
 
             if (openIDConnectConfigElem.getFirstChildWithName(
@@ -4153,8 +4153,8 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
         public static final String OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED =
                 "UserInfoMultiValueSupportEnabled";
-        public static final String OPENID_CONNECT_USERINFO_INTERNAL_PREFIXED_ROLE_CLAIM_ENABLED =
-                "UserInfoInternalPrefixedRolesClaimEnabled";
+        public static final String OPENID_CONNECT_USERINFO_INTERNAL_PREFIXED_ROLE_CLAIM_ALLOWED =
+                "UserInfoInternalPrefixedRolesClaimAllowed";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
