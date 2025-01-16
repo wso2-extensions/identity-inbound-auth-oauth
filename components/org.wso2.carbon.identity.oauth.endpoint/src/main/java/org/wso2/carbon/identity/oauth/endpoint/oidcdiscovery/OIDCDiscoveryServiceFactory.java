@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
 import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 
