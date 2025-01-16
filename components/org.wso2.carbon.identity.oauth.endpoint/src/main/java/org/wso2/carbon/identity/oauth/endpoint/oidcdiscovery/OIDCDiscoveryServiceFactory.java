@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery;
 
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
+import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.impl.OIDProviderJSONResponseBuilder;
 
 /**
  * Service holder for managing instances of OIDC Discovery related services.
@@ -29,12 +30,7 @@ public class OIDCDiscoveryServiceFactory {
     private static final OIDProviderResponseBuilder SERVICE;
 
     static {
-        OIDProviderResponseBuilder oidProviderResponseBuilder = (OIDProviderResponseBuilder) PrivilegedCarbonContext
-                .getThreadLocalCarbonContext().getOSGiService(OIDProviderResponseBuilder.class, null);
-        if (oidProviderResponseBuilder == null) {
-            throw new IllegalStateException("OIDProviderResponseBuilder is not available from OSGi context.");
-        }
-        SERVICE = oidProviderResponseBuilder;
+        SERVICE = new OIDProviderJSONResponseBuilder();
     }
 
     public static OIDProviderResponseBuilder getOIDProviderResponseBuilder() {
