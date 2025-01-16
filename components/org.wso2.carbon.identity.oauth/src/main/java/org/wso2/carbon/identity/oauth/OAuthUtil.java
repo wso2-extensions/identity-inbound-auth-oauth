@@ -1039,7 +1039,8 @@ public final class OAuthUtil {
                             .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
 
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
-                    clientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds), tenantDomain);
+                    clientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
+                            authenticatedUser.getTenantDomain());
                 }
 
             } catch (IdentityOAuth2Exception e) {
