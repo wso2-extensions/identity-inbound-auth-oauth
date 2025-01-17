@@ -24,10 +24,12 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.rar.utils.AuthorizationDetailsBaseTest;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.wso2.carbon.identity.oauth2.TestConstants.ACESS_TOKEN_ID;
@@ -39,7 +41,8 @@ public class DefaultAuthorizationDetailsValidatorTest extends AuthorizationDetai
 
     @BeforeClass
     public void setUp() throws IdentityOAuth2Exception {
-        when(serviceMock.getAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID))
+        this.serviceMock = mock(AuthorizationDetailsService.class);
+        when(this.serviceMock.getAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID))
                 .thenReturn(authorizationDetails);
 
         this.uut = new DefaultAuthorizationDetailsValidator(processorFactoryMock, serviceMock, schemaValidatorMock);

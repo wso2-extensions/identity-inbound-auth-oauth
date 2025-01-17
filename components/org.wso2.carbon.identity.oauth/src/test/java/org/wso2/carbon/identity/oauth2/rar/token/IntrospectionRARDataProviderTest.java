@@ -79,11 +79,9 @@ public class IntrospectionRARDataProviderTest extends AuthorizationDetailsBaseTe
         when(validatorMock.getValidatedAuthorizationDetails(any(OAuth2TokenValidationMessageContext.class)))
                 .thenReturn(new AuthorizationDetails());
 
-        try (MockedStatic<OAuth2Util> oAuth2UtilMock = Mockito.mockStatic(OAuth2Util.class);
-             MockedStatic<OAuth2ServiceComponentHolder> componentHolderMock =
+        try (MockedStatic<OAuth2ServiceComponentHolder> componentHolderMock =
                      Mockito.mockStatic(OAuth2ServiceComponentHolder.class)) {
 
-            oAuth2UtilMock.when(() -> OAuth2Util.buildScopeArray(any())).thenReturn(new String[0]);
             componentHolderMock.when(OAuth2ServiceComponentHolder::getInstance)
                     .thenReturn(this.componentHolderMock);
 

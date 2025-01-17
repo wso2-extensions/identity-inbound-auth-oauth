@@ -115,7 +115,7 @@ public class AuthorizationDetailsBaseTest {
         this.accessTokenDO.setTokenId(ACESS_TOKEN_ID);
         this.accessTokenDO.setTenantID(TENANT_ID);
 
-        mockAuthorizationDetailsProviderFactory();
+        mockAuthorizationDetailsProcessorFactory();
         this.serviceMock = mock(AuthorizationDetailsService.class);
 
         this.schemaValidatorMock = spy(AuthorizationDetailsSchemaValidator.class);
@@ -133,7 +133,7 @@ public class AuthorizationDetailsBaseTest {
         assertFalse(attributes.containsKey(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS));
     }
 
-    private void mockAuthorizationDetailsProviderFactory() {
+    private void mockAuthorizationDetailsProcessorFactory() {
 
         this.processorFactoryMock = spy(AuthorizationDetailsProcessorFactory.class);
         try {

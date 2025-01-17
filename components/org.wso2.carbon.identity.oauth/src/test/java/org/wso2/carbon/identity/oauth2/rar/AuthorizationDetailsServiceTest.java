@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
 import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
@@ -126,6 +127,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         when(processor.getType()).thenReturn(TEST_TYPE);
         when(processor.validate(any(AuthorizationDetailsContext.class))).thenReturn(ValidationResult.valid());
 
+        this.processorFactoryMock = Mockito.mock(AuthorizationDetailsProcessorFactory.class);
         when(this.processorFactoryMock.getAuthorizationDetailsProcessorByType(TEST_TYPE))
                 .thenReturn(Optional.of(processor));
 
