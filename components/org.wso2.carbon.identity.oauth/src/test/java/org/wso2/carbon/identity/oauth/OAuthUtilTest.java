@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,7 +24,10 @@ import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.mockito.Mockito;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.DataProvider;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -50,19 +53,27 @@ import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.user.core.jdbc.UniqueIDJDBCUserStoreManager;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import java.util.HashSet;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -74,10 +85,31 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
  */
 @WithCarbonHome
 @WithRealmService
+@Listeners(MockitoTestNGListener.class)
 public class OAuthUtilTest {
+
+    private static final String managedOrgClaim = "http://wso2.org/claims/identity/managedOrg";
+    private static final String orgID = "76dedfb5-99ef-4bf3-92e6-56d296db55ec";
+
+    @Mock
+    private OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
+
+    @Mock
+    private OrganizationManager organizationManagerMock;
+
+    @Mock
+    private OrganizationUserSharingService organizationUserSharingServiceMock;
+
+    @Mock
+    private TokenManagementDAO tokenManagementDAOMock;
+
+    @Mock
+    private OAuthTokenPersistenceFactory oAuthTokenPersistenceFactoryMock;
+
 
     @Mock
     RoleManagementService roleManagementService;
+
     @Mock
     ApplicationManagementService applicationManagementService;
 
@@ -291,8 +323,53 @@ public class OAuthUtilTest {
         assertTrue(result, "Token revocation failed.");
     }
 
-    private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {
+    @Test
+    public void testRevokeTokensInSharedUserFlow() throws Exception {
 
+        UniqueIDJDBCUserStoreManager userStoreManager = Mockito.spy(
+                new UniqueIDJDBCUserStoreManager(new RealmConfiguration(), 1));
+
+        org.wso2.carbon.user.core.common.User mockUser = Mockito.mock(org.wso2.carbon.user.core.common.User.class);
+        doReturn(mockUser).when(userStoreManager).getUser(null, null);
+
+        Map<String, String> claimsMap = new HashMap<>();
+        claimsMap.put(managedOrgClaim, orgID);
+        doReturn(claimsMap).when(userStoreManager).getUserClaimValuesWithID(null, new String[]{managedOrgClaim}, null);
+
+        try (MockedStatic<OrganizationManagementUtil> organizationManagementUtil
+                     = mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder
+                     = mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory
+                     = mockStatic(OAuthTokenPersistenceFactory.class)
+        ) {
+            mockStaticMethods(oAuthComponentServiceHolder, oAuthTokenPersistenceFactory, organizationManagementUtil);
+
+            boolean result = OAuthUtil.revokeTokens(null, userStoreManager, null);
+            assertTrue(result);
+        }
+    }
+
+    private void mockStaticMethods(MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder,
+                                   MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory,
+                                   MockedStatic<OrganizationManagementUtil> organizationManagementUtil)
+            throws Exception {
+
+        oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                .thenReturn(oAuthComponentServiceHolderMock);
+        when(oAuthComponentServiceHolderMock.getOrganizationManager()).thenReturn(organizationManagerMock);
+        when(oAuthComponentServiceHolderMock.getOrganizationUserSharingService())
+                .thenReturn(organizationUserSharingServiceMock);
+
+        oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                .thenReturn(oAuthTokenPersistenceFactoryMock);
+        when(oAuthTokenPersistenceFactoryMock.getTokenManagementDAO()).thenReturn(tokenManagementDAOMock);
+
+        organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString())).thenReturn(true);
+        when(organizationManagerMock.isPrimaryOrganization(anyString())).thenReturn(true);
+    }
+
+    private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {
 
         // Add some value to OAuthCache.
         DummyOAuthCacheEntry dummyOAuthCacheEntry = new DummyOAuthCacheEntry("identifier");
