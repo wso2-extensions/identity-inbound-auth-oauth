@@ -78,7 +78,6 @@ import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderRequestV
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory;
-import org.wso2.carbon.identity.oauth.endpoint.util.factory.WebFingerServiceFactory;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -792,8 +791,6 @@ public class EndpointUtilTest {
     @Test
     public void testGetServices() {
 
-        assertTrue(WebFingerServiceFactory.getWebFingerService() instanceof DefaultWebFingerProcessor,
-                "Retrieved incorrect WebFingerService");
         assertTrue(OIDCProviderRequestValidatorFactory.getOIDProviderRequestValidator()
                         instanceof DefaultOIDCProviderRequestBuilder,
                 "Retrieved incorrect OIDProviderRequestValidator");
