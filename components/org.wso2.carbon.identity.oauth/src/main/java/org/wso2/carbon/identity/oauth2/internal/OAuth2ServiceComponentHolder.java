@@ -979,6 +979,8 @@ public class OAuth2ServiceComponentHolder {
 
     /**
      * set an {@link AuthorizationDetailsTypeManager} instance.
+     *
+     * @param authorizationDetailsTypeManager An {@link AuthorizationDetailsTypeManager} instance.
      */
     public void setAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager authorizationDetailsTypeManager) {
 

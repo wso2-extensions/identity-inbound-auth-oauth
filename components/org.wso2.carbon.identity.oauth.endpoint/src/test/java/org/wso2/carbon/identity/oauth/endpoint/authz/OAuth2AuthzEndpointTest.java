@@ -51,6 +51,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.testng.collections.Sets;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
@@ -113,6 +114,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.DefaultResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.impl.FormPostResponseModeProvider;
@@ -287,7 +291,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
     @Mock
-    private AuthorizationDetailsService authorizationDetailsService;
+    private AuthorizationDetailsService authorizationDetailsServiceMock;
+
+    @Mock
+    private AuthorizationDetailsValidator authorizationDetailsValidatorMock;
+
+    @Mock
+    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderMock;
 
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
@@ -577,8 +587,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 SessionDataCacheKey consentDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_CONSENT_VALUE);
                 when(mockSessionDataCache.getValueFromCache(loginDataCacheKey)).thenReturn(loginCacheEntry);
                 when(mockSessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
-                when(loginCacheEntry.getoAuth2Parameters()).thenReturn(setOAuth2Parameters(
-                        new HashSet<>(Collections.singletonList(OAuthConstants.Scope.OPENID)), APP_NAME, null, null));
+                when(loginCacheEntry.getoAuth2Parameters()).thenReturn(setOAuth2Parameters(new HashSet<>(Collections
+                        .singletonList(OAuthConstants.Scope.OPENID)), APP_NAME, null, null, null));
 
                 mockEndpointUtil(false, endpointUtil);
                 when(oAuth2Service.getOauthApplicationState(CLIENT_ID_VALUE)).thenReturn("ACTIVE");
@@ -676,32 +686,39 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "provideAuthenticatedData")
     public Object[][] provideAuthenticatedData() {
 
+        final AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
+        testAuthorizationDetail.setType("test_type");
+
         return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
+                        null, RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
 
                 {false, true, null, null, null, null, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
+                        null, RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
 
-                {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList("scope1")), "not_form_post",
-                        APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
+                {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList("scope1")), null,
+                        "not_form_post", APP_REDIRECT_URL, HttpServletResponse.SC_FOUND},
 
                 {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL_JSON, HttpServletResponse.SC_OK},
+                        null, RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL_JSON, HttpServletResponse.SC_OK},
 
-                {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList("scope1")),
+                {true, true, new HashMap(), null, null, null, new HashSet<>(Arrays.asList("scope1")), null,
                         RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL_JSON, HttpServletResponse.SC_OK},
 
                 {true, false, null, OAuth2ErrorCodes.INVALID_REQUEST, null, null,
-                        new HashSet<>(Arrays.asList("scope1")),
+                        new HashSet<>(Arrays.asList("scope1")), null,
                         RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_OK},
 
                 {true, false, null, null, "Error!", null, new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                        RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_OK},
+                        null, RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL, HttpServletResponse.SC_OK},
 
                 {true, false, null, null, null, "http://localhost:8080/error",
-                        new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)), RESPONSE_MODE_FORM_POST,
-                        APP_REDIRECT_URL, HttpServletResponse.SC_OK}
+                        new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)), null, RESPONSE_MODE_FORM_POST,
+                        APP_REDIRECT_URL, HttpServletResponse.SC_OK},
+
+                {true, true, new HashMap<>(), null, null, null, Sets.newHashSet("scope1"),
+                        Sets.newHashSet(testAuthorizationDetail), RESPONSE_MODE_FORM_POST, APP_REDIRECT_URL_JSON,
+                        HttpServletResponse.SC_OK}
         });
     }
 
@@ -709,6 +726,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     public void testAuthorizeForAuthenticationResponse(boolean isResultInRequest, boolean isAuthenticated,
                                                        Map<ClaimMapping, String> attributes, String errorCode,
                                                        String errorMsg, String errorUri, Set<String> scopes,
+                                                       Set<AuthorizationDetail> testAuthorizationDetails,
                                                        String responseMode, String redirectUri, int expected,
                                                        boolean diagnosticLogsEnabled)
             throws Exception {
@@ -729,7 +747,9 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class,
                          Mockito.CALLS_REAL_METHODS);
                  MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
-                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
+                 MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<OAuth2ServiceComponentHolder> serviceComponentHolder =
+                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
 
                 sessionDataCache.when(SessionDataCache::getInstance).thenReturn(mockSessionDataCache);
                 SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
@@ -770,7 +790,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 identityUtil.when(() -> IdentityUtil.getServerURL(anyString(), anyBoolean(), anyBoolean()))
                         .thenReturn("https://localhost:9443/carbon");
 
-                OAuth2Parameters oAuth2Params = setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri);
+                OAuth2Parameters oAuth2Params =
+                        setOAuth2Parameters(scopes, APP_NAME, responseMode, redirectUri, testAuthorizationDetails);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
                 oAuth2Params.setState(STATE);
                 when(loginCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
@@ -796,6 +817,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 authzReqDTO.setResponseType("code");
                 OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authzReqDTO);
                 authzReqMsgCtx.setApprovedScope(new String[]{OAuthConstants.Scope.OPENID});
+                authzReqMsgCtx.setApprovedAuthorizationDetails(new AuthorizationDetails(testAuthorizationDetails));
                 when(oAuth2Service.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class))).thenReturn(
                         authzReqMsgCtx);
                 when(mockAuthorizationHandlerManager.validateScopesBeforeConsent(any(OAuth2AuthorizeReqDTO.class)))
@@ -819,9 +841,18 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 when(oAuth2ScopeService.hasUserProvidedConsentForAllRequestedScopes(
                         anyString(), isNull(), anyInt(), anyList())).thenReturn(true);
 
-                when(authorizationDetailsService.isUserAlreadyConsentedForAuthorizationDetails(
+                when(authorizationDetailsServiceMock.isUserAlreadyConsentedForAuthorizationDetails(
                         any(AuthenticatedUser.class), any(OAuth2Parameters.class))).thenReturn(true);
-                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsService);
+                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsServiceMock);
+
+                when(authorizationDetailsValidatorMock
+                        .getValidatedAuthorizationDetails(any(OAuthAuthzReqMessageContext.class)))
+                        .thenReturn(new AuthorizationDetails(testAuthorizationDetails));
+
+                when(oAuth2ServiceComponentHolderMock.getAuthorizationDetailsValidator())
+                        .thenReturn(authorizationDetailsValidatorMock);
+                serviceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                        .thenReturn(oAuth2ServiceComponentHolderMock);
 
                 mockServiceURLBuilder(serviceURLBuilder);
                 setSupportedResponseModes();
@@ -976,7 +1007,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
                 OAuth2Parameters oAuth2Params =
-                        setOAuth2Parameters(scopes, APP_NAME, RESPONSE_MODE_FORM_POST, redirectUrl);
+                        setOAuth2Parameters(scopes, APP_NAME, RESPONSE_MODE_FORM_POST, redirectUrl, null);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
 
                 when(consentCacheEntry.getoAuth2Parameters()).thenReturn(oAuth2Params);
@@ -1620,7 +1651,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 when(mockSessionDataCache.getValueFromCache(consentDataCacheKey)).thenReturn(consentCacheEntry);
 
                 OAuth2Parameters oAuth2Params =
-                        setOAuth2Parameters(new HashSet<>(), APP_NAME, responseMode, APP_REDIRECT_URL);
+                        setOAuth2Parameters(new HashSet<>(), APP_NAME, responseMode, APP_REDIRECT_URL, null);
                 oAuth2Params.setResponseType(responseType);
                 oAuth2Params.setState(state);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
@@ -1664,7 +1695,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
                 when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
 
-                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsService);
+                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsServiceMock);
 
                 Response response;
                 try {
@@ -1760,7 +1791,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
 
-                OAuth2Parameters oAuth2Params = setOAuth2Parameters(new HashSet<>(), APP_NAME, null, APP_REDIRECT_URL);
+                OAuth2Parameters oAuth2Params =
+                        setOAuth2Parameters(new HashSet<>(), APP_NAME, null, APP_REDIRECT_URL, null);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
                 oAuth2Params.setPrompt(prompt);
                 oAuth2Params.setIDTokenHint(idTokenHint);
@@ -1920,7 +1952,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 OAuth2Parameters oAuth2Params =
                         setOAuth2Parameters(new HashSet<>(Arrays.asList(OAuthConstants.Scope.OPENID)),
-                                APP_NAME, responseMode, APP_REDIRECT_URL);
+                                APP_NAME, responseMode, APP_REDIRECT_URL, null);
                 oAuth2Params.setClientId(CLIENT_ID_VALUE);
                 oAuth2Params.setPrompt(OAuthConstants.Prompt.LOGIN);
 
@@ -1953,8 +1985,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                                         , anyString()))
                         .thenReturn("sessionStateValue");
                 oidcSessionManagementUtil.when(
-                                () -> OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(),
-                                        isNull())).thenCallRealMethod();
+                        () -> OIDCSessionManagementUtil.addSessionStateToURL(anyString(), anyString(),
+                                isNull())).thenCallRealMethod();
 
                 sessionDataCache.when(SessionDataCache::getInstance).thenReturn(mockSessionDataCache);
                 SessionDataCacheKey loginDataCacheKey = new SessionDataCacheKey(SESSION_DATA_KEY_VALUE);
@@ -2685,11 +2717,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
         endpointUtil.when(EndpointUtil::getOAuthServerConfiguration).thenReturn(mockOAuthServerConfiguration);
         endpointUtil.when(() -> EndpointUtil.getUserConsentURL(any(OAuth2Parameters.class),
-                        anyString(), anyString(), any(OAuthMessage.class), anyString())).thenReturn(USER_CONSENT_URL);
+                anyString(), anyString(), any(OAuthMessage.class), anyString())).thenReturn(USER_CONSENT_URL);
 
         endpointUtil.when(EndpointUtil::getRequestObjectService).thenReturn(requestObjectService);
         endpointUtil.when(() -> EndpointUtil.getLoginPageURL(anyString(), anyString(), anyBoolean(),
-                        anyBoolean(), anySet(), anyMap(), any())).thenReturn(LOGIN_PAGE_URL);
+                anyBoolean(), anySet(), anyMap(), any())).thenReturn(LOGIN_PAGE_URL);
         EndpointUtil.setOAuthAdminService(oAuthAdminService);
         EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
 
@@ -2734,13 +2766,14 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     private OAuth2Parameters setOAuth2Parameters(Set<String> scopes, String appName, String responseMode,
-                                                 String redirectUri) {
+                                                 String redirectUri, Set<AuthorizationDetail> authorizationDetails) {
 
         OAuth2Parameters oAuth2Parameters = new OAuth2Parameters();
         oAuth2Parameters.setScopes(scopes);
         oAuth2Parameters.setResponseMode(responseMode);
         oAuth2Parameters.setRedirectURI(redirectUri);
         oAuth2Parameters.setApplicationName(appName);
+        oAuth2Parameters.setAuthorizationDetails(new AuthorizationDetails(authorizationDetails));
         return oAuth2Parameters;
     }
 
