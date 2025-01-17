@@ -715,7 +715,7 @@ public final class OAuthUtil {
         AuthenticatedUser authenticatedUser = new AuthenticatedUser();
         authenticatedUser.setUserStoreDomain(userStoreDomain);
         authenticatedUser.setTenantDomain(tenantDomain);
-        authenticatedUser.setUserName(username);
+        authenticatedUser.setUserName(UserCoreUtil.removeDomainFromName(username));
         boolean isOrganization;
         try {
             isOrganization = OrganizationManagementUtil.isOrganization(tenantDomain);
@@ -1039,7 +1039,8 @@ public final class OAuthUtil {
                             .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedUser);
 
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
-                    clientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds), tenantDomain);
+                    clientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
+                            authenticatedUser.getTenantDomain());
                 }
 
             } catch (IdentityOAuth2Exception e) {
