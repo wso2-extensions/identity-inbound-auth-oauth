@@ -20,18 +20,17 @@ package org.wso2.carbon.identity.oauth.endpoint.device;
 
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 
 /**
  * Service holder for managing instances of Device Authentication related services.
  */
 public class DeviceServiceFactory {
 
-    private static final DeviceAuthServiceImpl SERVICE;
+    private static final DeviceAuthService SERVICE;
 
     static {
-        DeviceAuthServiceImpl deviceAuthService = (DeviceAuthServiceImpl) PrivilegedCarbonContext
-                .getThreadLocalCarbonContext().getOSGiService(DeviceAuthServiceImpl.class, null);
+        DeviceAuthService deviceAuthService = (DeviceAuthService) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(DeviceAuthService.class, null);
          if (deviceAuthService == null) {
              throw new IllegalStateException("DeviceAuthService is not available from OSGi context.");
          }

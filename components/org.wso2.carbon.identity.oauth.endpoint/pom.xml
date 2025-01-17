@@ -233,7 +233,6 @@
             <artifactId>org.wso2.carbon.identity.oauth.extension</artifactId>
             <scope>compile</scope>
         </dependency>
-
     </dependencies>
 
     <build>

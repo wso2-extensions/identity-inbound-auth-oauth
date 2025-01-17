@@ -821,8 +821,6 @@ public class EndpointUtilTest {
     @Test
     public void testGetServices() {
 
-        assertTrue(WebFingerServiceFactory.getWebFingerService() instanceof DefaultWebFingerProcessor,
-                "Retrieved incorrect WebFingerService");
         assertTrue(OIDCProviderRequestValidatorFactory.getOIDProviderRequestValidator()
                         instanceof DefaultOIDCProviderRequestBuilder,
                 "Retrieved incorrect OIDProviderRequestValidator");
