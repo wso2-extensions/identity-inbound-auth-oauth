@@ -21,11 +21,11 @@ package org.wso2.carbon.identity.oauth;
 import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.mockito.Mockito;
-import org.mockito.testng.MockitoTestNGListener;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -47,39 +47,47 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
-import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
-import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.core.jdbc.UniqueIDJDBCUserStoreManager;
+import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.util.HashMap;
-import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth2.TestConstants.CARBON_TENANT_DOMAIN;
 import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
+import static org.wso2.carbon.identity.oauth2.TestConstants.MANAGED_ORG_CLAIM_URI;
+import static org.wso2.carbon.identity.oauth2.TestConstants.SAMPLE_ID;
 
 /**
  * Unit tests for OAuthUtil class.
@@ -88,12 +96,6 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.LOCAL_IDP;
 @WithRealmService
 @Listeners(MockitoTestNGListener.class)
 public class OAuthUtilTest {
-
-    private static final String managedOrgClaim = "http://wso2.org/claims/identity/managedOrg";
-    private static final String orgID = "76dedfb5-99ef-4bf3-92e6-56d296db55ec";
-
-    @Mock
-    private OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
 
     @Mock
     private OrganizationManager organizationManagerMock;
@@ -105,8 +107,7 @@ public class OAuthUtilTest {
     private TokenManagementDAO tokenManagementDAOMock;
 
     @Mock
-    private OAuthTokenPersistenceFactory oAuthTokenPersistenceFactoryMock;
-
+    private RealmService realmService;
 
     @Mock
     RoleManagementService roleManagementService;
@@ -367,7 +368,7 @@ public class OAuthUtilTest {
         inboundAuthenticationRequestConfigs[0] = inboundAuthenticationRequestConfig;
         inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs(inboundAuthenticationRequestConfigs);
         serviceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
-        when(applicationManagementService.getApplicationByResourceId(
+        lenient().when(applicationManagementService.getApplicationByResourceId(
                 appId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(serviceProvider);
         when(applicationManagementService.getApplicationResourceIDByInboundKey(anyString(), anyString(), anyString())).
                 thenReturn(appId);
@@ -387,11 +388,10 @@ public class OAuthUtilTest {
         when(mockAccessTokenDAO.getAccessTokens(anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
 
-        TokenManagementDAO mockTokenManagementDao = mock(TokenManagementDAO.class);
-        when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(mockTokenManagementDao);
+        when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAOMock);
         Set<String> clientIds = new HashSet<>();
         clientIds.add(clientId);
-        when(mockTokenManagementDao.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
+        when(tokenManagementDAOMock.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
 
         boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
         verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
@@ -401,47 +401,46 @@ public class OAuthUtilTest {
     @Test
     public void testRevokeTokensInSharedUserFlow() throws Exception {
 
-        UniqueIDJDBCUserStoreManager userStoreManager = Mockito.spy(
-                new UniqueIDJDBCUserStoreManager(new RealmConfiguration(), 1));
+        try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class)) {
 
-        org.wso2.carbon.user.core.common.User mockUser = Mockito.mock(org.wso2.carbon.user.core.common.User.class);
-        doReturn(mockUser).when(userStoreManager).getUser(null, null);
+            UniqueIDJDBCUserStoreManager userStoreManager = Mockito.spy(
+                    new UniqueIDJDBCUserStoreManager(new RealmConfiguration(), 1));
 
-        Map<String, String> claimsMap = new HashMap<>();
-        claimsMap.put(managedOrgClaim, orgID);
-        doReturn(claimsMap).when(userStoreManager).getUserClaimValuesWithID(null, new String[]{managedOrgClaim}, null);
+            org.wso2.carbon.user.core.common.User mockUser = Mockito.mock(org.wso2.carbon.user.core.common.User.class);
+            doReturn(mockUser).when(userStoreManager).getUser(any(), eq(null));
 
-        try (MockedStatic<OrganizationManagementUtil> organizationManagementUtil
-                     = mockStatic(OrganizationManagementUtil.class);
-             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder
-                     = mockStatic(OAuthComponentServiceHolder.class);
-             MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory
-                     = mockStatic(OAuthTokenPersistenceFactory.class)
-        ) {
-            mockStaticMethods(oAuthComponentServiceHolder, oAuthTokenPersistenceFactory, organizationManagementUtil);
+            Map<String, String> claimsMap = new HashMap<>();
+            claimsMap.put(MANAGED_ORG_CLAIM_URI, SAMPLE_ID);
+            doReturn(claimsMap).when(userStoreManager)
+                    .getUserClaimValuesWithID(null, new String[]{MANAGED_ORG_CLAIM_URI}, null);
+
+            OAuthComponentServiceHolder mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+            when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManagerMock);
+            when(organizationManagerMock.isPrimaryOrganization(anyString())).thenReturn(true);
+
+            when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(true);
+            when(UserCoreUtil.removeDomainFromName(null)).thenReturn(CARBON_TENANT_DOMAIN);
+
+            UserAssociation userAssociation = new UserAssociation();
+            userAssociation.setAssociatedUserId(SAMPLE_ID);
+            when(mockOAuthComponentServiceHolder.getOrganizationUserSharingService())
+                    .thenReturn(organizationUserSharingServiceMock);
+            when(organizationUserSharingServiceMock.getUserAssociation(null, null))
+                    .thenReturn(userAssociation);
+
+            when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
+            UserRealm userRealm = mock(UserRealm.class);
+            when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+            when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
+
+            OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
+            when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAOMock);
 
             boolean result = OAuthUtil.revokeTokens(null, userStoreManager, null);
             assertTrue(result);
         }
-    }
-
-    private void mockStaticMethods(MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder,
-                                   MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory,
-                                   MockedStatic<OrganizationManagementUtil> organizationManagementUtil)
-            throws Exception {
-
-        oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
-                .thenReturn(oAuthComponentServiceHolderMock);
-        when(oAuthComponentServiceHolderMock.getOrganizationManager()).thenReturn(organizationManagerMock);
-        when(oAuthComponentServiceHolderMock.getOrganizationUserSharingService())
-                .thenReturn(organizationUserSharingServiceMock);
-
-        oAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
-                .thenReturn(oAuthTokenPersistenceFactoryMock);
-        when(oAuthTokenPersistenceFactoryMock.getTokenManagementDAO()).thenReturn(tokenManagementDAOMock);
-
-        organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString())).thenReturn(true);
-        when(organizationManagerMock.isPrimaryOrganization(anyString())).thenReturn(true);
     }
 
     private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {
