@@ -169,6 +169,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         if (log.isDebugEnabled()) {
             log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
         }
+        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
+                userTenantDomain, userStoreManager, true);
+        if (log.isDebugEnabled()) {
+            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+        }
         if (authenticated) {
             AuthenticatedUser authenticatedUser =
                     new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
@@ -178,11 +183,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             return Optional.of(authenticatedUser);
         }
 
-        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
-                userTenantDomain, userStoreManager, true);
-        if (log.isDebugEnabled()) {
-            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
-        }
         return Optional.empty();
     }
 
@@ -387,13 +387,13 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
                         tenantAwareUserName, isPublishPasswordGrantLoginEnabled, userTenantDomain, serviceProvider);
             }
-            if (authenticatedUser.isPresent()) {
-                return authenticatedUser.get();
-            }
             triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
                     userTenantDomain, userStoreManager, false);
             if (log.isDebugEnabled()) {
                 log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+            }
+            if (authenticatedUser.isPresent()) {
+                return authenticatedUser.get();
             }
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
