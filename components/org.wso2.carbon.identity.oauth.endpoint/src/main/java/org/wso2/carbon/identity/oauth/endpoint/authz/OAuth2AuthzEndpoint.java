@@ -111,6 +111,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2AuthzServiceFactory;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;

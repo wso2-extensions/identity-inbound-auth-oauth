@@ -42,7 +42,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -201,7 +203,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
             privilegedCarbonContext.when(
                     PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPrivilegedCarbonContext);
-            lenient().when(mockPrivilegedCarbonContext.getOSGiService(DeviceAuthServiceImpl.class, null))
+            lenient().when(mockPrivilegedCarbonContext.getOSGiService(DeviceAuthService.class, null))
                     .thenReturn(deviceAuthService);
 
             mockOAuthServerConfiguration(oAuthServerConfiguration);
@@ -321,7 +323,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
                         any(HttpServletResponse.class))).
                         thenReturn(response);
-                DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                DeviceAuthService deviceAuthService = new DeviceAuthServiceImpl();
                 deviceServiceHolder.when(DeviceServiceFactory::getDeviceAuthService).thenReturn(deviceAuthService);
 
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
