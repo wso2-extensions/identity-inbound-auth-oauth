@@ -21,12 +21,16 @@ package org.wso2.carbon.identity.oauth.endpoint.device;
 import org.apache.oltu.oauth2.common.OAuth;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.junit.Assert;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -34,6 +38,8 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -46,6 +52,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -67,9 +74,13 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Use for unit tests in device end-point.
@@ -93,10 +104,18 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
     DeviceFlowPersistenceFactory deviceFlowPersistenceFactory;
 
     @Mock
+    DeviceAuthServiceImpl deviceAuthService;
+
+    @Mock
     DeviceFlowDAO deviceFlowDAO;
 
     @Mock
     HttpServletRequest request;
+
+    @Mock
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     private static final String CLIENT_ID_VALUE = "ca19a540f544777860e44e75f605d927";
     private static final String TEST_URL = "testURL";
@@ -119,6 +138,19 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         mockDatabase(identityDatabaseUtil);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(DeviceAuthService.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{deviceAuthService});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
     }
 
     @AfterMethod
@@ -126,6 +158,8 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
 
         loggerUtils.close();
         identityDatabaseUtil.close();
+        mockedConstruction.close();
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @DataProvider(name = "provideValues")
@@ -184,7 +218,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
      * @param expectedStatus Expected status for response.
      * @param status         Status of user code.
      * @throws IdentityOAuth2Exception If failed at device endpoint
-     * @throws OAuthSystemException If failed at device endpoint.
+     * @throws OAuthSystemException    If failed at device endpoint.
      */
     @Test(dataProvider = "dataValues")
     public void testDevice(String clientId, int expectedStatus, boolean status)
@@ -195,7 +229,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
              MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
                      mockStatic(DeviceFlowPersistenceFactory.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
+                     mockStatic(OAuthServerConfiguration.class)) {
             DeviceEndpoint deviceEndpoint = spy(new DeviceEndpoint());
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
@@ -212,8 +246,6 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
             oAuthClientAuthnContext.setClientId(clientId);
             oAuthClientAuthnContext.setAuthenticated(status);
             lenient().when(request.getAttribute(anyString())).thenReturn(oAuthClientAuthnContext);
-            DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
-            deviceEndpoint.setDeviceAuthService(deviceAuthService);
 
             lenient().when(httpServletRequest.getParameter(anyString())).thenReturn(clientId);
             lenient().when(httpServletRequest.getAttribute(OAuthConstants.CLIENT_AUTHN_CONTEXT))

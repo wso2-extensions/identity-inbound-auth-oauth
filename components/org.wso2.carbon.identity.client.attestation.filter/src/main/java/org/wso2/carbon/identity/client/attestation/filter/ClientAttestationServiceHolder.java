@@ -19,6 +19,7 @@
 
 package org.wso2.carbon.identity.client.attestation.filter;
 
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestationService;
 
@@ -29,23 +30,19 @@ import org.wso2.carbon.identity.client.attestation.mgt.services.ClientAttestatio
  */
 public class ClientAttestationServiceHolder {
 
-    // Singleton instance
-    private static ClientAttestationServiceHolder instance = new ClientAttestationServiceHolder();
-
     // Service instances
-    private ClientAttestationService clientAttestationService;
-    private ApplicationManagementService applicationManagementService;
-    // Private constructor to enforce Singleton pattern
-    private ClientAttestationServiceHolder() {}
+    private static class ClientAttestationHolder {
 
-    /**
-     * Returns the singleton instance of the ClientAttestationServiceHolder.
-     *
-     * @return The singleton instance.
-     */
-    public static ClientAttestationServiceHolder getInstance() {
+        static final ClientAttestationService SERVICE = (ClientAttestationService)
+                PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getOSGiService(ClientAttestationService.class, null);
+    }
 
-        return instance;
+    private static class ApplicationManagementHolder {
+
+        static final ApplicationManagementService SERVICE = (ApplicationManagementService)
+                PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getOSGiService(ApplicationManagementService.class, null);
     }
 
     /**
@@ -53,19 +50,12 @@ public class ClientAttestationServiceHolder {
      *
      * @return The Client Attestation Service instance.
      */
-    public ClientAttestationService getClientAttestationService() {
+    public static ClientAttestationService getClientAttestationService() {
 
-        return ClientAttestationServiceHolder.getInstance().clientAttestationService;
-    }
-
-    /**
-     * Sets the instance of the Client Attestation Service.
-     *
-     * @param clientAttestationService The Client Attestation Service instance to set.
-     */
-    public void setClientAttestationService(ClientAttestationService clientAttestationService) {
-
-        ClientAttestationServiceHolder.getInstance().clientAttestationService = clientAttestationService;
+        if (ClientAttestationHolder.SERVICE == null) {
+            throw new IllegalStateException("ClientAttestationService is not available from OSGI context.");
+        }
+        return ClientAttestationHolder.SERVICE;
     }
 
     /**
@@ -73,18 +63,11 @@ public class ClientAttestationServiceHolder {
      *
      * @return The Application Management Service instance.
      */
-    public ApplicationManagementService getApplicationManagementService() {
+    public static ApplicationManagementService getApplicationManagementService() {
 
-        return ClientAttestationServiceHolder.getInstance().applicationManagementService;
-    }
-
-    /**
-     * Sets the instance of the Application Management Service.
-     *
-     * @param applicationManagementService The Application Management Service instance to set.
-     */
-    public void setApplicationManagementService(ApplicationManagementService applicationManagementService) {
-
-        ClientAttestationServiceHolder.getInstance().applicationManagementService = applicationManagementService;
+        if (ApplicationManagementHolder.SERVICE == null) {
+            throw new IllegalStateException("ApplicationManagementService is not available from OSGI context.");
+        }
+        return ApplicationManagementHolder.SERVICE;
     }
 }

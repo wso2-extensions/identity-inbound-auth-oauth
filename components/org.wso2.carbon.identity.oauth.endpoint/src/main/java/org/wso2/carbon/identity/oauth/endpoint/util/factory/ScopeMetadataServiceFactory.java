@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,16 +16,14 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.factory;
+package org.wso2.carbon.identity.oauth.endpoint.util.factory;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.config.AbstractFactoryBean;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
@@ -33,32 +31,30 @@ import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import java.util.List;
 
 /**
- * Factory bean for ScopeService.
+ * Factory class for ScopeMetadataService.
  */
-public class ScopeServiceFactory extends AbstractFactoryBean<ScopeMetadataService> {
+public class ScopeMetadataServiceFactory {
 
-    private ScopeMetadataService scopeMetadataService;
+    private static final ScopeMetadataService SERVICE;
 
-    private static final Log log = LogFactory.getLog(ScopeServiceFactory.class);
+    private static final Log LOG = LogFactory.getLog(ScopeMetadataServiceFactory.class);
 
-    @Override
-    public Class<ScopeMetadataService> getObjectType() {
+    static {
+        ScopeMetadataService scopeMetadataService = setScopeMetadataService();
 
-        return ScopeMetadataService.class;
+        if (scopeMetadataService == null) {
+            throw new IllegalStateException("ScopeMetadataService is not available from OSGi context.");
+        }
+        SERVICE = scopeMetadataService;
     }
 
-    @Override
-    protected ScopeMetadataService createInstance() throws Exception {
+    private static ScopeMetadataService setScopeMetadataService() {
 
-        if (this.scopeMetadataService != null) {
-            return this.scopeMetadataService;
-        }
-
-        ScopeMetadataService scopeMetadataService = getScopeMetadataService();
+        ScopeMetadataService scopeMetadataService = getScopeMetadataServiceFromConfig();
         if (scopeMetadataService != null) {
-            this.scopeMetadataService = scopeMetadataService;
-            return this.scopeMetadataService;
+            return scopeMetadataService;
         }
+
         // Get the OSGi services registered for ScopeService interface.
         List<Object> scopeServices = PrivilegedCarbonContext
                 .getThreadLocalCarbonContext().getOSGiServices(ScopeMetadataService.class, null);
@@ -79,13 +75,12 @@ public class ScopeServiceFactory extends AbstractFactoryBean<ScopeMetadataServic
         }
 
         if (scopeMetadataService == null) {
-            throw new IdentityOAuth2ServerException("ScopeMetadataService is not available.");
+            throw new IllegalStateException("ScopeMetadataService is not available from OSGi context.");
         }
-        this.scopeMetadataService = scopeMetadataService;
-        return this.scopeMetadataService;
+        return scopeMetadataService;
     }
 
-    private ScopeMetadataService getScopeMetadataService() {
+    private static ScopeMetadataService getScopeMetadataServiceFromConfig() {
 
         String scopeMetadataServiceClassName = OAuthServerConfiguration.getInstance()
                 .getScopeMetadataExtensionImpl();
@@ -97,19 +92,24 @@ public class ScopeServiceFactory extends AbstractFactoryBean<ScopeMetadataServic
                 if (obj instanceof ScopeMetadataService) {
                     return (ScopeMetadataService) obj;
                 } else {
-                    log.error(scopeMetadataServiceClassName + " is not an instance of " +
+                    LOG.error(scopeMetadataServiceClassName + " is not an instance of " +
                             ScopeMetadataService.class.getName());
                 }
             } catch (ClassNotFoundException e) {
-                log.error("ClassNotFoundException while trying to find class " + scopeMetadataServiceClassName);
+                LOG.error("ClassNotFoundException while trying to find class " + scopeMetadataServiceClassName);
             } catch (InstantiationException e) {
-                log.error("InstantiationException while trying to instantiate class " +
+                LOG.error("InstantiationException while trying to instantiate class " +
                         scopeMetadataServiceClassName);
             } catch (IllegalAccessException e) {
-                log.error("IllegalAccessException while trying to instantiate class " +
+                LOG.error("IllegalAccessException while trying to instantiate class " +
                         scopeMetadataServiceClassName);
             }
         }
         return null;
+    }
+
+    public static ScopeMetadataService getScopeMetadataService() {
+
+        return SERVICE;
     }
 }
