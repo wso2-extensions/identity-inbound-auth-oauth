@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
-import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 
 /**
@@ -29,12 +28,7 @@ public class OAuth2AuthzServiceFactory {
     private static final OpenIDConnectClaimFilterImpl SERVICE;
 
     static {
-         OpenIDConnectClaimFilterImpl openIDConnectClaimFilter = (OpenIDConnectClaimFilterImpl) PrivilegedCarbonContext
-                .getThreadLocalCarbonContext().getOSGiService(OpenIDConnectClaimFilterImpl.class, null);
-            if (openIDConnectClaimFilter == null) {
-                throw new IllegalStateException("OpenIDConnectClaimFilterImpl is not available from OSGi context.");
-            }
-            SERVICE = openIDConnectClaimFilter;
+        SERVICE = new OpenIDConnectClaimFilterImpl();
     }
 
     public static OpenIDConnectClaimFilterImpl getOpenIdClaimFilterImpl() {
