@@ -22,6 +22,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.identity.api.resource.mgt.util.AuthorizationDetailsTypesUtil;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -68,6 +69,7 @@ public class AuthorizationDetailsService {
     private static final Log log = LogFactory.getLog(AuthorizationDetailsService.class);
     private final AuthorizationDetailsDAO authorizationDetailsDAO;
     private final AuthorizationDetailsProcessorFactory authorizationDetailsProcessorFactory;
+    private final boolean isRichAuthorizationRequestsDisabled;
 
     /**
      * Default constructor that initializes the service with the default {@link AuthorizationDetailsDAO} and
@@ -81,7 +83,8 @@ public class AuthorizationDetailsService {
 
         this(
                 AuthorizationDetailsProcessorFactory.getInstance(),
-                OAuthTokenPersistenceFactory.getInstance().getAuthorizationDetailsDAO()
+                OAuthTokenPersistenceFactory.getInstance().getAuthorizationDetailsDAO(),
+                AuthorizationDetailsTypesUtil.isRichAuthorizationRequestsEnabled()
         );
     }
 
@@ -93,12 +96,14 @@ public class AuthorizationDetailsService {
      *                                             handling authorization details persistence. Must not be {@code null}.
      */
     public AuthorizationDetailsService(final AuthorizationDetailsProcessorFactory authorizationDetailsProcessorFactory,
-                                       final AuthorizationDetailsDAO authorizationDetailsDAO) {
+                                       final AuthorizationDetailsDAO authorizationDetailsDAO,
+                                       final boolean isRichAuthorizationRequestsEnabled) {
 
         this.authorizationDetailsDAO =
                 Objects.requireNonNull(authorizationDetailsDAO, "AuthorizationDetailsDAO must not be null");
         this.authorizationDetailsProcessorFactory = Objects.requireNonNull(authorizationDetailsProcessorFactory,
                 "AuthorizationDetailsProviderFactory must not be null");
+        this.isRichAuthorizationRequestsDisabled = !isRichAuthorizationRequestsEnabled;
     }
 
     /**
@@ -116,7 +121,7 @@ public class AuthorizationDetailsService {
             final AuthorizationDetails userConsentedAuthorizationDetails)
             throws OAuthSystemException {
 
-        if (!isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
             log.debug("Request is not a rich authorization request. Skipping storage of authorization details.");
             return;
         }
@@ -185,7 +190,7 @@ public class AuthorizationDetailsService {
                                                         final String clientId, final OAuth2Parameters oAuth2Parameters)
             throws OAuthSystemException {
 
-        if (!isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
             log.debug("Request is not a rich authorization request. Skipping deletion of authorization details.");
             return;
         }
@@ -239,7 +244,7 @@ public class AuthorizationDetailsService {
                                                                  final OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
             return true;
         }
 
@@ -250,7 +255,7 @@ public class AuthorizationDetailsService {
                                                                        final OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
             log.debug("Request is not a rich authorization request. Skipping the authorization details retrieval.");
             return new AuthorizationDetails();
         }
@@ -368,6 +373,11 @@ public class AuthorizationDetailsService {
     public AuthorizationDetails getUserConsentedAuthorizationDetails(final String consentId, final int tenantId)
             throws IdentityOAuth2Exception {
 
+        if (this.isRichAuthorizationRequestsDisabled) {
+            log.debug("Rich authorization requests is disabled. Skip retrieving consented authorization details.");
+            return new AuthorizationDetails();
+        }
+
         try {
             final Set<AuthorizationDetail> consentedAuthorizationDetails = new HashSet<>();
             this.authorizationDetailsDAO.getUserConsentedAuthorizationDetails(consentId, tenantId)
@@ -413,6 +423,10 @@ public class AuthorizationDetailsService {
     public Optional<String> getConsentIdByUserIdAndAppId(final String userId, final String appId, final int tenantId)
             throws IdentityOAuth2Exception {
 
+        if (this.isRichAuthorizationRequestsDisabled) {
+            log.debug("Rich authorization requests is disabled. Skip retrieving consents.");
+            return Optional.empty();
+        }
         try {
             return Optional
                     .ofNullable(this.authorizationDetailsDAO.getConsentIdByUserIdAndAppId(userId, appId, tenantId));
@@ -434,6 +448,10 @@ public class AuthorizationDetailsService {
     public AuthorizationDetails getAccessTokenAuthorizationDetails(final String accessTokenId, final int tenantId)
             throws IdentityOAuth2Exception {
 
+        if (this.isRichAuthorizationRequestsDisabled) {
+            log.debug("Rich authorization requests is disabled. Skip retrieving token authorization details.");
+            return new AuthorizationDetails();
+        }
         try {
             final Set<AuthorizationDetailsTokenDTO> authorizationDetailsTokenDTOs =
                     this.authorizationDetailsDAO.getAccessTokenAuthorizationDetails(accessTokenId, tenantId);
@@ -482,10 +500,10 @@ public class AuthorizationDetailsService {
                                                      final AuthorizationDetails authorizationDetails)
             throws IdentityOAuth2Exception {
 
-        if (AuthorizationDetailsUtils.isEmpty(authorizationDetails)) {
+        if (this.isRichAuthorizationRequestsDisabled || AuthorizationDetailsUtils.isEmpty(authorizationDetails)) {
+            log.debug("Request is not a rich authorization request. Skipping storage of token authorization details.");
             return;
         }
-
         try {
             final AuthorizationDetails trimmedAuthorizationDetails = AuthorizationDetailsUtils
                     .getTrimmedAuthorizationDetails(authorizationDetails);
@@ -542,6 +560,10 @@ public class AuthorizationDetailsService {
     public void deleteAccessTokenAuthorizationDetails(final String accessTokenId, final int tenantId)
             throws IdentityOAuth2Exception {
 
+        if (this.isRichAuthorizationRequestsDisabled) {
+            log.debug("Rich authorization requests is disabled. Skip persisting token authorization details.");
+            return;
+        }
         try {
             int result = this.authorizationDetailsDAO.deleteAccessTokenAuthorizationDetails(accessTokenId, tenantId);
             if (result > 0 && log.isDebugEnabled()) {
@@ -604,7 +626,7 @@ public class AuthorizationDetailsService {
             final AuthzCodeDO authzCodeDO, final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuthAuthzReqMessageContext)) {
+        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuthAuthzReqMessageContext)) {
             log.debug("Request is not a rich authorization request. Skipping storage of code authorization details.");
             return;
         }
@@ -641,6 +663,10 @@ public class AuthorizationDetailsService {
     public AuthorizationDetails getAuthorizationCodeAuthorizationDetails(final String code, final int tenantId)
             throws IdentityOAuth2Exception {
 
+        if (this.isRichAuthorizationRequestsDisabled) {
+            log.debug("Rich authorization requests is disabled. Skip retrieving code authorization details.");
+            return new AuthorizationDetails();
+        }
         try {
             final Set<AuthorizationDetailsCodeDTO> authorizationDetailsCodeDTOs =
                     this.authorizationDetailsDAO.getOAuth2CodeAuthorizationDetails(code, tenantId);

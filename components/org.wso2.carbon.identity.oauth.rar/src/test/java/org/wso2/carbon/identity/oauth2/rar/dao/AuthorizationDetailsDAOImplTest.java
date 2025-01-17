@@ -265,36 +265,6 @@ public class AuthorizationDetailsDAOImplTest {
         assertNull(this.uut.getConsentIdByUserIdAndAppId("invalid_user_id", "invalid_app_id", TEST_TENANT_ID));
     }
 
-    @Test
-    public void testUserConsentedAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException {
-
-        this.mockAuthorizationDetailsTypesUtil(false);
-
-        assertEquals(0, this.uut.addUserConsentedAuthorizationDetails(Collections.emptySet()).length);
-        assertEquals(0, this.uut.updateUserConsentedAuthorizationDetails(Collections.emptySet()).length);
-        assertEquals(0, this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID).size());
-        assertEquals(-1, this.uut.deleteUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TEST_TENANT_ID));
-    }
-
-    @Test
-    public void testAccessTokenAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException {
-
-        this.mockAuthorizationDetailsTypesUtil(false);
-
-        assertEquals(0, uut.addAccessTokenAuthorizationDetails(Collections.emptySet()).length);
-        assertEquals(0, this.uut.getAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID).size());
-        assertEquals(-1, this.uut.deleteAccessTokenAuthorizationDetails(TEST_TOKEN_ID, TEST_TENANT_ID));
-    }
-
-    @Test
-    public void testOAuth2CodeAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException {
-
-        this.mockAuthorizationDetailsTypesUtil(false);
-
-        assertEquals(0, uut.addOAuth2CodeAuthorizationDetails(Collections.emptySet()).length);
-        assertEquals(0, this.uut.getOAuth2CodeAuthorizationDetails(TEST_AUTHORIZATION_CODE, TEST_TENANT_ID).size());
-    }
-
     private void mockAuthorizationDetailsTypesUtil(boolean isRichAuthorizationRequestsEnabled) {
 
         this.authorizationDetailsTypesUtilMock

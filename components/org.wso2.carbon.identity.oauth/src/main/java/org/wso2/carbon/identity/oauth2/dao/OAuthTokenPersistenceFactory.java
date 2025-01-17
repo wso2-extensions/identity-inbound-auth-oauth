@@ -116,7 +116,7 @@ public class OAuthTokenPersistenceFactory {
      * Retrieves the DAO for authorization details.
      * <p>
      * This method returns an {@link AuthorizationDetailsDAO} singleton instance that provides access to the
-     * {@link org.wso2.carbon.identity.oauth2.rar.common.model.AuthorizationDetails} data. This DAO is used to interact
+     * {@link org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails} data. This DAO is used to interact
      * with the underlying data store to fetch and manipulate authorization information.
      *</p>
      * @return the {@link AuthorizationDetailsDAO} instance that provides access to authorization details data.

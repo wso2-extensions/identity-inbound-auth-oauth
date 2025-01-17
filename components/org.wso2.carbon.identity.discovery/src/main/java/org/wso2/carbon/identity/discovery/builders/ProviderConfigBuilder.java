@@ -157,8 +157,8 @@ public class ProviderConfigBuilder {
         final Set<String> authorizationDetailTypes = AuthorizationDetailsProcessorFactory.getInstance()
                 .getSupportedAuthorizationDetailTypes();
         if (authorizationDetailTypes != null && !authorizationDetailTypes.isEmpty()) {
-            //final int size = supportedTypes.size();
-            providerConfig.setAuthorizationDetailsTypesSupported(authorizationDetailTypes.toArray(String[]::new));
+            providerConfig
+                    .setAuthorizationDetailsTypesSupported(authorizationDetailTypes.stream().toArray(String[]::new));
         }
         return providerConfig;
     }

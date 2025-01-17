@@ -131,7 +131,7 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         when(this.processorFactoryMock.getAuthorizationDetailsProcessorByType(TEST_TYPE))
                 .thenReturn(Optional.of(processor));
 
-        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock);
+        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock, true);
     }
 
     @BeforeMethod(onlyForGroups = {"error-flow-tests"}, dependsOnMethods = {"setUpMethod"})
@@ -150,7 +150,13 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
         when(this.authorizationDetailsDAOMock.deleteAccessTokenAuthorizationDetails(anyString(), anyInt()))
                 .thenThrow(SQLException.class);
 
-        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock);
+        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock, true);
+    }
+
+    @BeforeMethod(onlyForGroups = {"feature-disabled-flow-tests"}, dependsOnMethods = {"setUpErrorMethod"})
+    public void setUpFeatureDisabledMethod() {
+
+        uut = new AuthorizationDetailsService(this.processorFactoryMock, this.authorizationDetailsDAOMock, false);
     }
 
     @Test
@@ -443,4 +449,45 @@ public class AuthorizationDetailsServiceTest extends AuthorizationDetailsBaseTes
 
         uut.deleteAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID);
     }
+
+    @Test(groups = {"feature-disabled-flow-tests"})
+    public void testUserConsentedAuthorizationDetailsWhenFeatureIsDisabled()
+            throws OAuthSystemException, SQLException, IdentityOAuth2Exception {
+
+        this.uut.storeOrUpdateUserConsentedAuthorizationDetails(authenticatedUser, CLIENT_ID, oAuth2Parameters,
+                new AuthorizationDetails());
+        verify(authorizationDetailsDAOMock, times(0)).addUserConsentedAuthorizationDetails(anySet());
+        verify(authorizationDetailsDAOMock, times(0)).updateUserConsentedAuthorizationDetails(anySet());
+
+        this.uut.getUserConsentedAuthorizationDetails(TEST_CONSENT_ID, TENANT_ID);
+        verify(authorizationDetailsDAOMock, times(0)).getUserConsentedAuthorizationDetails(anyString(), anyInt());
+
+        this.uut.deleteUserConsentedAuthorizationDetails(authenticatedUser, TEST_CONSENT_ID, oAuth2Parameters);
+        verify(authorizationDetailsDAOMock, times(0)).deleteUserConsentedAuthorizationDetails(anyString(), anyInt());
+    }
+
+    @Test(groups = {"feature-disabled-flow-tests"})
+    public void testAccessTokenAuthorizationDetailsWhenFeatureIsDisabled()
+            throws SQLException, IdentityOAuth2Exception {
+
+        this.uut.storeAccessTokenAuthorizationDetails(accessTokenDO, authorizationDetails);
+        verify(authorizationDetailsDAOMock, times(0)).addAccessTokenAuthorizationDetails(anySet());
+
+        this.uut.getAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID);
+        verify(authorizationDetailsDAOMock, times(0)).getAccessTokenAuthorizationDetails(anyString(), anyInt());
+
+        this.uut.deleteAccessTokenAuthorizationDetails(ACESS_TOKEN_ID, TENANT_ID);
+        verify(authorizationDetailsDAOMock, times(0)).getAccessTokenAuthorizationDetails(anyString(), anyInt());
+    }
+
+    @Test(groups = {"feature-disabled-flow-tests"})
+    public void testOAuth2CodeAuthorizationDetailsWhenFeatureIsDisabled() throws SQLException, IdentityOAuth2Exception {
+
+        uut.storeAuthorizationCodeAuthorizationDetails(null, new OAuthAuthzReqMessageContext(null));
+        verify(authorizationDetailsDAOMock, times(0)).addOAuth2CodeAuthorizationDetails(anySet());
+
+        this.uut.getAuthorizationCodeAuthorizationDetails("", TENANT_ID);
+        verify(authorizationDetailsDAOMock, times(0)).getOAuth2CodeAuthorizationDetails(anyString(), anyInt());
+    }
+
 }
