@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -317,6 +318,80 @@ public class OAuthUtilTest {
         accessTokens.add(accessTokenDO);
         when(mockAccessTokenDAO.getAccessTokens(anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
+
+        boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
+        verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
+        assertTrue(result, "Token revocation failed.");
+    }
+
+    @Test
+    public void testRevokeTokensForOrganizationAudienceRoles() throws Exception {
+
+        String username = "testUser";
+        String roleId = "testRoleId";
+        String roleName = "testRole";
+        String appId = "testAppId";
+        String clientId = "testClientId";
+        String accessToken = "testAccessToken";
+
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+        when(userStoreManager.getTenantId()).thenReturn(-1234);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(mock(RealmConfiguration.class));
+        when(userStoreManager.getRealmConfiguration().getUserStoreProperty(anyString())).thenReturn("PRIMARY");
+
+        when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
+        when(OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
+
+        OAuthComponentServiceHolder mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
+        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
+
+        when(mockOAuthComponentServiceHolder.getRoleV2ManagementService()).thenReturn(roleManagementService);
+        RoleBasicInfo roleBasicInfo = new RoleBasicInfo();
+        roleBasicInfo.setId(roleId);
+        roleBasicInfo.setAudience(RoleConstants.ORGANIZATION);
+        roleBasicInfo.setAudienceId(appId);
+        roleBasicInfo.setName(roleName);
+        when(roleManagementService.getRoleBasicInfoById(roleId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
+                .thenReturn(roleBasicInfo);
+
+        when(mockOAuthComponentServiceHolder.getApplicationManagementService())
+                .thenReturn(applicationManagementService);
+        ServiceProvider serviceProvider = new ServiceProvider();
+        InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
+        InboundAuthenticationRequestConfig[] inboundAuthenticationRequestConfigs =
+                new InboundAuthenticationRequestConfig[1];
+        InboundAuthenticationRequestConfig inboundAuthenticationRequestConfig =
+                new InboundAuthenticationRequestConfig();
+        inboundAuthenticationRequestConfig.setInboundAuthKey(clientId);
+        inboundAuthenticationRequestConfig.setInboundAuthType(ApplicationConstants.StandardInboundProtocols.OAUTH2);
+        inboundAuthenticationRequestConfigs[0] = inboundAuthenticationRequestConfig;
+        inboundAuthenticationConfig.setInboundAuthenticationRequestConfigs(inboundAuthenticationRequestConfigs);
+        serviceProvider.setInboundAuthenticationConfig(inboundAuthenticationConfig);
+        when(applicationManagementService.getApplicationByResourceId(
+                appId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)).thenReturn(serviceProvider);
+        when(applicationManagementService.getApplicationResourceIDByInboundKey(anyString(), anyString(), anyString())).
+                thenReturn(appId);
+        when(applicationManagementService.getAllowedAudienceForRoleAssociation(anyString(), anyString())).
+                thenReturn(RoleConstants.ORGANIZATION);
+        OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
+        AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+        when(mockOAuthTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+        Set<AccessTokenDO> accessTokens = new HashSet<>();
+        AccessTokenDO accessTokenDO = new AccessTokenDO();
+        accessTokenDO.setAccessToken(accessToken);
+        accessTokenDO.setConsumerKey(clientId);
+        accessTokenDO.setScope(new String[]{"default"});
+        accessTokenDO.setAuthzUser(new AuthenticatedUser());
+        accessTokens.add(accessTokenDO);
+        when(mockAccessTokenDAO.getAccessTokens(anyString(),
+                any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
+
+        TokenManagementDAO mockTokenManagementDao = mock(TokenManagementDAO.class);
+        when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(mockTokenManagementDao);
+        Set<String> clientIds = new HashSet<>();
+        clientIds.add(clientId);
+        when(mockTokenManagementDao.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
 
         boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
         verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
