@@ -377,4 +377,11 @@ public class DiscoveryConstants {
      * Authorization Server.
      */
     public static final String MTLS_ENDPOINT_ALIASES = "mtls_endpoint_aliases";
+
+    /**
+     * authorization_details_types_supported.
+     * <p>OPTIONAL. JSON array containing the authorization details types the AS supports.</p>
+     * @see <a href='https://datatracker.ietf.org/doc/html/rfc9396.txt#name-metadata'>rfc9396</a>
+     */
+    public static final String AUTHORIZATION_DETAILS_TYPES_SUPPORTED = "authorization_details_types_supported";
 }
