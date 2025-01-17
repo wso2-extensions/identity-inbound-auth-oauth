@@ -52,6 +52,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -145,7 +146,7 @@ public class DeviceEndpointTest extends TestOAuthEndpointBase {
         mockedConstruction = mockConstruction(ServiceTracker.class,
                 (mock, context) -> {
                     verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
-                    if (argumentCaptor.getValue().contains(DeviceAuthServiceImpl.class.getName())) {
+                    if (argumentCaptor.getValue().contains(DeviceAuthService.class.getName())) {
                         when(mock.getServices()).thenReturn(new Object[]{deviceAuthService});
                     }
                 });

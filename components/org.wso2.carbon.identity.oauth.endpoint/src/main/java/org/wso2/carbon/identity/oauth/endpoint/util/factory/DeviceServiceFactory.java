@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.device;
+package org.wso2.carbon.identity.oauth.endpoint.util.factory;
 
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
