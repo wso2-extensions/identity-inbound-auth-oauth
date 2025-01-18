@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -345,24 +346,84 @@ public class OAuth2ServiceTest {
         }
     }
 
-    @Test(dataProvider = "ValidateClientInfoDataProvider")
-    public void testValidateHybridFlowValidRequest(String clientId, String grantType,
-                                                   String callbackUrl, String tenantDomain,
-                                                   int tenantId, String callbackURI) throws Exception {
+    @DataProvider(name = "HybridFlowValidationDataProvider")
+    public Object[][] hybridFlowValidationDataProvider() {
+
+        return new Object[][]{
+                // Valid hybrid flow
+                {true, "code token", "code token",
+                        true, null, null},
+
+                // Valid hybrid flow
+                {true, "code token,code id_token", "code token",
+                        true, null, null},
+
+                // Hybrid flow disabled
+                {false, "code token", "code token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "Hybrid flow is not enabled for the application."},
+
+                // Hybrid flow enabled but configured response type is null.
+                {true, null, "code id_token token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "No hybrid flow response types are configured " +
+                        "for the application with client ID: testClient."},
+
+                // Hybrid flow enabled but configured response type is empty.
+                {true, "", "code id_token token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "No hybrid flow response types are configured " +
+                        "for the application with client ID: testClient."},
+
+                // Hybrid flow enabled but configured response type is different than requested.
+                {true, "code id_token token", "code token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "Requested response type code token is not " +
+                        "configured for the hybrid flow for the application."},
+
+                {true, "code id_token token, code id_token", "code token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "Requested response type code token is not " +
+                        "configured for the hybrid flow for the application."}
+        };
+    }
+
+    @Test(dataProvider = "HybridFlowValidationDataProvider")
+    public void testValidateHybridFlow(boolean hybridFlowEnabled, String hybridFlowResponseType, String responseType,
+                                       boolean expectedValidClient, String expectedErrorCode,
+                                       String expectedErrorMsg) throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
-            OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain,
-                    tenantId, identityTenantUtil, oAuth2Util);
-            oAuthAppDO.setHybridFlowEnabled(true);
-            oAuthAppDO.setHybridFlowResponseType("code token");
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            String clientId = "testClient";
+            String callbackUrl = "dummyCallBackUrl";
+
+            // Set up the mocked OAuthAppDO
+            OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, "dummyGrantType",
+                    callbackUrl, "carbon.super", -1234, identityTenantUtil, oAuth2Util);
+            oAuthAppDO.setHybridFlowEnabled(hybridFlowEnabled);
+            oAuthAppDO.setHybridFlowResponseType(hybridFlowResponseType);
+            oAuthAppDO.setOauthConsumerKey(clientId);
+
+            // Mock static utility methods
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants
+                    .ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION)).thenReturn("true");
+            oAuth2Util.when(() -> OAuth2Util.isHybridResponseType(anyString())).thenCallRealMethod();
+
+            // Mock request parameters
             when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-            when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
-            when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code token");
-            OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                    validateClientInfo(mockHttpServletRequest);
+            when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackUrl);
+            when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn(responseType);
+
+            // Call the service
+            OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service
+                    .validateClientInfo(mockHttpServletRequest);
+
+            // Assert results
             assertNotNull(oAuth2ClientValidationResponseDTO);
-            assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+            assertEquals(oAuth2ClientValidationResponseDTO.isValidClient(), expectedValidClient);
+
+            if (!expectedValidClient) {
+                assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), expectedErrorCode);
+                assertEquals(oAuth2ClientValidationResponseDTO.getErrorMsg(), expectedErrorMsg);
+            }
         }
     }
 

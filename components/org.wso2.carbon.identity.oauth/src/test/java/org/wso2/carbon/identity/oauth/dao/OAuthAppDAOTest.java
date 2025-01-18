@@ -56,6 +56,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -1161,6 +1162,115 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         } finally {
             resetPrivilegedCarbonContext();
             Mockito.reset(mockOrganizationManager);
+        }
+    }
+
+    @DataProvider(name = "testGetAppInformationForHybridFlowData")
+    public Object[][] testGetAppInformationForHybridFlowData() {
+
+        return new Object[][]{
+                {true, "code token", true, "code token"},
+                {true, "code token, code id_token", true, "code token, code id_token"},
+                {false, "code id_token", false, "code id_token"},
+        };
+    }
+
+    @Test(dataProvider = "testGetAppInformationForHybridFlowData")
+    public void testGetAppInformationForHybridFlowTest
+            (boolean hybridFlowEnabled, String hybridFlowResponseType,
+             boolean hybridFlowEnabledExpected, String hybridFlowResponseTypeExpected) throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            mockUserstore(oAuthComponentServiceHolder);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+
+                // Add Impersonation OIDC properties.
+                defaultOAuthAppDO.setHybridFlowEnabled(hybridFlowEnabled);
+                defaultOAuthAppDO.setHybridFlowResponseType(hybridFlowResponseType);
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(oAuthAppDO);
+                assertEquals(oAuthAppDO.isHybridFlowEnabled(), hybridFlowEnabledExpected);
+                assertEquals(oAuthAppDO.getHybridFlowResponseType(), hybridFlowResponseTypeExpected);
+                appDAO.removeConsumerApplication(CONSUMER_KEY);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    @DataProvider(name = "testGetMigratedAppInformationForHybridFlowData")
+    public Object[][] testGetMigratedAppInformationForHybridFlowData() {
+
+        return new Object[][]{
+                {Arrays.asList("code token", "code id_token", "code id_token token"), true,
+                        "code token, code id_token, code id_token token"},
+                {Arrays.asList("code id_token"), true, "code id_token"},
+                {Arrays.asList(), false, null},
+        };
+    }
+
+    @Test(dataProvider = "testGetMigratedAppInformationForHybridFlowData")
+    public void testGetMigratedAppInformationForHybridFlowTest(List<String> configuredHybridFlowResponseType,
+                                                               boolean hybridFlowEnabledExpected,
+                                                               String hybridFlowResponseTypeExpected) throws Exception {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+            mockUserstore(oAuthComponentServiceHolder);
+            final String deleteHybridFlowProperty =
+                    createDeleteQuery(CONSUMER_KEY, "hybridFlowEnabled");
+            final String deleteHybridFlowResponseTypeProperty =
+                    createDeleteQuery(CONSUMER_KEY, "hybridFlowResponseType");
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            when(mockedServerConfig.getConfiguredHybridResponseTypes()).thenReturn(configuredHybridFlowResponseType);
+            try (Connection connection = getConnection(DB_NAME)) {
+                mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
+                OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
+
+                addOAuthApplication(defaultOAuthAppDO, TENANT_ID);
+
+                executeDeleteQuery(connection, deleteHybridFlowProperty);
+                executeDeleteQuery(connection, deleteHybridFlowResponseTypeProperty);
+
+                OAuthAppDAO appDAO = new OAuthAppDAO();
+                OAuthAppDO oAuthAppDO = appDAO.getAppInformation(CONSUMER_KEY);
+                assertNotNull(oAuthAppDO);
+                assertEquals(oAuthAppDO.isHybridFlowEnabled(), hybridFlowEnabledExpected);
+                assertEquals(oAuthAppDO.getHybridFlowResponseType(), hybridFlowResponseTypeExpected);
+                appDAO.removeConsumerApplication(CONSUMER_KEY);
+            }
+        } finally {
+            resetPrivilegedCarbonContext();
+        }
+    }
+
+    private String createDeleteQuery(String consumerKey, String propertyKey) {
+
+        return "DELETE FROM IDN_OIDC_PROPERTY WHERE CONSUMER_KEY='"
+                + consumerKey + "' AND PROPERTY_KEY ='" + propertyKey + "'";
+    }
+
+    private void executeDeleteQuery(Connection connection, String query) throws SQLException {
+
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.execute();
         }
     }
 
