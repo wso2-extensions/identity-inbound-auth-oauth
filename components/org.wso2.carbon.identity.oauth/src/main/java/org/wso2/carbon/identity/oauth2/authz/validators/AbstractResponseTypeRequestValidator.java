@@ -208,6 +208,7 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         String responseType = request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE);
         boolean hybridFlowEnabled = appDO.isHybridFlowEnabled();
 
+        // Check if the response type is a hybrid response type.
         if (OAuth2Util.isHybridResponseType(responseType)) {
             if (!hybridFlowEnabled) {
                 if (log.isDebugEnabled()) {
@@ -217,13 +218,16 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
                 throw new InvalidOAuthClientException("Hybrid flow is not enabled for the application.");
             }
 
-            String configuredHybridFlowResponseType = appDO.getHybridFlowResponseType();
-            if (!isRequestedResponseTypeConfigured(responseType, configuredHybridFlowResponseType)) {
+            // Retrieve the list of allowed hybrid response types
+            List<String> hybridResponseTypeList = getHybridResponseType(appDO);
+
+            // Validate the requested response type
+            if (!hybridResponseTypeList.contains(responseType)) {
                 String message = OAuthConstants.OAuthError.AuthorizationResponsei18nKey
                         .INVALID_RESPONSE_TYPE_FOR_HYBRID_FLOW;
                 if (log.isDebugEnabled()) {
-                    log.debug("Requested response type " + responseType + " is not configured for the hybrid flow " +
-                            "for the application with client ID: " + appDO.getOauthConsumerKey());
+                    log.debug(String.format("Requested response type '%s' is not configured for the hybrid " +
+                            "flow for the application with client ID: %s", responseType, appDO.getOauthConsumerKey()));
                 }
 
                 throw new InvalidOAuthClientException(message);
@@ -231,16 +235,18 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
         }
     }
 
-    private boolean isRequestedResponseTypeConfigured(String responseType, String configuredHybridFlowResponseType) {
+    private List<String> getHybridResponseType(OAuthAppDO appDO) throws InvalidOAuthClientException {
 
-        Set<String> configuredResponseTypes = new HashSet<>(Arrays.asList(configuredHybridFlowResponseType.split(" ")));
-        String[] requestedResponseTypes = responseType.split(" ");
-        for (String requestedType : requestedResponseTypes) {
-            if (!configuredResponseTypes.contains(requestedType)) {
-                return false;
-            }
+        String configuredHybridFlowResponseType = appDO.getHybridFlowResponseType();
+
+        // Validate if the configured response type string is null or empty
+        if (configuredHybridFlowResponseType == null || configuredHybridFlowResponseType.trim().isEmpty()) {
+            throw new InvalidOAuthClientException(String.format("No hybrid flow response types are configured " +
+                    "for the application with client ID: %s.", appDO.getOauthConsumerKey()));
         }
-        return true;
+
+        // Split the configured hybrid response types into a list
+        return Arrays.asList(configuredHybridFlowResponseType.split(","));
     }
 
     private OAuth2ClientValidationResponseDTO validateCallBack(String clientId, String callbackURI, OAuthAppDO appDO) {

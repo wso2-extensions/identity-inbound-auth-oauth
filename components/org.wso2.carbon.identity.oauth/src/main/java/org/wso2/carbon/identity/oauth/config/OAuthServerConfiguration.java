@@ -345,6 +345,9 @@ public class OAuthServerConfiguration {
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
+    private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
+            "code id_token", "code id_token token");
+    private List<String> configuredHybridResponseTypes = new ArrayList<>();
 
     private final List<String> restrictedQueryParameters = new ArrayList<>();
 
@@ -973,6 +976,11 @@ public class OAuthServerConfiguration {
     public boolean useRetainOldAccessTokens() {
 
         return Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens);
+    }
+
+    public List<String> getConfiguredHybridResponseTypes() {
+
+        return configuredHybridResponseTypes;
     }
 
     public boolean isTokenCleanupEnabled() {
@@ -2978,6 +2986,11 @@ public class OAuthServerConfiguration {
                 }
                 if (responseTypeName != null && !"".equals(responseTypeName) &&
                         responseTypeHandlerImplClass != null && !"".equals(responseTypeHandlerImplClass)) {
+
+                    // check for the configured hybrid response type
+                    if (HYBRID_RESPONSE_TYPES.contains(responseTypeName)) {
+                        configuredHybridResponseTypes.add(responseTypeName);
+                    }
                     supportedResponseTypeClassNames.put(responseTypeName, responseTypeHandlerImplClass);
                     OMElement responseTypeValidatorClassNameElement = supportedResponseTypeElement
                             .getFirstChildWithName(
