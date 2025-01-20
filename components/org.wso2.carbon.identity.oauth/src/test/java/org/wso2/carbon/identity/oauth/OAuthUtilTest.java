@@ -54,8 +54,10 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
 import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleBasicInfo;
+import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.jdbc.UniqueIDJDBCUserStoreManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -67,6 +69,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -77,6 +80,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -98,13 +102,16 @@ import static org.wso2.carbon.identity.oauth2.TestConstants.SAMPLE_ID;
 public class OAuthUtilTest {
 
     @Mock
-    private OrganizationManager organizationManagerMock;
+    private OrganizationManager organizationManager;
 
     @Mock
-    private OrganizationUserSharingService organizationUserSharingServiceMock;
+    private OrganizationUserSharingService organizationUserSharingService;
 
     @Mock
-    private TokenManagementDAO tokenManagementDAOMock;
+    private TokenManagementDAO tokenManagementDAO;
+
+    @Mock
+    private IdpManager idpManager;
 
     @Mock
     private RealmService realmService;
@@ -388,18 +395,30 @@ public class OAuthUtilTest {
         when(mockAccessTokenDAO.getAccessTokens(anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
 
-        when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAOMock);
+        when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
         Set<String> clientIds = new HashSet<>();
         clientIds.add(clientId);
-        when(tokenManagementDAOMock.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
+        when(tokenManagementDAO.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
 
         boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
         verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
         assertTrue(result, "Token revocation failed.");
     }
 
-    @Test
-    public void testRevokeTokensInSharedUserFlow() throws Exception {
+    @DataProvider(name = "authenticatedSharedUserFlowDataProvider")
+    public Object[][] authenticatedSharedUserFlowDataProvider() {
+
+        return new Object[][]{
+                {false, true, false},   // Shared User Flow
+                {true, true, false},    // SSO Login User Shared Flow
+                {false, false, false},  // No user association found
+                {false, true, true}     // Throws UserStoreException
+        };
+    }
+
+    @Test(dataProvider = "authenticatedSharedUserFlowDataProvider")
+    public void testAuthenticatedUserInSharedUserFlow(boolean isSSOLoginUser, boolean isUserAssociationFound,
+                                                      boolean shouldThrowUserStoreException) throws Exception {
 
         try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class)) {
 
@@ -416,30 +435,55 @@ public class OAuthUtilTest {
 
             OAuthComponentServiceHolder mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
             when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
-            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManagerMock);
-            when(organizationManagerMock.isPrimaryOrganization(anyString())).thenReturn(true);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
 
+            if (isSSOLoginUser) {
+                when(organizationManager.isPrimaryOrganization(anyString())).thenReturn(false);
+                when(mockOAuthComponentServiceHolder.getIdpManager()).thenReturn(idpManager);
+            } else {
+                when(organizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
+            }
             when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(true);
             when(UserCoreUtil.removeDomainFromName(null)).thenReturn(CARBON_TENANT_DOMAIN);
-
-            UserAssociation userAssociation = new UserAssociation();
-            userAssociation.setAssociatedUserId(SAMPLE_ID);
             when(mockOAuthComponentServiceHolder.getOrganizationUserSharingService())
-                    .thenReturn(organizationUserSharingServiceMock);
-            when(organizationUserSharingServiceMock.getUserAssociation(null, null))
-                    .thenReturn(userAssociation);
+                    .thenReturn(organizationUserSharingService);
 
-            when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
-            UserRealm userRealm = mock(UserRealm.class);
-            when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
-            when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
+            lenient().when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
 
-            OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
-            when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
-            when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAOMock);
+            if (isUserAssociationFound) {
+                UserAssociation userAssociation = new UserAssociation();
+                userAssociation.setAssociatedUserId(SAMPLE_ID);
+                when(organizationUserSharingService.getUserAssociation(null, null)).thenReturn(userAssociation);
+            }
+            if (shouldThrowUserStoreException) {
+                when(realmService.getTenantUserRealm(anyInt())).thenThrow(new UserStoreException());
+            } else {
+                UserRealm userRealm = mock(UserRealm.class);
+                lenient().when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+                lenient().when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
 
-            boolean result = OAuthUtil.revokeTokens(null, userStoreManager, null);
-            assertTrue(result);
+                OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory =
+                        mock(OAuthTokenPersistenceFactory.class);
+                when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
+                when(mockOAuthTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(tokenManagementDAO);
+            }
+            if (isSSOLoginUser || !isUserAssociationFound) {
+                boolean result = OAuthUtil.revokeTokens(null, userStoreManager, null);
+                assertTrue(result);
+                verify(mockUser, never()).getUserStoreDomain();
+            } else if (shouldThrowUserStoreException) {
+                try {
+                    OAuthUtil.revokeTokens(null, userStoreManager, null);
+                    fail();
+                } catch (UserStoreException e) {
+                    assertTrue(e.getMessage().contains("Failed to retrieve the user store domain"),
+                            "Unexpected exception message: " + e.getMessage());
+                }
+            } else {
+                boolean result = OAuthUtil.revokeTokens(null, userStoreManager, null);
+                assertTrue(result);
+                verify(mockUser, times(1)).getUserStoreDomain();
+            }
         }
     }
 
