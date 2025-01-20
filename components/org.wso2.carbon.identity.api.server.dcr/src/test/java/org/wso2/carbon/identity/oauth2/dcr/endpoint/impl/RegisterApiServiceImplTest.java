@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.impl;
 
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
@@ -30,6 +31,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
@@ -40,7 +42,6 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.TestUtil;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
-import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,11 +50,13 @@ import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+@WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
 public class RegisterApiServiceImplTest {
 
@@ -69,10 +72,20 @@ public class RegisterApiServiceImplTest {
     @Mock
     private DCRMService dcrmService;
 
+    @Mock
+    PrivilegedCarbonContext privilegedCarbonContext;
+
     MockedConstruction<ServiceTracker> mockedConstruction;
+    private MockedStatic<PrivilegedCarbonContext> mockedPrivilegedCarbonContext;
 
     @BeforeMethod
     public void setUp() throws Exception {
+
+        mockedPrivilegedCarbonContext = mockStatic(PrivilegedCarbonContext.class);
+        lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext()).thenReturn(privilegedCarbonContext);
+        lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getOSGiService(DCRMService.class, null)).thenReturn(mock(DCRMService.class));
+
         //Initializing variables.
         registerApiService = new RegisterApiServiceImpl();
         validclientId = "N2QqQluzQuL5X6CtM3KZwqzLQhUa";
@@ -101,16 +114,15 @@ public class RegisterApiServiceImplTest {
 
         mockedConstruction.close();
         PrivilegedCarbonContext.endTenantFlow();
+        mockedPrivilegedCarbonContext.close();
     }
 
     @Test
     public void testDeleteApplication() throws Exception {
 
-        DCRMUtils.setOAuth2DCRMService(dcrmService);
-        doNothing().when(dcrmService).deleteApplication(validclientId);
+        lenient().doNothing().when(dcrmService).deleteApplication(validclientId);
         Assert.assertEquals(registerApiService.deleteApplication(validclientId).getStatus(),
                 Response.Status.NO_CONTENT.getStatusCode());
-
     }
 
     @Test
@@ -127,8 +139,7 @@ public class RegisterApiServiceImplTest {
     @Test
     public void testGetApplication() throws Exception {
 
-        DCRMUtils.setOAuth2DCRMService(dcrmService);
-        when(dcrmService.getApplication(validclientId)).thenReturn(application);
+        lenient().when(dcrmService.getApplication(validclientId)).thenReturn(application);
         Assert.assertEquals(registerApiService.getApplication(validclientId).getStatus(),
                 Response.Status.OK.getStatusCode());
 
@@ -153,8 +164,7 @@ public class RegisterApiServiceImplTest {
 
         RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
         registrationRequestDTO.setClientName("app1");
-        DCRMUtils.setOAuth2DCRMService(dcrmService);
-        when(dcrmService.registerApplication(any(ApplicationRegistrationRequest.class)))
+        lenient().when(dcrmService.registerApplication(any(ApplicationRegistrationRequest.class)))
                 .thenReturn(application);
         Assert.assertEquals(registerApiService.registerApplication(registrationRequestDTO)
                 .getStatus(), Response.Status.CREATED.getStatusCode());
@@ -179,8 +189,7 @@ public class RegisterApiServiceImplTest {
         UpdateRequestDTO updateRequestDTO1 = new UpdateRequestDTO();
         updateRequestDTO1.setClientName("Client1");
         String clientID = "clientID1";
-        DCRMUtils.setOAuth2DCRMService(dcrmService);
-        when(dcrmService.updateApplication
+        lenient().when(dcrmService.updateApplication
                 (any(ApplicationUpdateRequest.class), anyString()))
                 .thenReturn(application);
         Assert.assertEquals(registerApiService.updateApplication(updateRequestDTO1, clientID)
