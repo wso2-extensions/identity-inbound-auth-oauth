@@ -25,10 +25,12 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth.user.UserInfoResponseBuilder;
@@ -40,6 +42,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.user.core.UserCoreConstants;
+import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +54,7 @@ import java.util.Optional;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
 
 /**
  * Abstract user info response builder.
@@ -76,12 +81,38 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
         Map<String, Object> userClaims = retrieveUserClaims(tokenResponse);
         Map<String, Object> filteredUserClaims = filterOIDCClaims(tokenResponse, clientId, spTenantDomain, userClaims);
 
+        // Handle roles claim.
+        handleRolesClaim(filteredUserClaims);
+
         // Handle subject claim.
         String subjectClaim = getSubjectClaim(userClaims, clientId, spTenantDomain, tokenResponse);
         subjectClaim = getOIDCSubjectClaim(clientId, spTenantDomain, subjectClaim);
         filteredUserClaims.put(OAuth2Util.SUB, subjectClaim);
 
         return buildResponse(tokenResponse, spTenantDomain, filteredUserClaims);
+    }
+
+    private void handleRolesClaim(Map<String, Object> filteredUserClaims) {
+
+        // This check is added for the backward compatibility of userinfo response.
+        if (!OAuthServerConfiguration.getInstance().isUserInfoResponseRemoveInternalPrefixFromRoles()) {
+            return;
+        }
+
+        if (!(filteredUserClaims.get(ROLES) instanceof String[])) {
+            return;
+        }
+        String[] roles = (String[]) filteredUserClaims.get(ROLES);
+        if (roles == null) {
+            return;
+        }
+        for (int i = 0; i < roles.length; i++) {
+            String role = roles[i];
+            if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(role))) {
+                String domainRemovedRole = UserCoreUtil.removeDomainFromName(role);
+                roles[i] = domainRemovedRole;
+            }
+        }
     }
 
     private String getOIDCSubjectClaim(String clientId, String spTenantDomain, String subjectClaim)
