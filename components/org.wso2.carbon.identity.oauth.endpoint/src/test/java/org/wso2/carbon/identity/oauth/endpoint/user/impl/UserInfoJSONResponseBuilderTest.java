@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
@@ -49,6 +50,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -70,6 +72,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_ROLE_PREFIX;
 
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
@@ -161,6 +164,10 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                 authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
                 mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
 
+                if (Arrays.asList(requestedScopes).contains(OAuthConstants.OIDCClaims.ROLES)) {
+                    when(mockOAuthServerConfiguration.isUserInfoResponseRemoveInternalPrefixFromRoles())
+                            .thenReturn(true);
+                }
                 String responseString =
                         userInfoJSONResponseBuilder.getResponseString(
                                 getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
@@ -169,6 +176,11 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                 assertNotNull(claimsInResponse);
                 assertFalse(claimsInResponse.isEmpty());
                 assertNotNull(claimsInResponse.get(sub));
+
+                if (claimsInResponse.containsKey(OAuth2Util.OIDC_ROLE_CLAIM_URI)) {
+                    Object[] rolesArray = (Object[]) claimsInResponse.get(OAuth2Util.OIDC_ROLE_CLAIM_URI);
+                    assertFalse(rolesArray[0].toString().startsWith(INTERNAL_ROLE_PREFIX));
+                }
 
                 for (Map.Entry<String, Object> expectClaimEntry : expectedClaims.entrySet()) {
                     assertTrue(claimsInResponse.containsKey(expectClaimEntry.getKey()));
