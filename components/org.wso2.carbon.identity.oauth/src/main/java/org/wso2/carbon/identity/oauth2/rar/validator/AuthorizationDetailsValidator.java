@@ -18,10 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.rar.validator;
 
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
-import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 

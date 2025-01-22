@@ -21,11 +21,11 @@ package org.wso2.carbon.identity.oauth2.rar.validator;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
-import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
 import org.wso2.carbon.identity.oauth2.rar.utils.AuthorizationDetailsBaseTest;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 

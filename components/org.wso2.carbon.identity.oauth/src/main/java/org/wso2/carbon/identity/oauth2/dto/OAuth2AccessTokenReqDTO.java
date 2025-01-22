@@ -18,11 +18,11 @@
 
 package org.wso2.carbon.identity.oauth2.dto;
 
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 
 import java.util.ArrayList;
 import java.util.Collections;

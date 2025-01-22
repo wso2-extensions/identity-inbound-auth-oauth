@@ -25,6 +25,12 @@ import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.oauth.rar.dto.AuthorizationDetailsCodeDTO;
+import org.wso2.carbon.identity.oauth.rar.dto.AuthorizationDetailsConsentDTO;
+import org.wso2.carbon.identity.oauth.rar.dto.AuthorizationDetailsTokenDTO;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -32,11 +38,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthTokenRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsCodeDTO;
-import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
-import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -48,14 +49,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toSet;
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.AUTHORIZATION_DETAILS_ID_PREFIX;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.AUTHORIZATION_DETAILS_ID_PREFIX;
 
 /**
  * Utility class for handling and validating authorization details in OAuth2 requests.
@@ -195,7 +194,7 @@ public class AuthorizationDetailsUtils {
 
         return userConsentedAuthorizationDetails.stream()
                 .map(detail -> new AuthorizationDetailsConsentDTO(consentId, detail, true, tenantId))
-                .collect(toSet());
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -213,7 +212,7 @@ public class AuthorizationDetailsUtils {
                 .stream()
                 .map(authorizationDetail -> new AuthorizationDetailsTokenDTO(
                         accessTokenDO.getTokenId(), authorizationDetail, accessTokenDO.getTenantID()))
-                .collect(toSet());
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -231,7 +230,7 @@ public class AuthorizationDetailsUtils {
                 .stream()
                 .map(authorizationDetail ->
                         new AuthorizationDetailsCodeDTO(authzCodeDO.getAuthzCodeId(), authorizationDetail, tenantId))
-                .collect(toSet());
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -253,14 +252,14 @@ public class AuthorizationDetailsUtils {
         final Set<String> consentedAuthorizationDetailIDs = httpServletRequest.getParameterMap().keySet().stream()
                 .filter(parameterName -> parameterName.startsWith(AUTHORIZATION_DETAILS_ID_PREFIX))
                 .map(parameterName -> parameterName.substring(AUTHORIZATION_DETAILS_ID_PREFIX.length()))
-                .collect(toSet());
+                .collect(Collectors.toSet());
 
         // Filter and collect the consented authorization details
         final AuthorizationDetails consentedAuthorizationDetails = new AuthorizationDetails(oAuth2Parameters
                 .getAuthorizationDetails()
                 .stream()
                 .filter(authorizationDetail -> consentedAuthorizationDetailIDs.contains(authorizationDetail.getId()))
-                .collect(toSet()));
+                .collect(Collectors.toSet()));
 
         log.debug("User consented authorization details extracted successfully.");
 
@@ -297,7 +296,7 @@ public class AuthorizationDetailsUtils {
                     authorizationDetail.setType(protectedAuthorizationDetail.getType());
                     authorizationDetail.setDescription(protectedAuthorizationDetail.getDescription());
                     return authorizationDetail;
-                }).collect(toSet());
+                }).collect(Collectors.toSet());
 
         return new AuthorizationDetails(displayableAuthorizationDetails);
     }
@@ -391,6 +390,7 @@ public class AuthorizationDetailsUtils {
 
         return authorizationDetails == null ? Collections.emptyMap()
                 : authorizationDetails.stream()
-                .collect(groupingBy(AuthorizationDetail::getType, mapping(identity(), toSet())));
+                .collect(Collectors.groupingBy(AuthorizationDetail::getType,
+                        Collectors.mapping(Function.identity(), Collectors.toSet())));
     }
 }

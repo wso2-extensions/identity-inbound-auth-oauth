@@ -21,8 +21,9 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAO;
-import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAOImpl;
+import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAO;
+import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAOImpl;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
@@ -68,7 +69,7 @@ public class OAuthTokenPersistenceFactory {
     }
 
     public AccessTokenDAO getAccessTokenDAO() {
-        
+
         AccessTokenDAO accessTokenDAO = OAuthComponentServiceHolder.getInstance().getAccessTokenDAOService();
         if (accessTokenDAO == null) {
             return tokenDAO;
@@ -116,7 +117,7 @@ public class OAuthTokenPersistenceFactory {
      * Retrieves the DAO for authorization details.
      * <p>
      * This method returns an {@link AuthorizationDetailsDAO} singleton instance that provides access to the
-     * {@link org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails} data. This DAO is used to interact
+     * {@link AuthorizationDetails} data. This DAO is used to interact
      * with the underlying data store to fetch and manipulate authorization information.
      *</p>
      * @return the {@link AuthorizationDetailsDAO} instance that provides access to authorization details data.

@@ -19,6 +19,10 @@
 package org.wso2.carbon.identity.oauth2.rar.utils;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -26,13 +30,9 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
-import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
 import java.lang.reflect.Field;

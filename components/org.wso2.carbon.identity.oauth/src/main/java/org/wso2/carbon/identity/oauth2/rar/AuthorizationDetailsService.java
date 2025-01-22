@@ -24,6 +24,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.api.resource.mgt.util.AuthorizationDetailsTypesUtil;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAO;
+import org.wso2.carbon.identity.oauth.rar.dto.AuthorizationDetailsCodeDTO;
+import org.wso2.carbon.identity.oauth.rar.dto.AuthorizationDetailsConsentDTO;
+import org.wso2.carbon.identity.oauth.rar.dto.AuthorizationDetailsTokenDTO;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -32,12 +38,6 @@ import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
-import org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAO;
-import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsCodeDTO;
-import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsConsentDTO;
-import org.wso2.carbon.identity.oauth2.rar.dto.AuthorizationDetailsTokenDTO;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -48,10 +48,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.getAuthorizationDetailsTypesMap;
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.isEmpty;
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.isRichAuthorizationRequest;
 
 /**
  * AuthorizationDetailsService is responsible for managing and handling OAuth2 authorization details,
@@ -121,7 +117,8 @@ public class AuthorizationDetailsService {
             final AuthorizationDetails userConsentedAuthorizationDetails)
             throws OAuthSystemException {
 
-        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled ||
+                !AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2Parameters)) {
             log.debug("Request is not a rich authorization request. Skipping storage of authorization details.");
             return;
         }
@@ -144,8 +141,8 @@ public class AuthorizationDetailsService {
 
             final AuthorizationDetails trimmedAuthorizationDetails = AuthorizationDetailsUtils
                     .getTrimmedAuthorizationDetails(userConsentedAuthorizationDetails);
-            final Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType =
-                    getAuthorizationDetailsTypesMap(this.getUserConsentedAuthorizationDetails(consentId, tenantId));
+            final Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType = AuthorizationDetailsUtils
+                    .getAuthorizationDetailsTypesMap(this.getUserConsentedAuthorizationDetails(consentId, tenantId));
 
             // Determine new authorization details to add or update based on the existing user consent
             trimmedAuthorizationDetails.stream().forEach(authorizationDetail -> {
@@ -190,7 +187,8 @@ public class AuthorizationDetailsService {
                                                         final String clientId, final OAuth2Parameters oAuth2Parameters)
             throws OAuthSystemException {
 
-        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled ||
+                !AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2Parameters)) {
             log.debug("Request is not a rich authorization request. Skipping deletion of authorization details.");
             return;
         }
@@ -244,24 +242,28 @@ public class AuthorizationDetailsService {
                                                                  final OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled ||
+                !AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2Parameters)) {
             return true;
         }
 
-        return isEmpty(this.getConsentRequiredAuthorizationDetails(authenticatedUser, oAuth2Parameters));
+        return AuthorizationDetailsUtils
+                .isEmpty(this.getConsentRequiredAuthorizationDetails(authenticatedUser, oAuth2Parameters));
     }
 
     public AuthorizationDetails getConsentRequiredAuthorizationDetails(final AuthenticatedUser authenticatedUser,
                                                                        final OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
-        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuth2Parameters)) {
+        if (this.isRichAuthorizationRequestsDisabled ||
+                !AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2Parameters)) {
             log.debug("Request is not a rich authorization request. Skipping the authorization details retrieval.");
             return new AuthorizationDetails();
         }
 
-        Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType = getAuthorizationDetailsTypesMap(
-                this.getUserConsentedAuthorizationDetails(authenticatedUser, oAuth2Parameters));
+        Map<String, Set<AuthorizationDetail>> consentedAuthorizationDetailsByType = AuthorizationDetailsUtils
+                .getAuthorizationDetailsTypesMap(this.getUserConsentedAuthorizationDetails(authenticatedUser,
+                        oAuth2Parameters));
 
         final Set<AuthorizationDetail> consentRequiredAuthorizationDetails = new HashSet<>();
         oAuth2Parameters.getAuthorizationDetails().stream()
@@ -480,7 +482,8 @@ public class AuthorizationDetailsService {
                                                      final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuthAuthzReqMessageContext.getApprovedAuthorizationDetails())) {
+        if (!AuthorizationDetailsUtils
+                .isRichAuthorizationRequest(oAuthAuthzReqMessageContext.getApprovedAuthorizationDetails())) {
             log.debug("Request is not a rich authorization request. Skipping storage of token authorization details.");
             return;
         }
@@ -537,7 +540,7 @@ public class AuthorizationDetailsService {
             final AccessTokenDO newAccessTokenDO, final AccessTokenDO oldAccessTokenDO,
             final OAuthTokenReqMessageContext oAuthTokenReqMessageContext) throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuthTokenReqMessageContext)) {
+        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuthTokenReqMessageContext)) {
             log.debug("Request is not a rich authorization request. Skipping storage of token authorization details.");
             return;
         }
@@ -588,7 +591,7 @@ public class AuthorizationDetailsService {
                                                        final OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuthTokenReqMessageContext)) {
+        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuthTokenReqMessageContext)) {
             log.debug("Request is not a rich authorization request. Skipping replacement of authorization details.");
             return;
         }
@@ -607,7 +610,7 @@ public class AuthorizationDetailsService {
                                                      final OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        if (!isRichAuthorizationRequest(oAuthTokenReqMessageContext)) {
+        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuthTokenReqMessageContext)) {
             log.debug("Request is not a rich authorization request. Skipping storage of token authorization details.");
             return;
         }
@@ -626,7 +629,8 @@ public class AuthorizationDetailsService {
             final AuthzCodeDO authzCodeDO, final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        if (this.isRichAuthorizationRequestsDisabled || !isRichAuthorizationRequest(oAuthAuthzReqMessageContext)) {
+        if (this.isRichAuthorizationRequestsDisabled ||
+                !AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuthAuthzReqMessageContext)) {
             log.debug("Request is not a rich authorization request. Skipping storage of code authorization details.");
             return;
         }

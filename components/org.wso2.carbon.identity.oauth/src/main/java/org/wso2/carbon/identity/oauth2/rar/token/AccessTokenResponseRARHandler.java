@@ -20,15 +20,14 @@ package org.wso2.carbon.identity.oauth2.rar.token;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils.isRichAuthorizationRequest;
 
 /**
  * Class responsible for modifying the access token response to include user-consented authorization details.
@@ -53,7 +52,8 @@ public class AccessTokenResponseRARHandler implements AccessTokenResponseHandler
             final OAuthTokenReqMessageContext oAuthTokenReqMessageContext) throws IdentityOAuth2Exception {
 
         Map<String, Object> additionalAttributes = new HashMap<>();
-        if (isRichAuthorizationRequest(oAuthTokenReqMessageContext.getAuthorizationDetails())) {
+        if (AuthorizationDetailsUtils
+                .isRichAuthorizationRequest(oAuthTokenReqMessageContext.getAuthorizationDetails())) {
 
             if (log.isDebugEnabled()) {
                 log.debug("Adding authorization details into the token response: " + oAuthTokenReqMessageContext

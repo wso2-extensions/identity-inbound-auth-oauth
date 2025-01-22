@@ -56,6 +56,7 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
@@ -1740,5 +1741,38 @@ public class OAuth2ServiceComponent {
             log.debug("Unregistering the AuthorizationDetailsProcessor service.");
         }
         AuthorizationDetailsProcessorFactory.getInstance().setAuthorizationDetailsProcessors(null);
+    }
+
+    /**
+     * Registers the {@link AuthorizationDetailsSchemaValidator} service.
+     *
+     * @param schemaValidator The {@code AuthorizationDetailsSchemaValidator} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator",
+            service = AuthorizationDetailsSchemaValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthorizationDetailsSchemaValidator"
+    )
+    protected void registerAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthorizationDetailsSchemaValidator service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(schemaValidator);
+    }
+
+    /**
+     * Unset the {@link AuthorizationDetailsSchemaValidator} service.
+     *
+     * @param schemaValidator The {@code AuthorizationDetailsSchemaValidator} instance.
+     */
+    protected void unregisterAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthorizationDetailsSchemaValidator service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(null);
     }
 }

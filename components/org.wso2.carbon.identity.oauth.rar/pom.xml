@@ -29,7 +29,7 @@
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
-    <packaging>jar</packaging>
+    <packaging>bundle</packaging>
     <name>WSO2 Carbon - Rich Authorization Requests</name>
     <url>http://wso2.org</url>
 
@@ -57,7 +57,7 @@
         </dependency>
 
         <dependency>
-            <groupId>io.vertx</groupId>
+            <groupId>org.wso2.orbit.io.vertx</groupId>
             <artifactId>vertx-json-schema</artifactId>
         </dependency>
 
@@ -127,6 +127,7 @@
                         <exclude>**/dto/**</exclude>
                         <exclude>**/exception/**</exclude>
                         <exclude>**/model/**</exclude>
+                        <exclude>**/internal/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>
@@ -166,6 +167,36 @@
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>
+                            ${project.artifactId}
+                        </Bundle-SymbolicName>
+                        <Private-Package>
+                            org.wso2.carbon.identity.oauth.rar.internal,
+                        </Private-Package>
+                        <Import-Package>
+                            org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
+                            org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
+
+                            org.wso2.carbon.identity.*; version="${carbon.identity.framework.imp.pkg.version.range}",
+
+                            org.apache.commons.collections.*; version="${commons-collections.wso2.osgi.version.range}",
+                            io.vertx.core.*; version="${vertx.json.schema.wso2.osgi.version.range}",
+                            io.vertx.json.schema.*; version="${vertx.json.schema.wso2.osgi.version.range}",
+                        </Import-Package>
+                        <Export-Package>
+                            !org.wso2.carbon.identity.oauth.rar.internal,
+                            org.wso2.carbon.identity.oauth.rar.*;
+                            version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                        </Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

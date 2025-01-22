@@ -20,9 +20,9 @@
 
     <test name="oauth-rar-test">
         <classes>
-            <class name="org.wso2.carbon.identity.oauth2.rar.dao.AuthorizationDetailsDAOImplTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsCommonUtilsTest"/>
-            <class name="org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsSchemaValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAOImplTest"/>
+            <class name="org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsCommonUtilsTest"/>
+            <class name="org.wso2.carbon.identity.oauth.rar.AuthorizationDetailsSchemaValidatorTest"/>
         </classes>
     </test>
 

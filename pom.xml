@@ -412,9 +412,14 @@
             </dependency>
             <!-- To validate json structures against json schemas like 'draft 2020-12' -->
             <dependency>
-                <groupId>io.vertx</groupId>
+                <groupId>org.wso2.orbit.io.vertx</groupId>
                 <artifactId>vertx-json-schema</artifactId>
-                <version>${vertx.json.schema.version}</version>
+                <version>${vertx.json.schema.wso2.osgi.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.wso2.orbit.io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty-all.wso2.osgi.version}</version>
             </dependency>
 
             <!-- Carbon Identity Inbound Authentication OAuth dependency -->
@@ -1055,7 +1060,9 @@
         <net.minidev.accessors-smart.version>2.4.7</net.minidev.accessors-smart.version>
         <org.ow2.asm.asm.version>5.2</org.ow2.asm.asm.version>
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
-        <vertx.json.schema.version>4.5.11</vertx.json.schema.version>
+        <vertx.json.schema.wso2.osgi.version>4.5.11.wso2v1</vertx.json.schema.wso2.osgi.version>
+        <vertx.json.schema.wso2.osgi.version.range>[4.5.11, 5.0.0)</vertx.json.schema.wso2.osgi.version.range>
+        <netty-all.wso2.osgi.version>4.1.115.wso2v1</netty-all.wso2.osgi.version>
 
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>

@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 
 import java.io.Serializable;
 import java.util.LinkedHashSet;

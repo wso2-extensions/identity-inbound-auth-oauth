@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
@@ -134,6 +135,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsService authorizationDetailsService;
     private AuthorizationDetailsValidator authorizationDetailsValidator;
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
+    private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -985,5 +987,25 @@ public class OAuth2ServiceComponentHolder {
     public void setAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager authorizationDetailsTypeManager) {
 
         this.authorizationDetailsTypeManager = authorizationDetailsTypeManager;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsSchemaValidator} instance.
+     *
+     * @return A {@link AuthorizationDetailsSchemaValidator} singleton instance.
+     */
+    public AuthorizationDetailsSchemaValidator getAuthorizationDetailsSchemaValidator() {
+
+        return this.authorizationDetailsSchemaValidator;
+    }
+
+    /**
+     * set an {@link AuthorizationDetailsSchemaValidator} instance.
+     *
+     * @param schemaValidator An {@link AuthorizationDetailsSchemaValidator} instance.
+     */
+    public void setAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
+
+        this.authorizationDetailsSchemaValidator = schemaValidator;
     }
 }

@@ -22,6 +22,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
@@ -29,8 +31,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -40,7 +40,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.AUTHORIZATION_DETAILS;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.AUTHORIZATION_DETAILS;
 import static org.wso2.carbon.identity.oauth2.validators.RefreshTokenValidator.TOKEN_TYPE_NAME;
 
 /**

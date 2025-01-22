@@ -18,12 +18,12 @@
 
 package org.wso2.carbon.identity.oauth2.rar.core;
 
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.model.ValidationResult;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
-import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetailsContext;
-import org.wso2.carbon.identity.oauth2.rar.model.ValidationResult;
 
 /**
  * The {@code AuthorizationDetailsProcessor} interface defines a contract for implementing
@@ -112,7 +112,7 @@ public interface AuthorizationDetailsProcessor {
      * authorization request when they are presented with the consent form.
      * @see AuthorizationDetailsContext
      * @see AuthorizationDetail
-     * @see AuthorizationDetail#setConsentDescription
+     * @see AuthorizationDetail#setDescription(String)
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc9396#name-enriched-authorization-deta">
      * Enriched Authorization Details</a>
      */

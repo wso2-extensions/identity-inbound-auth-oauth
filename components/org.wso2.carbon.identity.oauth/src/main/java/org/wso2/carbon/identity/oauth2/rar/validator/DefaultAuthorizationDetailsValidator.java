@@ -26,21 +26,21 @@ import org.wso2.carbon.identity.application.common.IdentityApplicationManagement
 import org.wso2.carbon.identity.application.common.model.AuthorizationDetailsType;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.model.ValidationResult;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
-import org.wso2.carbon.identity.oauth2.rar.exception.AuthorizationDetailsProcessingException;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetail;
-import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.rar.model.AuthorizationDetailsContext;
-import org.wso2.carbon.identity.oauth2.rar.model.ValidationResult;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
@@ -55,8 +55,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.TYPE_NOT_SUPPORTED_ERR_FORMAT;
-import static org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.TYPE_NOT_SUPPORTED_ERR_FORMAT;
+import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG;
 
 /**
  * Default implementation class responsible for validating {@link AuthorizationDetails} in different
@@ -73,7 +73,7 @@ public class DefaultAuthorizationDetailsValidator implements AuthorizationDetail
         this(
                 AuthorizationDetailsProcessorFactory.getInstance(),
                 OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService(),
-                AuthorizationDetailsSchemaValidator.getInstance()
+                OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsSchemaValidator()
         );
     }
 
