@@ -30,6 +30,7 @@ import org.opensaml.saml.saml2.core.AttributeStatement;
 import org.w3c.dom.Element;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -294,30 +295,61 @@ public class ClaimsUtil {
     /**
      * Handle claims from identity provider based on claim configurations.
      *
-     * @param identityProvider Identity Provider
-     * @param attributes       Relevant Claims coming from IDP
-     * @param tenantDomain     Tenant Domain.
-     * @param tokenReqMsgCtx   Token request message context.
-     * @return mapped local claims.
+     * @param identityProvider Identity Provider.
+     * @param attributes Relevant Claims coming from IDP
+     * @param tenantDomain Tenant Domain.
+     * @param tokenReqMsgCtx Token request message context.
+     * @return Mapped local claims.
      * @throws IdentityException
      * @throws IdentityApplicationManagementException
      */
     public static Map<String, String> handleClaimMapping(IdentityProvider identityProvider,
-            Map<String, String> attributes, String tenantDomain, OAuthTokenReqMessageContext tokenReqMsgCtx)
+                                                         Map<String, String> attributes, String tenantDomain,
+                                                         OAuthTokenReqMessageContext tokenReqMsgCtx)
             throws IdentityException, IdentityApplicationManagementException {
 
+        return handleClaimMapping(identityProvider, attributes, tenantDomain, tokenReqMsgCtx, false);
+    }
+
+    /**
+     * Handle claims from identity provider based on claim configurations.
+     *
+     * @param identityProvider Identity Provider
+     * @param attributes       Relevant Claims coming from IDP
+     * @param tenantDomain     Tenant Domain.
+     * @param tokenReqMsgCtx   Token request message context.
+     * @return Mapped local claims.
+     * @throws IdentityException
+     * @throws IdentityApplicationManagementException
+     */
+    public static Map<String, String> handleClaimMapping(IdentityProvider identityProvider,
+                                                         Map<String, String> attributes, String tenantDomain,
+                                                         OAuthTokenReqMessageContext tokenReqMsgCtx,
+                                                         boolean resolveIdPGroupAssignments)
+            throws IdentityException, IdentityApplicationManagementException {
+
+        List<String> assignedRoles = null;
+        ServiceProvider serviceProvider = null;
+        if (resolveIdPGroupAssignments) {
+            serviceProvider = getServiceProvider(tokenReqMsgCtx);
+            String applicationId = serviceProvider.getApplicationResourceId();
+            assignedRoles = getAssignedRolesFromIdPGroups(identityProvider, attributes, applicationId,
+                    tenantDomain);
+        }
         boolean proxyUserAttributes = !OAuthServerConfiguration.getInstance()
                 .isConvertOriginalClaimsFromAssertionsToOIDCDialect();
 
         if (proxyUserAttributes) {
             setHasNonOIDCClaimsProperty(tokenReqMsgCtx);
-            return attributes;
+            return appendIdPMappedUserRolesAttributes(attributes, assignedRoles);
         }
 
         ClaimMapping[] idPClaimMappings = identityProvider.getClaimConfig().getClaimMappings();
         Map<String, String> claimsAfterIdpMapping;
         Map<String, String> claimsAfterSPMapping = new HashMap<>();
-        ServiceProvider serviceProvider = getServiceProvider(tokenReqMsgCtx);
+        if (serviceProvider == null) {
+            serviceProvider = getServiceProvider(tokenReqMsgCtx);
+        }
 
         if (ArrayUtils.isNotEmpty(idPClaimMappings)) {
             if (log.isDebugEnabled()) {
@@ -378,7 +410,30 @@ public class ClaimsUtil {
                 }
             }
         }
-        return claimsAfterSPMapping;
+        return appendIdPMappedUserRolesAttributes(claimsAfterSPMapping, assignedRoles);
+    }
+
+    private static List<String> getAssignedRolesFromIdPGroups(IdentityProvider identityProvider,
+                                                              Map<String, String> attributes, String applicationId,
+                                                              String tenantDomain) {
+
+        String idpGroupClaimURI = FrameworkUtils.getEffectiveIdpGroupClaimUri(identityProvider, tenantDomain);
+        if (StringUtils.isBlank(idpGroupClaimURI)) {
+            return new ArrayList<>();
+        }
+
+        return FrameworkUtils.getAppAssociatedRolesFromFederatedUserAttributes(attributes, identityProvider,
+                applicationId, idpGroupClaimURI, tenantDomain);
+    }
+
+    private static Map<String, String> appendIdPMappedUserRolesAttributes(Map<String, String> attributes,
+                                                                          List<String> assignedRoles) {
+
+        if (CollectionUtils.isNotEmpty(assignedRoles)) {
+            attributes.put(FrameworkConstants.IDP_MAPPED_USER_ROLES,
+                    String.join(FrameworkUtils.getMultiAttributeSeparator(), assignedRoles));
+        }
+        return attributes;
     }
 
     /**
