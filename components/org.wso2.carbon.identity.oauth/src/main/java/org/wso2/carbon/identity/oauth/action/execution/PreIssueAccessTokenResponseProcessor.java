@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.action;
+package org.wso2.carbon.identity.oauth.action.execution;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;

@@ -39,8 +39,9 @@ import org.wso2.carbon.identity.cors.mgt.core.CORSManagementService;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.OauthInboundAuthConfigHandler;
-import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenRequestBuilder;
-import org.wso2.carbon.identity.oauth.action.PreIssueAccessTokenResponseProcessor;
+import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder;
+import org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenResponseProcessor;
+import org.wso2.carbon.identity.oauth.action.rule.PreIssueAccessTokenRuleEvaluationDataProvider;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -58,6 +59,7 @@ import org.wso2.carbon.identity.organization.management.organization.user.sharin
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
+import org.wso2.carbon.identity.rule.evaluation.provider.RuleEvaluationDataProvider;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -118,6 +120,7 @@ public class OAuthServiceComponent {
                     authProtocolApplicationService, null);
 
             registerActionRequestBuilderAndResponseProcessor(context);
+            registerRuleEvaluationDataProvider(context);
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
 
@@ -137,6 +140,13 @@ public class OAuthServiceComponent {
                 .registerService(ActionExecutionRequestBuilder.class, new PreIssueAccessTokenRequestBuilder(), null);
         context.getBundleContext()
                 .registerService(ActionExecutionResponseProcessor.class, new PreIssueAccessTokenResponseProcessor(),
+                        null);
+    }
+
+    private void registerRuleEvaluationDataProvider(ComponentContext context) {
+
+        context.getBundleContext()
+                .registerService(RuleEvaluationDataProvider.class, new PreIssueAccessTokenRuleEvaluationDataProvider(),
                         null);
     }
 

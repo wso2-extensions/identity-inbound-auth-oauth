@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.action;
+package org.wso2.carbon.identity.oauth.action.execution;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.logging.Log;
