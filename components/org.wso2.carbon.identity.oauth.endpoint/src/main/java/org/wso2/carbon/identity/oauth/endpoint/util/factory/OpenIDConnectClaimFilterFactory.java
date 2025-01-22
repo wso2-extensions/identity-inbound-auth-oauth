@@ -25,7 +25,7 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 /**
  * Service holder for managing instances of OAuth2 Authorization related services.
  */
-public class OAuth2AuthzServiceFactory {
+public class OpenIDConnectClaimFilterFactory {
 
     private static final OpenIDConnectClaimFilterImpl SERVICE;
 

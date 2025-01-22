@@ -111,7 +111,8 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
-import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2AuthzServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OpenIDConnectClaimFilterFactory;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
 import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
@@ -126,7 +127,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCacheKey;
@@ -3496,7 +3496,7 @@ public class OAuth2AuthzEndpoint {
 
         // Get the claims uri list of all the requested scopes. Eg:- country, email.
         List<String> claimListOfScopes =
-                OAuth2AuthzServiceFactory.getOpenIdClaimFilterImpl().getClaimsFilteredByOIDCScopes(
+                OpenIDConnectClaimFilterFactory.getOpenIdClaimFilterImpl().getClaimsFilteredByOIDCScopes(
                         oauth2Params.getScopes(), spTenantDomain);
 
         List<String> essentialRequestedClaims = new ArrayList<>();
@@ -4578,16 +4578,6 @@ public class OAuth2AuthzEndpoint {
         return OAuthConstants.Prompt.SELECT_ACCOUNT.equals(oauth2Params.getPrompt());
     }
 
-    /**
-     * Set the device authentication service.
-     *
-     * @param deviceAuthService Device authentication service.
-     */
-    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
-
-        OAuth2AuthzEndpoint.deviceAuthService = deviceAuthService;
-    }
-
     private void cacheUserAttributesByDeviceCode(SessionDataCacheEntry sessionDataCacheEntry)
             throws OAuthSystemException {
 
@@ -4608,7 +4598,7 @@ public class OAuth2AuthzEndpoint {
     private Optional<String> getDeviceCodeByUserCode(String userCode) throws OAuthSystemException {
 
         try {
-            return deviceAuthService.getDeviceCode(userCode);
+            return DeviceServiceFactory.getDeviceAuthService().getDeviceCode(userCode);
         } catch (IdentityOAuth2Exception e) {
             throw new OAuthSystemException("Error occurred while retrieving device code for user code: " + userCode, e);
         }
