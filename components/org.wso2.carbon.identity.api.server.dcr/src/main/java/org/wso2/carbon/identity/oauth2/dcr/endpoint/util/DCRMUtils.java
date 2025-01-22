@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.dcr.endpoint.util;
 
 import org.apache.commons.logging.Log;
 import org.slf4j.MDC;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
@@ -44,16 +45,15 @@ public class DCRMUtils {
     private static final String NOT_FOUND_STATUS = "NOT_FOUND_";
     private static final String FORBIDDEN_STATUS = "FORBIDDEN_";
 
-    private static DCRMService oAuth2DCRMService;
+    private static class OAuth2DCRMServiceHolder {
 
-    public static void setOAuth2DCRMService(DCRMService oAuth2DCRMService) {
-
-        DCRMUtils.oAuth2DCRMService = oAuth2DCRMService;
+        private static final DCRMService SERVICE = (DCRMService) PrivilegedCarbonContext
+                .getThreadLocalCarbonContext().getOSGiService(DCRMService.class, null);
     }
 
     public static DCRMService getOAuth2DCRMService() {
 
-        return oAuth2DCRMService;
+        return OAuth2DCRMServiceHolder.SERVICE;
     }
 
     public static ApplicationRegistrationRequest getApplicationRegistrationRequest(
@@ -307,5 +307,4 @@ public class DCRMUtils {
             return new DCRMEndpointException(status, errorDTO);
         }
     }
-
 }

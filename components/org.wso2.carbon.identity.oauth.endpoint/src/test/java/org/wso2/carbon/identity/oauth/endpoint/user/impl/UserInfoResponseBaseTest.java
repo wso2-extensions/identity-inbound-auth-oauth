@@ -468,6 +468,10 @@ public class UserInfoResponseBaseTest {
         final Map<String, Object> expectedClaimMapForCustomScope = new HashMap<>();
         expectedClaimMapForCustomScope.put(firstName, FIRST_NAME_VALUE);
 
+        Map<String, Object> userClaimsMap1 = new HashMap<>();
+        userClaimsMap1.put(OAuth2Util.OIDC_ROLE_CLAIM_URI, new String[]{"Internal/test_role1",
+                "Internal/test_role2"});
+
         return new Object[][]{
                 // Input User Claims,
                 // Map<"openid", ("first_name","username","last_name")>
@@ -493,6 +497,13 @@ public class UserInfoResponseBaseTest {
                         Collections.emptyMap(),
                         false,
                         OIDC_SCOPE_ARRAY,
+                        Collections.emptyMap()
+                },
+                {
+                        userClaimsMap1,
+                        Collections.emptyMap(),
+                        false,
+                        new String[]{OIDC_SCOPE, "roles"},
                         Collections.emptyMap()
                 }
         };

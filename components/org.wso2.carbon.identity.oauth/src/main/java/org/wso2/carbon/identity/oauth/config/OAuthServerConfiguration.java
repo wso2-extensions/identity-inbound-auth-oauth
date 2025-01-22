@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -233,6 +233,8 @@ public class OAuthServerConfiguration {
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private boolean userInfoMultiValueSupportEnabled = true;
+    private boolean userInfoRemoveInternalPrefixFromRoles = false;
+
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
@@ -1573,6 +1575,16 @@ public class OAuthServerConfiguration {
     public boolean getUserInfoMultiValueSupportEnabled() {
 
         return userInfoMultiValueSupportEnabled;
+    }
+
+    /**
+     * Returns whether Internal prefix should be removed from the roles claim of the userinfo response.
+     *
+     * @return True if Internal prefix value should be removed from the role claim of userinfo response.
+     */
+    public boolean isUserInfoResponseRemoveInternalPrefixFromRoles() {
+
+        return userInfoRemoveInternalPrefixFromRoles;
     }
 
     public String getConsumerDialectURI() {
@@ -3503,6 +3515,14 @@ public class OAuthServerConfiguration {
                 userInfoMultiValueSupportEnabled = Boolean.parseBoolean(
                         userInfoMultiValueSupportEnabledElem.getText().trim());
             }
+
+            OMElement userInfoResponseRemoveInternalPrefixFromRoles = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES));
+            if (userInfoResponseRemoveInternalPrefixFromRoles != null) {
+                userInfoRemoveInternalPrefixFromRoles =
+                        Boolean.parseBoolean(userInfoResponseRemoveInternalPrefixFromRoles.getText().trim());
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
@@ -4132,6 +4152,8 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
         public static final String OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED =
                 "UserInfoMultiValueSupportEnabled";
+        public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
+                "UserInfoRemoveInternalPrefixFromRoles";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";

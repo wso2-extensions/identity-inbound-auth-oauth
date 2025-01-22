@@ -219,13 +219,14 @@ public abstract class AbstractResponseTypeRequestValidator implements ResponseTy
 
             String configuredHybridFlowResponseType = appDO.getHybridFlowResponseType();
             if (!isRequestedResponseTypeConfigured(responseType, configuredHybridFlowResponseType)) {
+                String message = OAuthConstants.OAuthError.AuthorizationResponsei18nKey
+                        .INVALID_RESPONSE_TYPE_FOR_HYBRID_FLOW;
                 if (log.isDebugEnabled()) {
                     log.debug("Requested response type " + responseType + " is not configured for the hybrid flow " +
                             "for the application with client ID: " + appDO.getOauthConsumerKey());
                 }
 
-                throw new InvalidOAuthClientException("Requested response type " + responseType +
-                        " is not configured for the hybrid flow for the application.");
+                throw new InvalidOAuthClientException(message);
             }
         }
     }
