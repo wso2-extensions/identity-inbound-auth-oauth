@@ -369,6 +369,15 @@ public class OAuth2AuthzEndpoint {
                 oauthResponse = handleInitialAuthorizationRequest(oAuthMessage);
             } else if (isAuthenticationResponseFromFramework(oAuthMessage)) {
                 oauthResponse = handleAuthenticationResponse(oAuthMessage);
+                // Remove the commonAuthId cookie if the authentication flow failed.
+                MultivaluedMap<String, Object> responseMetadata = oauthResponse.getMetadata();
+                List<Object> locationHeaders = responseMetadata != null ?
+                        responseMetadata.get(HttpHeaders.LOCATION) : null;
+
+                if (locationHeaders != null && locationHeaders.stream()
+                        .anyMatch(header -> header.toString().contains(OAuth2ErrorCodes.INVALID_REQUEST))) {
+                    FrameworkUtils.removeAuthCookie(request, response);
+                }
             } else if (isConsentResponseFromUser(oAuthMessage)) {
                 oauthResponse = handleResponseFromConsent(oAuthMessage);
             } else {
