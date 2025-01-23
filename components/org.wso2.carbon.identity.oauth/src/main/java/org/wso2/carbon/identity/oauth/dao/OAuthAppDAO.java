@@ -1992,14 +1992,41 @@ public class OAuthAppDAO {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
         }
 
-        boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
-                HYBRID_FLOW_ENABLED));
-        oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+        String hybridFlowEnabledProperty = getFirstPropertyValue(spOIDCProperties, HYBRID_FLOW_ENABLED);
 
-        String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
-                OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+        // Check if the application has the `hybridFlowEnabled` property configured
+        if (hybridFlowEnabledProperty == null) {
+            // No hybridFlowEnabled property; use server's default behavior for hybrid flow.
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("The application with consumer key %s does not have the 'hybridFlowEnabled' " +
+                        "property configured. Using server default behavior to enable hybrid flow with all " +
+                        "configured response types.", oauthApp.getOauthConsumerKey()));
+            }
 
-        oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+            List<String> configuredHybridResponseTypes = OAuthServerConfiguration.getInstance()
+                    .getConfiguredHybridResponseTypes();
+
+            if (configuredHybridResponseTypes.isEmpty()) {
+                // No configured hybrid response types; hybrid flow is disabled
+                oauthApp.setHybridFlowEnabled(false);
+                oauthApp.setHybridFlowResponseType(null);
+            } else {
+                // Enable hybrid flow with all configured response types
+                oauthApp.setHybridFlowEnabled(true);
+                String hybridFlowResponseType = String.join(",", configuredHybridResponseTypes);
+                oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+            }
+        } else {
+            // Hybrid flow property is defined; parse and configure
+            boolean hybridFlowEnabled = Boolean.parseBoolean(hybridFlowEnabledProperty);
+            oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+
+            String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
+                    OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+
+            // Configure the hybrid flow response type (null if not explicitly set)
+            oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
