@@ -139,7 +139,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
@@ -282,43 +281,9 @@ public class OAuth2AuthzEndpoint {
 
     private static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
-    private static DeviceAuthService deviceAuthService;
-
-    private static AuthorizationDetailsService authorizationDetailsService;
-
     private static final String AUTH_SERVICE_RESPONSE = "authServiceResponse";
     private static final String IS_API_BASED_AUTH_HANDLED = "isApiBasedAuthHandled";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
-
-    public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
-
-        return openIDConnectClaimFilter;
-    }
-
-    public static void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
-
-        OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
-    }
-
-    public static ScopeMetadataService getScopeMetadataService() {
-
-        return scopeMetadataService;
-    }
-
-    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
-
-        OAuth2AuthzEndpoint.scopeMetadataService = scopeMetadataService;
-    }
-
-    public static AuthorizationDetailsService getAuthorizationDetailsService() {
-
-        return authorizationDetailsService;
-    }
-
-    public static void setAuthorizationDetailsService(AuthorizationDetailsService authorizationDetailsService) {
-
-        OAuth2AuthzEndpoint.authorizationDetailsService = authorizationDetailsService;
-    }
 
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
@@ -1769,12 +1734,14 @@ public class OAuth2AuthzEndpoint {
 
                 if (hasPromptContainsConsent(oauth2Params)) {
                     EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, true);
-                    authorizationDetailsService.replaceUserConsentedAuthorizationDetails(loggedInUser,
-                            clientId, oauth2Params, userConsentedAuthorizationDetails);
+                    OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                            .replaceUserConsentedAuthorizationDetails(loggedInUser, clientId, oauth2Params,
+                                    userConsentedAuthorizationDetails);
                 } else {
                     EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, false);
-                    authorizationDetailsService.storeOrUpdateUserConsentedAuthorizationDetails(loggedInUser,
-                            clientId, oauth2Params, userConsentedAuthorizationDetails);
+                    OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                            .storeOrUpdateUserConsentedAuthorizationDetails(loggedInUser, clientId, oauth2Params,
+                                    userConsentedAuthorizationDetails);
                 }
             }
         }
@@ -3783,7 +3750,8 @@ public class OAuth2AuthzEndpoint {
 
         try {
             return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params) &&
-                    authorizationDetailsService.isUserAlreadyConsentedForAuthorizationDetails(user, oauth2Params);
+                    OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                            .isUserAlreadyConsentedForAuthorizationDetails(user, oauth2Params);
         } catch (IdentityOAuth2ScopeException | IdentityOAuthAdminException e) {
             throw new OAuthSystemException("Error occurred while checking user has already approved the consent " +
                     "required OAuth scopes.", e);

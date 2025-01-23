@@ -326,9 +326,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @Mock
     private AuthorizationDetailsValidator authorizationDetailsValidatorMock;
 
-    @Mock
-    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderMock;
-
     private static final String ERROR_PAGE_URL = "https://localhost:9443/authenticationendpoint/oauth2_error.do";
     private static final String LOGIN_PAGE_URL = "https://localhost:9443/authenticationendpoint/login.do";
     private static final String USER_CONSENT_URL =
@@ -932,16 +929,15 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
                 when(authorizationDetailsServiceMock.isUserAlreadyConsentedForAuthorizationDetails(
                         any(AuthenticatedUser.class), any(OAuth2Parameters.class))).thenReturn(true);
-                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsServiceMock);
 
                 when(authorizationDetailsValidatorMock
                         .getValidatedAuthorizationDetails(any(OAuthAuthzReqMessageContext.class)))
                         .thenReturn(new AuthorizationDetails(testAuthorizationDetails));
 
-                when(oAuth2ServiceComponentHolderMock.getAuthorizationDetailsValidator())
-                        .thenReturn(authorizationDetailsValidatorMock);
-                serviceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                        .thenReturn(oAuth2ServiceComponentHolderMock);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsService(authorizationDetailsServiceMock);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsValidator(authorizationDetailsValidatorMock);
 
                 mockServiceURLBuilder(serviceURLBuilder);
                 setSupportedResponseModes();
@@ -1802,7 +1798,8 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizeReqDTO);
                 when(consentCacheEntry.getAuthzReqMsgCtx()).thenReturn(authzReqMsgCtx);
 
-                OAuth2AuthzEndpoint.setAuthorizationDetailsService(authorizationDetailsServiceMock);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsService(authorizationDetailsServiceMock);
 
                 Response response;
                 try {

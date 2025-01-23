@@ -78,7 +78,6 @@ import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigura
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory;
-import org.wso2.carbon.identity.oauth.endpoint.util.factory.WebFingerServiceFactory;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -179,9 +178,6 @@ public class EndpointUtilTest {
     BundleContext bundleContext;
 
     MockedConstruction<ServiceTracker> mockedConstruction;
-
-    @Mock
-    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderMock;
 
     private static final String COMMONAUTH_URL = "https://localhost:9443/commonauth";
     private static final String OIDC_CONSENT_PAGE_URL =
@@ -433,10 +429,8 @@ public class EndpointUtilTest {
 
                 lenient().when(authorizationDetailsServiceMock.getConsentRequiredAuthorizationDetails(user, parameters))
                         .thenReturn(testAuthorizationDetails);
-                lenient().when(oAuth2ServiceComponentHolderMock.getAuthorizationDetailsService())
-                        .thenReturn(authorizationDetailsServiceMock);
-                serviceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                        .thenReturn(oAuth2ServiceComponentHolderMock);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsService(authorizationDetailsServiceMock);
 
                 String consentUrl;
                 try {
