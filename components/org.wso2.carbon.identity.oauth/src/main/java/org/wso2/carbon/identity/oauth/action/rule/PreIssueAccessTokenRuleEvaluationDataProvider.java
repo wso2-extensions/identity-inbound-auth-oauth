@@ -77,7 +77,7 @@ public class PreIssueAccessTokenRuleEvaluationDataProvider implements RuleEvalua
 
     @Override
     public List<FieldValue> getEvaluationData(RuleEvaluationContext ruleEvaluationContext,
-                                              FlowContext flowContext, String s)
+                                              FlowContext flowContext, String tenantDomain)
             throws RuleEvaluationDataProviderException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
