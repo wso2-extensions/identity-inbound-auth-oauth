@@ -1215,7 +1215,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
         return new Object[][]{
                 {Arrays.asList("code token", "code id_token", "code id_token token"), true,
-                        "code token, code id_token, code id_token token"},
+                        "code token,code id_token,code id_token token"},
                 {Arrays.asList("code id_token"), true, "code id_token"},
                 {Arrays.asList(), false, null},
         };
