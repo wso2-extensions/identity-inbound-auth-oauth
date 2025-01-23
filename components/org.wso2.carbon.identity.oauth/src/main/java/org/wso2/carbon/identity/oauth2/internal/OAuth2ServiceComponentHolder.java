@@ -944,6 +944,16 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
+     * Set an {@link AuthorizationDetailsService} instance.
+     *
+     * @param authorizationDetailsService AuthorizationDetailsService instance.
+     */
+    public void setAuthorizationDetailsService(AuthorizationDetailsService authorizationDetailsService) {
+
+        this.authorizationDetailsService = authorizationDetailsService;
+    }
+
+    /**
      * Get an {@link AuthorizationDetailsService} instance.
      *
      * @return A {@link AuthorizationDetailsService} singleton instance.
@@ -954,6 +964,16 @@ public class OAuth2ServiceComponentHolder {
             this.authorizationDetailsService = new AuthorizationDetailsService();
         }
         return this.authorizationDetailsService;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsValidator} instance.
+     *
+     * @param authorizationDetailsValidator AuthorizationDetailsValidator instance.
+     */
+    public void setAuthorizationDetailsValidator(AuthorizationDetailsValidator authorizationDetailsValidator) {
+
+        this.authorizationDetailsValidator = authorizationDetailsValidator;
     }
 
     /**

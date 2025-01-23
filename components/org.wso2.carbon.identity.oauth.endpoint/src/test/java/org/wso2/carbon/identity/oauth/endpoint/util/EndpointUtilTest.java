@@ -170,9 +170,6 @@ public class EndpointUtilTest {
     @Mock
     FileBasedConfigurationBuilder mockFileBasedConfigurationBuilder;
 
-    @Mock
-    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderMock;
-
     private static final String COMMONAUTH_URL = "https://localhost:9443/commonauth";
     private static final String OIDC_CONSENT_PAGE_URL =
             "https://localhost:9443/authenticationendpoint/oauth2_consent.do";
@@ -311,9 +308,7 @@ public class EndpointUtilTest {
                  MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class);
-                 MockedStatic<OAuth2ServiceComponentHolder> serviceComponentHolder =
-                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
+                 MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class)) {
 
                 EndpointUtil.setOauthServerConfiguration(mockedOAuthServerConfiguration);
                 lenient().when(mockedOAuthServerConfiguration.isDropUnregisteredScopes()).thenReturn(false);
@@ -368,10 +363,8 @@ public class EndpointUtilTest {
 
                 lenient().when(authorizationDetailsServiceMock.getConsentRequiredAuthorizationDetails(user, parameters))
                         .thenReturn(testAuthorizationDetails);
-                lenient().when(oAuth2ServiceComponentHolderMock.getAuthorizationDetailsService())
-                        .thenReturn(authorizationDetailsServiceMock);
-                serviceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                        .thenReturn(oAuth2ServiceComponentHolderMock);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsService(authorizationDetailsServiceMock);
 
                 String consentUrl;
                 try {
