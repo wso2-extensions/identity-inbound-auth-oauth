@@ -35,7 +35,7 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.exception.CibaAuthFailureException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.CibaAuthServiceFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -161,7 +161,8 @@ public class OAuth2CibaEndpoint {
             throws CibaAuthFailureException {
 
         try {
-            cibaAuthCodeResponse = EndpointUtil.getCibaAuthService().generateAuthCodeResponse(cibaAuthCodeRequest);
+            cibaAuthCodeResponse = CibaAuthServiceFactory.getCibaAuthService()
+                    .generateAuthCodeResponse(cibaAuthCodeRequest);
         } catch (CibaCoreException | CibaClientException e) {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.SERVER_ERROR, "Error while generating " +
                     "authentication response.", e);

@@ -28,12 +28,16 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.testng.MockitoTestNGListener;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
@@ -42,9 +46,9 @@ import org.testng.collections.Sets;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
-import org.wso2.carbon.identity.application.authentication.framework.handler.request.impl.consent.SSOConsentService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
@@ -58,7 +62,6 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.builders.DefaultOIDCProviderRequestBuilder;
-import org.wso2.carbon.identity.discovery.builders.OIDCProviderRequestBuilder;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
@@ -68,6 +71,13 @@ import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFactory;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
@@ -111,9 +121,12 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -144,9 +157,6 @@ public class EndpointUtilTest {
     HttpServletResponse mockedHttpServletResponse;
 
     @Mock
-    PrivilegedCarbonContext mockedPrivilegedCarbonContext;
-
-    @Mock
     ServerConfiguration mockedServerConfiguration;
 
     @Mock
@@ -154,12 +164,6 @@ public class EndpointUtilTest {
 
     @Mock
     OAuthAdminServiceImpl mockedOAuthAdminService;
-
-    @Mock
-    SSOConsentService mockedSSOConsentService;
-
-    @Mock
-    RequestObjectService mockedRequestObjectService;
 
     @Mock
     OAuth2ScopeService oAuth2ScopeService;
@@ -171,7 +175,9 @@ public class EndpointUtilTest {
     FileBasedConfigurationBuilder mockFileBasedConfigurationBuilder;
 
     @Mock
-    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderMock;
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     private static final String COMMONAUTH_URL = "https://localhost:9443/commonauth";
     private static final String OIDC_CONSENT_PAGE_URL =
@@ -226,6 +232,52 @@ public class EndpointUtilTest {
         user.setUserId("4b4414e1-916b-4475-aaee-6b0751c29ff6");
         oAuth2ScopeConsentResponse = new OAuth2ScopeConsentResponse("sampleUser", "sampleApp",
                 -1234, new ArrayList<>(), new ArrayList<>());
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(DefaultOIDCProviderRequestBuilder.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{new DefaultOIDCProviderRequestBuilder()});
+                    }
+                    if (argumentCaptor.getValue().contains(OAuthServerConfiguration.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{mockedOAuthServerConfiguration});
+                    }
+                    if (argumentCaptor.getValue().contains(WebFingerProcessor.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{DefaultWebFingerProcessor.getInstance()});
+                    }
+                    if (argumentCaptor.getValue().contains(OIDCProcessor.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{DefaultOIDCProcessor.getInstance()});
+                    }
+                    if (argumentCaptor.getValue().contains(OAuth2Service.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{new OAuth2Service()});
+                    }
+                    if (argumentCaptor.getValue().contains(OAuth2TokenValidationService.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{new OAuth2TokenValidationService()});
+                    }
+                    if (argumentCaptor.getValue().contains(RequestObjectService.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{new RequestObjectService()});
+                    }
+                    if (argumentCaptor.getValue().contains(OAuth2ScopeService.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{new OAuth2ScopeService()});
+                    }
+                    if (argumentCaptor.getValue().contains(OAuthAdminServiceImpl.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{new OAuthAdminServiceImpl()});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        mockedConstruction.close();
+        PrivilegedCarbonContext.endTenantFlow();
+        Mockito.reset(bundleContext);
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
     }
 
     @DataProvider(name = "provideAuthzHeader")
@@ -303,7 +355,9 @@ public class EndpointUtilTest {
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
              MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigurationBuilder =
-                     mockStatic(FileBasedConfigurationBuilder.class);) {
+                     mockStatic(FileBasedConfigurationBuilder.class);
+             MockedStatic<OAuthServerConfigurationFactory> oAuthServerConfigurationFactory =
+                     mockStatic(OAuthServerConfigurationFactory.class)) {
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(mockedOAuthServerConfiguration);
 
@@ -313,11 +367,17 @@ public class EndpointUtilTest {
                  MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
                  MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class);
                  MockedStatic<OAuth2ServiceComponentHolder> serviceComponentHolder =
-                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
+                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS);
+                 MockedStatic<Oauth2ScopeServiceFactory> oauth2ScopeServiceFactory =
+                         mockStatic(Oauth2ScopeServiceFactory.class);
+                 MockedStatic<OAuthAdminServiceFactory> oAuthAdminServiceFactory =
+                         mockStatic(OAuthAdminServiceFactory.class)) {
 
-                EndpointUtil.setOauthServerConfiguration(mockedOAuthServerConfiguration);
+                oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
+                        .thenReturn(mockedOAuthServerConfiguration);
                 lenient().when(mockedOAuthServerConfiguration.isDropUnregisteredScopes()).thenReturn(false);
-                EndpointUtil.setOAuth2ScopeService(oAuth2ScopeService);
+                oauth2ScopeServiceFactory.when(Oauth2ScopeServiceFactory::getOAuth2ScopeService)
+                        .thenReturn(oAuth2ScopeService);
                 lenient().when(oAuth2ScopeService.getUserConsentForApp(anyString(), anyString(), anyInt()))
                         .thenReturn(oAuth2ScopeConsentResponse);
 
@@ -361,17 +421,16 @@ public class EndpointUtilTest {
                             thenReturn(null);
                 }
 
-                EndpointUtil.setOAuthAdminService(mockedOAuthAdminService);
+                oAuthAdminServiceFactory.when(OAuthAdminServiceFactory::getOAuthAdminService)
+                        .thenReturn(mockedOAuthAdminService);
                 lenient().when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
                 lenient().when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
                         .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
 
                 lenient().when(authorizationDetailsServiceMock.getConsentRequiredAuthorizationDetails(user, parameters))
                         .thenReturn(testAuthorizationDetails);
-                lenient().when(oAuth2ServiceComponentHolderMock.getAuthorizationDetailsService())
-                        .thenReturn(authorizationDetailsServiceMock);
-                serviceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
-                        .thenReturn(oAuth2ServiceComponentHolderMock);
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsService(authorizationDetailsServiceMock);
 
                 String consentUrl;
                 try {
@@ -577,19 +636,20 @@ public class EndpointUtilTest {
 
                 try (MockedConstruction<OAuthResponse.OAuthErrorResponseBuilder> mockedConstruction =
                              Mockito.mockConstruction(OAuthResponse.OAuthErrorResponseBuilder.class,
-                        (mock, context) -> {
-                            when(mock.error(any(OAuthProblemException.class))).thenReturn(mock);
-                            when(mock.location(anyString())).thenReturn(mock);
-                            when(mock.setState(anyString())).thenReturn(mock);
-                            when(mock.setParam(anyString(), isNull())).
-                                    thenReturn(mock);
-                            if (exeObject != null) {
-                                OAuthSystemException oAuthSystemException = (OAuthSystemException) exeObject;
-                                when(mock.buildQueryMessage()).thenThrow(oAuthSystemException);
-                            } else {
-                                when(mock.buildQueryMessage()).thenReturn(mockedOAuthResponse);
-                            }
-                        })) {
+                                     (mock, context) -> {
+                                         when(mock.error(any(OAuthProblemException.class))).thenReturn(mock);
+                                         when(mock.location(anyString())).thenReturn(mock);
+                                         when(mock.setState(anyString())).thenReturn(mock);
+                                         when(mock.setParam(anyString(), isNull())).
+                                                 thenReturn(mock);
+                                         if (exeObject != null) {
+                                             OAuthSystemException oAuthSystemException =
+                                                     (OAuthSystemException) exeObject;
+                                             when(mock.buildQueryMessage()).thenThrow(oAuthSystemException);
+                                         } else {
+                                             when(mock.buildQueryMessage()).thenReturn(mockedOAuthResponse);
+                                         }
+                                     })) {
                     lenient().when(mockedOAuthResponse.getLocationUri()).thenReturn("http://localhost:8080/location");
 
                     String url = EndpointUtil.getErrorRedirectURL(exception, parameters);
@@ -645,7 +705,7 @@ public class EndpointUtilTest {
         OAuth2Parameters parameters = (OAuth2Parameters) oAuth2ParamObject;
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                mockStatic(OAuthServerConfiguration.class);) {
+                     mockStatic(OAuthServerConfiguration.class);) {
             oAuthServerConfiguration.when(
                     OAuthServerConfiguration::getInstance).thenReturn(mockedOAuthServerConfiguration);
             when(mockedOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled())
@@ -653,8 +713,8 @@ public class EndpointUtilTest {
 
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);) {
-                oAuth2Util.when(()->OAuth2Util.isImplicitResponseType(anyString())).thenReturn(isImplicitResponse);
-                oAuth2Util.when(()->OAuth2Util.isHybridResponseType(anyString())).thenReturn(isHybridResponse);
+                oAuth2Util.when(() -> OAuth2Util.isImplicitResponseType(anyString())).thenReturn(isImplicitResponse);
+                oAuth2Util.when(() -> OAuth2Util.isHybridResponseType(anyString())).thenReturn(isHybridResponse);
 
                 oAuthURL.when(OAuth2Util.OAuthURL::getOAuth2ErrorPageUrl).thenReturn(ERROR_PAGE_URL);
 
@@ -718,7 +778,7 @@ public class EndpointUtilTest {
     public void testGetLoginPageURLFromCache() throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                mockStatic(OAuthServerConfiguration.class)) {
+                     mockStatic(OAuthServerConfiguration.class)) {
             oAuthServerConfiguration.when(
                     OAuthServerConfiguration::getInstance).thenReturn(mockedOAuthServerConfiguration);
 
@@ -754,29 +814,18 @@ public class EndpointUtilTest {
     @Test
     public void testGetServices() {
 
-        try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
-                     mockStatic(PrivilegedCarbonContext.class);) {
-            mockPrivilegedCarbonContext(privilegedCarbonContext);
-            EndpointUtil.setOAuth2Service(mockedOAuth2Service);
-            EndpointUtil.setSSOConsentService(mockedSSOConsentService);
-            EndpointUtil.setRequestObjectService(mockedRequestObjectService);
-            assertTrue(EndpointUtil.getWebFingerService() instanceof DefaultWebFingerProcessor,
-                    "Retrieved incorrect WebFingerService");
-            assertTrue(EndpointUtil.getOIDProviderRequestValidator() instanceof DefaultOIDCProviderRequestBuilder,
-                    "Retrieved incorrect OIDProviderRequestValidator");
-            assertTrue(EndpointUtil.getOIDCService() instanceof DefaultOIDCProcessor,
-                    "Retrieved incorrect OIDCService");
-            assertTrue(EndpointUtil.getOAuth2Service() instanceof OAuth2Service,
-                    "Retrieved incorrect OAuth2Service");
-            assertTrue(EndpointUtil.getOAuthServerConfiguration() instanceof OAuthServerConfiguration,
-                    "Retrieved incorrect OAuthServerConfiguration");
-            assertTrue(EndpointUtil.getOAuth2TokenValidationService() instanceof OAuth2TokenValidationService,
-                    "Retrieved incorrect OAuth2TokenValidationService");
-            assertTrue(EndpointUtil.getSSOConsentService() instanceof SSOConsentService,
-                    "Retrieved incorrect SSOConsentService");
-            assertTrue(EndpointUtil.getRequestObjectService() instanceof RequestObjectService,
-                    "Retrieved incorrect RequestObjectService");
-        }
+        assertTrue(OIDCProviderServiceFactory.getOIDCService() instanceof DefaultOIDCProcessor,
+                "Retrieved incorrect OIDCService");
+        assertTrue(OAuth2ServiceFactory.getOAuth2Service() instanceof OAuth2Service,
+                "Retrieved incorrect OAuth2Service");
+        assertTrue(OAuthServerConfigurationFactory.getOAuthServerConfiguration()
+                        instanceof OAuthServerConfiguration,
+                "Retrieved incorrect OAuthServerConfiguration");
+        assertTrue(OAuth2TokenValidatorServiceFactory.getOAuth2TokenValidatorService()
+                        instanceof OAuth2TokenValidationService,
+                "Retrieved incorrect OAuth2TokenValidationService");
+        assertTrue(RequestObjectServiceFactory.getRequestObjectService() instanceof RequestObjectService,
+                "Retrieved incorrect RequestObjectService");
     }
 
     @Test
@@ -793,17 +842,18 @@ public class EndpointUtilTest {
     @Test
     public void testGetOAuthServerConfigProperties() throws Exception {
 
-        try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext =
-                     mockStatic(PrivilegedCarbonContext.class);) {
-            mockPrivilegedCarbonContext(privilegedCarbonContext);
+        try (MockedStatic<OAuthServerConfigurationFactory> oAuthServerConfigurationFactory =
+                mockStatic(OAuthServerConfigurationFactory.class)) {
+            oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
+                    .thenReturn(mockedOAuthServerConfiguration);
             setMockedOAuthServerConfiguration();
-            EndpointUtil.setOauthServerConfiguration(mockedOAuthServerConfiguration);
             assertEquals(EndpointUtil.getUserInfoRequestValidator(), USER_INFO_REQUEST_VALIDATOR);
             assertEquals(EndpointUtil.getAccessTokenValidator(), USER_INFO_TOKEN_VALIDATOR);
             assertEquals(EndpointUtil.getUserInfoResponseBuilder(), USER_INFO_RESPONSE_BUILDER);
             assertEquals(EndpointUtil.getUserInfoClaimRetriever(), USER_INFO_CLAIM_RETRIEVER);
             assertEquals(EndpointUtil.getUserInfoClaimDialect(), USER_INFO_CLAIM_DIALECT);
         }
+
     }
 
     @DataProvider(name = "provideState")
@@ -819,9 +869,10 @@ public class EndpointUtilTest {
     @Test(dataProvider = "provideState")
     public void testValidateOauthApplication(String state, boolean diagnosticLogEnabled) {
 
-        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);) {
+        try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
+             MockedStatic<OAuth2ServiceFactory> oAuth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class);) {
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(diagnosticLogEnabled);
-            EndpointUtil.setOAuth2Service(mockedOAuth2Service);
+            oAuth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(mockedOAuth2Service);
             when(mockedOAuth2Service.getOauthApplicationState(anyString())).thenReturn(state);
 
             Response response;
@@ -859,24 +910,6 @@ public class EndpointUtilTest {
         logField.setAccessible(true);
         logField.set(claimUtilObject, mockedLog);
         lenient().when(mockedLog.isDebugEnabled()).thenReturn(isDebugEnabled);
-    }
-
-    private void mockPrivilegedCarbonContext(MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext) {
-
-        privilegedCarbonContext.when(
-                PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockedPrivilegedCarbonContext);
-        lenient().when(mockedPrivilegedCarbonContext.getOSGiService(OAuthServerConfiguration.class, null)).
-                thenReturn(mockedOAuthServerConfiguration);
-        lenient().when(mockedPrivilegedCarbonContext.getOSGiService(WebFingerProcessor.class, null)).
-                thenReturn(DefaultWebFingerProcessor.getInstance());
-        lenient().when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProviderRequestBuilder.class, null)).
-                thenReturn(new DefaultOIDCProviderRequestBuilder());
-        lenient().when(mockedPrivilegedCarbonContext.getOSGiService(OIDCProcessor.class, null)).
-                thenReturn(DefaultOIDCProcessor.getInstance());
-        lenient().when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2Service.class, null))
-                .thenReturn(new OAuth2Service());
-        lenient().when(mockedPrivilegedCarbonContext.getOSGiService(OAuth2TokenValidationService.class, null)).
-                thenReturn(new OAuth2TokenValidationService());
     }
 
     private void setMockedOAuthServerConfiguration() {

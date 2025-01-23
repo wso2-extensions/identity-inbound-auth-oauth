@@ -341,10 +341,10 @@ public class AuthorizationDetailsUtils {
      */
     public static String getUrlEncodedAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Starts URL encoding authorization details: " + authorizationDetails.toJsonString());
-        }
         if (isRichAuthorizationRequest(authorizationDetails)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Starts URL encoding authorization details: " + authorizationDetails.toJsonString());
+            }
             return URLEncoder.encode(authorizationDetails.toJsonString(), StandardCharsets.UTF_8);
         }
         return StringUtils.EMPTY;

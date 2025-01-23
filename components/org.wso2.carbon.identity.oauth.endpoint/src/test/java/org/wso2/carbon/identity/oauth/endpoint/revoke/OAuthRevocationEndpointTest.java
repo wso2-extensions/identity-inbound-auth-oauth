@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,23 +15,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth.endpoint.revoke;
 
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.commons.collections.iterators.IteratorEnumeration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.OAuth;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -39,8 +45,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
-import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.dto.OAuthRevocationRequestDTO;
@@ -59,9 +64,12 @@ import javax.ws.rs.core.Response;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
@@ -74,13 +82,15 @@ public class OAuthRevocationEndpointTest {
     OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
-    TokenPersistenceProcessor tokenPersistenceProcessor;
-
-    @Mock
     OAuthRevocationResponseDTO oAuthRevocationResponseDTO;
 
     @Mock
     OAuth2Service oAuth2Service;
+
+    @Mock
+    BundleContext bundleContext;
+
+    MockedConstruction<ServiceTracker> mockedConstruction;
 
     private static final String TOKEN_PARAM = "token";
     private static final String TOKEN_TYPE_HINT_PARAM = "token_type_hint";
@@ -104,7 +114,7 @@ public class OAuthRevocationEndpointTest {
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-                          );
+        );
         revocationEndpoint = new OAuthRevocationEndpoint();
     }
 
@@ -114,12 +124,27 @@ public class OAuthRevocationEndpointTest {
         initMocks(this);
         oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+
+        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
+        mockedConstruction = mockConstruction(ServiceTracker.class,
+                (mock, context) -> {
+                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
+                    if (argumentCaptor.getValue().contains(OAuth2Service.class.getName())) {
+                        when(mock.getServices()).thenReturn(new Object[]{oAuth2Service});
+                    }
+                });
+        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
     }
 
     @AfterMethod
     public void tearDown() {
 
         oAuthServerConfiguration.close();
+        mockedConstruction.close();
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @DataProvider(name = "testRevokeAccessTokenDataProvider")
@@ -220,7 +245,7 @@ public class OAuthRevocationEndpointTest {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
-             MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class, Mockito.CALLS_REAL_METHODS)) {
+             MockedStatic<OAuth2ServiceFactory> oauth2ServiceFactory = mockStatic(OAuth2ServiceFactory.class)) {
             MultivaluedMap<String, String> parameterMap = new MultivaluedHashMap<>();
             ResponseHeader[] responseHeaders = (ResponseHeader[]) headerObj;
             parameterMap.add(TOKEN_PARAM, token);
@@ -239,7 +264,7 @@ public class OAuthRevocationEndpointTest {
             HttpServletRequest request = mockHttpRequest(requestedParams, new HashMap<>());
             when(request.getHeader(OAuthConstants.HTTP_REQ_HEADER_AUTHZ)).thenReturn(authzHeader);
 
-            endpointUtil.when(EndpointUtil::getOAuth2Service).thenReturn(oAuth2Service);
+            oauth2ServiceFactory.when(OAuth2ServiceFactory::getOAuth2Service).thenReturn(oAuth2Service);
 
             final OAuthRevocationRequestDTO[] revokeReqDTO;
             revokeReqDTO = new OAuthRevocationRequestDTO[1];
