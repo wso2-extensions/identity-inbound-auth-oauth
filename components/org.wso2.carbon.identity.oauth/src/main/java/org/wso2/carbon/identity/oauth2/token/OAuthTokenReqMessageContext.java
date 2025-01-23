@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.token;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
@@ -63,6 +64,8 @@ public class OAuthTokenReqMessageContext {
     private List<String> audiences;
 
     private Map<String, Object> additionalAccessTokenClaims;
+
+    private AuthorizationDetails authorizationDetails;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
@@ -230,5 +233,27 @@ public class OAuthTokenReqMessageContext {
     public void setAdditionalAccessTokenClaims(Map<String, Object> additionalAccessTokenClaims) {
 
         this.additionalAccessTokenClaims = additionalAccessTokenClaims;
+    }
+
+    /**
+     * Retrieves the user consented or authorized authorization details.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the rich authorization requests.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getAuthorizationDetails() {
+
+        return this.authorizationDetails;
+    }
+
+    /**
+     * Sets the validated authorization details.
+     * This method updates the authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     */
+    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+
+        this.authorizationDetails = authorizationDetails;
     }
 }

@@ -38,6 +38,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.testng.collections.Sets;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
@@ -67,12 +68,16 @@ import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.RequestObjectService;
 import org.wso2.carbon.identity.webfinger.DefaultWebFingerProcessor;
@@ -160,7 +165,13 @@ public class EndpointUtilTest {
     OAuth2ScopeService oAuth2ScopeService;
 
     @Mock
+    private AuthorizationDetailsService authorizationDetailsServiceMock;
+
+    @Mock
     FileBasedConfigurationBuilder mockFileBasedConfigurationBuilder;
+
+    @Mock
+    private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderMock;
 
     private static final String COMMONAUTH_URL = "https://localhost:9443/commonauth";
     private static final String OIDC_CONSENT_PAGE_URL =
@@ -196,6 +207,14 @@ public class EndpointUtilTest {
     private String clientId;
     private AuthenticatedUser user;
     private OAuth2ScopeConsentResponse oAuth2ScopeConsentResponse;
+    private final AuthorizationDetails testAuthorizationDetails;
+
+    public EndpointUtilTest() {
+
+        final AuthorizationDetail testAuthorizationDetail = new AuthorizationDetail();
+        testAuthorizationDetail.setType("test_type");
+        this.testAuthorizationDetails = new AuthorizationDetails(Sets.newHashSet(testAuthorizationDetail));
+    }
 
     @BeforeMethod
     public void setUp() {
@@ -245,6 +264,7 @@ public class EndpointUtilTest {
         params.setClientId("testClientId");
         params.setTenantDomain("testTenantDomain");
         params.setScopes(new HashSet<String>(Arrays.asList("scope1", "scope2", "internal_login")));
+        params.setAuthorizationDetails(testAuthorizationDetails);
 
         OAuth2Parameters paramsOIDC = new OAuth2Parameters();
         paramsOIDC.setApplicationName("TestApplication");
@@ -291,7 +311,9 @@ public class EndpointUtilTest {
                  MockedStatic<OAuth2Util.OAuthURL> oAuthURL = mockStatic(OAuth2Util.OAuthURL.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                  MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class);) {
+                 MockedStatic<SessionDataCache> sessionDataCache = mockStatic(SessionDataCache.class);
+                 MockedStatic<OAuth2ServiceComponentHolder> serviceComponentHolder =
+                         mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
 
                 EndpointUtil.setOauthServerConfiguration(mockedOAuthServerConfiguration);
                 lenient().when(mockedOAuthServerConfiguration.isDropUnregisteredScopes()).thenReturn(false);
@@ -343,6 +365,13 @@ public class EndpointUtilTest {
                 lenient().when(mockedOAuthAdminService.getScopeNames()).thenReturn(new String[0]);
                 lenient().when(mockedOAuthAdminService.getRegisteredOIDCScope(anyString()))
                         .thenReturn(Arrays.asList("openid", "email", "profile", "groups"));
+
+                lenient().when(authorizationDetailsServiceMock.getConsentRequiredAuthorizationDetails(user, parameters))
+                        .thenReturn(testAuthorizationDetails);
+                lenient().when(oAuth2ServiceComponentHolderMock.getAuthorizationDetailsService())
+                        .thenReturn(authorizationDetailsServiceMock);
+                serviceComponentHolder.when(OAuth2ServiceComponentHolder::getInstance)
+                        .thenReturn(oAuth2ServiceComponentHolderMock);
 
                 String consentUrl;
                 try {

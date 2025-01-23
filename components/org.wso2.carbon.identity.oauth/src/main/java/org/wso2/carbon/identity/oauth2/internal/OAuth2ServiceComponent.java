@@ -33,6 +33,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
+import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
@@ -55,9 +56,11 @@ import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
+import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -85,6 +88,11 @@ import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
 import org.wso2.carbon.identity.oauth2.model.ResourceAccessControlKey;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
+import org.wso2.carbon.identity.oauth2.rar.token.AccessTokenResponseRARHandler;
+import org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProvider;
+import org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProvider;
 import org.wso2.carbon.identity.oauth2.scopeservice.APIResourceBasedScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
@@ -404,6 +412,11 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ImpersonationValidator.class, new ImpersonatorPermissionValidator(), null);
             bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
+
+            bundleContext.registerService(AccessTokenResponseHandler.class, new AccessTokenResponseRARHandler(), null);
+            bundleContext.registerService(JWTAccessTokenClaimProvider.class,
+                    new JWTAccessTokenRARClaimProvider(), null);
+            bundleContext.registerService(IntrospectionDataProvider.class, new IntrospectionRARDataProvider(), null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
@@ -1661,5 +1674,105 @@ public class OAuth2ServiceComponent {
             ClaimMetadataManagementService claimMetadataManagementService) {
 
         OAuth2ServiceComponentHolder.getInstance().setClaimMetadataManagementService(null);
+    }
+
+    /**
+     * Registers the {@link AuthorizationDetailsTypeManager} service.
+     *
+     * @param typeManager The {@code AuthorizationDetailsTypeManager} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager",
+            service = AuthorizationDetailsTypeManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthorizationDetailsTypeManager"
+    )
+    protected void registerAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager typeManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthorizationDetailsTypeManager service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsTypeManager(typeManager);
+    }
+
+
+    /**
+     * Unset the {@link AuthorizationDetailsTypeManager} service.
+     *
+     * @param typeManager The {@code AuthorizationDetailsTypeManager} instance.
+     */
+    protected void unregisterAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager typeManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthorizationDetailsTypeManager service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsTypeManager(null);
+    }
+
+    /**
+     * Registers the {@link AuthorizationDetailsProcessor} service.
+     *
+     * @param processor The {@code AuthorizationDetailsProcessor} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessor",
+            service = AuthorizationDetailsProcessor.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthorizationDetailsProcessor"
+    )
+    protected void registerAuthorizationDetailsProcessor(AuthorizationDetailsProcessor processor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthorizationDetailsProcessor service.");
+        }
+        AuthorizationDetailsProcessorFactory.getInstance().setAuthorizationDetailsProcessors(processor);
+    }
+
+    /**
+     * Unset the {@link AuthorizationDetailsProcessor} service.
+     *
+     * @param processor The {@code AuthorizationDetailsProcessor} instance.
+     */
+    protected void unregisterAuthorizationDetailsProcessor(AuthorizationDetailsProcessor processor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthorizationDetailsProcessor service.");
+        }
+        AuthorizationDetailsProcessorFactory.getInstance().setAuthorizationDetailsProcessors(null);
+    }
+
+    /**
+     * Registers the {@link AuthorizationDetailsSchemaValidator} service.
+     *
+     * @param schemaValidator The {@code AuthorizationDetailsSchemaValidator} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator",
+            service = AuthorizationDetailsSchemaValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthorizationDetailsSchemaValidator"
+    )
+    protected void registerAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthorizationDetailsSchemaValidator service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(schemaValidator);
+    }
+
+    /**
+     * Unset the {@link AuthorizationDetailsSchemaValidator} service.
+     *
+     * @param schemaValidator The {@code AuthorizationDetailsSchemaValidator} instance.
+     */
+    protected void unregisterAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthorizationDetailsSchemaValidator service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(null);
     }
 }

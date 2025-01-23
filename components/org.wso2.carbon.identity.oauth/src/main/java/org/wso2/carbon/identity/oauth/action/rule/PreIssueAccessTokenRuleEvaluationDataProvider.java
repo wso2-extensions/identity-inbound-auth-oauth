@@ -57,7 +57,7 @@ public class PreIssueAccessTokenRuleEvaluationDataProvider implements RuleEvalua
             return fieldName;
         }
 
-        public static RuleField valueOfFiledName(String fieldName) throws RuleEvaluationDataProviderException {
+        public static RuleField valueOfFieldName(String fieldName) throws RuleEvaluationDataProviderException {
 
             for (RuleField ruleField : RuleField.values()) {
                 if (ruleField.getFieldName().equals(fieldName)) {
@@ -87,7 +87,7 @@ public class PreIssueAccessTokenRuleEvaluationDataProvider implements RuleEvalua
         List<FieldValue> fieldValueList = new ArrayList<>();
 
         for (Field field : ruleEvaluationContext.getFields()) {
-            switch (RuleField.valueOfFiledName(field.getName())) {
+            switch (RuleField.valueOfFieldName(field.getName())) {
                 case APPLICATION:
                     addApplicationFieldValue(fieldValueList, field, tokenReqDTO);
                     break;

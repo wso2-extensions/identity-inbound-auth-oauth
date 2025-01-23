@@ -88,6 +88,8 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequest
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
 import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
@@ -105,6 +107,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.CarbonOAuthAuthzRequest;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.scopeservice.OAuth2Resource;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
@@ -872,6 +875,13 @@ public class EndpointUtil {
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
                         + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
 
+                // Append authorization details to consent page url
+                if (AuthorizationDetailsUtils.isRichAuthorizationRequest(params)) {
+                    additionalQueryParams = additionalQueryParams + "&" +
+                            AuthorizationDetailsConstants.AUTHORIZATION_DETAILS + "=" + AuthorizationDetailsUtils
+                            .getUrlEncodedAuthorizationDetails(filterConsentRequiredAuthorizationDetails(user, params));
+                }
+
                 // Append scope metadata to additionalQueryParams.
                 String scopeMetadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
                         params.getTenantDomain());
@@ -1092,7 +1102,8 @@ public class EndpointUtil {
         }
         try {
             Set<String> userApprovedScopesSet = params.getConsentRequiredScopes();
-            if (CollectionUtils.isNotEmpty(userApprovedScopesSet)) {
+            if (CollectionUtils.isNotEmpty(userApprovedScopesSet) ||
+                    AuthorizationDetailsUtils.isRichAuthorizationRequest(params)) {
                 if (log.isDebugEnabled()) {
                     log.debug("Storing user consent for approved scopes : " + userApprovedScopesSet.stream()
                             .collect(Collectors.joining(" ")) + " of client : " + params.getClientId());
@@ -2169,5 +2180,27 @@ public class EndpointUtil {
                     "Unable to read the request body");
         }
         return stringBuilder.toString();
+    }
+
+    private static AuthorizationDetails filterConsentRequiredAuthorizationDetails(
+            final AuthenticatedUser authenticatedUser, final OAuth2Parameters oAuth2Parameters)
+            throws IdentityOAuth2Exception {
+
+        if (authenticatedUser != null && !isPromptContainsConsent(oAuth2Parameters)) {
+
+            final AuthorizationDetails consentRequiredAuthorizationDetails = OAuth2ServiceComponentHolder.getInstance()
+                    .getAuthorizationDetailsService()
+                    .getConsentRequiredAuthorizationDetails(authenticatedUser, oAuth2Parameters);
+
+            if (log.isDebugEnabled()) {
+                log.debug(String.format("Consent required authorization details for clientId %s and userId %s : %s",
+                        oAuth2Parameters.getClientId(), authenticatedUser.getLoggableMaskedUserId(),
+                        consentRequiredAuthorizationDetails.toJsonString()));
+            }
+            return AuthorizationDetailsUtils
+                    .getDisplayableAuthorizationDetails(consentRequiredAuthorizationDetails);
+        }
+        return AuthorizationDetailsUtils
+                .getDisplayableAuthorizationDetails(oAuth2Parameters.getAuthorizationDetails());
     }
 }

@@ -769,6 +769,9 @@ public final class OAuthConstants {
             public static final String VALIDATE_EXISTING_CONSENT = "validate-existing-consent";
             public static final String GENERATE_INTROSPECTION_RESPONSE = "generate-introspect-response";
             public static final String RECEIVE_REVOKE_REQUEST = "receive-revoke-request";
+            public static final String VALIDATE_AUTHORIZATION_DETAILS = "validate-authorization-details";
+            public static final String VALIDATE_AUTHORIZATION_DETAILS_BEFORE_CONSENT
+                    = "validate-authorization-details-before-consent";
         }
 
         /**
@@ -789,6 +792,7 @@ public final class OAuthConstants {
             public static final String PROMPT = "prompt";
             public static final String APP_STATE = "app state";
             public static final String IMPERSONATOR = "impersonator";
+            public static final String REQUESTED_AUTHORIZATION_DETAILS = "requested authorization details";
         }
 
         /**

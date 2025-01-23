@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -55,6 +57,7 @@ public class OAuth2Parameters implements Serializable {
     private boolean isRequestObjectFlow;
     private boolean isMtlsRequest;
     private String requestedSubjectId;
+    private AuthorizationDetails authorizationDetails;
 
     public String getRequestedSubjectId() {
 
@@ -327,5 +330,27 @@ public class OAuth2Parameters implements Serializable {
     public void setIsMtlsRequest(boolean isMtlsRequest) {
 
         this.isMtlsRequest = isMtlsRequest;
+    }
+
+    /**
+     * Retrieves the current authorization details.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the current authorization information.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getAuthorizationDetails() {
+
+        return this.authorizationDetails;
+    }
+
+    /**
+     * Sets the authorization details.
+     * This method updates the authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     */
+    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+
+        this.authorizationDetails = authorizationDetails;
     }
 }

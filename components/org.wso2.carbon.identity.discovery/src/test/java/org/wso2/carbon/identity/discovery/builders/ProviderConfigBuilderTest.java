@@ -37,14 +37,17 @@ import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
@@ -84,7 +87,9 @@ public class ProviderConfigBuilderTest {
             OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
             oAuthServerConfiguration.when(
                     OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
-            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                 MockedStatic<AuthorizationDetailsProcessorFactory> factoryMockedStatic =
+                         mockStatic(AuthorizationDetailsProcessorFactory.class)) {
 
                 OIDCDiscoveryDataHolder mockOidcDiscoveryDataHolder = spy(new OIDCDiscoveryDataHolder());
                 mockOidcDiscoveryDataHolder.setClaimManagementService(mockClaimMetadataManagementService);
@@ -107,6 +112,11 @@ public class ProviderConfigBuilderTest {
                         .thenReturn(JWSAlgorithm.RS256);
                 when(mockOidProviderRequest.getTenantDomain()).thenReturn(
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+                AuthorizationDetailsProcessorFactory factoryMock = spy(AuthorizationDetailsProcessorFactory.class);
+                doReturn(Collections.emptySet()).when(factoryMock).getSupportedAuthorizationDetailTypes();
+                factoryMockedStatic.when(AuthorizationDetailsProcessorFactory::getInstance).thenReturn(factoryMock);
+
                 assertNotNull(providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest));
             }
         }
@@ -194,7 +204,9 @@ public class ProviderConfigBuilderTest {
              MockedStatic<OIDCDiscoveryDataHolder> oidcDiscoveryDataHolder =
                      mockStatic(OIDCDiscoveryDataHolder.class);
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<DiscoveryUtil> discoveryUtil = mockStatic(DiscoveryUtil.class);) {
+             MockedStatic<DiscoveryUtil> discoveryUtil = mockStatic(DiscoveryUtil.class);
+             MockedStatic<AuthorizationDetailsProcessorFactory> factoryMockedStatic =
+                     mockStatic(AuthorizationDetailsProcessorFactory.class)) {
             OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
             oAuthServerConfiguration.when(
                     OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
@@ -223,9 +235,14 @@ public class ProviderConfigBuilderTest {
             when(mockOidProviderRequest.getTenantDomain()).thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
             when(mockOAuthServerConfiguration.getUserInfoJWTSignatureAlgorithm()).thenReturn(idTokenSignatureAlgorithm);
 
+            AuthorizationDetailsProcessorFactory factoryMock = spy(AuthorizationDetailsProcessorFactory.class);
+            doReturn(Collections.singleton("test_type")).when(factoryMock).getSupportedAuthorizationDetailTypes();
+            factoryMockedStatic.when(AuthorizationDetailsProcessorFactory::getInstance).thenReturn(factoryMock);
+
             OIDProviderConfigResponse response = providerConfigBuilder.buildOIDProviderConfig(mockOidProviderRequest);
             assertNotNull(response);
             assertEquals(response.getIssuer(), dummyIdIssuer);
+            assertEquals(response.getAuthorizationDetailsTypesSupported()[0], "test_type");
         }
     }
 
