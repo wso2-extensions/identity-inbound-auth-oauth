@@ -212,6 +212,8 @@
             <class name="org.wso2.carbon.identity.oauth2.rar.token.IntrospectionRARDataProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.token.JWTAccessTokenRARClaimProviderTest"/>
             <class name="org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidatorTest"/>
+            <class name="org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilderTest"/>
+            <class name="org.wso2.carbon.identity.oauth.action.rule.PreIssueAccessTokenRuleEvaluationDataProviderTest"/>
         </classes>
     </test>
 </suite>

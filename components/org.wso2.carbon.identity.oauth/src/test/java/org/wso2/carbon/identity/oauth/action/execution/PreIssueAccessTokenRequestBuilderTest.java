@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.action;
+package org.wso2.carbon.identity.oauth.action.execution;
 
 import org.apache.commons.codec.binary.Base64;
 import org.mockito.MockedStatic;
