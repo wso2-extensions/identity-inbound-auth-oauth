@@ -935,7 +935,7 @@ public class OAuth2AuthzEndpoint {
                 value.setRequestedClaims(removeConsentRequestedNullUserAttributes(value.getRequestedClaims(),
                         loggedInUser.getUserAttributes(), spTenantDomain));
                 List<ClaimMetaData> requestedOidcClaimsList =
-                        getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain);
+                        getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain, false);
                 value.setRequestedClaims(requestedOidcClaimsList);
             }
 
@@ -3384,15 +3384,17 @@ public class OAuth2AuthzEndpoint {
                         removeConsentRequestedNullUserAttributes(claimsForApproval.getRequestedClaims(),
                                 user.getUserAttributes(), spTenantDomain));
                 List<ClaimMetaData> requestedOidcClaimsList =
-                        getRequestedOidcClaimsList(claimsForApproval, oauth2Params, spTenantDomain);
+                        getRequestedOidcClaimsList(claimsForApproval, oauth2Params, spTenantDomain, false);
                 if (CollectionUtils.isNotEmpty(requestedOidcClaimsList)) {
                     requestClaimsQueryParam = REQUESTED_CLAIMS + "=" +
                             buildConsentClaimString(requestedOidcClaimsList);
                 }
 
-                if (CollectionUtils.isNotEmpty(claimsForApproval.getMandatoryClaims())) {
+                List<ClaimMetaData> mandatoryOidcClaims =
+                        getRequestedOidcClaimsList(claimsForApproval, oauth2Params, spTenantDomain, true);
+                if (CollectionUtils.isNotEmpty(mandatoryOidcClaims)) {
                     mandatoryClaimsQueryParam = MANDATORY_CLAIMS + "=" +
-                            buildConsentClaimString(claimsForApproval.getMandatoryClaims());
+                            buildConsentClaimString(mandatoryOidcClaims);
                 }
                 additionalQueryParam = buildQueryParamString(requestClaimsQueryParam, mandatoryClaimsQueryParam);
             }
@@ -3475,17 +3477,19 @@ public class OAuth2AuthzEndpoint {
     }
 
     /**
-     * Filter requested claims based on OIDC claims and return the claims which includes in OIDC.
+     * Filter requested or mandatory claims based on OIDC claims and return the claims included in OIDC.
      *
      * @param claimsForApproval         Consent required claims.
      * @param oauth2Params              OAuth parameters.
      * @param spTenantDomain            Tenant domain.
-     * @return                          Requested OIDC claim list.
+     * @param isMandatory               If true, filter mandatory claims; otherwise, filter requested claims.
+     * @return                          Filtered OIDC claim list.
      * @throws RequestObjectException   If an error occurred while getting essential claims for the session data key.
      * @throws ClaimMetadataException   If an error occurred while getting claim mappings.
      */
     private List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
-                                                           OAuth2Parameters oauth2Params, String spTenantDomain)
+                                                           OAuth2Parameters oauth2Params, String spTenantDomain,
+                                                           boolean isMandatory)
             throws RequestObjectException, ClaimMetadataException {
 
         List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
@@ -3498,14 +3502,13 @@ public class OAuth2AuthzEndpoint {
 
         List<String> essentialRequestedClaims = new ArrayList<>();
 
-        if (oauth2Params.isRequestObjectFlow()) {
+        if (!isMandatory && oauth2Params.isRequestObjectFlow()) {
             // Get the requested claims came through request object.
             List<RequestedClaim> requestedClaimsOfIdToken = EndpointUtil.getRequestObjectService()
                     .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), false);
 
             List<RequestedClaim> requestedClaimsOfUserInfo = EndpointUtil.getRequestObjectService()
                     .getRequestedClaimsForSessionDataKey(oauth2Params.getSessionDataKey(), true);
-
 
             // Get the list of id token's essential claims.
             for (RequestedClaim requestedClaim : requestedClaimsOfIdToken) {
@@ -3524,7 +3527,7 @@ public class OAuth2AuthzEndpoint {
 
         // Add user info's essential claims requested using claims parameter. Claims for id_token are skipped
         // since claims parameter does not support id_token yet.
-        if (oauth2Params.getEssentialClaims() != null) {
+        if (!isMandatory && oauth2Params.getEssentialClaims() != null) {
             essentialRequestedClaims.addAll(OAuth2Util.getEssentialClaims(oauth2Params.getEssentialClaims(),
                     USERINFO));
         }
@@ -3557,10 +3560,13 @@ public class OAuth2AuthzEndpoint {
             }
         }
 
-        /* Check whether the local claim of oidc claims contains the requested claims or essential claims of
-         request object contains the requested claims, If it contains add it as requested claim.
-         */
-        for (ClaimMetaData claimMetaData : claimsForApproval.getRequestedClaims()) {
+        // Determine the source claims list based on whether it is mandatory or requested.
+        List<ClaimMetaData> approvalPendingClaims = isMandatory
+                ? claimsForApproval.getMandatoryClaims()
+                : claimsForApproval.getRequestedClaims();
+
+        // Filter claims based on OIDC mappings.
+        for (ClaimMetaData claimMetaData : approvalPendingClaims) {
             if (localClaimsOfOidcClaims.contains(claimMetaData.getClaimUri()) ||
                     localClaimsOfEssentialClaims.contains(claimMetaData.getClaimUri())) {
                 requestedOidcClaimsList.add(claimMetaData);
