@@ -1548,6 +1548,11 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 authzRespDTO.setSubjectToken("sample_subject_token");
                 when(oAuth2Service.authorize(any(OAuthAuthzReqMessageContext.class))).thenReturn(authzRespDTO);
 
+                OAuth2ServiceComponentHolder.getInstance()
+                        .setAuthorizationDetailsService(authorizationDetailsServiceMock);
+                when(authorizationDetailsServiceMock.isUserAlreadyConsentedForAuthorizationDetails(
+                        any(AuthenticatedUser.class), any(OAuth2Parameters.class))).thenReturn(true);
+
                 mockEndpointUtil(false, endpointUtil);
                 Response response;
                 try (Connection connection = getConnection()) {
