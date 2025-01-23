@@ -2013,7 +2013,7 @@ public class OAuthAppDAO {
             } else {
                 // Enable hybrid flow with all configured response types
                 oauthApp.setHybridFlowEnabled(true);
-                String hybridFlowResponseType = String.join(", ", configuredHybridResponseTypes);
+                String hybridFlowResponseType = String.join(",", configuredHybridResponseTypes);
                 oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
             }
         } else {

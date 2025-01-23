@@ -374,12 +374,10 @@ public class OAuth2ServiceTest {
 
                 // Hybrid flow enabled but configured response type is different than requested.
                 {true, "code id_token token", "code token",
-                        false, OAuth2ErrorCodes.INVALID_CLIENT, "Requested response type code token is not " +
-                        "configured for the hybrid flow for the application."},
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "invalid.response.type.for.hybrid.flow"},
 
                 {true, "code id_token token, code id_token", "code token",
-                        false, OAuth2ErrorCodes.INVALID_CLIENT, "Requested response type code token is not " +
-                        "configured for the hybrid flow for the application."}
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "invalid.response.type.for.hybrid.flow"}
         };
     }
 
