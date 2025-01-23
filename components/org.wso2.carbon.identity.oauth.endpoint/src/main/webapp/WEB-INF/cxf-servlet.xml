@@ -57,6 +57,7 @@
         <property name="openIDConnectClaimFilter" ref="openIDConnectClaimFilterFactoryBean"/>
         <property name="deviceAuthService" ref="deviceAuthServiceFactoryBean"/>
         <property name="scopeMetadataService" ref="scopeServiceFactoryBean"/>
+        <property name="authorizationDetailsService" ref="authorizationDetailsServiceFactoryBean"/>
     </bean>
     <bean id="apiAuthnEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnEndpoint"/>
     <bean id="tokenEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.token.OAuth2TokenEndpoint"/>
@@ -103,4 +104,5 @@
     <bean id="parEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpoint"/>
     <bean id="parAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.ParServiceFactory"/>
     <bean id="idpManagerBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.IDPManagerFactory"/>
+    <bean id="authorizationDetailsServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.AuthorizationDetailsServiceFactory"/>
 </beans>

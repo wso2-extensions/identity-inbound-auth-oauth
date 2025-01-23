@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authz;
 
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 
 import java.io.Serializable;
@@ -55,6 +56,10 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     private boolean isSubjectTokenFlow;
 
     private Properties properties = new Properties();
+
+    private AuthorizationDetails approvedAuthorizationDetails;
+
+    private AuthorizationDetails requestedAuthorizationDetails;
 
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
@@ -211,5 +216,49 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setSubjectTokenFlow(boolean subjectTokenFlow) {
 
         isSubjectTokenFlow = subjectTokenFlow;
+    }
+
+    /**
+     * Retrieves the user approved authorization details.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the approved authorization information.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getApprovedAuthorizationDetails() {
+
+        return this.approvedAuthorizationDetails;
+    }
+
+    /**
+     * Sets the approved authorization details.
+     * This method updates the approved authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param approvedAuthorizationDetails the approved {@link AuthorizationDetails} to set.
+     */
+    public void setApprovedAuthorizationDetails(final AuthorizationDetails approvedAuthorizationDetails) {
+
+        this.approvedAuthorizationDetails = approvedAuthorizationDetails;
+    }
+
+    /**
+     * Retrieves the requested authorization details.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the authorization information came in the request.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getRequestedAuthorizationDetails() {
+
+        return this.requestedAuthorizationDetails;
+    }
+
+    /**
+     * Sets the requested authorization details.
+     * This method updates the requested authorization details with the provided {@link AuthorizationDetails} instance.
+     *
+     * @param requestedAuthorizationDetails the requested {@link AuthorizationDetails} to set.
+     */
+    public void setRequestedAuthorizationDetails(final AuthorizationDetails requestedAuthorizationDetails) {
+
+        this.requestedAuthorizationDetails = requestedAuthorizationDetails;
     }
 }

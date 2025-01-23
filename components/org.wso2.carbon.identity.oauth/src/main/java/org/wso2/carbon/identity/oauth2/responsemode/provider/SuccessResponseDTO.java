@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth2.responsemode.provider;
 
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 
 import java.util.Set;
 
@@ -34,6 +35,7 @@ public class SuccessResponseDTO {
     private String formPostBody;
     private String subjectToken;
     private Set<String> scope = null;
+    private AuthorizationDetails authorizationDetails;
 
     public String getAuthorizationCode() {
 
@@ -116,5 +118,26 @@ public class SuccessResponseDTO {
     public void setSubjectToken(String subjectToken) {
 
         this.subjectToken = subjectToken;
+    }
+
+    /**
+     * Retrieves the authorization details to be included in the successful authorization response.
+     *
+     * @return the {@link AuthorizationDetails} instance representing the current authorization information.
+     * If no authorization details are available, it will return {@code null}.
+     */
+    public AuthorizationDetails getAuthorizationDetails() {
+
+        return this.authorizationDetails;
+    }
+
+    /**
+     * Sets the authorization details to be included in the successful authorization response.
+     *
+     * @param authorizationDetails the {@link AuthorizationDetails} to set.
+     */
+    public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
+
+        this.authorizationDetails = authorizationDetails;
     }
 }

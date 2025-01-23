@@ -22,6 +22,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AbstractResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 
@@ -62,6 +65,8 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
             String scope = authorizationResponseDTO.getSuccessResponseDTO().getScope();
             String authenticatedIdPs = authorizationResponseDTO.getAuthenticatedIDPs();
             String subjectToken = authorizationResponseDTO.getSuccessResponseDTO().getSubjectToken();
+            final AuthorizationDetails authorizationDetails = authorizationResponseDTO.getSuccessResponseDTO()
+                    .getAuthorizationDetails();
             List<String> params = new ArrayList<>();
             if (accessToken != null) {
                 appendParam(params, OAuthConstants.ACCESS_TOKEN_RESPONSE_PARAM, accessToken);
@@ -98,6 +103,11 @@ public class FragmentResponseModeProvider extends AbstractResponseModeProvider {
 
             if (StringUtils.isNotBlank(subjectToken)) {
                 appendParam(params, OAuthConstants.SUBJECT_TOKEN, subjectToken);
+            }
+
+            if (AuthorizationDetailsUtils.isRichAuthorizationRequest(authorizationDetails)) {
+                params.add(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS + "=" +
+                        AuthorizationDetailsUtils.getUrlEncodedAuthorizationDetails(authorizationDetails));
             }
 
             redirectUrl += "#" + String.join("&", params);

@@ -52,6 +52,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -65,6 +68,9 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
+import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
+import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -119,6 +125,7 @@ public class AccessTokenIssuer {
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
     private static final String SERVICE_PROVIDERS_SUB_CLAIM = "ServiceProviders.UseUsernameAsSubClaim";
+    private final AuthorizationDetailsValidator authorizationDetailsValidator;
 
     /**
      * Private constructor which will not allow to create objects of this class from outside
@@ -126,6 +133,7 @@ public class AccessTokenIssuer {
     private AccessTokenIssuer() throws IdentityOAuth2Exception {
 
         authzGrantHandlers = OAuthServerConfiguration.getInstance().getSupportedGrantTypes();
+        this.authorizationDetailsValidator = new DefaultAuthorizationDetailsValidator();
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         if (appInfoCache != null) {
             if (log.isDebugEnabled()) {
@@ -447,6 +455,35 @@ public class AccessTokenIssuer {
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
+        }
+
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx)) {
+            try {
+                final AuthorizationDetails validatedAuthorizationDetails = this.authorizationDetailsValidator
+                        .getValidatedAuthorizationDetails(tokReqMsgCtx);
+                tokReqMsgCtx.setAuthorizationDetails(validatedAuthorizationDetails);
+            } catch (AuthorizationDetailsProcessingException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid authorization details requested by client Id: " + tokenReqDTO.getClientId());
+                }
+
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_DETAILS)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_AUTHORIZATION_DETAILS,
+                                    tokenReqDTO.getAuthorizationDetails().toSet())
+                            .resultMessage(AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                }
+                tokenRespDTO = handleError(AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_CODE,
+                        AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG, tokenReqDTO);
+                setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+                triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
+                return tokenRespDTO;
+            }
         }
 
         handleTokenBinding(tokenReqDTO, grantType, tokReqMsgCtx, oAuthAppDO);

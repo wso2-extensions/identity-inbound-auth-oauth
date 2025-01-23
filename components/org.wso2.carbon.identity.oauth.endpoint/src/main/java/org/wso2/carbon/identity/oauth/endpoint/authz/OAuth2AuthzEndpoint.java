@@ -113,9 +113,13 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2UnauthorizedScopeException;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
@@ -134,6 +138,8 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeaderHandler;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.AuthorizationResponseDTO;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
@@ -281,6 +287,9 @@ public class OAuth2AuthzEndpoint {
     private static ScopeMetadataService scopeMetadataService;
 
     private static DeviceAuthService deviceAuthService;
+
+    private static AuthorizationDetailsService authorizationDetailsService;
+
     private static final String AUTH_SERVICE_RESPONSE = "authServiceResponse";
     private static final String IS_API_BASED_AUTH_HANDLED = "isApiBasedAuthHandled";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
@@ -303,6 +312,16 @@ public class OAuth2AuthzEndpoint {
     public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
 
         OAuth2AuthzEndpoint.scopeMetadataService = scopeMetadataService;
+    }
+
+    public static AuthorizationDetailsService getAuthorizationDetailsService() {
+
+        return authorizationDetailsService;
+    }
+
+    public static void setAuthorizationDetailsService(AuthorizationDetailsService authorizationDetailsService) {
+
+        OAuth2AuthzEndpoint.authorizationDetailsService = authorizationDetailsService;
     }
 
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
@@ -1650,6 +1669,7 @@ public class OAuth2AuthzEndpoint {
                 oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
+        oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
         if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
@@ -1746,10 +1766,17 @@ public class OAuth2AuthzEndpoint {
             if (approvedAlways) {
                 OpenIDConnectUserRPStore.getInstance().putUserRPToStore(loggedInUser, applicationName,
                         true, clientId);
+                final AuthorizationDetails userConsentedAuthorizationDetails = AuthorizationDetailsUtils
+                        .extractAuthorizationDetailsFromRequest(oAuthMessage.getRequest(), oauth2Params);
+
                 if (hasPromptContainsConsent(oauth2Params)) {
                     EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, true);
+                    authorizationDetailsService.replaceUserConsentedAuthorizationDetails(loggedInUser,
+                            clientId, oauth2Params, userConsentedAuthorizationDetails);
                 } else {
                     EndpointUtil.storeOAuthScopeConsent(loggedInUser, oauth2Params, false);
+                    authorizationDetailsService.storeOrUpdateUserConsentedAuthorizationDetails(loggedInUser,
+                            clientId, oauth2Params, userConsentedAuthorizationDetails);
                 }
             }
         }
@@ -1889,6 +1916,7 @@ public class OAuth2AuthzEndpoint {
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
             setScopes(authzRespDTO, builder, authorizationResponseDTO);
+            setAuthorizationDetails(authzRespDTO, builder, authorizationResponseDTO);
         }
         if (isSubjectTokenFlow(responseType, authzRespDTO)) {
             setSubjectToken(authzRespDTO, builder, authorizationResponseDTO);
@@ -2630,6 +2658,13 @@ public class OAuth2AuthzEndpoint {
             params.setEssentialClaims(oauthRequest.getParam(CLAIMS));
         }
 
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(oauthRequest)) {
+
+            final String authorizationDetailsJson = oauthRequest
+                    .getParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS);
+            params.setAuthorizationDetails(new AuthorizationDetails(authorizationDetailsJson));
+        }
+
         handleMaxAgeParameter(oauthRequest, params);
 
         Object isMtls = oAuthMessage.getRequest().getAttribute(OAuthConstants.IS_MTLS_REQUEST);
@@ -3031,6 +3066,22 @@ public class OAuth2AuthzEndpoint {
             authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND, e.getMessage(), e.getErrorCode());
             return handleAuthorizationFailureBeforeConsent(oAuthMessage, oauth2Params, authorizeRespDTO);
+        }
+
+        try {
+            validateAuthorizationDetailsBeforeConsent(oAuthMessage, oauth2Params);
+        } catch (AuthorizationDetailsProcessingException e) {
+            log.debug("Error occurred while validating authorization details. Caused by, ", e);
+
+            authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND,
+                    AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG,
+                    AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_CODE);
+
+            OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO = new OAuth2AuthorizeRespDTO();
+            oAuth2AuthorizeRespDTO.setErrorMsg(AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG);
+            oAuth2AuthorizeRespDTO.setErrorCode(AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_CODE);
+            oAuth2AuthorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
+            return handleAuthorizationFailureBeforeConsent(oAuthMessage, oauth2Params, oAuth2AuthorizeRespDTO);
         }
 
         boolean hasUserApproved = isUserAlreadyApproved(oauth2Params, authenticatedUser);
@@ -3726,10 +3777,14 @@ public class OAuth2AuthzEndpoint {
             throws OAuthSystemException {
 
         try {
-            return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params);
+            return EndpointUtil.isUserAlreadyConsentedForOAuthScopes(user, oauth2Params) &&
+                    authorizationDetailsService.isUserAlreadyConsentedForAuthorizationDetails(user, oauth2Params);
         } catch (IdentityOAuth2ScopeException | IdentityOAuthAdminException e) {
             throw new OAuthSystemException("Error occurred while checking user has already approved the consent " +
                     "required OAuth scopes.", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new OAuthSystemException("Error occurred while checking user has already approved the consent " +
+                    "required authorization details.", e);
         }
     }
 
@@ -3823,6 +3878,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
         authzReqDTO.setRequestedSubjectId(oauth2Params.getRequestedSubjectId());
         authzReqDTO.setMappedRemoteClaims(sessionDataCacheEntry.getMappedRemoteClaims());
+        authzReqDTO.setAuthorizationDetails(oauth2Params.getAuthorizationDetails());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
@@ -4833,5 +4889,87 @@ public class OAuth2AuthzEndpoint {
             }
         }
         return redirectURI;
+    }
+
+    /**
+     * Validates the authorization details in the provided OAuth message before user consent.
+     *
+     * <p>This method checks if the request is a rich authorization request. If it is, it
+     * retrieves and validates the authorization details, updating the parameters and context
+     * accordingly. If any validation errors occur, it logs the issue and throws an appropriate
+     * exception.</p>
+     *
+     * @param oAuthMessage          The {@link OAuthMessage} containing the authorization request details.
+     * @param oAuth2Parameters      The {@link OAuth2Parameters} object holding the parameters of the OAuth request.
+     * @throws AuthorizationDetailsProcessingException If there is an error processing the authorization details.
+     * @throws OAuthSystemException                    If there is an error during the validation process.
+     */
+    private void validateAuthorizationDetailsBeforeConsent(final OAuthMessage oAuthMessage,
+                                                           final OAuth2Parameters oAuth2Parameters)
+            throws AuthorizationDetailsProcessingException, OAuthSystemException {
+
+        if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2Parameters)) {
+            log.debug("Authorization request is not a rich authorization request. Skipping validation.");
+            return;
+        }
+
+        try {
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_DETAILS_BEFORE_CONSENT);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oAuth2Parameters.getClientId())
+                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oAuth2Parameters.getApplicationName())
+                        .inputParam("authorization details to be validated",
+                                oAuth2Parameters.getAuthorizationDetails().toSet())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("authorization details validation started")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
+
+            final OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext =
+                    oAuthMessage.getSessionDataCacheEntry().getAuthzReqMsgCtx();
+
+            // Validate the authorization details
+            final AuthorizationDetails validatedAuthorizationDetails = OAuth2ServiceComponentHolder.getInstance()
+                    .getAuthorizationDetailsValidator()
+                    .getValidatedAuthorizationDetails(oAuthAuthzReqMessageContext);
+
+            // Update the authorization message context with validated authorization details
+            oAuthAuthzReqMessageContext.setRequestedAuthorizationDetails(AuthorizationDetailsUtils
+                    .assignUniqueIDsToAuthorizationDetails(validatedAuthorizationDetails));
+            oAuthMessage.getSessionDataCacheEntry().setAuthzReqMsgCtx(oAuthAuthzReqMessageContext);
+
+            // update oAuth2Parameters with validated authorization details
+            oAuth2Parameters.setAuthorizationDetails(oAuthAuthzReqMessageContext.getRequestedAuthorizationDetails());
+
+            if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_DETAILS_BEFORE_CONSENT);
+                diagnosticLogBuilder.inputParam(LogConstants.InputKeys.CLIENT_ID, oAuth2Parameters.getClientId())
+                        .inputParam(LogConstants.InputKeys.APPLICATION_NAME, oAuth2Parameters.getApplicationName())
+                        .inputParam("authorization details after validation",
+                                oAuth2Parameters.getAuthorizationDetails().toSet())
+                        .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                        .resultMessage("authorization details validation completed")
+                        .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
+        } catch (IdentityOAuth2ServerException e) {
+            log.error("Error occurred while validating authorization details. Caused by, ", e);
+            throw new OAuthSystemException("Error occurred while validating requested authorization details", e);
+        }
+    }
+
+    private void setAuthorizationDetails(final OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO,
+                                         final OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                         final AuthorizationResponseDTO authorizationResponseDTO) {
+
+        final AuthorizationDetails authorizationDetails = oAuth2AuthorizeRespDTO.getAuthorizationDetails();
+        builder.setParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS,
+                AuthorizationDetailsUtils.getUrlEncodedAuthorizationDetails(authorizationDetails));
+        authorizationResponseDTO.getSuccessResponseDTO().setAuthorizationDetails(authorizationDetails);
     }
 }
