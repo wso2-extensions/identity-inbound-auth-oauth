@@ -75,7 +75,6 @@ import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerConfigurationFactory;
-import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderRequestValidatorFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory;
@@ -821,9 +820,6 @@ public class EndpointUtilTest {
     @Test
     public void testGetServices() {
 
-        assertTrue(OIDCProviderRequestValidatorFactory.getOIDProviderRequestValidator()
-                        instanceof DefaultOIDCProviderRequestBuilder,
-                "Retrieved incorrect OIDProviderRequestValidator");
         assertTrue(OIDCProviderServiceFactory.getOIDCService() instanceof DefaultOIDCProcessor,
                 "Retrieved incorrect OIDCService");
         assertTrue(OAuth2ServiceFactory.getOAuth2Service() instanceof OAuth2Service,
