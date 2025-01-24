@@ -180,8 +180,10 @@
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.dcr.internal,
-                            org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
+                            org.wso2.carbon.identity.oauth.dcr.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",
+                            org.wso2.carbon.identity.oauth.dcr.handler.*;version="${identity.inbound.auth.oauth.exp.pkg.version}"
                         </Export-Package>
+                        <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>
             </plugin>
