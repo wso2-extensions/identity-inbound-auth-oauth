@@ -185,8 +185,7 @@ public class ApiAuthnHandler {
 
     private boolean isAdditionalAuthenticatorDataAvailable(AuthenticatorData authenticatorData) {
 
-        // We can assume if required params are empty that other additional data is also empty.
-        return !authenticatorData.getRequiredParams().isEmpty();
+        return !authenticatorData.getRequiredParams().isEmpty() || (authenticatorData.getAdditionalData() != null);
     }
 
     private Map<String, String> getAdditionalData(AdditionalData additionalData) {
