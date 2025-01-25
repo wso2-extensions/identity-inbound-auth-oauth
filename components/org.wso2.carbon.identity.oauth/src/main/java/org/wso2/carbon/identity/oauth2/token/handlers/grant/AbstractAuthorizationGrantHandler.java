@@ -202,8 +202,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
                 String requestGrantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
                 boolean isConsentRequiredGrant = OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(requestGrantType);
+                boolean isRichAuthRequest = AuthorizationDetailsUtils.isRichAuthorizationRequest(
+                        tokReqMsgCtx.getAuthorizationDetails());
 
-                if (!isConsentRequiredGrant) {
+                if (!isConsentRequiredGrant && !isRichAuthRequest) {
 
                     long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
                     if (isExistingTokenValid(existingTokenBean, expireTime)) {
@@ -242,6 +244,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             if (existingTokenBean != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Latest access token is found in the OAuthCache for the app: " + consumerKey);
+                }
+
+                if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("TokenRenewalPerRequest is enabled. " +
+                                "Proceeding to revoke any existing active tokens and issue new token for client Id: " +
+                                consumerKey + ", user: " + authorizedUserId + " and scope: " + scope + ".");
+                    }
+                    return renewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, oauthTokenIssuer);
                 }
 
                 long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
