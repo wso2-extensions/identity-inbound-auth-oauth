@@ -972,7 +972,7 @@
         </carbon.identity.framework.imp.pkg.version.range>
         <identity.oauth.xacml.version.range>[2.0.0, 3.0.0)</identity.oauth.xacml.version.range>
 
-        <carbon.identity.organization.management.version>1.4.70-SNAPSHOT
+        <carbon.identity.organization.management.version>1.4.74
         </carbon.identity.organization.management.version>
         <carbon.identity.organization.management.version.range>[1.1.14, 2.0.0)
         </carbon.identity.organization.management.version.range>
