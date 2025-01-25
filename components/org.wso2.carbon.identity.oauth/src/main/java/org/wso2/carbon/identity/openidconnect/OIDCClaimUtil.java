@@ -48,7 +48,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
-import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -648,7 +647,8 @@ public class OIDCClaimUtil {
      */
     public static boolean isSharedUserProfileResolverEnabled() {
 
-        return OrganizationSharedUserUtil.isSharedUserProfileResolverEnabled();
+        return true;
+       // return OrganizationSharedUserUtil.isSharedUserProfileResolverEnabled();
     }
 
     private static void addSharedUserGroupsFromSharedOrganization(AuthenticatedUser authenticatedUser,
