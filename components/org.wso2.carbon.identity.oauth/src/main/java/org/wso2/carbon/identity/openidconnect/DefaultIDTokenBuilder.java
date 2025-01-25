@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -30,6 +30,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
@@ -121,7 +122,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // Initialize OAuthAppDO using the client ID.
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, spTenantDomain);
         } catch (InvalidOAuthClientException e) {
             String error = "Error occurred while getting app information for client_id: " + clientId;
             throw new IdentityOAuth2Exception(error, e);
@@ -421,7 +422,16 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
     private String getSigningTenantDomain(OAuthTokenReqMessageContext tokReqMsgCtx) {
         boolean isJWTSignedWithSPKey = OAuthServerConfiguration.getInstance().isJWTSignedWithSPKey();
-        if (isJWTSignedWithSPKey) {
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is
+         registered directly in the organization of the applicationResidentOrgId. In this case, the tenant domain
+         that needs to be signing the token should be the root tenant of the organization in applicationResidentOrgId.
+        */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            return PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        } else if (isJWTSignedWithSPKey) {
             return (String) tokReqMsgCtx.getProperty(MultitenantConstants.TENANT_DOMAIN);
         } else {
             return tokReqMsgCtx.getAuthorizedUser().getTenantDomain();

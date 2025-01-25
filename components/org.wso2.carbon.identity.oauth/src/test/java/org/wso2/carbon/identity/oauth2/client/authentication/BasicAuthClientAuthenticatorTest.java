@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2018-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -115,7 +115,7 @@ public class BasicAuthClientAuthenticatorTest {
             OAuthClientAuthnContext oAuthClientAuthnContext = (OAuthClientAuthnContext) oAuthClientAuthnContextObj;
             HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
 
-            oAuth2Util.when(() -> OAuth2Util.authenticateClient(anyString(), anyString())).thenReturn
+            oAuth2Util.when(() -> OAuth2Util.authenticateClient(anyString(), anyString(), anyString())).thenReturn
                     (isAuthenticated);
             when(httpServletRequest.getHeader(headerName)).thenReturn(headerValue);
             assertEquals(basicAuthClientAuthenticator.authenticateClient(httpServletRequest, bodyContent,
@@ -157,10 +157,10 @@ public class BasicAuthClientAuthenticatorTest {
             HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
 
             if (exception instanceof IdentityOAuthAdminException) {
-                oAuth2Util.when(() -> OAuth2Util.authenticateClient(anyString(), anyString())).thenThrow(
+                oAuth2Util.when(() -> OAuth2Util.authenticateClient(anyString(), anyString(), anyString())).thenThrow(
                         (IdentityOAuthAdminException) exception);
             } else if (exception instanceof IdentityOAuth2Exception) {
-                oAuth2Util.when(() -> OAuth2Util.authenticateClient(anyString(), anyString())).thenThrow(
+                oAuth2Util.when(() -> OAuth2Util.authenticateClient(anyString(), anyString(), anyString())).thenThrow(
                         (IdentityOAuth2Exception) exception);
             }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2023-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -255,13 +255,17 @@ public class AuthzUtil {
 
         // Application id is not required for basic authentication flow.
         List<String> roleIds = getUserRoles(authenticatedUser, null);
-        String tenantDomain = authenticatedUser.getTenantDomain();
-        if (StringUtils.isNotBlank(authenticatedUser.getAccessingOrganization()) &&
-                !authenticatedUser.getAccessingOrganization().
-                        equals(authenticatedUser.getUserResidentOrganization())) {
-            tenantDomain = getAccessingTenantDomain(authenticatedUser);
+        List<String> permissions;
+        /*
+         If the authenticatedUser contains an accessing organization, the the scopes should be checked against the
+         accessing organization.
+        */
+        if (StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization())) {
+            permissions = getAssociatedScopesForRoles(roleIds,
+                    authenticatedUser.getAccessingOrganization());
+        } else {
+            permissions = getAssociatedScopesForRoles(roleIds, authenticatedUser.getTenantDomain());
         }
-        List<String> permissions = getAssociatedScopesForRoles(roleIds, tenantDomain);
         if (OAuthServerConfiguration.getInstance().isUseLegacyPermissionAccessForUserBasedAuth()) {
             // Handling backward compatibility for previous access level.
             List<String> internalScopes = getInternalScopes(authenticatedUser.getTenantDomain());
