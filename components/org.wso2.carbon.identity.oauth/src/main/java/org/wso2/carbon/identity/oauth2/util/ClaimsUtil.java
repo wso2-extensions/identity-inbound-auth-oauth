@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -29,6 +30,7 @@ import org.opensaml.saml.saml2.core.Attribute;
 import org.opensaml.saml.saml2.core.AttributeStatement;
 import org.w3c.dom.Element;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -329,11 +331,9 @@ public class ClaimsUtil {
             throws IdentityException, IdentityApplicationManagementException {
 
         List<String> assignedRoles = null;
-        ServiceProvider serviceProvider = null;
+        ServiceProvider serviceProvider = getServiceProvider(tokenReqMsgCtx);
         if (resolveIdPGroupAssignments) {
-            serviceProvider = getServiceProvider(tokenReqMsgCtx);
-            String applicationId = serviceProvider.getApplicationResourceId();
-            assignedRoles = getAssignedRolesFromIdPGroups(identityProvider, attributes, applicationId,
+            assignedRoles = getAssignedRolesFromIdPGroups(identityProvider, attributes, serviceProvider,
                     tenantDomain);
         }
         boolean proxyUserAttributes = !OAuthServerConfiguration.getInstance()
@@ -347,9 +347,6 @@ public class ClaimsUtil {
         ClaimMapping[] idPClaimMappings = identityProvider.getClaimConfig().getClaimMappings();
         Map<String, String> claimsAfterIdpMapping;
         Map<String, String> claimsAfterSPMapping = new HashMap<>();
-        if (serviceProvider == null) {
-            serviceProvider = getServiceProvider(tokenReqMsgCtx);
-        }
 
         if (ArrayUtils.isNotEmpty(idPClaimMappings)) {
             if (log.isDebugEnabled()) {
@@ -414,8 +411,14 @@ public class ClaimsUtil {
     }
 
     private static List<String> getAssignedRolesFromIdPGroups(IdentityProvider identityProvider,
-                                                              Map<String, String> attributes, String applicationId,
-                                                              String tenantDomain) {
+                                                              Map<String, String> attributes,
+                                                              ServiceProvider serviceProvider,
+                                                              String tenantDomain) throws FrameworkException {
+
+        if (serviceProvider == null || MapUtils.isEmpty(attributes)) {
+            return new ArrayList<>();
+        }
+        String applicationId = serviceProvider.getApplicationResourceId();
 
         String idpGroupClaimURI = FrameworkUtils.getEffectiveIdpGroupClaimUri(identityProvider, tenantDomain);
         if (StringUtils.isBlank(idpGroupClaimURI)) {
