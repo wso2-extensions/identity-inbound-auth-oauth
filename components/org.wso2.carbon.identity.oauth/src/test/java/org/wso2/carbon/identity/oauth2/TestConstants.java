@@ -91,4 +91,10 @@ public class TestConstants {
 
     public static final String FAPI_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
+
+    // Rich Authorization Requests
+    public static final String TEST_CONSENT_ID = "52481ccd-0927-4d17-8cfc-5110fc4aa009";
+    public static final String TEST_USER_ID = "c2179b58-b048-49d1-acb4-45b672d6fe5f";
+    public static final String TEST_APP_ID = "a49257ea-3d5d-4558-b0c5-f9b3b0ca2fb0";
+    public static final String TEST_TYPE = "test_type_v1";
 }

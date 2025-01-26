@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
+import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.net.URISyntaxException;
@@ -152,6 +153,13 @@ public class ProviderConfigBuilder {
                 .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
         providerConfig.setMtlsTokenEndpoint(OAuth2Util.OAuthURL.getOAuth2MTLSTokenEPUrl());
         providerConfig.setMtlsPushedAuthorizationRequestEndpoint(OAuth2Util.OAuthURL.getOAuth2MTLSParEPUrl());
+
+        final Set<String> authorizationDetailTypes = AuthorizationDetailsProcessorFactory.getInstance()
+                .getSupportedAuthorizationDetailTypes();
+        if (authorizationDetailTypes != null && !authorizationDetailTypes.isEmpty()) {
+            providerConfig
+                    .setAuthorizationDetailsTypesSupported(authorizationDetailTypes.stream().toArray(String[]::new));
+        }
         return providerConfig;
     }
 }

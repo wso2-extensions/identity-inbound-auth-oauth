@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.util.OrganizationSharedUserUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -484,7 +485,28 @@ public class OIDCClaimUtil {
             claimURIList.remove(APP_ROLES_CLAIM);
             appRoleClaimRequested = true;
         }
-        Map<String, String> userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+
+        Map<String, String> userClaims;
+        if (isSharedUserProfileResolverEnabled() && isSharedUserAccessingSharedOrg(authenticatedUser) &&
+                StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
+            String userAccessingTenantDomain = resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+            AbstractUserStoreManager userStoreManager =
+                    (AbstractUserStoreManager) OAuthComponentServiceHolder.getInstance().getRealmService()
+                            .getTenantUserRealm(IdentityTenantUtil.getTenantId(userAccessingTenantDomain))
+                            .getUserStoreManager();
+            String fullQualifiedSharedUsername = userStoreManager.getUser(authenticatedUser.getSharedUserId(), null)
+                    .getFullQualifiedUsername();
+            realm = IdentityTenantUtil.getRealm(userAccessingTenantDomain, fullQualifiedSharedUsername);
+
+            try {
+                FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
+                userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+            } finally {
+                FrameworkUtils.endTenantFlow();
+            }
+        } else {
+            userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+        }
 
         if (roleClaimRequested || appRoleClaimRequested) {
             String[] appAssocatedRolesOfUser = getAppAssociatedRolesOfUser(authenticatedUser,
@@ -599,12 +621,34 @@ public class OIDCClaimUtil {
         }
     }
 
-    private static boolean isSharedUserAccessingSharedOrg(AuthenticatedUser authenticatedUser) {
+    public static boolean isSharedUserAccessingSharedOrg(AuthenticatedUser authenticatedUser) {
 
         return StringUtils.isNotEmpty(authenticatedUser.getUserSharedOrganizationId()) &&
                 StringUtils.isNotEmpty(authenticatedUser.getAccessingOrganization()) &&
                 StringUtils.equals(authenticatedUser.getUserSharedOrganizationId(),
                         authenticatedUser.getAccessingOrganization());
+    }
+
+    /**
+     * Resolve the tenant domain of the organization.
+     *
+     * @param organizationId Organization Id.
+     * @return Tenant domain of the organization.
+     * @throws OrganizationManagementException If an error occurred while resolving the tenant domain.
+     */
+    public static String resolveTenantDomain(String organizationId) throws OrganizationManagementException {
+
+        return OAuthComponentServiceHolder.getInstance().getOrganizationManager().resolveTenantDomain(organizationId);
+    }
+
+    /**
+     * Check whether the shared user profile resolver is enabled.
+     *
+     * @return True if the shared user profile resolver is enabled.
+     */
+    public static boolean isSharedUserProfileResolverEnabled() {
+
+        return OrganizationSharedUserUtil.isSharedUserProfileResolverEnabled();
     }
 
     private static void addSharedUserGroupsFromSharedOrganization(AuthenticatedUser authenticatedUser,

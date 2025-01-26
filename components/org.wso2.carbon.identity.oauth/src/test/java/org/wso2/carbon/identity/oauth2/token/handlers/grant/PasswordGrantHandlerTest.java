@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.apache.commons.logging.Log;
 import org.mockito.MockedStatic;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -50,6 +51,8 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -59,6 +62,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -82,8 +87,10 @@ public class PasswordGrantHandlerTest {
 
     private static final String CLIENT_ID = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
 
+    private Log mockLog;
+
     @BeforeMethod
-    public void init() {
+    public void init() throws Exception {
 
         tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
@@ -97,6 +104,18 @@ public class PasswordGrantHandlerTest {
         serverConfiguration = mock(OAuthServerConfiguration.class);
         oauthIssuer = mock(OauthTokenIssuer.class);
         localAndOutboundAuthenticationConfig = mock(LocalAndOutboundAuthenticationConfig.class);
+        mockLog = mock(Log.class);
+        Field logField =
+                PasswordGrantHandler.class.getDeclaredField("log");
+        logField.setAccessible(true);
+
+        // Remove the 'final' modifier using reflection
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+
+        // Set the static field to the mock object
+        logField.set(null, mockLog);
     }
 
     @DataProvider(name = "ValidateGrantDataProvider")
@@ -134,6 +153,8 @@ public class PasswordGrantHandlerTest {
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
             when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("wso2.com");
             when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("randomPassword");
+
+            when(mockLog.isDebugEnabled()).thenReturn(true);
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfiguration);
 
@@ -186,6 +207,7 @@ public class PasswordGrantHandlerTest {
 
             PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
             boolean isValid = passwordGrantHandler.validateGrant(tokReqMsgCtx);
+            verify(mockLog, times(2)).debug(eq("PASSWORD_GRANT_POST_AUTHENTICATION event is triggered"));
             assertTrue(isValid, "Password grant validation should be successful");
         }
     }

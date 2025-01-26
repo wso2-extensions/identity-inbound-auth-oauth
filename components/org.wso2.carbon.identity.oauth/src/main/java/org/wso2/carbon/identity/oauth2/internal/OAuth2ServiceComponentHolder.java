@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceManager;
+import org.wso2.carbon.identity.api.resource.mgt.AuthorizationDetailsTypeManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.UserSessionManagementService;
@@ -33,6 +34,7 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
@@ -46,6 +48,9 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenti
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
+import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvider;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
@@ -126,6 +131,11 @@ public class OAuth2ServiceComponentHolder {
     private ConfigurationManager configurationManager;
     private static AccountLockService accountLockService;
     private ClaimMetadataManagementService claimMetadataManagementService;
+
+    private AuthorizationDetailsService authorizationDetailsService;
+    private AuthorizationDetailsValidator authorizationDetailsValidator;
+    private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
+    private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -931,5 +941,91 @@ public class OAuth2ServiceComponentHolder {
     public ClaimMetadataManagementService getClaimMetadataManagementService() {
 
         return claimMetadataManagementService;
+    }
+
+    /**
+     * Set an {@link AuthorizationDetailsService} instance.
+     *
+     * @param authorizationDetailsService AuthorizationDetailsService instance.
+     */
+    public void setAuthorizationDetailsService(AuthorizationDetailsService authorizationDetailsService) {
+
+        this.authorizationDetailsService = authorizationDetailsService;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsService} instance.
+     *
+     * @return A {@link AuthorizationDetailsService} singleton instance.
+     */
+    public AuthorizationDetailsService getAuthorizationDetailsService() {
+
+        if (this.authorizationDetailsService == null) {
+            this.authorizationDetailsService = new AuthorizationDetailsService();
+        }
+        return this.authorizationDetailsService;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsValidator} instance.
+     *
+     * @param authorizationDetailsValidator AuthorizationDetailsValidator instance.
+     */
+    public void setAuthorizationDetailsValidator(AuthorizationDetailsValidator authorizationDetailsValidator) {
+
+        this.authorizationDetailsValidator = authorizationDetailsValidator;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsValidator} instance.
+     *
+     * @return A {@link AuthorizationDetailsValidator} singleton instance.
+     */
+    public AuthorizationDetailsValidator getAuthorizationDetailsValidator() {
+
+        if (this.authorizationDetailsValidator == null) {
+            this.authorizationDetailsValidator = new DefaultAuthorizationDetailsValidator();
+        }
+        return this.authorizationDetailsValidator;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsTypeManager} instance.
+     *
+     * @return A {@link AuthorizationDetailsTypeManager} singleton instance.
+     */
+    public AuthorizationDetailsTypeManager getAuthorizationDetailsTypeManager() {
+
+        return this.authorizationDetailsTypeManager;
+    }
+
+    /**
+     * set an {@link AuthorizationDetailsTypeManager} instance.
+     *
+     * @param authorizationDetailsTypeManager An {@link AuthorizationDetailsTypeManager} instance.
+     */
+    public void setAuthorizationDetailsTypeManager(AuthorizationDetailsTypeManager authorizationDetailsTypeManager) {
+
+        this.authorizationDetailsTypeManager = authorizationDetailsTypeManager;
+    }
+
+    /**
+     * Get an {@link AuthorizationDetailsSchemaValidator} instance.
+     *
+     * @return A {@link AuthorizationDetailsSchemaValidator} singleton instance.
+     */
+    public AuthorizationDetailsSchemaValidator getAuthorizationDetailsSchemaValidator() {
+
+        return this.authorizationDetailsSchemaValidator;
+    }
+
+    /**
+     * set an {@link AuthorizationDetailsSchemaValidator} instance.
+     *
+     * @param schemaValidator An {@link AuthorizationDetailsSchemaValidator} instance.
+     */
+    public void setAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
+
+        this.authorizationDetailsSchemaValidator = schemaValidator;
     }
 }

@@ -30,13 +30,16 @@ import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLock
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.test.common.testng.utils.MockAuthenticatedUser;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.FederatedAssociationManager;
 import org.wso2.carbon.identity.user.profile.mgt.association.federation.exception.FederatedAssociationManagerClientException;
@@ -47,6 +50,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -54,6 +58,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
+import static org.wso2.carbon.identity.oauth2.TestConstants.TENANT_ID;
 
 /**
  * Unit tests for the RefreshGrantHandler class.
@@ -66,6 +71,7 @@ public class RefreshGrantHandlerTest {
     private OAuthServerConfiguration oAuthServerConfiguration;
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
+    private AuthorizationDetailsService authorizationDetailsService;
 
     @BeforeMethod
     public void init() {
@@ -75,6 +81,7 @@ public class RefreshGrantHandlerTest {
         oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         oAuth2ServiceComponentHolder = mock(OAuth2ServiceComponentHolder.class);
+        authorizationDetailsService = mock(AuthorizationDetailsService.class);
     }
 
     @DataProvider(name = "validateGrantWhenUserIsLockedInUserStoreEnd")
@@ -143,6 +150,10 @@ public class RefreshGrantHandlerTest {
                 isValidateAuthenticatedUserForRefreshGrant);
         when(oAuth2ServiceComponentHolder.getRefreshTokenGrantProcessor()).thenReturn(refreshTokenGrantProcessor);
         when(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
+        when(authorizationDetailsService
+                .getUserConsentedAuthorizationDetails(any(AuthenticatedUser.class), anyString(), anyInt()))
+                .thenReturn(new AuthorizationDetails());
+        when(oAuth2ServiceComponentHolder.getAuthorizationDetailsService()).thenReturn(authorizationDetailsService);
 
         FederatedAssociationManager federatedAssociationManager = mock(FederatedAssociationManager.class);
         if (federatedAssociationManagerException instanceof FederatedAssociationManagerException) {
@@ -169,7 +180,9 @@ public class RefreshGrantHandlerTest {
                     OAuthServerConfiguration.class);
                  MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic = mockStatic(
                          OAuth2ServiceComponentHolder.class);
-                 MockedStatic<FrameworkUtils> frameworkUtilsMockedStatic = mockStatic(FrameworkUtils.class)) {
+                 MockedStatic<FrameworkUtils> frameworkUtilsMockedStatic = mockStatic(FrameworkUtils.class);
+                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+                oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(TENANT_ID);
                 oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                         .thenReturn(oAuthServerConfiguration);
                 oAuth2ServiceComponentHolderMockedStatic.when(OAuth2ServiceComponentHolder::getInstance)
@@ -185,6 +198,7 @@ public class RefreshGrantHandlerTest {
                 }
 
                 RefreshGrantHandler refreshGrantHandler = new RefreshGrantHandler();
+                refreshGrantHandler.init();
                 boolean validateResult = refreshGrantHandler.validateGrant(oAuthTokenReqMessageContext);
                 assertTrue(validateResult);
             }

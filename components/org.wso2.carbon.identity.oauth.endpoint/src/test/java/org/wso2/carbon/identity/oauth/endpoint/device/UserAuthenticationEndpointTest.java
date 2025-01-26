@@ -31,6 +31,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
@@ -41,7 +42,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth.endpoint.util.factory.DeviceServiceFactory;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
+import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowDAO;
 import org.wso2.carbon.identity.oauth2.device.dao.DeviceFlowPersistenceFactory;
@@ -110,6 +113,9 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     @Mock
     ServiceURL serviceURL;
 
+    @Mock
+    PrivilegedCarbonContext mockPrivilegedCarbonContext;
+
     private static final String TEST_USER_CODE = "testUserCode";
     private static final String TEST_URL = "testURL";
     private static final String PENDING = "PENDING";
@@ -148,6 +154,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     public void tearDown() throws Exception {
 
         cleanData();
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @BeforeMethod
@@ -189,9 +196,17 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
             throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
-                OAuthServerConfiguration.class)) {
-            mockOAuthServerConfiguration(oAuthServerConfiguration);
+                OAuthServerConfiguration.class);
+             MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext
+                     = mockStatic(PrivilegedCarbonContext.class)) {
+            DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
 
+            privilegedCarbonContext.when(
+                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockPrivilegedCarbonContext);
+            lenient().when(mockPrivilegedCarbonContext.getOSGiService(DeviceAuthService.class, null))
+                    .thenReturn(deviceAuthService);
+
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
             setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
             try (MockedStatic<DeviceFlowPersistenceFactory> deviceFlowPersistenceFactory =
@@ -224,9 +239,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
                 lenient().when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
                         any(HttpServletResponse.class))).thenReturn(response);
-                DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
                 setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
                 response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
                 Assert.assertNotNull(response1);
@@ -282,7 +295,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                          mockStatic(DeviceFlowPersistenceFactory.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+                 MockedStatic<DeviceServiceFactory> deviceServiceHolder = mockStatic(DeviceServiceFactory.class);) {
 
                 deviceFlowPersistenceFactory.when(
                         DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
@@ -309,9 +323,11 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
                         any(HttpServletResponse.class))).
                         thenReturn(response);
-                DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                DeviceAuthService deviceAuthService = new DeviceAuthServiceImpl();
+                deviceServiceHolder.when(DeviceServiceFactory::getDeviceAuthService).thenReturn(deviceAuthService);
+
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
+
                 setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
                 response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
                 if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
@@ -356,7 +372,9 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                          mockStatic(DeviceFlowPersistenceFactory.class);
                  MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
                  MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);) {
+                 MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+                 MockedStatic<DeviceServiceFactory> deviceServiceHolder = mockStatic(DeviceServiceFactory.class);) {
+
                 deviceFlowPersistenceFactory.when(
                         DeviceFlowPersistenceFactory::getInstance).thenReturn(mockDeviceFlowPersistenceFactory);
                 when(mockDeviceFlowPersistenceFactory.getDeviceFlowDAO()).thenReturn(deviceFlowDAO);
@@ -381,9 +399,11 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
                 lenient().when(oAuth2AuthzEndpoint.authorize(any(CommonAuthRequestWrapper.class),
                                 any(HttpServletResponse.class))).thenReturn(response);
+
                 DeviceAuthServiceImpl deviceAuthService = new DeviceAuthServiceImpl();
+                deviceServiceHolder.when(DeviceServiceFactory::getDeviceAuthService).thenReturn(deviceAuthService);
+
                 userAuthenticationEndpoint = new UserAuthenticationEndpoint();
-                userAuthenticationEndpoint.setDeviceAuthService(deviceAuthService);
                 setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
                 response1 = userAuthenticationEndpoint.deviceAuthorize(httpServletRequest, httpServletResponse);
                 if (expectedValue == HttpServletResponse.SC_ACCEPTED) {
