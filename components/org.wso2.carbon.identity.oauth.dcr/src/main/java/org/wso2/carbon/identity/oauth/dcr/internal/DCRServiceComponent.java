@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactor
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.UnregistrationRequestFactory;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
@@ -272,5 +273,20 @@ public class DCRServiceComponent {
 
         DCRDataHolder.getInstance().setOrganizationManager(null);
         log.debug("Unset organization management service.");
+    }
+
+    @Reference(name = "identity.oauth.dcr.attribute.filter",
+            service = AdditionalAttributeFilter.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAdditionalAttributeFilter")
+    protected void setAdditionalAttributeFilter(AdditionalAttributeFilter additionalAttributeFilter) {
+
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(additionalAttributeFilter);
+    }
+
+    protected void unsetAdditionalAttributeFilter(AdditionalAttributeFilter tokenBinderInfo) {
+
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(null);
     }
 }
