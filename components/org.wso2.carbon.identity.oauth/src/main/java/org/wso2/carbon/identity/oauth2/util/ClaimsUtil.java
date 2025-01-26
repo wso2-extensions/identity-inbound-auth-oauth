@@ -298,13 +298,15 @@ public class ClaimsUtil {
      * Handle claims from identity provider based on claim configurations.
      *
      * @param identityProvider Identity Provider.
-     * @param attributes Relevant Claims coming from IDP
-     * @param tenantDomain Tenant Domain.
-     * @param tokenReqMsgCtx Token request message context.
+     * @param attributes       Relevant Claims coming from IDP
+     * @param tenantDomain     Tenant Domain.
+     * @param tokenReqMsgCtx   Token request message context.
      * @return Mapped local claims.
-     * @throws IdentityException
-     * @throws IdentityApplicationManagementException
+     * @throws IdentityException                      If an error occurred while handling claim mappings.
+     * @throws IdentityApplicationManagementException If an error occurred while getting service provider.
+     * @deprecated Use {@link #handleClaimMapping(IdentityProvider, Map, String, OAuthTokenReqMessageContext, boolean)}.
      */
+    @Deprecated
     public static Map<String, String> handleClaimMapping(IdentityProvider identityProvider,
                                                          Map<String, String> attributes, String tenantDomain,
                                                          OAuthTokenReqMessageContext tokenReqMsgCtx)
@@ -316,13 +318,14 @@ public class ClaimsUtil {
     /**
      * Handle claims from identity provider based on claim configurations.
      *
-     * @param identityProvider Identity Provider
-     * @param attributes       Relevant Claims coming from IDP
-     * @param tenantDomain     Tenant Domain.
-     * @param tokenReqMsgCtx   Token request message context.
+     * @param identityProvider           Identity Provider
+     * @param attributes                 Relevant Claims coming from IDP
+     * @param tenantDomain               Tenant Domain.
+     * @param tokenReqMsgCtx             Token request message context.
+     * @param resolveIdPGroupAssignments Whether resolving IdP Group assignments needed.
      * @return Mapped local claims.
-     * @throws IdentityException
-     * @throws IdentityApplicationManagementException
+     * @throws IdentityException                      If an error occurred while handling claim mappings.
+     * @throws IdentityApplicationManagementException If an error occurred while getting service provider.
      */
     public static Map<String, String> handleClaimMapping(IdentityProvider identityProvider,
                                                          Map<String, String> attributes, String tenantDomain,
