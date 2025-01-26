@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -73,9 +73,11 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
@@ -667,7 +669,8 @@ public class OAuth2ServiceTest {
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
             setUpRevokeToken(oAuthComponentServiceHolder, oAuth2Util, oAuthUtil);
             AccessTokenDO accessTokenDO = getAccessToken();
             TokenBinding tokenBinding = new TokenBinding();
@@ -680,9 +683,11 @@ public class OAuth2ServiceTest {
             setPrivateField(oAuthTokenPersistenceFactory, "managementDAO", mockTokenManagementDAOImpl);
             AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
             setPrivateField(oAuthTokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
-            when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
 
             OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
             oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO);
@@ -710,14 +715,17 @@ public class OAuth2ServiceTest {
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
             setUpRevokeToken(oAuthComponentServiceHolder, oAuth2Util, oAuthUtil);
             AccessTokenDO accessTokenDO = getAccessToken();
             when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setTokenBindingValidationEnabled(true);
-            when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
 
             OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
             OAuthRevocationResponseDTO oAuthRevocationResponseDTO = oAuth2Service
@@ -958,7 +966,10 @@ public class OAuth2ServiceTest {
     @Test
     public void testGetOauthApplicationState() throws Exception {
 
-        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class)) {
+
+            authzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
             String id = "clientId1";
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setState("ACTIVE");
@@ -979,6 +990,7 @@ public class OAuth2ServiceTest {
     public void testGetOauthApplicationStateWithIdentityOAuth2Exception() throws Exception {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
 
@@ -998,6 +1010,7 @@ public class OAuth2ServiceTest {
     public void testGetOauthApplicationStateWithInvalidOAuthClientException() throws Exception {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
 

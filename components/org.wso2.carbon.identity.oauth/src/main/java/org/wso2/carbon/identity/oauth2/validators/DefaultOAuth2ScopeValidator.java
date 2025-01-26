@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2023-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -23,6 +23,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -129,8 +130,13 @@ public class DefaultOAuth2ScopeValidator {
         String tenantDomain = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain();
         String clientId = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId();
         String appId = getApplicationId(clientId, tenantDomain);
-        // When user is not accessing the resident organization, resolve the application id from the shared app table.
-        if (!AuthzUtil.isUserAccessingResidentOrganization(tokenReqMessageContext.getAuthorizedUser())) {
+        /*
+         When user is not accessing the resident organization and if the user is not accessing an application in
+         the organization level, resolve the application id from the shared app table.
+        */
+        if (!AuthzUtil.isUserAccessingResidentOrganization(tokenReqMessageContext.getAuthorizedUser()) &&
+                StringUtils.isEmpty(PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                        getApplicationResidentOrganizationId())) {
             String orgId = tokenReqMessageContext.getAuthorizedUser().getAccessingOrganization();
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
