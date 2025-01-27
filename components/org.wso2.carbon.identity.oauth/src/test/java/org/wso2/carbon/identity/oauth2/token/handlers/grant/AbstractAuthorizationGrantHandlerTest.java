@@ -519,8 +519,9 @@ public class AbstractAuthorizationGrantHandlerTest {
             OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuerImpl.class);
             when(oauthTokenIssuer.getAccessTokenType()).thenReturn(OAuth2Constants.TokenTypes.OPAQUE);
 
-            oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId)).thenReturn(oauthTokenIssuer);
-            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId)).thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(eq(clientId))).thenReturn(oauthTokenIssuer);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId))).thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId), any())).thenReturn(oAuthAppDO);
             oauth2Util.when(() -> OAuth2Util.isOrganizationValidAndActive(anyString())).thenReturn(true);
             oauth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenCallRealMethod();
             oauth2Util.when(() -> OAuth2Util.getTokenPartitionedSqlByUserStore(anyString(), any()))
