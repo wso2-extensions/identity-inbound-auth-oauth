@@ -3728,7 +3728,7 @@ public class AuthzUtil {
                 authzReqDTO.setSelectedAcr(sessionContext.getSessionAuthHistory().getSelectedAcrValue());
             }
         }
-        // Adding Httprequest headers and cookies in AuthzDTO.
+        // Adding Http request headers and cookies in AuthzDTO.
         authzReqDTO.setHttpRequestHeaders(httpRequestHeaderHandler.getHttpRequestHeaders());
         authzReqDTO.setCookie(httpRequestHeaderHandler.getCookies());
         return authzReqDTO;

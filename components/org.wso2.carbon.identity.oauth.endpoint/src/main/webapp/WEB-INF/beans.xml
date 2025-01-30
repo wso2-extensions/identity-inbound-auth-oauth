@@ -26,4 +26,5 @@
         <property name="ParAuthServiceImpl" ref="ParAuthServiceFactoryBean"/>
     </bean>
     <bean id="ParAuthServiceFactoryBean" class="org.wso2.carbon.identity.oauth.endpoint.factory.ParServiceFactory"/>
+    <bean id="authChallengeEndpointBean" class="org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint"/>
 </beans>

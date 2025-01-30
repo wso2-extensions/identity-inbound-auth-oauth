@@ -24,6 +24,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.servlet.ServletException;
@@ -31,6 +34,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -70,8 +74,11 @@ import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticat
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
+import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -131,28 +138,38 @@ public class AuthzChallengeEndpoint {
     private static DeviceAuthService deviceAuthService;
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
-    @POST
+    private final AuthenticationService authenticationService = new AuthenticationService();
+    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
+    private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
+
+    @GET
     @Path("/")
-    @Consumes("application/x-www-form-urlencoded")
+    @Consumes({"application/x-www-form-urlencoded","application/json"})
     @Produces({"text/html", "application/json"})
     public Response handleAuthorizeChallenge(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) {
         try {
-            Map<String, String[]> parameterMap = request.getParameterMap();
+            String contentType = request.getContentType();
+//            request.setParameter(OAuthConstants.OAuth20Params.RESPONSE_MODE);
 
-            if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
-                // Handle initial authorization challenge request (prev. handled by /authorize)
-                return handleInitialAuthzChallengeRequest(request, response);
-//            } else if (parameterMap.containsKey("flowId")) {
-//                // Handle subsequent authentication flow (prev. handled by /authn)
-//                return handleSubsequentAuthzChallengeRequest(request, response, payload);
-            } else {
-                throw new AuthServiceException(
-                        AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                        "Invalid request parameters for /authorize-challenge.");
+            if ("application/x-www-form-urlencoded".equalsIgnoreCase(contentType)) {
+                Map<String, String[]> parameterMap = request.getParameterMap();
+
+                if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
+                    return handleInitialAuthzChallengeRequest(request, response);
+                }
+            } else if ("application/json".equalsIgnoreCase(contentType)) {
+                if (payload != null && payload.contains("\"auth_session\"")) {
+                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
+                }
             }
+
+            throw new AuthServiceException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Invalid request parameters for /authorize-challenge."
+            );
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
-            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
             log.error("Error occurred while handling authorize challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
@@ -165,9 +182,12 @@ public class AuthzChallengeEndpoint {
 
         OAuthMessage oAuthMessage;
 
+        AuthzUtil.setCommonAuthIdToRequest(request, response);
+
         try{
             request = RequestUtil.buildRequest(request);
             oAuthMessage = AuthzUtil.buildOAuthMessage(request, response);
+            request = new CustomHttpServletRequestWrapper(request, "response_mode", "direct");
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw e;
@@ -217,11 +237,7 @@ public class AuthzChallengeEndpoint {
             } else {
                 oauthResponse = AuthzUtil.handleInvalidRequest(oAuthMessage);
             }
-            // Response for the API based authentication flow.
-//            if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
-                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, true);
-//            }
-
+            oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, true);
             return oauthResponse;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -237,17 +253,42 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-//    private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) throws AuthServiceException {
-//
-//    }
+    private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) throws AuthServiceException {
+        try {
+            AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
+            AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
+            AuthServiceResponse authServiceResponse = authenticationService.handleAuthentication(authServiceRequest);
+
+            switch (authServiceResponse.getFlowStatus()) {
+                case INCOMPLETE:
+                    return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse);
+                case SUCCESS_COMPLETED:
+                    return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
+                case FAIL_INCOMPLETE:
+                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse);
+                case FAIL_COMPLETED:
+                    return ApiAuthnUtils.handleFailCompletedAuthResponse(authServiceResponse);
+                default:
+                    throw new AuthServiceException(
+                            AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS.code(),
+                            String.format(AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS
+                                    .description(), authServiceResponse.getFlowStatus()));
+            }
+
+        } catch (AuthServiceClientException e) {
+            return ApiAuthnUtils.buildResponseForClientError(e, LOG);
+        } catch (AuthServiceException e) {
+            return ApiAuthnUtils.buildResponseForServerError(e, LOG);
+        }
+    }
 
 
 
     @POST
     @Path("/")
-    @Consumes("application/x-www-form-urlencoded")
+    @Consumes({"application/x-www-form-urlencoded","application/json"})
     @Produces({"text/html", "application/json"})
-    public Response authorizePost(@Context HttpServletRequest request, @Context HttpServletResponse response,
+    public Response authorizeChallengePost(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                   MultivaluedMap paramMap)
             throws URISyntaxException, InvalidRequestParentException {
 
@@ -533,23 +574,24 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-//    private Response initiateChallenge(OAuthMessage oAuthMessage) throws AuthServiceException {
-//
-//        String authCode = "c8da8db1-6023-4942-a1df-89e1d3d15e23";
-//
-//        if (AuthzChallengeUtils.isInitialRequest(oAuthMessage)) {
-//            AuthzChallengeErrorResponse failureResponse = new AuthzChallengeErrorResponse();
-//            failureResponse.setAuthSession(authCode);
-//            failureResponse.setError(AuthzChallengeError.INSUFFICIENT_AUTHORIZATION);
-//
-//            return buildJsonResponse(failureResponse);
-//        }
-//
-//        AuthzChallengeResponse successResponse = new AuthzChallengeResponse();
-//        successResponse.setAuthorizationCode(authCode);
-//
-//        return buildJsonResponse(successResponse);
-//    }
+    private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
+                                                        AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
+
+        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
+
+        Map<String, List<String>> internalParamsList = new HashMap<>();
+        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
+        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
+        internalRequest.setInternalRequest(true);
+
+        try {
+            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response);
+        } catch (InvalidRequestParentException | URISyntaxException e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error while processing the final oauth authorization request.", e);
+        }
+    }
 
 }
 
