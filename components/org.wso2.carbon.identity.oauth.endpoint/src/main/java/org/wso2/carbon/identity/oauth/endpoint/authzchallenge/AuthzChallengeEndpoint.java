@@ -19,7 +19,9 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,13 +36,17 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.Providers;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -255,6 +261,18 @@ public class AuthzChallengeEndpoint {
 
     private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) throws AuthServiceException {
         try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.readTree(payload);
+
+            // Rename auth_session to flowId
+            if (jsonNode.has("auth_session")) {
+                ObjectNode objectNode = (ObjectNode) jsonNode;
+                JsonNode authSessionValue = objectNode.remove("auth_session");
+                objectNode.set("flowId", authSessionValue);
+
+                // Convert back to JSON string
+                payload = objectMapper.writeValueAsString(objectNode);
+            }
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
             AuthServiceResponse authServiceResponse = authenticationService.handleAuthentication(authServiceRequest);
@@ -279,6 +297,9 @@ public class AuthzChallengeEndpoint {
             return ApiAuthnUtils.buildResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
             return ApiAuthnUtils.buildResponseForServerError(e, LOG);
+        } catch (JsonProcessingException e) {
+            AuthServiceException authException = new AuthServiceException("Error processing JSON payload", e);
+            return ApiAuthnUtils.buildResponseForServerError(authException, LOG);
         }
     }
 
@@ -286,23 +307,51 @@ public class AuthzChallengeEndpoint {
 
     @POST
     @Path("/")
-    @Consumes({"application/x-www-form-urlencoded","application/json"})
+    @Consumes({"application/x-www-form-urlencoded", "application/json"})
     @Produces({"text/html", "application/json"})
-    public Response authorizeChallengePost(@Context HttpServletRequest request, @Context HttpServletResponse response,
-                                  MultivaluedMap paramMap)
-            throws URISyntaxException, InvalidRequestParentException {
+    public Response authorizeChallengePost(@Context HttpServletRequest request,
+                                           @Context HttpServletResponse response,
+                                           @HeaderParam("Content-Type") String contentType,
+                                           @Context Providers providers,// Only for x-www-form-urlencoded
+                                           String payload) { // JSON Payload
+        try {
+            if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
+                Map<String, String[]> parameterMap = request.getParameterMap();
 
-        // Validate repeated parameters
-        if (!validateParams(request, paramMap)) {
-            return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(new URI(getErrorPageURL(request,
-                            OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                                    .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request with repeated parameters",
-                            null)))
-                    .build();
+                if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
+                    MultivaluedMap<String, String> paramMap = new MultivaluedHashMap<>();
+                    parameterMap.forEach((key, values) -> paramMap.put(key, Arrays.asList(values)));
+
+                    if (!validateParams(request, paramMap)) {
+                        return Response.status(HttpServletResponse.SC_BAD_REQUEST)
+                                .location(new URI(getErrorPageURL(request,
+                                        OAuth2ErrorCodes.INVALID_REQUEST,
+                                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                                        "Invalid authorization request with repeated parameters", null)))
+                                .build();
+                    }
+                    HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
+                    return handleInitialAuthzChallengeRequest(httpRequest, response);
+                }
+            } else if (contentType != null && contentType.contains("application/json")) {
+                if (payload != null && payload.contains("\"auth_session\"")) {
+                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
+                }
+            }
+
+            throw new AuthServiceException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Invalid request parameters for /authorize-challenge."
+            );
+        } catch (AuthServiceClientException e) {
+            log.error("Client error while handling authentication request.", e);
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
+            log.error("Error occurred while handling authorize challenge request.", e);
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
-        HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
-        return handleInitialAuthzChallengeRequest(httpRequest, response);
     }
+
 
     /**
      * Set the device authentication service.
