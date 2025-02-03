@@ -85,7 +85,7 @@ public class ApiAuthnHandler {
         AuthzChallengeResponse authzChallengeResponse = new AuthzChallengeResponse();
         authzChallengeResponse.setAuth_session(authServiceResponse.getSessionDataKey());
         authzChallengeResponse.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
-        authzChallengeResponse.setError_description("Provide required parameters given below");
+        authzChallengeResponse.setError_description("The presented authorization is insufficient.");
         authzChallengeResponse.setFlowStatus(authServiceResponse.getFlowStatus());
         NextStep nextStep = buildNextStep(authServiceResponse);
         authzChallengeResponse.setNextStep(nextStep);

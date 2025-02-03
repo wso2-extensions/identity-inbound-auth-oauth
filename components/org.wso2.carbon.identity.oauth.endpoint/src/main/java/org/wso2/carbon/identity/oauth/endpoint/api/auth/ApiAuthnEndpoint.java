@@ -76,6 +76,7 @@ public class ApiAuthnEndpoint {
     public Response handleAuthentication(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                          String payload) {
 
+        //TODO: Use flowType to find Authorize-Challenge or Authorize
         try {
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);

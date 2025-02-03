@@ -148,42 +148,42 @@ public class AuthzChallengeEndpoint {
     private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
 
-    @GET
-    @Path("/")
-    @Consumes({"application/x-www-form-urlencoded","application/json"})
-    @Produces({"text/html", "application/json"})
-    public Response handleAuthorizeChallenge(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) {
-        try {
-            String contentType = request.getContentType();
-//            request.setParameter(OAuthConstants.OAuth20Params.RESPONSE_MODE);
+//    @GET
+//    @Path("/")
+//    @Consumes({"application/x-www-form-urlencoded","application/json"})
+//    @Produces({"text/html", "application/json"})
+//    public Response handleAuthorizeChallenge(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) {
+//        try {
+//            String contentType = request.getContentType();
+////            request.setParameter(OAuthConstants.OAuth20Params.RESPONSE_MODE);
+//
+//            if ("application/x-www-form-urlencoded".equalsIgnoreCase(contentType)) {
+//                Map<String, String[]> parameterMap = request.getParameterMap();
+//
+//                if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
+//                    return handleInitialAuthzChallengeRequest(request, response);
+//                }
+//            } else if ("application/json".equalsIgnoreCase(contentType)) {
+//                if (payload != null && payload.contains("\"auth_session\"")) {
+//                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
+//                }
+//            }
+//
+//            throw new AuthServiceException(
+//                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+//                    "Invalid request parameters for /authorize-challenge."
+//            );
+//        } catch (AuthServiceClientException e) {
+//            log.error("Client error while handling authentication request.", e);
+//            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+//        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
+//            log.error("Error occurred while handling authorize challenge request.", e);
+//            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+//        }
+//    }
 
-            if ("application/x-www-form-urlencoded".equalsIgnoreCase(contentType)) {
-                Map<String, String[]> parameterMap = request.getParameterMap();
 
-                if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
-                    return handleInitialAuthzChallengeRequest(request, response);
-                }
-            } else if ("application/json".equalsIgnoreCase(contentType)) {
-                if (payload != null && payload.contains("\"auth_session\"")) {
-                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
-                }
-            }
-
-            throw new AuthServiceException(
-                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Invalid request parameters for /authorize-challenge."
-            );
-        } catch (AuthServiceClientException e) {
-            log.error("Client error while handling authentication request.", e);
-            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
-        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
-            log.error("Error occurred while handling authorize challenge request.", e);
-            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-
-    public Response handleInitialAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response)
+    public Response handleInitialAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, boolean isInternalRequest)
             throws URISyntaxException, InvalidRequestParentException {
 
         OAuthMessage oAuthMessage;
@@ -202,19 +202,23 @@ public class AuthzChallengeEndpoint {
             return AuthzUtil.handleIdentityException(request, e);
         }
 
+        //TODO : Use isInternalRequest to bypass this on second call.
         // Perform request authentication
-        OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
-        if (!oAuthClientAuthnContext.isAuthenticated()) {
-            return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext);
-        }
 
-        ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
-        if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
-            return AuthzUtil.handleAttestationFailureResponse(clientAttestationContext);
-        }
+        if(!isInternalRequest){
+            OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
+            if (!oAuthClientAuthnContext.isAuthenticated()) {
+                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext);
+            }
 
-        if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
-            return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
+            ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
+            if (clientAttestationContext.isAttestationEnabled() && !clientAttestationContext.isAttested()) {
+                return AuthzUtil.handleAttestationFailureResponse(clientAttestationContext);
+            }
+
+            if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
+                return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
+            }
         }
 
         try {
@@ -298,8 +302,8 @@ public class AuthzChallengeEndpoint {
         } catch (AuthServiceException e) {
             return ApiAuthnUtils.buildResponseForServerError(e, LOG);
         } catch (JsonProcessingException e) {
-            AuthServiceException authException = new AuthServiceException("Error processing JSON payload", e);
-            return ApiAuthnUtils.buildResponseForServerError(authException, LOG);
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                    "Error while building JSON response.", e);
         }
     }
 
@@ -307,37 +311,31 @@ public class AuthzChallengeEndpoint {
 
     @POST
     @Path("/")
-    @Consumes({"application/x-www-form-urlencoded", "application/json"})
+    @Consumes("application/x-www-form-urlencoded")
     @Produces({"text/html", "application/json"})
-    public Response authorizeChallengePost(@Context HttpServletRequest request,
+    public Response authorizeChallengeInitialPost(@Context HttpServletRequest request,
                                            @Context HttpServletResponse response,
-                                           @HeaderParam("Content-Type") String contentType,
-                                           @Context Providers providers,// Only for x-www-form-urlencoded
-                                           String payload) { // JSON Payload
+                                           MultivaluedMap paramMap) {
         try {
-            if (contentType != null && contentType.contains("application/x-www-form-urlencoded")) {
-                Map<String, String[]> parameterMap = request.getParameterMap();
+            Map<String, String[]> parameterMap = request.getParameterMap();
 
-                if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
-                    MultivaluedMap<String, String> paramMap = new MultivaluedHashMap<>();
-                    parameterMap.forEach((key, values) -> paramMap.put(key, Arrays.asList(values)));
+            if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
 
-                    if (!validateParams(request, paramMap)) {
-                        return Response.status(HttpServletResponse.SC_BAD_REQUEST)
-                                .location(new URI(getErrorPageURL(request,
-                                        OAuth2ErrorCodes.INVALID_REQUEST,
-                                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
-                                        "Invalid authorization request with repeated parameters", null)))
-                                .build();
-                    }
-                    HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
-                    return handleInitialAuthzChallengeRequest(httpRequest, response);
+                if (!validateParams(request, paramMap)) {
+                    return Response.status(HttpServletResponse.SC_BAD_REQUEST)
+                            .location(new URI(getErrorPageURL(request,
+                                    OAuth2ErrorCodes.INVALID_REQUEST,
+                                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                                    "Invalid authorization request with repeated parameters", null)))
+                            .build();
                 }
-            } else if (contentType != null && contentType.contains("application/json")) {
-                if (payload != null && payload.contains("\"auth_session\"")) {
-                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
-                }
+                HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
+                return handleInitialAuthzChallengeRequest(httpRequest, response, false);
             }
+//            } else if (contentType != null && contentType.contains("application/json")) {
+//                if (payload != null && payload.contains("\"auth_session\"")) {
+//                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
+//                }
 
             throw new AuthServiceException(
                     AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
@@ -347,6 +345,32 @@ public class AuthzChallengeEndpoint {
             log.error("Client error while handling authentication request.", e);
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
         } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
+            log.error("Error occurred while handling authorize challenge request.", e);
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @POST
+    @Path("/")
+    @Consumes("application/json")
+    @Produces("application/json")
+    public Response authorizeChallengeSubsequentPost(@Context HttpServletRequest request,
+                                           @Context HttpServletResponse response,
+                                           String payload) {
+        try {
+            if (payload != null && payload.contains("\"auth_session\"")) {
+                return handleSubsequentAuthzChallengeRequest(request, response, payload);
+            }
+
+            throw new AuthServiceException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Invalid request parameters for /authorize-challenge."
+            );
+
+        } catch (AuthServiceClientException e) {
+            log.error("Client error while handling authentication request.", e);
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+        } catch (AuthServiceException e) {
             log.error("Error occurred while handling authorize challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -397,14 +421,14 @@ public class AuthzChallengeEndpoint {
 
         oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
                 .UNKNOWN);
-        return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse());
+        return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse(),true);
 
     }
 
     private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage)
             throws URISyntaxException, InvalidRequestParentException {
 
-        return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse());
+        return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse(),true);
     }
 
     public Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
@@ -524,12 +548,12 @@ public class AuthzChallengeEndpoint {
                         // the process should continue without breaking.
                         log.error("Error occurred while getting service provider id.");
                     }
-                    return handleInitialAuthzChallengeRequest(requestWrapper, oAuthMessage.getResponse());
+                    return handleInitialAuthzChallengeRequest(requestWrapper, oAuthMessage.getResponse(),true);
                 }
             } else {
                 requestWrapper
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
-                return handleInitialAuthzChallengeRequest(requestWrapper, oAuthMessage.getResponse());
+                return handleInitialAuthzChallengeRequest(requestWrapper, oAuthMessage.getResponse(),true);
             }
         } catch (AuthServiceException e) {
             return AuthzUtil.handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
@@ -635,7 +659,7 @@ public class AuthzChallengeEndpoint {
         internalRequest.setInternalRequest(true);
 
         try {
-            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response);
+            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
         } catch (InvalidRequestParentException | URISyntaxException e) {
             throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
                     "Error while processing the final oauth authorization request.", e);

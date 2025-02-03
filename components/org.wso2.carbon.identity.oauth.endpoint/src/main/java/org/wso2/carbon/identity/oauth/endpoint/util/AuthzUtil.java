@@ -4565,6 +4565,9 @@ public class AuthzUtil {
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             // Keeping the app native flow as it is.
                             if (isAuthzChallenge) {
+                                if(attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED){
+                                    return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                                }
                                 return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonPayload).build();
                             } else {
                                 return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
