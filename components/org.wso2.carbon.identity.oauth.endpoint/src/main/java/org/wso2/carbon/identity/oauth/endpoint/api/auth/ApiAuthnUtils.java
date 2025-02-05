@@ -49,7 +49,9 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import java.util.Optional;
@@ -69,7 +71,10 @@ public class ApiAuthnUtils {
             "was invalid or missing from your request.";
     private static final String AUTHENTICATOR = "authenticator";
     private static final String IDP = "idp";
+    private static final String RESPONSE_MODE = "response_mode";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
+    private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
     private ApiAuthnUtils() {
 
@@ -263,6 +268,28 @@ public class ApiAuthnUtils {
         return Response.ok().entity(jsonString).build();
     }
 
+    public static Response buildResponse(AuthResponse response, boolean isAuthzChallenge) throws AuthServiceException {
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        String jsonString;
+        try {
+            jsonString = objectMapper.writeValueAsString(response);
+        } catch (JsonProcessingException e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                    "Error while building JSON response.", e);
+        }
+        if (isAuthzChallenge){
+            if(response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+            }
+            if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
+                return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonString).build();
+            }
+        }
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
     public static AuthServiceRequest getAuthServiceRequest(HttpServletRequest request, HttpServletResponse response,
                                                            AuthRequest authRequest) throws AuthServiceClientException {
 
@@ -309,11 +336,20 @@ public class ApiAuthnUtils {
         return buildResponse(authResponse);
     }
 
-    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
+    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean isAuthzChallenge) throws AuthServiceException {
 
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+        return buildResponse(authResponse, isAuthzChallenge);
+    }
+
+    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
+        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(authResponse);
+    }
+
+    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean isAuthzChallenge) throws AuthServiceException {
+        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+        return buildResponse(authResponse, isAuthzChallenge);
     }
 
     public static Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
@@ -341,6 +377,30 @@ public class ApiAuthnUtils {
          implementation it is not possible to distinguish between these two types of errors. Therefore,
          it was decided to set the http status code to 400.*/
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
+                                                        AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
+
+        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
+
+        Map<String, List<String>> internalParamsList = new HashMap<>();
+        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
+        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
+        internalRequest.setInternalRequest(true);
+
+        try {
+            if(request.getParameter(RESPONSE_MODE).equals(OAuthConstants.ResponseModes.DIRECT)){
+                return oAuth2AuthzEndpoint.authorize(internalRequest, response);
+            }else {
+                return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
+            }
+
+        } catch (InvalidRequestParentException | URISyntaxException e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error while processing the final oauth authorization request.", e);
+        }
     }
 
     public static AuthServiceConstants.ErrorMessage getDefaultAuthenticationFailureError() {

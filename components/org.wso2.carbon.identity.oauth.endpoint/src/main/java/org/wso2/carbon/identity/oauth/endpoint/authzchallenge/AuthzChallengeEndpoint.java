@@ -145,7 +145,6 @@ public class AuthzChallengeEndpoint {
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
     private final AuthenticationService authenticationService = new AuthenticationService();
-    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
 
 //    @GET
@@ -193,7 +192,6 @@ public class AuthzChallengeEndpoint {
         try{
             request = RequestUtil.buildRequest(request);
             oAuthMessage = AuthzUtil.buildOAuthMessage(request, response);
-            request = new CustomHttpServletRequestWrapper(request, "response_mode", "direct");
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             throw e;
@@ -202,7 +200,6 @@ public class AuthzChallengeEndpoint {
             return AuthzUtil.handleIdentityException(request, e);
         }
 
-        //TODO : Use isInternalRequest to bypass this on second call.
         // Perform request authentication
 
         if(!isInternalRequest){
@@ -283,11 +280,11 @@ public class AuthzChallengeEndpoint {
 
             switch (authServiceResponse.getFlowStatus()) {
                 case INCOMPLETE:
-                    return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse);
+                    return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse, true);
                 case SUCCESS_COMPLETED:
-                    return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
+                    return ApiAuthnUtils.handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
-                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse);
+                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse, true);
                 case FAIL_COMPLETED:
                     return ApiAuthnUtils.handleFailCompletedAuthResponse(authServiceResponse);
                 default:
@@ -505,27 +502,21 @@ public class AuthzChallengeEndpoint {
             String sessionDataKey =
                     (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);
 
-
             CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(oAuthMessage.getRequest());
             requestWrapper.setParameter(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
             requestWrapper.setParameter(FrameworkConstants.RequestParams.TYPE, type);
 
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
 
-//            if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
-                // Marking the initial request as additional validation will be done from the auth service.
-                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
-                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
+            // Marking the initial request as additional validation will be done from the auth service.
+            requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
+            requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
 
-                AuthenticationService authenticationService = new AuthenticationService();
-                AuthServiceResponse authServiceResponse = authenticationService.
-                        handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
-                // This is done to provide a way to propagate the auth service response to needed places.
-                AuthzUtil.attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
-//            } else {
-//                CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
-//                commonAuthenticationHandler.doGet(requestWrapper, responseWrapper);
-//            }
+            AuthenticationService authenticationService = new AuthenticationService();
+            AuthServiceResponse authServiceResponse = authenticationService.
+                    handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
+            // This is done to provide a way to propagate the auth service response to needed places.
+            AuthzUtil.attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
 
             Object attribute = oAuthMessage.getRequest().getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
             if (attribute != null) {
@@ -644,25 +635,6 @@ public class AuthzChallengeEndpoint {
                     oAuthMessage.getRequest().getParameterMap(), oAuthMessage.getRequest());
         } catch (IdentityOAuth2Exception e) {
             return AuthzUtil.handleException(e);
-        }
-    }
-
-    private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
-                                                        AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
-
-        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
-
-        Map<String, List<String>> internalParamsList = new HashMap<>();
-        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
-        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
-        internalRequest.setInternalRequest(true);
-
-        try {
-            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
-        } catch (InvalidRequestParentException | URISyntaxException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Error while processing the final oauth authorization request.", e);
         }
     }
 
