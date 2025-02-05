@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -132,6 +133,7 @@ public class DCRMServiceTest {
         mockOAuthAdminService = mock(OAuthAdminService.class);
         applicationRegistrationRequest = new ApplicationRegistrationRequest();
         applicationRegistrationRequest.setClientName(dummyClientName);
+        applicationRegistrationRequest.setAdditionalAttributes(new HashMap<>());
         dcrmService = new DCRMService();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
@@ -148,6 +150,17 @@ public class DCRMServiceTest {
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         mockConfigurationManager = mock(ConfigurationManager.class);
         DCRDataHolder.getInstance().setConfigurationManager(mockConfigurationManager);
+
+        List<String> responseKeys = new ArrayList<>();
+        Map<String, Object> processedAttributes = new HashMap<>();
+        AdditionalAttributeFilter additionalAttributeFilter = mock(AdditionalAttributeFilter.class);
+        lenient().when(additionalAttributeFilter.filterDCRRegisterAttributes(any(), any()))
+                .thenReturn(processedAttributes);
+        lenient().when(additionalAttributeFilter.filterDCRUpdateAttributes(any(), any(), any()))
+                .thenReturn(processedAttributes);
+        lenient().when(additionalAttributeFilter.processDCRGetAttributes(any())).thenReturn(processedAttributes);
+        lenient().when(additionalAttributeFilter.getResponseAttributeKeys()).thenReturn(responseKeys);
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(additionalAttributeFilter);
     }
 
     @AfterMethod
@@ -1104,6 +1117,8 @@ public class DCRMServiceTest {
         applicationUpdateRequest.setGrantTypes(dummyGrantTypes);
         applicationUpdateRequest.setTokenType(dummyTokenType);
         applicationUpdateRequest.setBackchannelLogoutUri(dummyBackchannelLogoutUri);
+        applicationUpdateRequest.setAdditionalAttributes(new HashMap<>());
+
 
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);

@@ -81,6 +81,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -124,27 +125,36 @@ public class OAuthUtilTest {
 
     private AutoCloseable closeable;
     private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
-    private MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder;
     private MockedStatic<OAuth2Util> oAuth2Util;
     private MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory;
 
     @BeforeMethod
     public void setUp() throws Exception {
 
+        closeable = MockitoAnnotations.openMocks(this);
         organizationManagementUtil = mockStatic(OrganizationManagementUtil.class);
-        oAuthComponentServiceHolder = mockStatic(OAuthComponentServiceHolder.class);
+        OAuthComponentServiceHolder.getInstance().setOrganizationUserSharingService(organizationUserSharingService);
+        OAuthComponentServiceHolder.getInstance().setRoleV2ManagementService(roleManagementService);
+        OAuthComponentServiceHolder.getInstance().setApplicationManagementService(applicationManagementService);
+        OAuthComponentServiceHolder.getInstance().setIdpManager(idpManager);
+        OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+        OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
         oAuth2Util = mockStatic(OAuth2Util.class);
         oAuthTokenPersistenceFactory = mockStatic(OAuthTokenPersistenceFactory.class);
-        closeable = MockitoAnnotations.openMocks(this);
     }
 
     @AfterMethod
     public void tearDown() throws Exception {
 
         organizationManagementUtil.close();
-        oAuthComponentServiceHolder.close();
         oAuth2Util.close();
         oAuthTokenPersistenceFactory.close();
+        reset(organizationUserSharingService);
+        reset(roleManagementService);
+        reset(applicationManagementService);
+        reset(realmService);
+        reset(idpManager);
+        reset(organizationManager);
         closeable.close();
     }
     
@@ -285,10 +295,6 @@ public class OAuthUtilTest {
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
 
-        OAuthComponentServiceHolder mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
-
-        when(mockOAuthComponentServiceHolder.getRoleV2ManagementService()).thenReturn(roleManagementService);
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo();
         roleBasicInfo.setId(roleId);
         roleBasicInfo.setAudience(RoleConstants.APPLICATION);
@@ -297,8 +303,6 @@ public class OAuthUtilTest {
         when(roleManagementService.getRoleBasicInfoById(roleId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(roleBasicInfo);
 
-        when(mockOAuthComponentServiceHolder.getApplicationManagementService())
-                .thenReturn(applicationManagementService);
         ServiceProvider serviceProvider = new ServiceProvider();
         InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
         InboundAuthenticationRequestConfig[] inboundAuthenticationRequestConfigs =
@@ -350,10 +354,6 @@ public class OAuthUtilTest {
         when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(false);
         when(OAuth2Util.getTenantId(anyString())).thenReturn(-1234);
 
-        OAuthComponentServiceHolder mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
-        when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
-
-        when(mockOAuthComponentServiceHolder.getRoleV2ManagementService()).thenReturn(roleManagementService);
         RoleBasicInfo roleBasicInfo = new RoleBasicInfo();
         roleBasicInfo.setId(roleId);
         roleBasicInfo.setAudience(RoleConstants.ORGANIZATION);
@@ -362,8 +362,6 @@ public class OAuthUtilTest {
         when(roleManagementService.getRoleBasicInfoById(roleId, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(roleBasicInfo);
 
-        when(mockOAuthComponentServiceHolder.getApplicationManagementService())
-                .thenReturn(applicationManagementService);
         ServiceProvider serviceProvider = new ServiceProvider();
         InboundAuthenticationConfig inboundAuthenticationConfig = new InboundAuthenticationConfig();
         InboundAuthenticationRequestConfig[] inboundAuthenticationRequestConfigs =
@@ -433,22 +431,13 @@ public class OAuthUtilTest {
             doReturn(claimsMap).when(userStoreManager)
                     .getUserClaimValuesWithID(null, new String[]{MANAGED_ORG_CLAIM_URI}, null);
 
-            OAuthComponentServiceHolder mockOAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
-            when(OAuthComponentServiceHolder.getInstance()).thenReturn(mockOAuthComponentServiceHolder);
-            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
-
             if (isSSOLoginUser) {
                 when(organizationManager.isPrimaryOrganization(anyString())).thenReturn(false);
-                when(mockOAuthComponentServiceHolder.getIdpManager()).thenReturn(idpManager);
             } else {
                 when(organizationManager.isPrimaryOrganization(anyString())).thenReturn(true);
             }
             when(OrganizationManagementUtil.isOrganization(anyString())).thenReturn(true);
             when(UserCoreUtil.removeDomainFromName(null)).thenReturn(CARBON_TENANT_DOMAIN);
-            when(mockOAuthComponentServiceHolder.getOrganizationUserSharingService())
-                    .thenReturn(organizationUserSharingService);
-
-            lenient().when(mockOAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
 
             if (isUserAssociationFound) {
                 UserAssociation userAssociation = new UserAssociation();

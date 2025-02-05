@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
@@ -66,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
@@ -273,13 +275,30 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(tokenReq.getScope());
     }
 
-    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) {
+    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
+            throws IdentityOAuth2Exception {
 
         boolean isEmailUserNameEnabled = MultitenantUtils.isEmailUserName();
         boolean isSaasApp = serviceProvider.isSaasApp();
         boolean isLegacySaaSAuthenticationEnabled = IdentityTenantUtil.isLegacySaaSAuthenticationEnabled();
         String usernameFromRequest = tokenReq.getResourceOwnerUsername();
         String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+         directly in the organization of the applicationResidentOrgId. In this scenario the user is also in the
+         organization level and the tenant domain of the user should be resolved from the organization id.
+        */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomainFromContext = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
 
         if (!isSaasApp) {
             /*
@@ -393,6 +412,17 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
             }
             if (authenticatedUser.isPresent()) {
+                String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getApplicationResidentOrganizationId();
+                /*
+                 If applicationResidentOrgId is not empty, then the request comes for an application which is
+                 registered directly in the organization of the applicationResidentOrgId. In this scenario the user's
+                 accessing and resident organization will be the organization of the applicationResidentOrgId.
+                */
+                if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                    authenticatedUser.get().setAccessingOrganization(applicationResidentOrgId);
+                    authenticatedUser.get().setUserResidentOrganization(applicationResidentOrgId);
+                }
                 return authenticatedUser.get();
             }
             if (isPublishPasswordGrantLoginEnabled) {

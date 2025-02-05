@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -27,6 +27,8 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.action.execution.ActionExecutorService;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
@@ -74,6 +76,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -166,6 +169,9 @@ public class AbstractAuthorizationGrantHandlerTest {
              boolean dbEntryAvailable, String dbTokenState, boolean tokenLoggable, boolean isIDPIdColumnEnabled,
              boolean setBindingReference) throws Exception {
 
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
@@ -189,7 +195,8 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         // Mocking static methods using try-with-resources
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class)) {
+             MockedStatic<OAuth2Util> oauth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
 
             identityUtil.when(() -> IdentityUtil.getProperty(anyString()))
                     .thenReturn(Boolean.TRUE.toString());
@@ -201,13 +208,17 @@ public class AbstractAuthorizationGrantHandlerTest {
             OauthTokenIssuer oauthTokenIssuer = mock(JWTTokenIssuer.class);
             when(oauthTokenIssuer.getAccessTokenType()).thenReturn("jwt");
             oauth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId)).thenReturn(oauthTokenIssuer);
-            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId)).thenReturn(oAuthAppDO);
+            oauth2Util.when(() -> OAuth2Util.getAppInformationByClientId(eq(clientId), anyString())).
+                    thenReturn(oAuthAppDO);
 
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
             // Set allowed grant types (ensure PASSWORD_GRANT is allowed for renewal)
             OAuth2ServiceComponentHolder.setJwtRenewWithoutRevokeAllowedGrantTypes(
                     Collections.singletonList("password")); // This allows PASSWORD_GRANT
 
             OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
@@ -258,6 +269,11 @@ public class AbstractAuthorizationGrantHandlerTest {
                           boolean isIDPIdColumnEnabled)
             throws Exception {
 
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
+
         OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
 
         Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
@@ -273,6 +289,7 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         OAuth2AccessTokenRespDTO tokenRespDTO = handler.issue(tokReqMsgCtx);
         assertNotNull(tokenRespDTO.getAccessToken());
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @DataProvider(name = "AuthorizeAccessDelegationDataProvider")

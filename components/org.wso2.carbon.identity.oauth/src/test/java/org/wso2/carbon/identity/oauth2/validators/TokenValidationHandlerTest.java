@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.util.TestUtils;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementConfigUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -254,8 +255,12 @@ public class TokenValidationHandlerTest {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
-                     mockStatic(OAuth2ServiceComponentHolder.class);) {
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString())).
+                    thenReturn(false);
             OAuth2ServiceComponentHolder.setIDPIdColumnEnabled(isIDPIdColumnEnabled);
             mockRequiredObjects(oAuthServerConfiguration, identityDatabaseUtil);
             OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
