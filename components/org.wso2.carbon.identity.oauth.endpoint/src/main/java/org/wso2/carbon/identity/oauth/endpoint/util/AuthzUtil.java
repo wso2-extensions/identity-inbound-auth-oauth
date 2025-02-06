@@ -63,7 +63,6 @@ import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.owasp.encoder.Encode;
-import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
@@ -79,10 +78,8 @@ import org.wso2.carbon.identity.application.authentication.framework.handler.req
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedIdPData;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
-import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.FederatedToken;
-import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
@@ -101,7 +98,6 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.model.UserAgent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -120,9 +116,8 @@ import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.AuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeCompletedResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -4522,7 +4517,7 @@ public class AuthzUtil {
                 Object authResponse;
 
                 if (isAuthzChallenge) {
-                    authResponse = API_AUTHN_HANDLER.handleFirstPartyResponse(authServiceResponse);
+                    authResponse = API_AUTHN_HANDLER.handleInitialAuthzChallengeResponse(authServiceResponse);
                 } else {
                     authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
                 }
@@ -4566,7 +4561,9 @@ public class AuthzUtil {
                             // Keeping the app native flow as it is.
                             if (isAuthzChallenge) {
                                 if(attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED){
-                                    return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                                    AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse = new AuthzChallengeCompletedResponse(queryParams);
+                                    String challengeJsonPayload = new Gson().toJson(authzChallengeCompleteAuthResponse);
+                                    return Response.status(HttpServletResponse.SC_OK).entity(challengeJsonPayload).build();
                                 }
                                 return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonPayload).build();
                             } else {

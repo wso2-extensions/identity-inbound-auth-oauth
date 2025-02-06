@@ -4,24 +4,20 @@ import org.wso2.carbon.identity.application.authentication.framework.util.auth.s
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.FlowTypeEnum;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 
-public class AuthzChallengeResponse {
+public class AuthzChallengeIncompleteResponse {
     private String auth_session;
     private String error;
     private String error_description;
-    private AuthServiceConstants.FlowStatus flowStatus;
-    private FlowTypeEnum flowType = FlowTypeEnum.AUTHENTICATION;
     private NextStep nextStep;
 
-    public AuthzChallengeResponse(){
+    public AuthzChallengeIncompleteResponse(){
 
     }
 
-    public AuthzChallengeResponse(String auth_session, String error, String error_description, AuthServiceConstants.FlowStatus flowStatus, FlowTypeEnum flowType, NextStep nextStep){
+    public AuthzChallengeIncompleteResponse(String auth_session, String error, String error_description, AuthServiceConstants.FlowStatus flowStatus, FlowTypeEnum flowType, NextStep nextStep){
         this.auth_session = auth_session;
         this.error = error;
         this.error_description = error_description;
-        this.flowStatus = flowStatus;
-        this.flowType = flowType;
         this.nextStep = nextStep;
     }
 
@@ -47,22 +43,6 @@ public class AuthzChallengeResponse {
 
     public void setError_description(String error_description){
         this.error_description = error_description;
-    }
-
-    public AuthServiceConstants.FlowStatus getFlowStatus(){
-        return flowStatus;
-    }
-
-    public void setFlowStatus(AuthServiceConstants.FlowStatus flowStatus){
-        this.flowStatus = flowStatus;
-    }
-
-    public FlowTypeEnum getFlowType(){
-        return flowType;
-    }
-
-    public void setFlowType(FlowTypeEnum flowType){
-        this.flowType = flowType;
     }
 
     public NextStep getNextStep(){

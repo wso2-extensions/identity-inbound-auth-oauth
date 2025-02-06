@@ -64,7 +64,7 @@ import javax.ws.rs.core.Response;
 @Path("/authn")
 public class ApiAuthnEndpoint {
 
-
+    private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
     private final AuthenticationService authenticationService = new AuthenticationService();
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
@@ -76,7 +76,6 @@ public class ApiAuthnEndpoint {
     public Response handleAuthentication(@Context HttpServletRequest request, @Context HttpServletResponse response,
                                          String payload) {
 
-        //TODO: Use flowType to find Authorize-Challenge or Authorize
         try {
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
@@ -86,7 +85,7 @@ public class ApiAuthnEndpoint {
                 case INCOMPLETE:
                     return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse);
                 case SUCCESS_COMPLETED:
-                    return ApiAuthnUtils.handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
+                    return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse);
                 case FAIL_COMPLETED:
@@ -102,6 +101,25 @@ public class ApiAuthnEndpoint {
             return ApiAuthnUtils.buildResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
             return ApiAuthnUtils.buildResponseForServerError(e, LOG);
+        }
+    }
+
+    private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
+                                                              AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
+
+        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
+
+        Map<String, List<String>> internalParamsList = new HashMap<>();
+        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
+        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
+        internalRequest.setInternalRequest(true);
+
+        try {
+            return oAuth2AuthzEndpoint.authorize(internalRequest, response);
+        } catch (InvalidRequestParentException | URISyntaxException e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error while processing the final oauth authorization request.", e);
         }
     }
 

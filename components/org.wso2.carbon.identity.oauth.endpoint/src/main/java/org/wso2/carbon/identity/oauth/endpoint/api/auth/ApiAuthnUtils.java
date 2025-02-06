@@ -22,12 +22,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
@@ -35,7 +32,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.MDC;
-import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
@@ -44,14 +40,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.auth.
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
-import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import java.util.Optional;
@@ -71,10 +62,7 @@ public class ApiAuthnUtils {
             "was invalid or missing from your request.";
     private static final String AUTHENTICATOR = "authenticator";
     private static final String IDP = "idp";
-    private static final String RESPONSE_MODE = "response_mode";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
-    private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
-    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
     private ApiAuthnUtils() {
 
@@ -270,16 +258,26 @@ public class ApiAuthnUtils {
 
     public static Response buildResponse(AuthResponse response, boolean isAuthzChallenge) throws AuthServiceException {
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-        String jsonString;
-        try {
-            jsonString = objectMapper.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
-                    "Error while building JSON response.", e);
-        }
+        String jsonString = null;
+        Object authzChallengeResponse;
         if (isAuthzChallenge){
+            if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
+                authzChallengeResponse = API_AUTHN_HANDLER.handleIncompleteAuthzChallengeResponse(response);
+            }else if(response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED || response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_INCOMPLETE) {
+                authzChallengeResponse = API_AUTHN_HANDLER.handleFailedAuthzChallengeResponse(response);
+            }else{
+                throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                        "Error while building JSON. Invalid flow status.");
+            }
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+            try {
+                jsonString = objectMapper.writeValueAsString(authzChallengeResponse);
+            } catch (JsonProcessingException e) {
+                throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                        "Error while building JSON response.", e);
+            }
+
             if(response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
                 return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
             }
@@ -377,30 +375,6 @@ public class ApiAuthnUtils {
          implementation it is not possible to distinguish between these two types of errors. Therefore,
          it was decided to set the http status code to 400.*/
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
-    }
-
-    public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
-                                                        AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
-
-        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
-
-        Map<String, List<String>> internalParamsList = new HashMap<>();
-        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
-        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
-        internalRequest.setInternalRequest(true);
-
-        try {
-            if(request.getParameter(RESPONSE_MODE).equals(OAuthConstants.ResponseModes.DIRECT)){
-                return oAuth2AuthzEndpoint.authorize(internalRequest, response);
-            }else {
-                return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
-            }
-
-        } catch (InvalidRequestParentException | URISyntaxException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Error while processing the final oauth authorization request.", e);
-        }
     }
 
     public static AuthServiceConstants.ErrorMessage getDefaultAuthenticationFailureError() {

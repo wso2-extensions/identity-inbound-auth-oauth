@@ -145,6 +145,7 @@ public class AuthzChallengeEndpoint {
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
     private final AuthenticationService authenticationService = new AuthenticationService();
+    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
 
 //    @GET
@@ -271,7 +272,6 @@ public class AuthzChallengeEndpoint {
                 JsonNode authSessionValue = objectNode.remove("auth_session");
                 objectNode.set("flowId", authSessionValue);
 
-                // Convert back to JSON string
                 payload = objectMapper.writeValueAsString(objectNode);
             }
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
@@ -282,7 +282,7 @@ public class AuthzChallengeEndpoint {
                 case INCOMPLETE:
                     return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse, true);
                 case SUCCESS_COMPLETED:
-                    return ApiAuthnUtils.handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
+                    return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse, true);
                 case FAIL_COMPLETED:
@@ -329,10 +329,6 @@ public class AuthzChallengeEndpoint {
                 HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
                 return handleInitialAuthzChallengeRequest(httpRequest, response, false);
             }
-//            } else if (contentType != null && contentType.contains("application/json")) {
-//                if (payload != null && payload.contains("\"auth_session\"")) {
-//                    return handleSubsequentAuthzChallengeRequest(request, response, payload);
-//                }
 
             throw new AuthServiceException(
                     AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
@@ -351,9 +347,7 @@ public class AuthzChallengeEndpoint {
     @Path("/")
     @Consumes("application/json")
     @Produces("application/json")
-    public Response authorizeChallengeSubsequentPost(@Context HttpServletRequest request,
-                                           @Context HttpServletResponse response,
-                                           String payload) {
+    public Response authorizeChallengeSubsequentPost(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) {
         try {
             if (payload != null && payload.contains("\"auth_session\"")) {
                 return handleSubsequentAuthzChallengeRequest(request, response, payload);
@@ -502,21 +496,27 @@ public class AuthzChallengeEndpoint {
             String sessionDataKey =
                     (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);
 
+
             CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(oAuthMessage.getRequest());
             requestWrapper.setParameter(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
             requestWrapper.setParameter(FrameworkConstants.RequestParams.TYPE, type);
 
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
 
-            // Marking the initial request as additional validation will be done from the auth service.
-            requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
-            requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
+//            if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
+                // Marking the initial request as additional validation will be done from the auth service.
+                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
+                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
 
-            AuthenticationService authenticationService = new AuthenticationService();
-            AuthServiceResponse authServiceResponse = authenticationService.
-                    handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
-            // This is done to provide a way to propagate the auth service response to needed places.
-            AuthzUtil.attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
+                AuthenticationService authenticationService = new AuthenticationService();
+                AuthServiceResponse authServiceResponse = authenticationService.
+                        handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
+                // This is done to provide a way to propagate the auth service response to needed places.
+                AuthzUtil.attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
+//            } else {
+//                CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
+//                commonAuthenticationHandler.doGet(requestWrapper, responseWrapper);
+//            }
 
             Object attribute = oAuthMessage.getRequest().getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
             if (attribute != null) {
@@ -635,6 +635,25 @@ public class AuthzChallengeEndpoint {
                     oAuthMessage.getRequest().getParameterMap(), oAuthMessage.getRequest());
         } catch (IdentityOAuth2Exception e) {
             return AuthzUtil.handleException(e);
+        }
+    }
+
+    private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
+                                                        AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
+
+        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
+
+        Map<String, List<String>> internalParamsList = new HashMap<>();
+        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
+        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
+        internalRequest.setInternalRequest(true);
+
+        try {
+            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
+        } catch (InvalidRequestParentException | URISyntaxException e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error while processing the final oauth authorization request.", e);
         }
     }
 

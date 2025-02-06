@@ -38,7 +38,8 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Param;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.StepTypeEnum;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
-import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeIncompleteResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.nio.charset.StandardCharsets;
@@ -79,18 +80,36 @@ public class ApiAuthnHandler {
         return authResponse;
     }
 
-    public AuthzChallengeResponse handleFirstPartyResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
+    public AuthzChallengeIncompleteResponse handleInitialAuthzChallengeResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
 
         //TODO: Implement the logic to handle the response in specification's format.
-        AuthzChallengeResponse authzChallengeResponse = new AuthzChallengeResponse();
-        authzChallengeResponse.setAuth_session(authServiceResponse.getSessionDataKey());
-        authzChallengeResponse.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
-        authzChallengeResponse.setError_description("The presented authorization is insufficient.");
-        authzChallengeResponse.setFlowStatus(authServiceResponse.getFlowStatus());
+        AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
+        response.setAuth_session(authServiceResponse.getSessionDataKey());
+        response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
+        response.setError_description("The presented authorization is insufficient.");
         NextStep nextStep = buildNextStep(authServiceResponse);
-        authzChallengeResponse.setNextStep(nextStep);
+        response.setNextStep(nextStep);
 
-        return authzChallengeResponse;
+        return response;
+    }
+
+    public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) throws AuthServiceException {
+        AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
+        response.setAuth_session(authResponse.getFlowId());
+        response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
+        response.setError_description("The presented authorization is insufficient.");
+        response.setNextStep(authResponse.getNextStep());
+
+        return response;
+    }
+
+    public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) throws AuthServiceException {
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+        response.setAuth_session(authResponse.getFlowId());
+        response.setError(AuthzChallengeErrorEnum.REDIRECT_TO_WEB.getValue());
+        response.setError_description("Authorization failed. Start a web-based flow.");
+
+        return response;
     }
 
     private NextStep buildNextStep(AuthServiceResponse authServiceResponse) {
