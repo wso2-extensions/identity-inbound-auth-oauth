@@ -188,11 +188,11 @@ public class OAuthClientAuthnService {
                     executeAuthenticator(oAuthClientAuthenticator, oAuthClientAuthnContext, request, bodyContentMap);
                 });
             } catch (InvalidOAuthClientException e) {
-                String errorMessage = "A valid OAuth client could not be found for client_id: " + clientId;
                 if (log.isDebugEnabled()) {
-                    log.debug(errorMessage, e);
+                    log.debug("A valid OAuth client could not be found for client_id: " + clientId, e);
                 }
-                setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, errorMessage, oAuthClientAuthnContext);
+                setErrorToContext(OAuth2ErrorCodes.INVALID_CLIENT, "Client credentials are invalid.",
+                        oAuthClientAuthnContext);
             } catch (IdentityOAuth2Exception e) {
                 throw new OAuthClientAuthnException("Error while obtaining the service provider for client_id: " +
                         clientId, OAuth2ErrorCodes.SERVER_ERROR);
