@@ -35,9 +35,9 @@ import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
-import org.wso2.carbon.identity.oauth2.fga.FGADataManagementInterface;
-import org.wso2.carbon.identity.oauth2.fga.FGASchemaManagementInterface;
-import org.wso2.carbon.identity.oauth2.fga.FGAuthorizationInterface;
+import org.wso2.carbon.identity.oauth2.fga.services.FGADataManagementInterface;
+import org.wso2.carbon.identity.oauth2.fga.services.FGASchemaManagementInterface;
+import org.wso2.carbon.identity.oauth2.fga.services.FGAuthorizationInterface;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidationHandler;
@@ -200,30 +200,6 @@ public class OAuthComponentServiceHolder {
     public OAuthEventInterceptor getOAuthEventInterceptorProxy() {
 
         return this.oAuthEventInterceptorHandlerProxy;
-    }
-
-    public void addFGAuthorizationService(FGAuthorizationInterface authorizationInterface) {
-        this.fgAuthorizationInterface = authorizationInterface;
-    }
-
-    public FGAuthorizationInterface getFGAuthorizationService() {
-        return this.fgAuthorizationInterface;
-    }
-
-    public void addFGASchemaManagementService(FGASchemaManagementInterface schemaManagementInterface) {
-        this.fgaSchemaManagementInterface = schemaManagementInterface;
-    }
-
-    public FGASchemaManagementInterface getFGASchemaManagementService() {
-        return this.fgaSchemaManagementInterface;
-    }
-
-    public void addFGADataManagementService(FGADataManagementInterface dataManagementInterface) {
-        this.fgaDataManagementInterface = dataManagementInterface;
-    }
-
-    public FGADataManagementInterface getFGADataManagementService() {
-        return this.fgaDataManagementInterface;
     }
 
     public OAuth2Service getOauth2Service() {
@@ -584,5 +560,29 @@ public class OAuthComponentServiceHolder {
     public void setConfigurationManager(ConfigurationManager configurationManager) {
 
         this.configurationManager = configurationManager;
+    }
+
+    public void addFGAuthorizationService(FGAuthorizationInterface authorizationInterface) {
+        this.fgAuthorizationInterface = authorizationInterface;
+    }
+
+    public FGAuthorizationInterface getFGAuthorizationService() {
+        return this.fgAuthorizationInterface;
+    }
+
+    public void addFGASchemaManagementService(FGASchemaManagementInterface schemaManagementInterface) {
+        this.fgaSchemaManagementInterface = schemaManagementInterface;
+    }
+
+    public FGASchemaManagementInterface getFGASchemaManagementService() {
+        return this.fgaSchemaManagementInterface;
+    }
+
+    public void addFGADataManagementService(FGADataManagementInterface dataManagementInterface) {
+        this.fgaDataManagementInterface = dataManagementInterface;
+    }
+
+    public FGADataManagementInterface getFGADataManagementService() {
+        return this.fgaDataManagementInterface;
     }
 }

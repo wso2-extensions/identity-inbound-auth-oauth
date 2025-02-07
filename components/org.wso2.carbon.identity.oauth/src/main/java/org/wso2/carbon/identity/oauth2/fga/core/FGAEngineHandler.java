@@ -16,14 +16,18 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth2.fga;
+package org.wso2.carbon.identity.oauth2.fga.core;
 
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.fga.services.FGADataManagementInterface;
+import org.wso2.carbon.identity.oauth2.fga.services.FGASchemaManagementInterface;
+import org.wso2.carbon.identity.oauth2.fga.services.FGAuthorizationInterface;
 
 /**
  * This class handles the FGA connector registered as an OSGi service.
  */
 public class FGAEngineHandler {
+
     private static FGAuthorizationInterface authorizationService;
     private static FGASchemaManagementInterface schemaManagementService;
     private static FGADataManagementInterface dataManagementService;

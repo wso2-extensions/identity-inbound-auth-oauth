@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.fga;
+package org.wso2.carbon.identity.oauth2.fga.services;
 
 public interface FGADataManagementInterface {
 

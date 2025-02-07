@@ -16,9 +16,14 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth2.fga;
+package org.wso2.carbon.identity.oauth2.fga.factory;
 
-public class AccessControlFactory {
+import org.wso2.carbon.identity.oauth2.fga.core.FGAEngineHandler;
+
+/**
+ *
+ */
+public class FGAuthorizationEngineFactory {
 
     private static FGAEngineHandler fgaEngineHandler;
 
