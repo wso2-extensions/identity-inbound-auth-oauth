@@ -168,23 +168,11 @@ public class JWKSBasedJWTValidator implements JWTValidator {
                 if (log.isDebugEnabled()) {
                     log.debug("Signature Algorithm found in the JWT Header: " + alg);
                 }
-                if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
-                    // At this point 'x509Certificate' will never be null.
-                    PublicKey publicKey = x509Certificate.getPublicKey();
-                    if (publicKey instanceof RSAPublicKey) {
-                        x509Certificate.checkValidity();
-                    } else {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Public key is not an RSA public key.");
-                        }
-                        return false;
-                    }
-                } else {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Signature Algorithm not supported yet : " + alg);
-                    }
+
+                if (!isValidCertificate(x509Certificate, alg)) {
                     return false;
                 }
+                x509Certificate.checkValidity();
             } else if (log.isDebugEnabled()) {
                 log.debug("X509Certificate is null. Hence, certificate expiry date validation is skipped.");
             }
@@ -247,5 +235,33 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         URL. */
         JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(expectedJWSAlg, keySource);
         jwtProcessor.setJWSKeySelector(keySelector);
+    }
+
+    /**
+     * Validate the certificate based on the signature algorithm.
+     *
+     * @param x509Certificate X509Certificate
+     * @param alg             Signature Algorithm
+     * @return true if the certificate is valid.
+     */
+    private boolean isValidCertificate(X509Certificate x509Certificate, String alg) {
+
+        if (alg.startsWith(RS) || alg.startsWith(PS)) {
+            // At this point 'x509Certificate' will never be null.
+            PublicKey publicKey = x509Certificate.getPublicKey();
+            if (publicKey instanceof RSAPublicKey) {
+                return true;
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("Public key is not an RSA public key.");
+                }
+                return false;
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Signature Algorithm not supported yet: " + alg);
+            }
+            return false;
+        }
     }
 }
