@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockException;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -68,6 +69,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
@@ -230,15 +232,30 @@ public class PasswordGrantHandlerTest {
 
         return new Object[][]{
                 {"carbon.super", true, true, new IdentityApplicationManagementException("Error"),
-                        "Error while retrieving service provider"},
-                {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store"},
-                {"wso2.com", false, true, null, "Authentication failed for user"}
+                        "Error while retrieving service provider", false},
+                {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store", false},
+                {"carbon.super", true, true, new UserStoreException(
+                        new AccountLockException(
+                                "17003:AdminInitiated",
+                                "Account is locked by admin for user: a*****r in user store: PRIMARY in tenant: " +
+                                        "carbon.super. Cannot login until the account is unlocked.")),
+                        "17003:AdminInitiated Account is locked by admin for user: a*****r in user store: PRIMARY in " +
+                                "tenant: carbon.super. Cannot login until the account is unlocked.",
+                        true},
+                {"carbon.super", true, true, new UserStoreException(
+                        new AccountLockException(
+                                "17003:AdminInitiated",
+                                "Account is locked by admin for user: a*****r in user store: PRIMARY in tenant: " +
+                                        "carbon.super. Cannot login until the account is unlocked.")),
+                        "Authentication failed for username",
+                        false},
+                {"wso2.com", false, true, null, "Authentication failed for user", false}
         };
     }
 
     @Test(dataProvider = "GetValidateGrantForExceptionDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
     public void testValidateGrantForException(String tenantDomain, boolean authenticated, boolean isSaas, Exception e,
-                                              String reasonForError) throws Exception {
+                                              String reasonForError, boolean isShowAuthFailureReason) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
@@ -253,7 +270,11 @@ public class PasswordGrantHandlerTest {
                     .thenReturn(fileBasedConfigurationBuilder);
             AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
             Map<String, String> parameterMap = new HashMap<>();
-            parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+            if (isShowAuthFailureReason) {
+                parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "true");
+            } else {
+                parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+            }
             basicAuthenticatorConfig.setParameterMap(parameterMap);
             when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
                     basicAuthenticatorConfig);
@@ -293,7 +314,10 @@ public class PasswordGrantHandlerTest {
             }
             when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
 
-            if (e instanceof UserStoreException) {
+            if (e != null && e.getCause() instanceof AccountLockException) {
+                when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+                when(userStoreManager.authenticateWithID(anyString(), anyString(), any(), anyString())).thenThrow(e);
+            } else if (e instanceof UserStoreException) {
                 when(userRealm.getUserStoreManager()).thenThrow(e);
             } else {
                 when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
@@ -313,15 +337,28 @@ public class PasswordGrantHandlerTest {
                 authenticationResult = new AuthenticationResult(AuthenticationResult.AuthenticationStatus.FAIL);
             }
 
-            when(userStoreManager.authenticateWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI),
-                    anyString(), any(), eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(authenticationResult);
+            if (e == null || !(e.getCause() instanceof AccountLockException)) {
+                when(userStoreManager.authenticateWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI),
+                        anyString(), any(), eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(authenticationResult);
+            }
 
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
             frameworkUtils.when(() -> FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
                     .thenReturn("randomUserwso2.com");
             PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
-            passwordGrantHandler.validateGrant(tokReqMsgCtx);
-            fail("Password grant validation should fail with the reason " + reasonForError);
+
+            if (e != null && e.getCause() instanceof AccountLockException) {
+                try {
+                    passwordGrantHandler.validateGrant(tokReqMsgCtx);
+                } catch (IdentityOAuth2Exception ex) {
+                    assertEquals(ex.getMessage(), reasonForError, "Error message should contain the " +
+                            "account lock exception message");
+                    throw ex;
+                }
+            } else {
+                passwordGrantHandler.validateGrant(tokReqMsgCtx);
+                fail("Password grant validation should fail with the reason " + reasonForError);
+            }
         }
     }
 
