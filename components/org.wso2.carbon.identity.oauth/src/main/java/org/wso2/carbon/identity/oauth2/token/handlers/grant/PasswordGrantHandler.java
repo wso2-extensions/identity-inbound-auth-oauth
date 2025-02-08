@@ -468,12 +468,12 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 IdentityException identityException = (IdentityException) (e.getCause());
                 // Set error code to message if available.
                 if (StringUtils.isNotBlank(identityException.getErrorCode())) {
-                    message = identityException.getMessage();
                     errorCode = identityException.getErrorCode();
+                    message = errorCode + " " + identityException.getMessage();
                 }
             }
             message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
-            throw new IdentityOAuth2Exception(errorCode, message);
+            throw new IdentityOAuth2Exception(message, e);
         } catch (AuthenticationFailedException e) {
             String message = "Authentication failed for the user: " + tokenReq.getResourceOwnerUsername();
             if (log.isDebugEnabled()) {
