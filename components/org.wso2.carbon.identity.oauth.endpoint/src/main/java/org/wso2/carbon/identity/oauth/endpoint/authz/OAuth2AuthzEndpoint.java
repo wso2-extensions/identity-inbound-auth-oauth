@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsLogger;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
@@ -4210,24 +4211,31 @@ public class OAuth2AuthzEndpoint {
         if (readAMRValueFromIdp) {
             List<String> resultantAuthMethods = new ArrayList<>();
             Object[] idpKeySet = authenticatedIdPs.keySet().toArray();
-            for (int i = 0; i < authMethods.size(); i++) {
+            for (String authMethod : authMethods) {
                 boolean amrFieldExists = false;
-                if (idpKeySet[i] != null) {
-                    String idpKey = (String) idpKeySet[i];
-                    if (authenticatedIdPs.get(idpKey) != null && authenticatedIdPs.get(idpKey).getUser() != null
-                            && authenticatedIdPs.get(idpKey).getUser().getUserAttributes() != null) {
-                        for (Map.Entry<ClaimMapping, String> entry : authenticatedIdPs.get(idpKey).getUser()
-                                .getUserAttributes().entrySet()) {
-                            if (entry.getKey().getLocalClaim().getClaimUri().equals(OAuthConstants.AMR)) {
-                                amrFieldExists = true;
-                                addToAuthMethods(entry.getValue(), resultantAuthMethods);
-                                break;
+                for (Object idp : idpKeySet) {
+                    String idpKey = (String) idp;
+                    for (AuthenticatorConfig authenticator : authenticatedIdPs.get(idpKey).getAuthenticators()) {
+                        if (authenticator.getName().equals(authMethod)) {
+                            if (authenticatedIdPs.get(idpKey) != null && authenticatedIdPs.get(idpKey).getUser() != null
+                                    && authenticatedIdPs.get(idpKey).getUser().getUserAttributes() != null) {
+                                for (Map.Entry<ClaimMapping, String> entry : authenticatedIdPs.get(idpKey).getUser()
+                                        .getUserAttributes().entrySet()) {
+                                    if (entry.getKey().getLocalClaim().getClaimUri().equals(OAuthConstants.AMR)) {
+                                        amrFieldExists = true;
+                                        addToAuthMethods(entry.getValue(), resultantAuthMethods);
+                                        break;
+                                    }
+                                }
                             }
+                        }
+                        if (amrFieldExists) {
+                            break;
                         }
                     }
                 }
                 if (!amrFieldExists) {
-                    resultantAuthMethods.add(authMethods.get(i));
+                    resultantAuthMethods.add(authMethod);
                 }
             }
             return resultantAuthMethods;
