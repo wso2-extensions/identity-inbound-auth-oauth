@@ -246,7 +246,7 @@ public class JWKSBasedJWTValidator implements JWTValidator {
      */
     private boolean isValidCertificate(X509Certificate x509Certificate, String alg) {
 
-        if (alg.startsWith(RS) || alg.startsWith(PS)) {
+        if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
             // At this point 'x509Certificate' will never be null.
             PublicKey publicKey = x509Certificate.getPublicKey();
             if (publicKey instanceof RSAPublicKey) {
