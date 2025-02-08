@@ -88,7 +88,6 @@ public class JWKSBasedJWTValidator implements JWTValidator {
             if (!checkCertificateValidity(jwksUri, (SignedJWT) jwt)) {
                 return false;
             }
-
             return this.validateSignature(jwt, jwksUri, algorithm, opts);
 
         } catch (ParseException e) {
