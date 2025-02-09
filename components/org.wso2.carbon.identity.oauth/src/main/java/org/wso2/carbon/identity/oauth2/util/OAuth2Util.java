@@ -5718,4 +5718,28 @@ public class OAuth2Util {
         }
         return tenantDomain;
     }
+
+    /**
+     * Resolve the tenant domain from the application resident organization id which will be set when the resource
+     * is accessing from the tenanted endpoint.
+     *
+     * @return Application resident tenant domain.
+     * @throws IdentityOAuth2Exception When an error occurred while resolving the tenant domain.
+     */
+    public static String getAppResidentTenantDomain() throws IdentityOAuth2Exception {
+
+        String appResidentTenantDomain = null;
+        String appResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().
+                getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appResidentOrgId)) {
+            try {
+                appResidentTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager().
+                        resolveTenantDomain(appResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error occurred while resolving the tenant domain for the " +
+                        "organization id.", e);
+            }
+        }
+        return appResidentTenantDomain;
+    }
 }

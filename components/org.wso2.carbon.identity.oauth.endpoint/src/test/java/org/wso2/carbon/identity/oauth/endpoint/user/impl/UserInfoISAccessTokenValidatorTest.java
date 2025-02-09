@@ -35,9 +35,12 @@ import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
+import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -56,7 +59,7 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.MockitoAnnotations.initMocks;
+import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
 
 @Listeners(MockitoTestNGListener.class)
@@ -69,10 +72,14 @@ public class UserInfoISAccessTokenValidatorTest {
     private OAuth2TokenValidationService oAuth2TokenValidationService;
 
     @Mock
+    private DefaultTokenProvider defaultTokenProvider;
+
+    @Mock
     BundleContext bundleContext;
 
     MockedConstruction<ServiceTracker> mockedConstruction;
 
+    private AutoCloseable closeable;
     private UserInforRequestDefaultValidator userInforRequestDefaultValidator;
     private UserInfoISAccessTokenValidator userInfoISAccessTokenValidator;
     private final String token = "ZWx1c3VhcmlvOnlsYWNsYXZl";
@@ -95,7 +102,7 @@ public class UserInfoISAccessTokenValidatorTest {
     @BeforeMethod
     public void setUp() {
 
-        initMocks(this);
+        closeable = openMocks(this);
 
         PrivilegedCarbonContext.startTenantFlow();
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
@@ -112,10 +119,11 @@ public class UserInfoISAccessTokenValidatorTest {
     }
 
     @AfterMethod
-    public void tearDown() {
+    public void tearDown() throws Exception {
 
         mockedConstruction.close();
         PrivilegedCarbonContext.endTenantFlow();
+        closeable.close();
     }
 
     @Test
@@ -177,6 +185,28 @@ public class UserInfoISAccessTokenValidatorTest {
             OAuth2TokenValidationResponseDTO responseDTO = userInfoISAccessTokenValidator
                     .validateToken(accessTokenIdentifier);
             assertEquals(responseDTO.getAuthorizationContextToken().getTokenString(), accessTokenIdentifier);
+        }
+    }
+
+    @Test(dataProvider = "getTokens", expectedExceptions = UserInfoEndpointException.class)
+    public void testTokenValidationVerifyTokenError(String accessTokenIdentifier) throws Exception {
+
+        prepareOAuth2TokenValidationService();
+
+        try (MockedStatic<OAuth2TokenValidatorServiceFactory> utilServiceHolder =
+                     mockStatic(OAuth2TokenValidatorServiceFactory.class)) {
+            utilServiceHolder.when(OAuth2TokenValidatorServiceFactory::getOAuth2TokenValidatorService)
+                    .thenReturn(oAuth2TokenValidationService);
+
+            OAuth2TokenValidationResponseDTO mockedResponseDTO = new OAuth2TokenValidationResponseDTO();
+            mockedResponseDTO.setValid(true);
+            when(oAuth2TokenValidationService.validate(any())).thenReturn(mockedResponseDTO);
+
+            OAuth2ServiceComponentHolder.getInstance().setTokenProvider(defaultTokenProvider);
+            lenient().when(OAuth2ServiceComponentHolder.getInstance().getTokenProvider().getVerifiedAccessToken(
+                    accessTokenIdentifier, false)).thenThrow(
+                            new IdentityOAuth2Exception("Error in getting AccessToken"));
+            userInfoISAccessTokenValidator.validateToken(accessTokenIdentifier);
         }
     }
 
