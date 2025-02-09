@@ -27,6 +27,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -83,6 +84,7 @@ import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
@@ -888,12 +890,90 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
         }
     }
 
+    @Test
+    public void testResolveBackChannelLogoutURLForNonOrgApps() {
+
+        ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+        serviceProviderProperty.setName(IS_FRAGMENT_APP);
+        serviceProviderProperty.setValue("true");
+
+        ServiceProvider orgApplication = new ServiceProvider();
+        orgApplication.setApplicationName(IdentityApplicationConstants.OAuth2.NAME);
+        orgApplication.setSpProperties(new ServiceProviderProperty[]{serviceProviderProperty});
+
+        OAuthAppDO appDO = getDefaultOAuthAppDO();
+        appDO.setBackChannelLogoutUrl(null);
+
+        try (MockedStatic<OrganizationManagementUtil> organizationManagementUtil = mockStatic(
+                OrganizationManagementUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder = mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder = mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+        ) {
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(
+                    TENANT_DOMAIN)).thenReturn(false);
+
+            assertNull(appDO.getBackChannelLogoutUrl());
+        }
+    }
+
+    @Test
+    public void testResolveBackChannelLogoutURLForSuperTenantApps() {
+
+        ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+        serviceProviderProperty.setName(IS_FRAGMENT_APP);
+        serviceProviderProperty.setValue("true");
+
+        ServiceProvider orgApplication = new ServiceProvider();
+        orgApplication.setApplicationName(IdentityApplicationConstants.OAuth2.NAME);
+        orgApplication.setSpProperties(new ServiceProviderProperty[]{serviceProviderProperty});
+
+        OAuthAppDO appDO = getDefaultOAuthAppDO();
+        appDO.setBackChannelLogoutUrl(null);
+
+        try (MockedStatic<OrganizationManagementUtil> organizationManagementUtil = mockStatic(
+                OrganizationManagementUtil.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder = mockStatic(
+                     OAuth2ServiceComponentHolder.class);
+             MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder = mockStatic(
+                     OAuthComponentServiceHolder.class);
+             MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class);
+        ) {
+
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(
+                    TENANT_DOMAIN)).thenReturn(true);
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService).
+                    thenReturn(mockApplicationManagementService);
+            when(mockApplicationManagementService.getServiceProviderByClientId(CONSUMER_KEY,
+                    IdentityApplicationConstants.OAuth2.NAME, TENANT_DOMAIN)).thenReturn(orgApplication);
+
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance).
+                    thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.getPrimaryOrganizationId(TENANT_DOMAIN))
+                    .thenReturn(String.valueOf(MultitenantConstants.SUPER_TENANT_ID));
+            when(mockOrganizationManager.resolveTenantDomain(
+                    String.valueOf(MultitenantConstants.SUPER_TENANT_ID)))
+                    .thenReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+
+            mockServiceURLBuilder("https://localhost:8080" + DEFAULT_BACKCHANNEL_LOGOUT_URL, serviceURLBuilder);
+
+            assertEquals(appDO.getBackChannelLogoutUrl(), "https://localhost:8080" + DEFAULT_BACKCHANNEL_LOGOUT_URL);
+        } catch (IdentityApplicationManagementException | OrganizationManagementException | URLBuilderException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private void mockServiceURLBuilder(String url, MockedStatic<ServiceURLBuilder> serviceURLBuilder)
             throws URLBuilderException {
 
         ServiceURLBuilder mockServiceURLBuilder = mock(ServiceURLBuilder.class);
         serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
         lenient().when(mockServiceURLBuilder.addPath(any())).thenReturn(mockServiceURLBuilder);
+        lenient().when(mockServiceURLBuilder.setTenant(any())).thenReturn(mockServiceURLBuilder);
 
         ServiceURL serviceURL = mock(ServiceURL.class);
         lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
