@@ -45,8 +45,9 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.TENANT_CONTEXT_PATH_COMPONENT;
-import static org.wso2.carbon.identity.organization.management.application.constant.OrgApplicationMgtConstants.IS_FRAGMENT_APP;
 
 /**
  * OAuth application data object.
@@ -57,7 +58,6 @@ import static org.wso2.carbon.identity.organization.management.application.const
 public class OAuthAppDO extends InboundConfigurationProtocol implements Serializable {
 
     private static final long serialVersionUID = -6453843721358989519L;
-    private static final String DEFAULT_BACKCHANNEL_LOGOUT_URL = "/identity/oidc/slo";
 
     @XmlTransient
     private int id;
