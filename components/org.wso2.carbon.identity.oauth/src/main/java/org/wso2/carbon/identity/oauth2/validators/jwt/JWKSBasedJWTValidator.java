@@ -169,9 +169,10 @@ public class JWKSBasedJWTValidator implements JWTValidator {
                     log.debug("Signature Algorithm found in the JWT Header: " + alg);
                 }
 
-                if (!isValidCertificate(x509Certificate, alg)) {
+                if (!isSupportedAlgorithm(alg) || !isValidPublicKey(x509Certificate)) {
                     return false;
                 }
+
                 x509Certificate.checkValidity();
             } else if (log.isDebugEnabled()) {
                 log.debug("X509Certificate is null. Hence, certificate expiry date validation is skipped.");
@@ -237,31 +238,26 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         jwtProcessor.setJWSKeySelector(keySelector);
     }
 
-    /**
-     * Validate the certificate based on the signature algorithm.
-     *
-     * @param x509Certificate X509Certificate
-     * @param alg             Signature Algorithm
-     * @return true if the certificate is valid.
-     */
-    private boolean isValidCertificate(X509Certificate x509Certificate, String alg) {
+    private boolean isSupportedAlgorithm(String alg) {
 
-        if (alg.indexOf(RS) == 0 || alg.indexOf(PS) == 0) {
-            // At this point 'x509Certificate' will never be null.
-            PublicKey publicKey = x509Certificate.getPublicKey();
-            if (publicKey instanceof RSAPublicKey) {
-                return true;
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Public key is not an RSA public key.");
-                }
-                return false;
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Signature Algorithm not supported yet: " + alg);
-            }
-            return false;
+        if (alg.startsWith(RS) || alg.startsWith(PS)) {
+            return true;
         }
+        if (log.isDebugEnabled()) {
+            log.debug("Signature Algorithm not supported yet: " + alg);
+        }
+        return false;
+    }
+
+    private boolean isValidPublicKey(X509Certificate x509Certificate) {
+
+        PublicKey publicKey = x509Certificate.getPublicKey();
+        if (publicKey instanceof RSAPublicKey) {
+            return true;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Public key is not an RSA public key.");
+        }
+        return false;
     }
 }

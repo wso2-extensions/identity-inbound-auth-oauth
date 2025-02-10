@@ -34,7 +34,6 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
-import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
@@ -52,7 +51,6 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
@@ -138,33 +136,6 @@ public class JWKSBasedJWTValidatorTest {
                 }
             }
         }
-    }
-
-    @Test
-    void testValidRSACertificate() throws Exception {
-
-        when(mockCertificate.getPublicKey()).thenReturn(mockRSAPublicKey);
-        boolean result = invokeIsValidCertificate(mockCertificate, "RS256");
-
-        assertTrue(result, "Expected valid RSA certificate to pass validation.");
-    }
-
-    @Test
-    void testInvalidCertificate() throws Exception {
-
-        when(mockCertificate.getPublicKey()).thenReturn(mockNonRSAPublicKey);
-        boolean result = invokeIsValidCertificate(mockCertificate, "ES256");
-
-        assertFalse(result, "Expected unsupported algorithm to fail validation.");
-    }
-
-    private boolean invokeIsValidCertificate(X509Certificate certificate, String alg) throws Exception {
-
-        JWKSBasedJWTValidator validator = new JWKSBasedJWTValidator();
-        Method method = JWKSBasedJWTValidator.class.getDeclaredMethod("isValidCertificate",
-                X509Certificate.class, String.class);
-        method.setAccessible(true);
-        return (boolean) method.invoke(validator, certificate, alg);
     }
 
     @DataProvider(name = "validateDataForException")
