@@ -245,10 +245,6 @@
             <artifactId>org.wso2.carbon.identity.organization.management.role.management.service</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.wso2.carbon.identity.organization.management</groupId>
-            <artifactId>org.wso2.carbon.identity.organization.management.application</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.consent.server.configs.mgt</artifactId>
         </dependency>
@@ -452,7 +448,6 @@
                             org.wso2.carbon.identity.organization.management.role.management.service.models; version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.util;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.organization.management.organization.user.sharing.models;version="${carbon.identity.organization.management.version.range}",
-                            org.wso2.carbon.identity.organization.management.application.constant;version="${carbon.identity.organization.management.version.range}",
                             org.wso2.carbon.identity.handler.event.account.lock.service.*;version="${account.lock.service.imp.pkg.version.range}",
 
                             org.wso2.carbon.base; version="${carbon.base.imp.pkg.version.range}",
