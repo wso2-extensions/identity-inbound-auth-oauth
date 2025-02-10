@@ -50,13 +50,18 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.net.MalformedURLException;
+import java.security.PublicKey;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
+import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
 
 /**
  * Validate JWT using Identity Provider's jwks_uri.
@@ -80,7 +85,9 @@ public class JWKSBasedJWTValidator implements JWTValidator {
 
         try {
             JWT jwt = JWTParser.parse(jwtString);
-            checkCertificateValidity(jwksUri, (SignedJWT) jwt);
+            if (!checkCertificateValidity(jwksUri, (SignedJWT) jwt)) {
+                return false;
+            }
             return this.validateSignature(jwt, jwksUri, algorithm, opts);
 
         } catch (ParseException e) {
@@ -113,7 +120,7 @@ public class JWKSBasedJWTValidator implements JWTValidator {
      * @throws KeySourceException              If remote JWK, or matching keys set was not found in the given JWKS.
      * @throws BadJOSEException                If the keyId of the JWS header is null (i.e. due to a bad signature.)
      */
-    private void checkCertificateValidity(String jwksUri, SignedJWT jwt) throws MalformedURLException,
+    private boolean checkCertificateValidity(String jwksUri, SignedJWT jwt) throws MalformedURLException,
             CertificateNotYetValidException, CertificateExpiredException, KeySourceException, BadJOSEException {
 
         String isEnforceCertificateValidity = IdentityUtil.getProperty(ENFORCE_CERTIFICATE_VALIDITY);
@@ -122,7 +129,7 @@ public class JWKSBasedJWTValidator implements JWTValidator {
             if (log.isDebugEnabled()) {
                 log.debug("Check for the certificate validity is disabled.");
             }
-            return;
+            return true;
         }
 
         X509Certificate x509Certificate = null;
@@ -156,6 +163,16 @@ public class JWKSBasedJWTValidator implements JWTValidator {
             }
 
             if (x509Certificate != null) {
+
+                String alg = jwt.getHeader().getAlgorithm().getName();
+                if (log.isDebugEnabled()) {
+                    log.debug("Signature Algorithm found in the JWT Header: " + alg);
+                }
+
+                if (!isSupportedAlgorithm(alg) || !isValidPublicKey(x509Certificate)) {
+                    return false;
+                }
+
                 x509Certificate.checkValidity();
             } else if (log.isDebugEnabled()) {
                 log.debug("X509Certificate is null. Hence, certificate expiry date validation is skipped.");
@@ -163,6 +180,7 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         } else {
             throw new KeySourceException("Remote JWK set not found in the JWKS endpoint: " + jwksUri);
         }
+        return true;
     }
 
     @Override
@@ -218,5 +236,28 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         URL. */
         JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(expectedJWSAlg, keySource);
         jwtProcessor.setJWSKeySelector(keySelector);
+    }
+
+    private boolean isSupportedAlgorithm(String alg) {
+
+        if (alg.startsWith(RS) || alg.startsWith(PS)) {
+            return true;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Signature Algorithm not supported yet: " + alg);
+        }
+        return false;
+    }
+
+    private boolean isValidPublicKey(X509Certificate x509Certificate) {
+
+        PublicKey publicKey = x509Certificate.getPublicKey();
+        if (publicKey instanceof RSAPublicKey) {
+            return true;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Public key is not an RSA public key.");
+        }
+        return false;
     }
 }
