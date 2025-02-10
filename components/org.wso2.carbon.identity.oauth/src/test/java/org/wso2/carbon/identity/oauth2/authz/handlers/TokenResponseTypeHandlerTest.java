@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 
 /**
  * Unit test covering TokenResponseTypeHandler class
@@ -108,6 +109,7 @@ public class TokenResponseTypeHandlerTest {
         oAuthAppDO.setOauthConsumerKey(clientId);
         oAuthAppDO.setUser(authenticatedUser);
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+        oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
 
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setAccessToken("abcdefghijklmn");

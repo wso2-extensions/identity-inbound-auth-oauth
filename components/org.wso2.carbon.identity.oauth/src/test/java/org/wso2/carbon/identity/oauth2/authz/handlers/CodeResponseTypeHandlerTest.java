@@ -47,6 +47,7 @@ import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 
 /**
  * Test class covering CodeResponseTypeHandler
@@ -163,6 +164,7 @@ public class CodeResponseTypeHandlerTest {
         appDO.setUserAccessTokenExpiryTime(3600);
         appDO.setRefreshTokenExpiryTime(84100);
         appDO.setIdTokenExpiryTime(3600);
+        appDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
         return appDO;
     }
 }

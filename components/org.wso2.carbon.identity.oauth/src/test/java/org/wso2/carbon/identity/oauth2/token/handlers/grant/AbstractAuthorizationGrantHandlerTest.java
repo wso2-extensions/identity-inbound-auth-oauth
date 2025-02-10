@@ -91,6 +91,7 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_REVOKED;
 
@@ -147,6 +148,7 @@ public class AbstractAuthorizationGrantHandlerTest {
         oAuthAppDO.setUser(authenticatedUser);
         oAuthAppDO.setCallbackUrl("http://i.have.nowhere.to.go");
         oAuthAppDO.setOauthVersion(OAuthConstants.OAuthVersions.VERSION_2);
+        oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
 
         oAuthAppDAO.addOAuthApplication(oAuthAppDO);
 

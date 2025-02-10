@@ -65,6 +65,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
 
 @WithCarbonHome
@@ -247,6 +248,7 @@ public class JWTTokenGeneratorTest {
         oAuthAppDO.setUser(user);
         oAuthAppDO.setApplicationName("testApp" + new Random(4));
         oAuthAppDO.setOauthVersion("2.0");
+        oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
 
         OAuthAppDAO authAppDAO = new OAuthAppDAO();
         authAppDAO.addOAuthConsumer("testUser", -1234, "PRIMARY");
