@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,7 +42,6 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.core.URLBuilderException;
-import org.wso2.carbon.identity.core.model.UserAgent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -66,7 +63,6 @@ import org.wso2.carbon.utils.DiagnosticLog;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -84,9 +80,7 @@ import javax.ws.rs.core.Response;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.LOGIN_HINT;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PROVIDER_ID;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
 
 /**
  * Rest implementation of OAuth2 authorize endpoint.
@@ -289,34 +283,7 @@ public class OAuth2AuthzEndpoint {
             OAuthProblemException, URISyntaxException, InvalidRequestParentException {
 
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
-            if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-                oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
-                    if (ArrayUtils.isNotEmpty(value)) {
-                        if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
-                            String[] maskedValue = Arrays.copyOf(value, value.length);
-                            Arrays.setAll(maskedValue, i ->
-                                    LoggerUtils.isLogMaskingEnable ?
-                                            LoggerUtils.getMaskedContent(maskedValue[i]) : maskedValue[i]);
-                            diagnosticLogBuilder.inputParam(key, Arrays.asList(maskedValue));
-                        } else {
-                            diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
-                        }
-                    }
-                });
-            }
-            String userAgentHeader = oAuthMessage.getRequest().getHeader("User-Agent");
-            if (StringUtils.isNotEmpty(userAgentHeader)) {
-                UserAgent userAgent = new UserAgent(userAgentHeader);
-                diagnosticLogBuilder.inputParam("login browser", userAgent.getBrowser())
-                        .inputParam("login device", userAgent.getDevice());
-            }
-            diagnosticLogBuilder.resultMessage("Successfully received OAuth2 Authorize request.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            AuthzUtil.logOAuth2InitialRequest(oAuthMessage);
         }
         String redirectURL = AuthzUtil.handleOAuthAuthorizationRequest(oAuthMessage);
         String type = AuthzUtil.getRequestProtocolType(oAuthMessage);

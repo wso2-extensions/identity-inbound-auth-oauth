@@ -98,6 +98,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.model.UserAgent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -114,10 +115,14 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.AuthResponseWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeCompletedResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -150,6 +155,7 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvide
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.RequestUtil;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
@@ -1251,63 +1257,6 @@ public class AuthzUtil {
         return (OAuthConstants.ResponseModes.FORM_POST.equals(responseMode) ||
                 OAuthConstants.ResponseModes.FORM_POST_JWT.equals(responseMode));
     }
-
-//    public Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
-//            OAuthProblemException, URISyntaxException, InvalidRequestParentException {
-//
-//        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-//            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-//                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-//                    OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
-//            if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
-//                oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
-//                    if (ArrayUtils.isNotEmpty(value)) {
-//                        if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
-//                            String[] maskedValue = Arrays.copyOf(value, value.length);
-//                            Arrays.setAll(maskedValue, i ->
-//                                    LoggerUtils.isLogMaskingEnable ?
-//                                            LoggerUtils.getMaskedContent(maskedValue[i]) : maskedValue[i]);
-//                            diagnosticLogBuilder.inputParam(key, Arrays.asList(maskedValue));
-//                        } else {
-//                            diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
-//                        }
-//                    }
-//                });
-//            }
-//            String userAgentHeader = oAuthMessage.getRequest().getHeader("User-Agent");
-//            if (StringUtils.isNotEmpty(userAgentHeader)) {
-//                UserAgent userAgent = new UserAgent(userAgentHeader);
-//                diagnosticLogBuilder.inputParam("login browser", userAgent.getBrowser())
-//                        .inputParam("login device", userAgent.getDevice());
-//            }
-//            diagnosticLogBuilder.resultMessage("Successfully received OAuth2 Authorize request.")
-//                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-//                    .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
-//            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-//        }
-//        String redirectURL = handleOAuthAuthorizationRequest(oAuthMessage);
-//        String type = getRequestProtocolType(oAuthMessage);
-//        try {
-//            // Add the service provider id to the redirect URL. This is needed to support application wise branding.
-//            String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
-//            if (StringUtils.isNotBlank(clientId)) {
-//                ServiceProvider serviceProvider = getServiceProvider(clientId);
-//                if (serviceProvider != null) {
-//                    redirectURL = addServiceProviderIdToRedirectURI(redirectURL,
-//                            serviceProvider.getApplicationResourceId());
-//                }
-//            }
-//        } catch (OAuthSystemException e) {
-//            // The value is set to be used for branding purposes. Therefore, if an error occurs, the process should
-//            // continue without breaking.
-//            log.debug("Error while getting the service provider id", e);
-//        }
-//        if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
-//            return handleAuthFlowThroughFramework(oAuthMessage, type, redirectURL);
-//        } else {
-//            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
-//        }
-//    }
 
     public static String getRequestProtocolType(OAuthMessage oAuthMessage) {
 
@@ -4199,7 +4148,7 @@ public class AuthzUtil {
                 return OAuthProblemException.error(errorCode, errorMessage);
             }
         } else {
-            // If there is a error uri sent in the authentication result we add that to the exception.
+            // If there is an error uri sent in the authentication result we add that to the exception.
             return OAuthProblemException.error(errorCode, errorMessage).uri(errorUri);
         }
     }
@@ -4585,7 +4534,12 @@ public class AuthzUtil {
                 }
             }
         } catch (AuthServiceException e) {
-            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
+            if(isAuthzChallenge){
+                return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e, isAuthzChallenge);
+            }else {
+                return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
+            }
+
         }
 
         // Returning the original response as it hasn't been handled as an API based authentication response.
@@ -4601,6 +4555,34 @@ public class AuthzUtil {
             request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
             return ApiAuthnUtils.buildResponseForServerError(e, log);
         }
+    }
+
+    public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e, boolean isAuthzChallenge) {
+        if(isAuthzChallenge){
+            if (e instanceof AuthServiceClientException) {
+                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+                return ApiAuthnUtils.buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
+            } else {
+                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+                return ApiAuthnUtils.buildResponseForServerError(e, log);
+            }
+        }else{
+            return handleApiBasedAuthErrorResponse(request, e);
+        }
+    }
+
+    public static Response handleAuthenticationFrameworkError (OAuthMessage oAuthMessage, Exception e){
+        log.error("Error occurred while sending request to authentication framework.");
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
+                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
+                    .resultMessage("Server error occurred.")
+                    .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+        }
+        return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
     }
 
     private static Map<String, String> getQueryParamsFromUrl(String url) throws UnsupportedEncodingException,
@@ -4713,6 +4695,36 @@ public class AuthzUtil {
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
     }
 
+    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext, boolean isAuthzChallenge) {
+
+        if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
+            String msg = "Server encountered an error while authorizing the request.";
+            return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
+        }
+        return buildAuthzChallengeResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
+    }
+
+    private static Response buildAuthzChallengeResponseForAuthorizationFailure(String description, Log log) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Request authorization failed. " + description);
+        }
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        authzChallengeFailResponse.setError(AuthzChallengeErrorEnum.INVALID_CLIENT.getValue());
+        if(StringUtils.isNotBlank(description)){
+            authzChallengeFailResponse.setError_description(description);
+        }else {
+            authzChallengeFailResponse.setError_description("Authorization failure. Authorization information " +
+                    "was invalid or missing from your request.");
+        }
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+
+        return Response.status(HttpServletResponse.SC_UNAUTHORIZED)
+                .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
+                .entity(jsonString).build();
+    }
+
     public static Response handleAttestationFailureResponse(ClientAttestationContext clientAttestationContext) {
 
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(
@@ -4744,6 +4756,37 @@ public class AuthzUtil {
             }
         }
         return redirectURI;
+    }
+
+    public static void logOAuth2InitialRequest(OAuthMessage oAuthMessage) {
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                OAuthConstants.LogConstants.ActionIDs.RECEIVE_AUTHORIZATION_RESPONSE);
+        if (oAuthMessage.getRequest() != null && MapUtils.isNotEmpty(oAuthMessage.getRequest().getParameterMap())) {
+            oAuthMessage.getRequest().getParameterMap().forEach((key, value) -> {
+                if (ArrayUtils.isNotEmpty(value)) {
+                    if (STATE.equals(key) || LOGIN_HINT.equals(key)) {
+                        String[] maskedValue = Arrays.copyOf(value, value.length);
+                        Arrays.setAll(maskedValue, i ->
+                                LoggerUtils.isLogMaskingEnable ?
+                                        LoggerUtils.getMaskedContent(maskedValue[i]) : maskedValue[i]);
+                        diagnosticLogBuilder.inputParam(key, Arrays.asList(maskedValue));
+                    } else {
+                        diagnosticLogBuilder.inputParam(key, Arrays.asList(value));
+                    }
+                }
+            });
+        }
+        String userAgentHeader = oAuthMessage.getRequest().getHeader("User-Agent");
+        if (StringUtils.isNotEmpty(userAgentHeader)) {
+            UserAgent userAgent = new UserAgent(userAgentHeader);
+            diagnosticLogBuilder.inputParam("login browser", userAgent.getBrowser())
+                    .inputParam("login device", userAgent.getDevice());
+        }
+        diagnosticLogBuilder.resultMessage("Successfully received OAuth2 Authorize Challenge request.")
+                .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
+                .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION);
+        LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
     }
 
 }

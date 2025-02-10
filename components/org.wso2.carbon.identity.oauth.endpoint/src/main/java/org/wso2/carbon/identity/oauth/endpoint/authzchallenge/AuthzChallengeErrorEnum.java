@@ -1,5 +1,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum AuthzChallengeErrorEnum {
 
     INVALID_REQUEST("invalid_request"),

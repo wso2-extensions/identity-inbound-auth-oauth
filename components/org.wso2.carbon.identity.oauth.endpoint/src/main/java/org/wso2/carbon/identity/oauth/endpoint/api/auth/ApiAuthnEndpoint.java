@@ -18,36 +18,21 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.api.auth;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
-import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -65,7 +50,6 @@ import javax.ws.rs.core.Response;
 public class ApiAuthnEndpoint {
 
     private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
-    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
     private final AuthenticationService authenticationService = new AuthenticationService();
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
 
@@ -110,10 +94,7 @@ public class ApiAuthnEndpoint {
 
         String callerSessionDataKey = authServiceResponse.getSessionDataKey();
 
-        Map<String, List<String>> internalParamsList = new HashMap<>();
-        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
-        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
-        internalRequest.setInternalRequest(true);
+        OAuthRequestWrapper internalRequest = ApiAuthnUtils.createInternalRequest(request, callerSessionDataKey);
 
         try {
             return oAuth2AuthzEndpoint.authorize(internalRequest, response);

@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
@@ -40,9 +42,12 @@ import org.wso2.carbon.identity.application.authentication.framework.model.auth.
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import java.util.Optional;
@@ -110,6 +115,32 @@ public class ApiAuthnUtils {
         apiError.setDescription(errorDescription);
         apiError.setTraceId(getCorrelationId());
         String jsonString = new Gson().toJson(apiError);
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    public static Response buildAuthzChallengeResponseForClientError(AuthServiceClientException exception, Log log) {
+        if (log.isDebugEnabled()) {
+            log.debug("Client error while handling authentication request.", exception);
+        }
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        Optional<AuthServiceConstants.ErrorMessage> error =
+                AuthServiceConstants.ErrorMessage.fromCode(exception.getErrorCode());
+
+        String errorDescription;
+        if (StringUtils.isNotBlank(exception.getMessage())) {
+            errorDescription = exception.getMessage();
+        } else {
+            if (error.isPresent()) {
+                errorDescription = error.get().description();
+            } else {
+                errorDescription = getDefaultClientError().description();
+            }
+        }
+
+        authzChallengeFailResponse.setError(AuthzChallengeErrorEnum.INVALID_CLIENT.getValue());
+        authzChallengeFailResponse.setError_description(errorDescription);
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
     }
 
@@ -380,5 +411,13 @@ public class ApiAuthnUtils {
     public static AuthServiceConstants.ErrorMessage getDefaultAuthenticationFailureError() {
 
         return AuthServiceConstants.ErrorMessage.ERROR_AUTHENTICATION_FAILURE;
+    }
+
+    public static OAuthRequestWrapper createInternalRequest(HttpServletRequest request, String callerSessionDataKey) {
+        Map<String, List<String>> internalParamsList = new HashMap<>();
+        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
+        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
+        internalRequest.setInternalRequest(true);
+        return internalRequest;
     }
 }
