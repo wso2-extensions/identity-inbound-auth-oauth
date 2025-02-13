@@ -72,8 +72,6 @@ public class JWKSBasedJWTValidator implements JWTValidator {
     private ConfigurableJWTProcessor<SecurityContext> jwtProcessor;
     private static final String ENFORCE_CERTIFICATE_VALIDITY
             = "JWTValidatorConfigs.EnforceCertificateExpiryTimeValidity";
-    private static final String ENABLE_RSA_VALIDATION_IN_JWKS_BASED_JWT_VALIDATOR =
-            "OAuth.EnableRSAValidationInJWKSBasedJWTValidator";
 
     public JWKSBasedJWTValidator() {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
@@ -171,12 +169,8 @@ public class JWKSBasedJWTValidator implements JWTValidator {
                     log.debug("Signature Algorithm found in the JWT Header: " + alg);
                 }
 
-                if (Boolean.parseBoolean(IdentityUtil.getProperty(
-                        ENABLE_RSA_VALIDATION_IN_JWKS_BASED_JWT_VALIDATOR))) {
-
-                    if (!isSupportedAlgorithm(alg) || !isValidPublicKey(x509Certificate)) {
-                        return false;
-                    }
+                if (!isSupportedAlgorithm(alg) || !isValidPublicKey(x509Certificate)) {
+                    return false;
                 }
 
                 x509Certificate.checkValidity();
