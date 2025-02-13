@@ -102,8 +102,8 @@ public class DefaultLogoutTokenBuilderTest {
     public void setup() throws IdentityOAuth2Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic
-                     = mockStatic(OAuthServerConfiguration.class);
-        ) {
+                     = mockStatic(OAuthServerConfiguration.class);) {
+
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
             when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA256withRSA");
