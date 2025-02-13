@@ -17,6 +17,7 @@
 package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
@@ -336,7 +337,12 @@ public abstract class AbstractUserInfoResponseBuilder implements UserInfoRespons
             if (optionalAccessTokenDO.isPresent()) {
                 AccessTokenDO accessTokenDO = optionalAccessTokenDO.get();
                 clientId = accessTokenDO.getConsumerKey();
-                oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+                if (StringUtils.isNotEmpty(appResidentTenantDomain)) {
+                    oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, appResidentTenantDomain);
+                } else {
+                    oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                }
             } else {
                 throw new IllegalArgumentException(OAuth2Util.ACCESS_TOKEN_IS_NOT_ACTIVE_ERROR_MESSAGE);
             }

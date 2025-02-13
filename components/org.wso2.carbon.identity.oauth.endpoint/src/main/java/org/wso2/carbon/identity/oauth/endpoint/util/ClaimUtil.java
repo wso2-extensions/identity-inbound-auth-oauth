@@ -136,8 +136,14 @@ public class ClaimUtil {
 
                 Map<String, String> spToLocalClaimMappings;
                 String clientId = getClientID(accessTokenDO);
-                OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
-                String spTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                String spTenantDomain;
+                String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+                if (StringUtils.isNotEmpty(appResidentTenantDomain)) {
+                    spTenantDomain = appResidentTenantDomain;
+                } else {
+                    OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                    spTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                }
 
                 ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
                 ClaimMapping[] requestedLocalClaimMappings = serviceProvider.getClaimConfig().getClaimMappings();
