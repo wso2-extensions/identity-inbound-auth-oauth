@@ -500,7 +500,7 @@ public class OIDCClaimUtil {
 
             try {
                 FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
-                userClaims = getUserClaimsInLocalDialect(fullQualifiedUsername, realm, claimURIList);
+                userClaims = getUserClaimsInLocalDialect(fullQualifiedSharedUsername, realm, claimURIList);
             } finally {
                 FrameworkUtils.endTenantFlow();
             }
