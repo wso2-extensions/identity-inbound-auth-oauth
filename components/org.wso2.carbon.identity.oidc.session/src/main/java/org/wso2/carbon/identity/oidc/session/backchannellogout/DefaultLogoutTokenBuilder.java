@@ -41,6 +41,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.security.interfaces.RSAPublicKey;
@@ -326,9 +328,12 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
             try {
                 // Set the correct tenant domain before creating the path.
-                return ServiceURLBuilder.create().setTenant(tenantDomain).addPath(OAUTH2_TOKEN_EP_URL).build().
-                        getAbsolutePublicURL();
-            } catch (URLBuilderException e) {
+                ServiceURLBuilder serviceURLBuilder = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL);
+                if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                    return serviceURLBuilder.setOrganization(tenantDomain).build().getAbsolutePublicURL();
+                }
+                return serviceURLBuilder.setTenant(tenantDomain).build().getAbsolutePublicURL();
+            } catch (URLBuilderException | OrganizationManagementException e) {
                 String errorMsg = String.format("Error while building the absolute url of the context: '%s',  for the"
                         + " tenant domain: '%s'", OAUTH2_TOKEN_EP_URL, tenantDomain);
                 throw new IdentityOAuth2Exception(errorMsg, e);
