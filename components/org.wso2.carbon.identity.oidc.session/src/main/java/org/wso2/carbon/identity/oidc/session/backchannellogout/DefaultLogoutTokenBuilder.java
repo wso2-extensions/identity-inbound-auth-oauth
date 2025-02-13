@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
@@ -330,7 +331,9 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
                 // Set the correct tenant domain before creating the path.
                 ServiceURLBuilder serviceURLBuilder = ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL);
                 if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
-                    return serviceURLBuilder.setOrganization(tenantDomain).build().getAbsolutePublicURL();
+                    String orgId = OIDCSessionManagementComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveOrganizationId(tenantDomain);
+                    return serviceURLBuilder.setOrganization(orgId).build().getAbsolutePublicURL();
                 }
                 return serviceURLBuilder.setTenant(tenantDomain).build().getAbsolutePublicURL();
             } catch (URLBuilderException | OrganizationManagementException e) {

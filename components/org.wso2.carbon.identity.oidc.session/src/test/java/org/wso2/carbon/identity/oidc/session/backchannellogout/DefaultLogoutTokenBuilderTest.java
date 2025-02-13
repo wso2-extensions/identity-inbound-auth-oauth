@@ -32,7 +32,6 @@ import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -41,7 +40,10 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
+import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementComponentServiceHolder;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
 import java.util.HashSet;
@@ -79,7 +81,7 @@ public class DefaultLogoutTokenBuilderTest {
 
     private static final String SUPER_TENANT_TOKEN_URL = "https://localhost:9443/oauth/token";
     private static final String OTHER_TENANT_TOKEN_URL = "https://localhost:9443/t/tenantDomain/oauth2/token";
-    private static final String ORGANIZATION_TOKEN_URL = "https://localhost:9443/o/orgName/oauth2/token";
+    private static final String ORGANIZATION_TOKEN_URL = "https://localhost:9443/o/orgId/oauth2/token";
 
     private DefaultLogoutTokenBuilder logoutTokenBuilder;
     private OAuthAppDO appDO;
@@ -91,6 +93,10 @@ public class DefaultLogoutTokenBuilderTest {
     private ServiceURLBuilder mockServiceURLBuilder;
     @Mock
     private JWT jwt;
+    @Mock
+    private OIDCSessionManagementComponentServiceHolder oidcSessionManagementComponentServiceHolder;
+    @Mock
+    private OrganizationManager organizationManager;
 
     @BeforeMethod
     public void setup() throws IdentityOAuth2Exception {
@@ -120,7 +126,8 @@ public class DefaultLogoutTokenBuilderTest {
 
     @Test(dataProvider = "tokenUriProvider")
     public void testBuildLogoutToken(String tenantDomain, boolean isOrganization, String url)
-            throws IdentityOAuth2Exception, InvalidOAuthClientException, URLBuilderException {
+            throws IdentityOAuth2Exception, InvalidOAuthClientException, URLBuilderException,
+            OrganizationManagementException {
 
         OIDCSessionState oidcSessionState = new OIDCSessionState();
         Set<String> sessionParticipants = new HashSet<>();
@@ -131,15 +138,16 @@ public class DefaultLogoutTokenBuilderTest {
 
         try (MockedStatic<OIDCSessionManagementUtil> oidcSessionManagementUtilMockedStatic
                      = mockStatic(OIDCSessionManagementUtil.class);
-             MockedStatic<AppInfoCache> appInfoCacheMockedStatic = mockStatic(AppInfoCache.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
              MockedStatic<OrganizationManagementUtil> organizationManagementUtilMockedStatic
                      = mockStatic(OrganizationManagementUtil.class);
                 MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic = mockStatic(ServiceURLBuilder.class);
              MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic
                      = mockStatic(OAuthServerConfiguration.class);
-             MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class);
-        ) {
+             MockedStatic<OIDCSessionManagementComponentServiceHolder> oidcSessionManagementComponentServiceHolderMocked
+                     = mockStatic(OIDCSessionManagementComponentServiceHolder.class);
+             MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class);) {
+
             oidcSessionManagementUtilMockedStatic.when(OIDCSessionManagementUtil::getSessionManager)
                     .thenReturn(oidcSessionManager);
             when(oidcSessionManager.getOIDCSessionState(anyString(), anyString())).thenReturn(oidcSessionState);
@@ -156,7 +164,15 @@ public class DefaultLogoutTokenBuilderTest {
                             .isOrganization(appDO.getUser().getTenantDomain())).thenReturn(isOrganization);
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
+            oidcSessionManagementComponentServiceHolderMocked.when(
+                            OIDCSessionManagementComponentServiceHolder::getInstance)
+                    .thenReturn(oidcSessionManagementComponentServiceHolder);
 
+            if (isOrganization) {
+                when(oidcSessionManagementComponentServiceHolder.getOrganizationManager())
+                        .thenReturn(organizationManager);
+                when(organizationManager.resolveOrganizationId(tenantDomain)).thenReturn(tenantDomain);
+            }
 
             mockServiceURLBuilder(url, serviceURLBuilderMockedStatic);
 
@@ -207,6 +223,4 @@ public class DefaultLogoutTokenBuilderTest {
         lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
         lenient().when(mockServiceURLBuilder.build()).thenReturn(serviceURL);
     }
-
-
 }
