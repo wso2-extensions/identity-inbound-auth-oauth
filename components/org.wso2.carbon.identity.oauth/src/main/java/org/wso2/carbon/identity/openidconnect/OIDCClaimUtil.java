@@ -96,7 +96,7 @@ public class OIDCClaimUtil {
     /**
      * Map the local roles of a user to service provider mapped role values.
      *
-     * @param serviceProvider
+     * @param serviceProvider        Service Provider
      * @param locallyMappedUserRoles List of local roles
      * @param claimSeparator         Separator used to combine individual roles in the returned string.
      * @return Service Provider mapped roles combined with claimSeparator
@@ -104,6 +104,7 @@ public class OIDCClaimUtil {
     public static String getServiceProviderMappedUserRoles(ServiceProvider serviceProvider,
                                                            List<String> locallyMappedUserRoles,
                                                            String claimSeparator) throws FrameworkException {
+
         if (isNotEmpty(locallyMappedUserRoles)) {
             locallyMappedUserRoles = new ArrayList<>(locallyMappedUserRoles);
             // Get Local Role to Service Provider Role mappings.
