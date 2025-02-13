@@ -40,6 +40,7 @@ import org.wso2.carbon.identity.oidc.session.handler.OIDCLogoutHandler;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCLogoutServlet;
 import org.wso2.carbon.identity.oidc.session.servlet.OIDCSessionIFrameServlet;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import javax.servlet.Servlet;
@@ -233,5 +234,24 @@ public class OIDCSessionManagementComponent {
         if (tokenBinderInfo instanceof TokenBinder) {
             OIDCSessionManagementComponentServiceHolder.getInstance().removeTokenBinder((TokenBinder) tokenBinderInfo);
         }
+    }
+
+    @Reference(
+            name = "organization.service",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager"
+    )
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
+        log.debug("Set the organization management service.");
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        OIDCSessionManagementComponentServiceHolder.getInstance().setOrganizationManager(null);
+        log.debug("Unset organization management service.");
     }
 }
