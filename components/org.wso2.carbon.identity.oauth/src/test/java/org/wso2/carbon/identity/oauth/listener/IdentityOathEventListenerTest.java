@@ -17,80 +17,139 @@
  */
 package org.wso2.carbon.identity.oauth.listener;
 
-import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.core.model.IdentityCacheConfig;
-import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
-import org.wso2.carbon.identity.oauth.util.ClaimCache;
-import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
-import org.wso2.carbon.user.core.UserStoreManager;
-import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.user.api.UserRealm;
+import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
+import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.service.RealmService;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.MockitoAnnotations.initMocks;
-import static org.testng.Assert.assertEquals;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.mockito.MockitoAnnotations.openMocks;
+
 
 public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
-    private IdentityOathEventListener identityOathEventListener = new IdentityOathEventListener();
-    private String username = "USER_NAME";
-    private String claimUri = "CLAIM_URI";
-    private String claimValue = "CLAIM_VALUE";
-    private String profileName = "PROFILE_NAME";
+    private final String credentialUpdateUsername = "testUsername";
+    private final String newCredential = "newPassword1$";
+    @Mock
+    OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
+    private IdentityOathEventListener identityOathEventListener;
+    @Mock
+    private AbstractUserStoreManager abstractUserStoreManager;
+    @Mock
+    private OAuth2RevocationProcessor oAuth2RevocationProcessor;
+    @Mock
+    private OrganizationManager organizationManager;
+    private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic;
+    private MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolderMockedStatic;
 
     @Mock
-    private UserStoreManager userStoreManager;
+    private OAuthComponentServiceHolder oAuthComponentServiceHolder;
+
+    private MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic;
 
     @Mock
-    private AuthenticatedUser authenticatedUser;
+    private OrganizationUserSharingService organizationUserSharingService;
 
     @Mock
-    private Map<String, String> mockedMapClaims;
+    private RealmService realmService;
 
     @Mock
-    private ClaimMetaDataCache claimMetaDataCache;
+    private UserRealm userRealm;
 
-    @Mock
-    private OAuthServerConfiguration oauthServerConfigurationMock;
+    @BeforeMethod
+    public void setUp() {
 
-//    @BeforeMethod
-//    public void setUp() throws Exception {
-//        initMocks(this);
-//
-//        mockStatic(OAuthServerConfiguration.class);
-//        when(OAuthServerConfiguration.getInstance()).thenReturn(oauthServerConfigurationMock);
-//        when(oauthServerConfigurationMock.getTimeStampSkewInSeconds()).thenReturn(3600L);
-//
-//        mockStatic(UserCoreUtil.class);
-//        mockStatic(IdentityTenantUtil.class);
-//        mockStatic(AuthorizationGrantCache.class);
-//        mockStatic(IdentityUtil.class);
-//        mockStatic(StringUtils.class);
-//        mockStatic(ClaimMetaDataCache.class);
-//        mockStatic(OAuth2Util.class);
-//
-//    }
+        openMocks(this);
+        identityOathEventListener = new IdentityOathEventListener();
+
+        identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
+
+        oAuth2ServiceComponentHolderMockedStatic = mockStatic(OAuth2ServiceComponentHolder.class);
+        when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolder);
+
+        oAuthComponentServiceHolderMockedStatic = mockStatic(OAuthComponentServiceHolder.class);
+        when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
+
+    }
+
+    @AfterMethod
+    public void clear() {
+
+        identityTenantUtilMockedStatic.close();
+        oAuth2ServiceComponentHolderMockedStatic.close();
+        oAuthComponentServiceHolderMockedStatic.close();
+    }
+
+    private void prepareForCredentialUpdate() throws UserStoreException, OrganizationManagementException {
+
+        String userID = "testId";
+        int tenantId = 1234;
+        String tenant = "testTenant";
+        String orgId = "testOrg";
+        String orgIdUserAssociation = "TestAssociateOrg";
+        String tenantUserAssociation = "TestAssociateTenant";
+        int userAssociationTenantId = 3245;
+        User user = new User(userID);
+        List<UserAssociation> userAssociationList = new ArrayList<>();
+        UserAssociation userAssociation = new UserAssociation();
+        userAssociation.setOrganizationId(orgIdUserAssociation);
+        userAssociationList.add(userAssociation);
+
+        when(oAuth2ServiceComponentHolder.getRevocationProcessor()).thenReturn(oAuth2RevocationProcessor);
+        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenReturn(
+                false);
+        when(abstractUserStoreManager.getUser(null, credentialUpdateUsername)).thenReturn(user);
+        when(abstractUserStoreManager.getTenantId()).thenReturn(tenantId);
+        when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenant);
+        when(organizationManager.resolveOrganizationId(tenant)).thenReturn(orgId);
+        when(oAuthComponentServiceHolder.getOrganizationUserSharingService()).thenReturn(
+                organizationUserSharingService);
+        when(organizationUserSharingService.getUserAssociationsOfGivenUser(userID, orgId)).thenReturn(
+                userAssociationList);
+        when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
+        when(organizationManager.resolveTenantDomain(orgIdUserAssociation)).thenReturn(tenantUserAssociation);
+        when(oAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
+        when(IdentityTenantUtil.getTenantId(tenantUserAssociation)).thenReturn(userAssociationTenantId);
+        when(realmService.getTenantUserRealm(userAssociationTenantId)).thenReturn(userRealm);
+        when(userRealm.getUserStoreManager()).thenReturn(abstractUserStoreManager);
+    }
+
+    @Test
+    public void testDoPostUpdateCredential() throws UserStoreException, OrganizationManagementException {
+
+        prepareForCredentialUpdate();
+        identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername, newCredential,
+                abstractUserStoreManager);
+    }
+
+    @Test
+    public void testDoPostUpdateCredentialByAdmin() throws UserStoreException, OrganizationManagementException {
+
+        prepareForCredentialUpdate();
+        identityOathEventListener.doPostUpdateCredentialByAdmin(credentialUpdateUsername, newCredential,
+                abstractUserStoreManager);
+
+    }
+
 //
 //    @DataProvider(name = "testGetExecutionOrderIdData")
 //    public Object[][] testGetExecutionOrderIdData() {

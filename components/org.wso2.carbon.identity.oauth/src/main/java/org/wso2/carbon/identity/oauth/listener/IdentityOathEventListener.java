@@ -32,6 +32,7 @@ import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCache;
 import org.wso2.carbon.identity.oauth.util.ClaimMetaDataCacheEntry;
@@ -41,11 +42,14 @@ import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.util.ArrayList;
@@ -156,9 +160,13 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        return OAuth2ServiceComponentHolder.getInstance()
+        boolean isErrorOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
+
+        boolean isErrorOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+
+        return isErrorOnRevokeTokens || isErrorOnRevokeAssociateUsersTokens;
     }
 
     @Override
@@ -168,9 +176,14 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        return OAuth2ServiceComponentHolder.getInstance()
+
+        boolean isErrorOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
+
+        boolean isErrorOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+
+        return isErrorOnRevokeTokens || isErrorOnRevokeAssociateUsersTokens;
     }
 
     @Override
@@ -406,5 +419,52 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         }
         ClaimCache.getInstance().clearCacheEntry(cacheEntry.getClaimCacheKey(),
                 IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId()));
+    }
+
+    /**
+     * Revoke access tokens of associated users.
+     *
+     * @param username         Username of the user.
+     * @param userStoreManager User store manager of the user.
+     * @return boolean true if any error occurred while revoking the tokens.
+     */
+    private boolean revokeTokensOfAssociatedUsers(String username, UserStoreManager userStoreManager) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Revoking access tokens of associated users of user: " + username);
+        }
+
+        boolean isErrorOnRevoking = false;
+        try {
+            String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, username).getUserID();
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+            String orgId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            List<UserAssociation> userAssociationList = OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService().getUserAssociationsOfGivenUser(userId, orgId);
+
+            for (UserAssociation userAssociation : userAssociationList) {
+                String orgIdOfUserAssociation = userAssociation.getOrganizationId();
+                String tenantDomainOfUserAssociation = OAuthComponentServiceHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(orgIdOfUserAssociation);
+                RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+                UserStoreManager userStoreManagerOfUserAssociation = (UserStoreManager)
+                        realmService.getTenantUserRealm(
+                                IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
+                String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
+                        .getUserNameFromUserID(userAssociation.getUserId());
+                boolean isErrorOnSingleRevoke = OAuth2ServiceComponentHolder.getInstance()
+                        .getRevocationProcessor()
+                        .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
+                if (isErrorOnSingleRevoke) {
+                    isErrorOnRevoking = true;
+                }
+            }
+        } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
+            log.error("Error occurred while revoking access tokens of associated users.", e);
+            return true;
+        }
+
+        return isErrorOnRevoking;
     }
 }
