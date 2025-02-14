@@ -1116,9 +1116,9 @@ public final class OAuthUtil {
                             .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedOrgUser));
                 }
 
-                Set<String> mainClientIds = new HashSet<>();
+                Set<String> filteredClientIds = new HashSet<>();
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
-                    mainClientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
+                    filteredClientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
                             authenticatedUser.getTenantDomain());
                 }
 
@@ -1129,9 +1129,9 @@ public final class OAuthUtil {
                         organizationClientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
                                 userResidentTenantDomain);
                     }
-                    clientIds.addAll(organizationClientIds);
+                    filteredClientIds.addAll(organizationClientIds);
                 }
-                clientIds.addAll(mainClientIds);
+                clientIds = filteredClientIds;
 
             } catch (IdentityOAuth2Exception e) {
                 LOG.error("Error occurred while retrieving apps authorized by User ID : " + authenticatedUser, e);
