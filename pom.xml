@@ -1067,7 +1067,7 @@
         <org.ow2.asm.version>9.2</org.ow2.asm.version>
         <vertx.json.schema.wso2.osgi.version>4.5.11.wso2v1</vertx.json.schema.wso2.osgi.version>
         <vertx.json.schema.wso2.osgi.version.range>[4.5.11, 5.0.0)</vertx.json.schema.wso2.osgi.version.range>
-        <netty-all.wso2.osgi.version>4.1.115.wso2v1</netty-all.wso2.osgi.version>
+        <netty-all.wso2.osgi.version>4.1.115.wso2v2</netty-all.wso2.osgi.version>
 
         <!--Maven Plugin Version-->
         <carbon.p2.plugin.version>5.1.2</carbon.p2.plugin.version>
