@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.graph.js.JsLogger;
 import org.wso2.carbon.identity.application.authentication.framework.context.AuthHistory;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
@@ -4204,6 +4205,21 @@ public class OAuth2AuthzEndpoint {
      * @param authenticatedIdPs The authenticated IDPs.
      */
     private List<String> getAMRValues(List<String> authMethods, Map<String, AuthenticatedIdPData> authenticatedIdPs) {
+
+        boolean authenticatorAMREnabled = true;
+        if (authenticatorAMREnabled) {
+            List<String> resultantAuthMethods = new ArrayList<>();
+            for (Map.Entry<String, AuthenticatedIdPData> entry : authenticatedIdPs.entrySet()) {
+                if (entry.getValue() != null && entry.getValue().getAuthenticators() != null) {
+                    for (AuthenticatorConfig authenticatorConfig : entry.getValue().getAuthenticators()) {
+                        if (authenticatorConfig != null && authenticatorConfig.getAmrValues() != null) {
+                            resultantAuthMethods.addAll(Arrays.asList(authenticatorConfig.getAmrValues()));
+                        }
+                    }
+                }
+            }
+            return resultantAuthMethods;
+        }//implement the logic using for loops
 
         boolean readAMRValueFromIdp = Boolean.parseBoolean(IdentityUtil.getProperty(
                 OAuthConstants.READ_AMR_VALUE_FROM_IDP));
