@@ -49,23 +49,16 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
     private final String credentialUpdateUsername = "testUsername";
     private final String newCredential = "newPassword1$";
-
-    private IdentityOathEventListener identityOathEventListener;
-
-    @Mock
-    private AbstractUserStoreManager abstractUserStoreManager;
-
-    @Mock
-    private OAuth2RevocationProcessor oAuth2RevocationProcessor;
-
-    @Mock
-    private OrganizationManager organizationManager;
-
-    private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic;
-
     @Mock
     OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
-
+    private IdentityOathEventListener identityOathEventListener;
+    @Mock
+    private AbstractUserStoreManager abstractUserStoreManager;
+    @Mock
+    private OAuth2RevocationProcessor oAuth2RevocationProcessor;
+    @Mock
+    private OrganizationManager organizationManager;
+    private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolderMockedStatic;
     private MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolderMockedStatic;
 
     @Mock
@@ -81,7 +74,6 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
     @Mock
     private UserRealm userRealm;
-
 
     @BeforeMethod
     public void setUp() {
@@ -123,13 +115,16 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         userAssociationList.add(userAssociation);
 
         when(oAuth2ServiceComponentHolder.getRevocationProcessor()).thenReturn(oAuth2RevocationProcessor);
-        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenReturn(false);
+        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenReturn(
+                false);
         when(abstractUserStoreManager.getUser(null, credentialUpdateUsername)).thenReturn(user);
         when(abstractUserStoreManager.getTenantId()).thenReturn(tenantId);
         when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenant);
         when(organizationManager.resolveOrganizationId(tenant)).thenReturn(orgId);
-        when(oAuthComponentServiceHolder.getOrganizationUserSharingService()).thenReturn(organizationUserSharingService);
-        when(organizationUserSharingService.getUserAssociationsOfGivenUser(userID, orgId)).thenReturn(userAssociationList);
+        when(oAuthComponentServiceHolder.getOrganizationUserSharingService()).thenReturn(
+                organizationUserSharingService);
+        when(organizationUserSharingService.getUserAssociationsOfGivenUser(userID, orgId)).thenReturn(
+                userAssociationList);
         when(oAuthComponentServiceHolder.getOrganizationManager()).thenReturn(organizationManager);
         when(organizationManager.resolveTenantDomain(orgIdUserAssociation)).thenReturn(tenantUserAssociation);
         when(oAuthComponentServiceHolder.getRealmService()).thenReturn(realmService);
@@ -142,11 +137,13 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     public void testDoPostUpdateCredential() throws UserStoreException, OrganizationManagementException {
 
         prepareForCredentialUpdate();
-        identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername, newCredential, abstractUserStoreManager);
+        identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername, newCredential,
+                abstractUserStoreManager);
     }
 
     @Test
     public void testDoPostUpdateCredentialByAdmin() throws UserStoreException, OrganizationManagementException {
+
         prepareForCredentialUpdate();
         identityOathEventListener.doPostUpdateCredentialByAdmin(credentialUpdateUsername, newCredential,
                 abstractUserStoreManager);
