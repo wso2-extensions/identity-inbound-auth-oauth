@@ -144,7 +144,7 @@ public class RequestObject implements Serializable {
         try {
             Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
             if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-                JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
+                Map<String, Object> jsonObjectClaim = (Map<String, Object>) jsonObjectRequestedClaims.get(CLAIMS);
 
                 //To iterate the claims json object to fetch the claim requestor and all requested claims.
                 for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
