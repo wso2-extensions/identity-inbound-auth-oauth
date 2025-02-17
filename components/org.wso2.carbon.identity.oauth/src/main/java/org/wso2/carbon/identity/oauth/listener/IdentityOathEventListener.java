@@ -438,7 +438,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             log.debug("Revoking access tokens of associated users of user: " + username);
         }
 
-        boolean isErrorOnRevoking = false;
+        boolean isSuccessOnRevoking = true;
         try {
             String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, username).getUserID();
             String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
@@ -461,7 +461,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                         .getRevocationProcessor()
                         .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
                 if (!isSuccessOnSingleRevoke) {
-                    isErrorOnRevoking = true;
+                    isSuccessOnRevoking = false;
                 }
             }
         } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
@@ -469,6 +469,6 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return false;
         }
 
-        return !isErrorOnRevoking;
+        return isSuccessOnRevoking;
     }
 }
