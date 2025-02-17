@@ -23,12 +23,12 @@ import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.AllowedOperation;
+import org.wso2.carbon.identity.action.execution.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.model.Header;
 import org.wso2.carbon.identity.action.execution.model.Operation;
 import org.wso2.carbon.identity.action.execution.model.Param;
@@ -146,20 +146,13 @@ public class PreIssueAccessTokenRequestBuilderTest {
         Assert.assertEquals(actionType, ActionType.PRE_ISSUE_ACCESS_TOKEN);
     }
 
-    @DataProvider(name = "BuildTokenRequestMessageContext")
-    public Object[][] buildTokenRequestMessageContext() {
-
-        return new Object[][]{
-                {mockTokenMessageContext()},
-        };
-    }
-
-    @Test(dataProvider = "BuildTokenRequestMessageContext")
-    public void testBuildActionExecutionRequest(Map<String, Object> eventContext)
+    @Test
+    public void testBuildActionExecutionRequest()
             throws ActionExecutionRequestBuilderException {
 
         ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
-                buildActionExecutionRequest(eventContext);
+                buildActionExecutionRequest(
+                        FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), null);
         Assert.assertNotNull(actionExecutionRequest);
         Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
         assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
@@ -254,21 +247,11 @@ public class PreIssueAccessTokenRequestBuilderTest {
         }
     }
 
-    /**
-     * Mock the token message context for testing.
-     *
-     * @return A map representing the event context.
-     */
-    private Map<String, Object> mockTokenMessageContext() {
-
-        Map<String, Object> eventContext = new HashMap<>();
+    private OAuthTokenReqMessageContext getMockTokenMessageContext() {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = mockTokenRequestDTO();
         AuthenticatedUser authenticatedUser = mockAuthenticatedUser();
-        OAuthTokenReqMessageContext tokenMessageContext = mockMessageContext(tokenReqDTO, authenticatedUser);
-        eventContext.put("tokenMessageContext", tokenMessageContext);
-
-        return eventContext;
+        return mockMessageContext(tokenReqDTO, authenticatedUser);
     }
 
     /**

@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.Error;
 import org.wso2.carbon.identity.action.execution.model.Failure;
+import org.wso2.carbon.identity.action.execution.model.FlowContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityConstants;
@@ -76,13 +77,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
@@ -614,15 +612,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         ActionExecutionStatus<?> executionStatus = null;
         if (checkExecutePreIssueAccessTokensActions(tokenReqMessageContext)) {
 
-            Map<String, Object> additionalProperties = new HashMap<>();
-            Consumer<Map<String, Object>> mapInitializer =
-                    map -> map.put("tokenMessageContext", tokenReqMessageContext);
-            mapInitializer.accept(additionalProperties);
+            FlowContext flowContext = FlowContext.create().add("tokenMessageContext", tokenReqMessageContext);
 
             try {
                 executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                                .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
-                                        IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext,
+                                IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
+
                 if (log.isDebugEnabled()) {
                     log.debug(String.format(
                             "Invoked pre issue access token action for clientID: %s grant types: %s. Status: %s",

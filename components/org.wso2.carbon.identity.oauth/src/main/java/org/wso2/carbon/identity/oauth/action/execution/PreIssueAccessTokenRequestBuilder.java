@@ -24,9 +24,11 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionRequestContext;
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.model.Event;
+import org.wso2.carbon.identity.action.execution.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.model.Operation;
 import org.wso2.carbon.identity.action.execution.model.Organization;
 import org.wso2.carbon.identity.action.execution.model.Request;
@@ -80,11 +82,12 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     @Override
-    public ActionExecutionRequest buildActionExecutionRequest(Map<String, Object> eventContext)
+    public ActionExecutionRequest buildActionExecutionRequest(FlowContext flowContext,
+                                                              ActionExecutionRequestContext actionExecutionContext)
             throws ActionExecutionRequestBuilderException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
-                (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
+                flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
 
         Map<String, Object> additionalClaimsToAddToToken = getAdditionalClaimsToAddToToken(tokenMessageContext);
 

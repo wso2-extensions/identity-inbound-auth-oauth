@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.action.execution.ActionExecutionLogConstants;
 import org.wso2.carbon.identity.action.execution.ActionExecutionResponseProcessor;
 import org.wso2.carbon.identity.action.execution.exception.ActionExecutionResponseProcessorException;
+import org.wso2.carbon.identity.action.execution.model.ActionExecutionResponseContext;
 import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationErrorResponse;
 import org.wso2.carbon.identity.action.execution.model.ActionInvocationFailureResponse;
@@ -34,9 +35,9 @@ import org.wso2.carbon.identity.action.execution.model.ActionInvocationSuccessRe
 import org.wso2.carbon.identity.action.execution.model.ActionType;
 import org.wso2.carbon.identity.action.execution.model.Error;
 import org.wso2.carbon.identity.action.execution.model.ErrorStatus;
-import org.wso2.carbon.identity.action.execution.model.Event;
 import org.wso2.carbon.identity.action.execution.model.FailedStatus;
 import org.wso2.carbon.identity.action.execution.model.Failure;
+import org.wso2.carbon.identity.action.execution.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
 import org.wso2.carbon.identity.action.execution.model.Success;
 import org.wso2.carbon.identity.action.execution.model.SuccessStatus;
@@ -80,15 +81,16 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     @Override
-    public ActionExecutionStatus<Success> processSuccessResponse(Map<String, Object> eventContext, Event event,
-                                                                 ActionInvocationSuccessResponse
-                                                                         actionInvocationSuccessResponse)
+    public ActionExecutionStatus<Success> processSuccessResponse(FlowContext flowContext,
+                                                                 ActionExecutionResponseContext
+                                                                         <ActionInvocationSuccessResponse>
+                                                                         responseContext)
             throws ActionExecutionResponseProcessorException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
-                (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
-        PreIssueAccessTokenEvent preIssueAccessTokenEvent = (PreIssueAccessTokenEvent) event;
-        List<PerformableOperation> operationsToPerform = actionInvocationSuccessResponse.getOperations();
+                flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
+        PreIssueAccessTokenEvent preIssueAccessTokenEvent = (PreIssueAccessTokenEvent) responseContext.getActionEvent();
+        List<PerformableOperation> operationsToPerform = responseContext.getActionInvocationResponse().getOperations();
 
         AccessToken requestAccessToken = preIssueAccessTokenEvent.getAccessToken();
         AccessToken.Builder responseAccessTokenBuilder = preIssueAccessTokenEvent.getAccessToken().copy();
@@ -120,7 +122,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
         updateTokenMessageContext(tokenMessageContext, responseAccessToken);
 
-        return new SuccessStatus.Builder().setResponseContext(eventContext).build();
+        return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();
     }
 
     private void logOperationExecutionResults(ActionType actionType,
@@ -164,10 +166,13 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     @Override
-    public ActionExecutionStatus<Failure> processFailureResponse(Map<String, Object> eventContext, Event actionEvent,
-                                                                 ActionInvocationFailureResponse failureResponse) throws
-            ActionExecutionResponseProcessorException {
+    public ActionExecutionStatus<Failure> processFailureResponse(FlowContext flowContext,
+                                                                 ActionExecutionResponseContext
+                                                                         <ActionInvocationFailureResponse>
+                                                                         responseContext)
+            throws ActionExecutionResponseProcessorException {
 
+        ActionInvocationFailureResponse failureResponse = responseContext.getActionInvocationResponse();
         handleInvalidErrorCodes(failureResponse.getFailureReason());
         return new FailedStatus(new Failure(failureResponse.getFailureReason(),
                 failureResponse.getFailureDescription()));
@@ -207,9 +212,9 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     @Override
-    public ActionExecutionStatus<Error> processErrorResponse(Map<String, Object> map, Event event,
-                                                             ActionInvocationErrorResponse
-                                                                     actionInvocationErrorResponse)
+    public ActionExecutionStatus<Error> processErrorResponse(FlowContext flowContext,
+                                                             ActionExecutionResponseContext
+                                                                     <ActionInvocationErrorResponse> responseContext)
             throws ActionExecutionResponseProcessorException {
 
         /*
@@ -220,7 +225,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
          * However, currently this value is not propagated by the endpoint to comply with OAuth specification.
          */
         return new ErrorStatus(new Error(OAuth2ErrorCodes.SERVER_ERROR,
-                actionInvocationErrorResponse.getErrorDescription()));
+                responseContext.getActionInvocationResponse().getErrorDescription()));
     }
 
     private void updateTokenMessageContext(OAuthTokenReqMessageContext tokenMessageContext,
