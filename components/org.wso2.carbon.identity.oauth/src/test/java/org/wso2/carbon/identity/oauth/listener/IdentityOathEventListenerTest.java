@@ -19,10 +19,12 @@ package org.wso2.carbon.identity.oauth.listener;
 
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -43,7 +45,7 @@ import java.util.List;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
-
+import static org.testng.Assert.assertTrue;
 
 public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
@@ -65,6 +67,8 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic;
+
+    private MockedStatic<OAuthUtil> oAuthUtilMockedStatic;
 
     @Mock
     private OrganizationUserSharingService organizationUserSharingService;
@@ -89,6 +93,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         oAuthComponentServiceHolderMockedStatic = mockStatic(OAuthComponentServiceHolder.class);
         when(OAuthComponentServiceHolder.getInstance()).thenReturn(oAuthComponentServiceHolder);
 
+        oAuthUtilMockedStatic = mockStatic(OAuthUtil.class);
     }
 
     @AfterMethod
@@ -105,19 +110,25 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         int tenantId = 1234;
         String tenant = "testTenant";
         String orgId = "testOrg";
+        String usernameAssociation = "TestAssociateUsername";
         String orgIdUserAssociation = "TestAssociateOrg";
         String tenantUserAssociation = "TestAssociateTenant";
         int userAssociationTenantId = 3245;
         User user = new User(userID);
         List<UserAssociation> userAssociationList = new ArrayList<>();
         UserAssociation userAssociation = new UserAssociation();
+        userAssociation.setUserId(userID);
         userAssociation.setOrganizationId(orgIdUserAssociation);
         userAssociationList.add(userAssociation);
 
         when(oAuth2ServiceComponentHolder.getRevocationProcessor()).thenReturn(oAuth2RevocationProcessor);
         when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenReturn(
-                false);
+                true);
+        when(oAuth2RevocationProcessor.revokeTokens(usernameAssociation, abstractUserStoreManager)).thenReturn(
+                true);
+        when(OAuthUtil.revokeAuthzCodes(credentialUpdateUsername, abstractUserStoreManager)).thenReturn(true);
         when(abstractUserStoreManager.getUser(null, credentialUpdateUsername)).thenReturn(user);
+        when(abstractUserStoreManager.getUserNameFromUserID(userID)).thenReturn(usernameAssociation);
         when(abstractUserStoreManager.getTenantId()).thenReturn(tenantId);
         when(IdentityTenantUtil.getTenantDomain(tenantId)).thenReturn(tenant);
         when(organizationManager.resolveOrganizationId(tenant)).thenReturn(orgId);
@@ -137,16 +148,20 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     public void testDoPostUpdateCredential() throws UserStoreException, OrganizationManagementException {
 
         prepareForCredentialUpdate();
-        identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername, newCredential,
+        boolean isUpdateSuccess = identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername,
+                newCredential,
                 abstractUserStoreManager);
+        assertTrue(isUpdateSuccess);
     }
 
     @Test
     public void testDoPostUpdateCredentialByAdmin() throws UserStoreException, OrganizationManagementException {
 
         prepareForCredentialUpdate();
-        identityOathEventListener.doPostUpdateCredentialByAdmin(credentialUpdateUsername, newCredential,
+        boolean isUpdateSuccess = identityOathEventListener.doPostUpdateCredentialByAdmin(credentialUpdateUsername,
+                newCredential,
                 abstractUserStoreManager);
+        assertTrue(isUpdateSuccess);
 
     }
 

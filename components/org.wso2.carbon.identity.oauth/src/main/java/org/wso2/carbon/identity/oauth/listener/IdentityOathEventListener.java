@@ -430,7 +430,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
      *
      * @param username         Username of the user.
      * @param userStoreManager User store manager of the user.
-     * @return boolean true if any error occurred while revoking the tokens.
+     * @return true if revocation is successfull. Else return false
      */
     private boolean revokeTokensOfAssociatedUsers(String username, UserStoreManager userStoreManager) {
 
@@ -457,18 +457,18 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                                 IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
                 String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
                         .getUserNameFromUserID(userAssociation.getUserId());
-                boolean isErrorOnSingleRevoke = OAuth2ServiceComponentHolder.getInstance()
+                boolean isSuccessOnSingleRevoke = OAuth2ServiceComponentHolder.getInstance()
                         .getRevocationProcessor()
                         .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
-                if (isErrorOnSingleRevoke) {
+                if (!isSuccessOnSingleRevoke) {
                     isErrorOnRevoking = true;
                 }
             }
         } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
             log.error("Error occurred while revoking access tokens of associated users.", e);
-            return true;
+            return false;
         }
 
-        return isErrorOnRevoking;
+        return !isErrorOnRevoking;
     }
 }
