@@ -1,0 +1,132 @@
+package org.wso2.carbon.identity.oauth.endpoint.ciba;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.as.response.OAuthASResponse;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.apache.oltu.oauth2.common.message.OAuthResponse;
+import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
+import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
+import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
+import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeDO;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.BINDING_MESSAGE;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_AUTH_CODE_KEY;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LOGIN_HINT;
+import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
+
+/**
+ * Rest implementation for ciba user authentication flow.
+ */
+@Path("/ciba_auth")
+public class UserAuthenticationEndpoint {
+
+    private static final Log log = LogFactory.getLog(UserAuthenticationEndpoint.class);
+    private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+
+    @GET
+    @Path("/")
+    @Consumes("application/x-www-form-urlencoded")
+    @Produces("text/html")
+    public Response cibaAuth(@Context HttpServletRequest request, @Context HttpServletResponse response)
+            throws InvalidRequestParentException, OAuthSystemException {
+
+        String authCodeKey = request.getParameter(CIBA_AUTH_CODE_KEY);
+        String loginHint = request.getParameter(LOGIN_HINT);
+        String bindingMessage = request.getParameter(BINDING_MESSAGE);
+
+        try {
+            if (StringUtils.isBlank(authCodeKey)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("authCodeKey is missing in the request.");
+                }
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(
+                        new URI(getErrorPageURL(request, OAuth2ErrorCodes.INVALID_REQUEST,
+                                OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                                "Invalid ciba user authorization request", null))).build();
+            }
+            CibaAuthCodeDO cibaAuthCodeDO = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
+                    .getCibaAuthCode(authCodeKey);
+            if (!isExpiredCibaAuthCode(cibaAuthCodeDO)) {
+                CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
+                commonAuthRequestWrapper.setParameter(
+                        org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE,
+                        OAuth2Util.buildScopeString(cibaAuthCodeDO.getScopes()));
+                commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants
+                                .RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
+                commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants.NONCE,
+                        cibaAuthCodeDO.getAuthReqId());
+                commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants.CLIENT_ID,
+                        cibaAuthCodeDO.getConsumerKey());
+                commonAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, loginHint);
+                commonAuthRequestWrapper.setParameter(CibaConstants.LOGIN_HINT, loginHint);
+                if (!StringUtils.isBlank(bindingMessage)) {
+                    commonAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, bindingMessage);
+                }
+                commonAuthRequestWrapper.setAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW, true);
+                return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
+            } else {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(
+                        new URI(getErrorPageURL(request, OAuth2ErrorCodes.INVALID_REQUEST,
+                                OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                                "Invalid ciba user authorization request", null))).build();
+            }
+
+        } catch (CibaCoreException e) {
+            return handleCibaCoreException(e);
+        } catch (URISyntaxException e) {
+            return handleURISyntaxException(e);
+        }
+    }
+
+    private Response handleCibaCoreException(CibaCoreException e) throws OAuthSystemException {
+
+        if (log.isDebugEnabled()) {
+            log.debug(e.getMessage(), e);
+        }
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_BAD_REQUEST).
+                setError(OAuth2ErrorCodes.INVALID_REQUEST).setErrorDescription("Invalid Request").buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private Response handleURISyntaxException(URISyntaxException e) throws OAuthSystemException {
+
+        log.error("Error while parsing string as an URI reference.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    private boolean isExpiredCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
+
+        if (cibaAuthCodeDO == null) {
+            return true;
+        }
+        // If the status is not REQUESTED, then the authentication request is already completed.
+        return cibaAuthCodeDO.getAuthReqStatus() != AuthReqStatus.REQUESTED;
+    }
+}
