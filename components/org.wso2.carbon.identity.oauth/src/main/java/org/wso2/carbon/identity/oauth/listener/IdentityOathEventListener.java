@@ -160,13 +160,15 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        boolean isErrorOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
+        boolean isSuccessOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
 
-        boolean isErrorOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+        boolean isSuccessOnRevokeAuthCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
-        return isErrorOnRevokeTokens || isErrorOnRevokeAssociateUsersTokens;
+        boolean isSuccessOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+
+        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthCodes;
     }
 
     @Override
@@ -177,13 +179,15 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
 
-        boolean isErrorOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
+        boolean isSuccessOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
 
-        boolean isErrorOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+        boolean isSuccessOnRevokeAuthCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
-        return isErrorOnRevokeTokens || isErrorOnRevokeAssociateUsersTokens;
+        boolean isSuccessOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+
+        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthCodes;
     }
 
     @Override
