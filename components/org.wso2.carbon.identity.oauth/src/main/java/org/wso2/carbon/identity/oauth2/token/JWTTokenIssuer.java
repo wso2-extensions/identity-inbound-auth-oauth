@@ -934,18 +934,31 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return handleCustomClaimsInPreIssueAccessTokenResponse(jwtClaimsSetBuilder, tokenReqMessageContext);
         }
 
-        if (tokenReqMessageContext != null &&
-                tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
-                StringUtils.equals(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType(),
-                        OAuthConstants.GrantTypes.CLIENT_CREDENTIALS) &&
-                OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant()) {
-
-            // CC grant doesn't involve a user and hence skipping OIDC claims to CC grant type Access token.
+        if (tokenReqMessageContext != null && tokenReqMessageContext.getOauth2AccessTokenReqDTO() != null &&
+                shouldSkipOIDCClaimHandling(tokenReqMessageContext)) {
+            /*
+            CC grant and organization switch done from CC grant based token doesn't involve a user and hence skipping
+            OIDC claims those cases.
+             */
             return jwtClaimsSetBuilder.build();
         }
 
         CustomClaimsCallbackHandler claimsCallBackHandler = ClaimHandlerUtil.getClaimsCallbackHandler(oAuthAppDO);
         return claimsCallBackHandler.handleCustomClaims(jwtClaimsSetBuilder, tokenReqMessageContext);
+    }
+
+    private boolean shouldSkipOIDCClaimHandling(OAuthTokenReqMessageContext tokenReqMessageContext) {
+
+        String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
+        // Check if the grant type is CLIENT_CREDENTIALS and the config to skip OIDC claims is enabled.
+        boolean isSkipOIDCClaimsForClientCredentialGrant =
+                OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType) &&
+                        OAuthServerConfiguration.getInstance().isSkipOIDCClaimsForClientCredentialGrant();
+        // Check if the grant type is ORGANIZATION_SWITCH and the user type is APPLICATION
+        boolean isOrgSwitchWithAppUser = OAuthConstants.GrantTypes.ORGANIZATION_SWITCH.equals(grantType) &&
+                OAuthConstants.UserType.APPLICATION.equals(getAuthorizedUserType(null, tokenReqMessageContext));
+
+        return isSkipOIDCClaimsForClientCredentialGrant || isOrgSwitchWithAppUser;
     }
 
     private JWTClaimsSet handleCustomClaimsInPreIssueAccessTokenResponse(JWTClaimsSet.Builder jwtClaimsSetBuilder,
