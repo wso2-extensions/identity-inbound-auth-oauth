@@ -164,11 +164,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
 
-        boolean isSuccessOnRevokeAuthCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
+        boolean isSuccessOnRevokeAuthzCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
         boolean isSuccessOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
 
-        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthCodes;
+        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthzCodes;
     }
 
     @Override
@@ -183,11 +183,11 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
 
-        boolean isSuccessOnRevokeAuthCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
+        boolean isSuccessOnRevokeAuthzCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
         boolean isSuccessOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
 
-        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthCodes;
+        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthzCodes;
     }
 
     @Override
