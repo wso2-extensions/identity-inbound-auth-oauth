@@ -24,7 +24,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -184,13 +186,15 @@ public class ClaimUtil {
                         realm = getUserRealm(null, userAccessingTenantDomain);
                         try {
                             FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
-                            userClaims = getUserClaimsFromUserStore(sharedUserId, realm, claimURIList);
+                            userClaims = getUserClaimsFromUserStore(authenticatedUser, serviceProvider, sharedUserId,
+                                    realm, claimURIList);
                         } finally {
                             FrameworkUtils.endTenantFlow();
                         }
                     } else {
                         realm = getUserRealm(null, userTenantDomain);
-                        userClaims = getUserClaimsFromUserStore(userId, realm, claimURIList);
+                        userClaims = getUserClaimsFromUserStore(authenticatedUser, serviceProvider, userId, realm,
+                                claimURIList);
                     }
 
                     if (isNotEmpty(userClaims)) {
@@ -313,8 +317,9 @@ public class ClaimUtil {
         return claimSeparator;
     }
 
-    private static Map<String, String> getUserClaimsFromUserStore(String userId,
-                                                                  UserRealm realm,
+    private static Map<String, String> getUserClaimsFromUserStore(AuthenticatedUser authenticatedUser,
+                                                                  ServiceProvider serviceProvider,
+                                                                  String resolvedUserId, UserRealm realm,
                                                                   List<String> claimURIList) throws UserStoreException {
 
         AbstractUserStoreManager userstore = (AbstractUserStoreManager) realm.getUserStoreManager();
@@ -322,7 +327,18 @@ public class ClaimUtil {
             throw new UserStoreException("Unable to retrieve UserStoreManager");
         }
         Map<String, String> userClaims =
-                userstore.getUserClaimValuesWithID(userId, claimURIList.toArray(new String[0]), null);
+                userstore.getUserClaimValuesWithID(resolvedUserId, claimURIList.toArray(new String[0]), null);
+        if ((claimURIList.contains(FrameworkConstants.ROLES_CLAIM))) {
+            String[] appAssociatedRoles = null;
+            try {
+                appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(authenticatedUser,
+                        serviceProvider.getApplicationResourceId());
+            } catch (ApplicationRolesException e) {
+                throw new UserStoreException("Error while retrieving application associated roles for user", e);
+            }
+            userClaims.put(FrameworkConstants.ROLES_CLAIM,
+                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appAssociatedRoles));
+        }
         if (log.isDebugEnabled()) {
             log.debug("User claims retrieved from user store: " + userClaims.size());
         }
