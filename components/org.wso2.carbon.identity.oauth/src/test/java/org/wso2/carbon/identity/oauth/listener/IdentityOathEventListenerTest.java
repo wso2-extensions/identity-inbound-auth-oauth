@@ -102,6 +102,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         identityTenantUtilMockedStatic.close();
         oAuth2ServiceComponentHolderMockedStatic.close();
         oAuthComponentServiceHolderMockedStatic.close();
+        oAuthUtilMockedStatic.close();
     }
 
     private void prepareForCredentialUpdate() throws UserStoreException, OrganizationManagementException {
