@@ -175,6 +175,10 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
         String tenantDomain = getTenantDomain(tokReqMsgCtx);
         IdentityProvider identityProvider = getIdentityProvider(assertion, tenantDomain);
+        if (!identityProvider.isEnable()) {
+            throw new IdentityOAuth2Exception("No Active IDP found for the given idp : " + identityProvider
+                    .getIdentityProviderName());
+        }
         // If SAMLSignKeyStore property defined in the carbon.xml then validate the signature against provided
         // SAML Sign KeyStore certificate else validate against the IDP certificate.
         if (isSAMLSignKeyStoreConfigured()) {
