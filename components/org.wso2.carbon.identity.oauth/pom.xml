@@ -435,9 +435,9 @@
                             org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.rule.evaluation.model; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.rule.evaluation.exception; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.rule.evaluation.provider; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.model; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.exception; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.api.provider; version="${carbon.identity.framework.imp.pkg.version.range}",
 
                             org.wso2.carbon.identity.oauth.common.token.bindings.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
