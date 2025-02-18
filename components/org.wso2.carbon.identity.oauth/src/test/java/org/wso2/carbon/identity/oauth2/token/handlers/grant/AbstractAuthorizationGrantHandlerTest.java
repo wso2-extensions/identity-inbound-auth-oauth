@@ -80,7 +80,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -128,7 +127,7 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
         MockitoAnnotations.initMocks(this);
-        when(mockActionExecutionService.execute(any(ActionType.class), anyMap(), any())).thenReturn(
+        when(mockActionExecutionService.execute(any(ActionType.class), any(), any())).thenReturn(
                 new SuccessStatus.Builder().build());
 
         authenticatedUser.setUserName("randomUser");
