@@ -51,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -250,7 +251,9 @@ public class ClaimUtilTest {
                      mockStatic(OAuth2ServiceComponentHolder.class);
              MockedStatic<ClaimMetadataHandler> claimMetadataHandler =
                      mockStatic(ClaimMetadataHandler.class);
-             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(mockedOAuthServerConfiguration);
@@ -289,6 +292,8 @@ public class ClaimUtilTest {
                         mockedApplicationManagementService);
                 lenient().when(mockedApplicationManagementService.getServiceProviderNameByClientId(
                         anyString(), anyString(), anyString())).thenReturn("SP1");
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 if (mockServiceProvider) {
                     lenient().when(
@@ -302,6 +307,7 @@ public class ClaimUtilTest {
                 mockedUserStoreManager = mock(AbstractUserStoreManager.class);
                 when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
 
+                lenient().when(mockedServiceProvider.getTenantDomain()).thenReturn("carbon.super");
                 lenient().when(mockedServiceProvider.getClaimConfig()).thenReturn(mockedClaimConfig);
                 lenient().when(mockedClaimConfig.getClaimMappings()).thenReturn(claimMappings);
 
