@@ -33,13 +33,13 @@ import java.util.UUID;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.ARBITRARY_SEND_TO;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.BINDING_MESSAGE;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CHALLENGE;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_APP_PLACEHOLDER_NAME;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_AUTH_CODE_KEY;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_NOTIFICATION_SCENARIO;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_USER_AUTH_ENDPOINT;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEFAULT_CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEFAULT_CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEFAULT_CIBA_USER_LOGIN_MAIL_TEMPLATE_NAME;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEFAULT_CIBA_USER_LOGIN_SMS_TEMPLATE_NAME;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEFAULT_CIBA_USER_LOGIN_TEMPLATE_NAME;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEVICE_ID;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.DEVICE_TOKEN;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LOGIN_HINT;
@@ -53,24 +53,32 @@ import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.TEMPLATE_
 import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
 
 /**
- * This class is responsible for sending the notification to the user.
+ * This class is responsible for sending the login request notification to the user.
  */
 public class CibaUserNotificationHandler {
 
     private static final Log log = LogFactory.getLog(CibaUserNotificationHandler.class);
 
+    /**
+     * Send the login request notification to the user.
+     *
+     * @param cibaUserNotificationContext CibaUserNotificationContext.
+     * @throws CibaCoreException If an error occurred while sending the notification.
+     */
     public void sendNotification(CibaUserNotificationContext cibaUserNotificationContext) throws CibaCoreException {
 
         NotificationChannelManager notificationChannelManager =
                 CibaServiceComponentHolder.getNotificationChannelManager();
         AuthenticatedUser user = cibaUserNotificationContext.getAuthenticatedUser();
         try {
+            // Build the user login request url which contains the auth code key, binding message and login hint.
             String userLoginRequestUrl = ServiceURLBuilder.create().addPath(CIBA_USER_AUTH_ENDPOINT)
                     .addParameter(CIBA_AUTH_CODE_KEY, cibaUserNotificationContext.getAuthCodeKey())
                     .addParameter(BINDING_MESSAGE, cibaUserNotificationContext.getBindingMessage())
                     .addParameter(LOGIN_HINT, user.toFullQualifiedUsername()).build().getAbsoluteInternalURL();
+            // Resolve the communication channel of the user.
             String communicationChannel = notificationChannelManager
-                    .resolveCommunicationChannel(user.toFullQualifiedUsername(), user.getTenantDomain(),
+                    .resolveCommunicationChannel(user.getUserName(), user.getTenantDomain(),
                     user.getUserStoreDomain());
             if (NotificationChannels.EMAIL_CHANNEL.getChannelType().equalsIgnoreCase(communicationChannel)) {
                 sendEmailNotification(cibaUserNotificationContext, userLoginRequestUrl);
@@ -86,19 +94,31 @@ public class CibaUserNotificationHandler {
         }
     }
 
+    /**
+     * Send email notification to the user.
+     *
+     * @param cibaUserNotificationContext CibaUserNotificationContext.
+     * @param userLoginRequestUrl         User login request url.
+     * @throws CibaCoreException If an error occurred while sending the email notification.
+     */
     private void sendEmailNotification(CibaUserNotificationContext cibaUserNotificationContext,
                                        String userLoginRequestUrl) throws CibaCoreException {
 
         if (log.isDebugEnabled()) {
             log.debug("Sending email notification to the user.");
         }
+        AuthenticatedUser user = cibaUserNotificationContext.getAuthenticatedUser();
         Map<String, Object> properties = new HashMap<>();
         IdentityEventService eventService = CibaServiceComponentHolder.getIdentityEventService();
         String email = resolveEmailOfAuthenticatedUser(cibaUserNotificationContext.getAuthenticatedUser());
-        properties.put(TEMPLATE_TYPE, DEFAULT_CIBA_USER_LOGIN_MAIL_TEMPLATE_NAME);
-        properties.put(DEFAULT_CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME, userLoginRequestUrl);
-        properties.put(DEFAULT_CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME, cibaUserNotificationContext
+        properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, user.getUserStoreDomain());
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, user.getTenantDomain());
+        properties.put(TEMPLATE_TYPE, DEFAULT_CIBA_USER_LOGIN_TEMPLATE_NAME);
+        properties.put(CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME, userLoginRequestUrl);
+        properties.put(CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME, cibaUserNotificationContext
                 .getBindingMessage());
+        properties.put(CIBA_APP_PLACEHOLDER_NAME, cibaUserNotificationContext.getApplicationName());
         properties.put(ARBITRARY_SEND_TO, email);
 
         Event event = new Event(IdentityEventConstants.Event.TRIGGER_NOTIFICATION, properties);
@@ -111,6 +131,13 @@ public class CibaUserNotificationHandler {
         }
     }
 
+    /**
+     * Send SMS notification to the user.
+     *
+     * @param cibaUserNotificationContext CibaUserNotificationContext.
+     * @param userLoginRequestUrl         User login request url.
+     * @throws CibaCoreException If an error occurred while sending the email notification.
+     */
     private void sendSMSNotification(CibaUserNotificationContext cibaUserNotificationContext,
                                      String userLoginRequestUrl)
             throws CibaCoreException {
@@ -118,17 +145,22 @@ public class CibaUserNotificationHandler {
         if (log.isDebugEnabled()) {
             log.debug("Sending sms notification to the user.");
         }
+        AuthenticatedUser user = cibaUserNotificationContext.getAuthenticatedUser();
         Map<String, Object> properties = new HashMap<>();
         IdentityEventService eventService = CibaServiceComponentHolder.getIdentityEventService();
         String mobileNumber = resolveMobileNumberOfAuthenticatedUser(cibaUserNotificationContext
                 .getAuthenticatedUser());
         properties.put(IdentityEventConstants.EventProperty.NOTIFICATION_CHANNEL,
                 NotificationChannels.SMS_CHANNEL.getChannelType());
+        properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, user.getUserStoreDomain());
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, user.getTenantDomain());
         properties.put(ARBITRARY_SEND_TO, mobileNumber);
-        properties.put(TEMPLATE_TYPE, DEFAULT_CIBA_USER_LOGIN_SMS_TEMPLATE_NAME);
-        properties.put(DEFAULT_CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME, userLoginRequestUrl);
-        properties.put(DEFAULT_CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME, cibaUserNotificationContext
+        properties.put(TEMPLATE_TYPE, DEFAULT_CIBA_USER_LOGIN_TEMPLATE_NAME);
+        properties.put(CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME, userLoginRequestUrl);
+        properties.put(CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME, cibaUserNotificationContext
                 .getBindingMessage());
+        properties.put(CIBA_APP_PLACEHOLDER_NAME, cibaUserNotificationContext.getApplicationName());
 
         Event event = new Event(SMS_EVENT_TRIGGER_NAME, properties);
         try {
@@ -140,6 +172,13 @@ public class CibaUserNotificationHandler {
         }
     }
 
+    /**
+     * Send push notification to the user.
+     *
+     * @param cibaUserNotificationContext CibaUserNotificationContext.
+     * @param userLoginRequestUrl         User login request url.
+     * @throws CibaCoreException If an error occurred while sending the email notification.
+     */
     private void sendPushNotification(CibaUserNotificationContext cibaUserNotificationContext,
                                       String userLoginRequestUrl)
             throws CibaCoreException {
@@ -159,6 +198,7 @@ public class CibaUserNotificationHandler {
         properties.put(NOTIFICATION_PROVIDER, device.getProvider());
         properties.put(DEVICE_ID, device.getDeviceId());
         properties.put(CHALLENGE, userLoginRequestUrl);
+        properties.put(CIBA_APP_PLACEHOLDER_NAME, cibaUserNotificationContext.getApplicationName());
 
         Event event = new Event(PUSH_NOTIFICATION_EVENT_NAME, properties);
         try {
