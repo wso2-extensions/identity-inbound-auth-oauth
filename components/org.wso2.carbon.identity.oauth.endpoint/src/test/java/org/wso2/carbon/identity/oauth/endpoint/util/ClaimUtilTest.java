@@ -28,6 +28,7 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.application.common.model.LocalRole;
 import org.wso2.carbon.identity.application.common.model.PermissionsAndRoleConfig;
 import org.wso2.carbon.identity.application.common.model.RoleMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
@@ -51,6 +53,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -59,8 +63,10 @@ import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -71,6 +77,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 
 @Listeners(MockitoTestNGListener.class)
 public class ClaimUtilTest {
@@ -112,6 +119,9 @@ public class ClaimUtilTest {
 
     @Mock
     private PermissionsAndRoleConfig mockedPermissionAndRoleConfig;
+
+    @Mock
+    private RoleManagementService mockedRoleManagementService;
 
     private Field claimUtilLogField;
     private Object claimUtilObject;
@@ -317,6 +327,16 @@ public class ClaimUtilTest {
                     lenient().when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class),
                                     isNull())).
                             thenReturn(userClaimsMap);
+                    ServiceProviderProperty serviceProviderProperty = new ServiceProviderProperty();
+                    serviceProviderProperty.setName(IS_FRAGMENT_APP);
+                    serviceProviderProperty.setValue(Boolean.TRUE.toString());
+                    ServiceProviderProperty[] serviceProviderProperties = new ServiceProviderProperty[1];
+                    serviceProviderProperties[0] = serviceProviderProperty;
+                    lenient().when(mockedServiceProvider.getSpProperties()).thenReturn(serviceProviderProperties);
+
+                    AssociatedRolesConfig associatedRolesConfig = new AssociatedRolesConfig();
+                    associatedRolesConfig.setAllowedAudience(RoleConstants.ORGANIZATION);
+                    lenient().when(mockedServiceProvider.getAssociatedRolesConfig()).thenReturn(associatedRolesConfig);
                 } else {
                     when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class), isNull())).
                             thenThrow(new UserStoreException("UserNotFound"));
@@ -340,6 +360,16 @@ public class ClaimUtilTest {
                 when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
                 when(oAuth2ServiceComponentHolderInstance.getTokenProvider())
                         .thenReturn(new DefaultTokenProvider());
+                lenient().when(oAuth2ServiceComponentHolderInstance.getRoleManagementServiceV2())
+                        .thenReturn(mockedRoleManagementService);
+
+                Set<String> roleGroupClaimURIs = new HashSet<>();
+                roleGroupClaimURIs.add("http://wso2.org/claims/role");
+                roleGroupClaimURIs.add("http://wso2.org/claims/roles");
+                roleGroupClaimURIs.add("http://wso2.org/claims/groups");
+
+                identityUtil.when(IdentityUtil::getRoleGroupClaims).thenReturn(roleGroupClaimURIs);
+
                 Map<String, Object> claimsMap;
                 try {
                     claimsMap = ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);

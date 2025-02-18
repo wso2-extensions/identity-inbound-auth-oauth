@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -28,6 +29,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataHandler;
@@ -50,8 +52,13 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.role.v2.mgt.core.RoleConstants;
+import org.wso2.carbon.identity.role.v2.mgt.core.exception.IdentityRoleManagementException;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.Role;
+import org.wso2.carbon.identity.role.v2.mgt.core.model.RoleProperty;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.UserStoreException;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
@@ -205,7 +212,11 @@ public class ClaimUtil {
                             if (IdentityUtil.getRoleGroupClaims().stream().anyMatch(roleGroupClaimURI ->
                                     roleGroupClaimURI.equals(entry.getKey()))) {
                                 String claimSeparator = getMultiAttributeSeparator(userId, realm);
-                                entry.setValue(getSpMappedRoleClaim(serviceProvider, entry, claimSeparator));
+                                String roleClaim = entry.getValue();
+                                List<String> rolesList = Arrays.asList(roleClaim.split(claimSeparator));
+                                rolesList = filterSharedRoles(serviceProvider, rolesList);
+                                entry.setValue(OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider,
+                                        rolesList, claimSeparator));
                             }
 
                             String oidcClaimUri = spToLocalClaimMappings.get(entry.getKey());
@@ -303,6 +314,56 @@ public class ClaimUtil {
         String roleClaim = entry.getValue();
         List<String> rolesList = Arrays.asList(roleClaim.split(claimSeparator));
         return OIDCClaimUtil.getServiceProviderMappedUserRoles(serviceProvider, rolesList, claimSeparator);
+    }
+
+    private static List<String> filterSharedRoles(ServiceProvider serviceProvider,
+                                                  List<String> userRoles) throws FrameworkException {
+
+        List<String> rolesAssociatedWithApp = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(userRoles)) {
+            rolesAssociatedWithApp = new ArrayList<>(userRoles);
+            /*
+             Check whether the application is a fragment application and if so, add only the shared roles
+             to the user's role list.
+            */
+            if (serviceProvider.getSpProperties() != null && Arrays.stream(serviceProvider.getSpProperties()).anyMatch(
+                    spProperty -> ApplicationConstants.IS_FRAGMENT_APP.equals(spProperty.getName())
+                            && StringUtils.equals(Boolean.TRUE.toString(), spProperty.getValue()))) {
+                if (RoleConstants.ORGANIZATION.equalsIgnoreCase(serviceProvider.getAssociatedRolesConfig().
+                        getAllowedAudience())) {
+                    for (String roleName : rolesAssociatedWithApp) {
+                        try {
+                            String roleId = OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2().
+                                    getRoleIdByName(removeInternalDomain(roleName), RoleConstants.ORGANIZATION,
+                                            serviceProvider.getTenantDomain(), serviceProvider.getTenantDomain());
+                            if (roleId != null) {
+                                Role role = OAuth2ServiceComponentHolder.getInstance().getRoleManagementServiceV2().
+                                        getRole(roleId, serviceProvider.getTenantDomain());
+                                List<RoleProperty> roleProperties = role.getRoleProperties();
+                                boolean isSharedRole = roleProperties.stream().anyMatch(roleProperty ->
+                                        RoleConstants.IS_SHARED_ROLE_PROP_NAME.equals(roleProperty.getName()) &&
+                                                Boolean.TRUE.toString().equals(roleProperty.getValue()));
+                                if (!isSharedRole) {
+                                    rolesAssociatedWithApp.remove(roleName);
+                                }
+                            }
+                        } catch (IdentityRoleManagementException e) {
+                            throw new FrameworkException("Error while getting the role details of role : " +
+                                    roleName, e);
+                        }
+                    }
+                }
+            }
+        }
+        return rolesAssociatedWithApp;
+    }
+
+    private static String removeInternalDomain(String roleName) {
+
+        if (UserCoreConstants.INTERNAL_DOMAIN.equalsIgnoreCase(IdentityUtil.extractDomainFromName(roleName))) {
+            return UserCoreUtil.removeDomainFromName(roleName);
+        }
+        return roleName;
     }
 
     private static String getMultiAttributeSeparator(String username,
