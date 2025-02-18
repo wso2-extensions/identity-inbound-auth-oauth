@@ -18,8 +18,6 @@
 
 package org.wso2.carbon.identity.webfinger.builders;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.ServerConfigurationException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -37,8 +35,6 @@ import static org.wso2.carbon.identity.discovery.DiscoveryUtil.isUseEntityIdAsIs
  * Add other information when needed.
  */
 public class WebFingerOIDCResponseBuilder {
-
-    private static final Log log = LogFactory.getLog(WebFingerOIDCResponseBuilder.class);
 
     public WebFingerResponse buildWebFingerResponse(WebFingerRequest request) throws WebFingerEndpointException,
             ServerConfigurationException {

@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.webfinger;
 
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,5 +51,4 @@ public class WebFingerResponse {
         link.setHref(href);
         this.links.add(link);
     }
-
 }

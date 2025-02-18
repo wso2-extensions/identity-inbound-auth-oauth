@@ -38,7 +38,7 @@ import javax.servlet.http.HttpServletResponse;
  * Webfinger endpoint. Servelet is registered for the path /.well-known/webfinger
  */
 public class WebFingerServlet extends HttpServlet {
-    private static final Log log = LogFactory.getLog(WebFingerServlet.class);
+    private static final Log LOG = LogFactory.getLog(WebFingerServlet.class);
 
     @Override
     protected void doGet(HttpServletRequest httpServletRequest,
@@ -57,7 +57,7 @@ public class WebFingerServlet extends HttpServlet {
             httpServletResponse.setStatus(processor.handleError(e));
             return;
         } catch (ServerConfigurationException e) {
-            log.error("Server Configuration error occurred.", e);
+            LOG.error("Server Configuration error occurred.", e);
             httpServletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return;
         }
