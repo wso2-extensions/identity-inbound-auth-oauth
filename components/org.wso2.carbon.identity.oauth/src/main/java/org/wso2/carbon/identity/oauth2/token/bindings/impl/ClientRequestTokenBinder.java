@@ -23,14 +23,13 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CNF;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 
 
@@ -48,7 +47,16 @@ public class ClientRequestTokenBinder extends AbstractTokenBinder {
         for (RequestParameter parameter : parameters) {
             if (TOKEN_BINDING_ID.equals(parameter.getKey())
                     && StringUtils.isNotBlank(parameter.getValue()[0])) {
-                        return Optional.ofNullable(parameter.getValue()[0]);
+                // Adding the cnf parameter to the request parameters to ensure tokenBindingId
+                // will be added to the token.
+                if (oAuth2AccessTokenReqDTO.getParameters() == null) {
+                    Map<String, String> parametersMap = new HashMap<>();
+                    parametersMap.put(CNF, parameter.getValue()[0]);
+                    oAuth2AccessTokenReqDTO.setParameters(parametersMap);
+                } else {
+                    oAuth2AccessTokenReqDTO.getParameters().put(CNF, parameter.getValue()[0]);
+                }
+                return Optional.ofNullable(parameter.getValue()[0]);
             }
         }
         return Optional.empty();
