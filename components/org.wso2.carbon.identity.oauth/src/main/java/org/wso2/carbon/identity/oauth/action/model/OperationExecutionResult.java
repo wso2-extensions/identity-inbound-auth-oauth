@@ -18,7 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
-import org.wso2.carbon.identity.action.execution.model.PerformableOperation;
+import org.wso2.carbon.identity.action.execution.api.model.PerformableOperation;
 
 /**
  * This class represents the result of the execution of an operation.
