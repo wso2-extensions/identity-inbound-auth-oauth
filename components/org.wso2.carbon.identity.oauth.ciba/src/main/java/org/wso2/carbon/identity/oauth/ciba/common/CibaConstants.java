@@ -48,10 +48,10 @@ public class CibaConstants {
     public static final String EXPIRES_IN = "expires_in";
     public static final String CIBA_USER_AUTH_ENDPOINT = "/oauth2/ciba_auth";
     public static final String CIBA_AUTH_CODE_KEY = "authCodeKey";
-    public static final String DEFAULT_CIBA_USER_LOGIN_MAIL_TEMPLATE_NAME = "CIBAUserLoginEmailNotification";
-    public static final String DEFAULT_CIBA_USER_LOGIN_SMS_TEMPLATE_NAME = "CIBAUserLoginSMSNotification";
-    public static final String DEFAULT_CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME = "CIBAUserLoginLink";
-    public static final String DEFAULT_CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME = "CIBABindingMessage";
+    public static final String DEFAULT_CIBA_USER_LOGIN_TEMPLATE_NAME = "CIBAUserLoginRequest";
+    public static final String CIBA_USER_LOGIN_LINK_PLACEHOLDER_NAME = "user-login-link";
+    public static final String CIBA_BINDING_MESSAGE_PLACEHOLDER_NAME = "binding-message";
+    public static final String CIBA_APP_PLACEHOLDER_NAME = "application-name";
     public static final String SMS_EVENT_TRIGGER_NAME = "TRIGGER_SMS_NOTIFICATION_LOCAL";
     public static final String TEMPLATE_TYPE = "TEMPLATE_TYPE";
     public static final String ARBITRARY_SEND_TO = "send-to";
@@ -60,7 +60,6 @@ public class CibaConstants {
     public static final String NOTIFICATION_SCENARIO = "NOTIFICATION_SCENARIO";
     public static final String CIBA_NOTIFICATION_SCENARIO = "AUTHENTICATION";
     public static final String PUSH_ID = "pushId";
-    public static final String PUSH_AUTH_ID = "pushAuthId";
     public static final String DEVICE_TOKEN = "deviceToken";
     public static final String NOTIFICATION_PROVIDER = "notificationProvider";
     public static final String CHALLENGE = "challenge";

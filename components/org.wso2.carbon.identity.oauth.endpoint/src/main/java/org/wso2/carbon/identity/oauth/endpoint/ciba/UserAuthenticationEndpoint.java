@@ -52,6 +52,8 @@ public class UserAuthenticationEndpoint {
     public Response cibaAuth(@Context HttpServletRequest request, @Context HttpServletResponse response)
             throws InvalidRequestParentException, OAuthSystemException {
 
+        // The user (authorization device) has invoked this endpoint to authenticate with their received notification.
+        // Here we directly call the framework after validation to continue the authentication flow.
         String authCodeKey = request.getParameter(CIBA_AUTH_CODE_KEY);
         String loginHint = request.getParameter(LOGIN_HINT);
         String bindingMessage = request.getParameter(BINDING_MESSAGE);
@@ -74,7 +76,7 @@ public class UserAuthenticationEndpoint {
                         org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE,
                         OAuth2Util.buildScopeString(cibaAuthCodeDO.getScopes()));
                 commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants
-                                .RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
+                        .RESPONSE_TYPE, CibaConstants.RESPONSE_TYPE_VALUE);
                 commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants.NONCE,
                         cibaAuthCodeDO.getAuthReqId());
                 commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants.CLIENT_ID,
@@ -92,7 +94,6 @@ public class UserAuthenticationEndpoint {
                                 OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
                                 "Invalid ciba user authorization request", null))).build();
             }
-
         } catch (CibaCoreException e) {
             return handleCibaCoreException(e);
         } catch (URISyntaxException e) {
@@ -100,6 +101,13 @@ public class UserAuthenticationEndpoint {
         }
     }
 
+    /**
+     * Handle CibaCoreException.
+     *
+     * @param e CibaCoreException
+     * @return Response
+     * @throws OAuthSystemException OAuthSystemException
+     */
     private Response handleCibaCoreException(CibaCoreException e) throws OAuthSystemException {
 
         if (log.isDebugEnabled()) {
@@ -111,6 +119,13 @@ public class UserAuthenticationEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
+    /**
+     * Handle URISyntaxException.
+     *
+     * @param e URISyntaxException
+     * @return Response
+     * @throws OAuthSystemException OAuthSystemException
+     */
     private Response handleURISyntaxException(URISyntaxException e) throws OAuthSystemException {
 
         log.error("Error while parsing string as an URI reference.", e);
@@ -121,6 +136,13 @@ public class UserAuthenticationEndpoint {
                 EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
     }
 
+    /**
+     * Check whether the ciba authentication request is expired.
+     *
+     * @param cibaAuthCodeDO CibaAuthCodeDO
+     * @return True if the ciba authentication request is expired.
+     * @throws CibaCoreException Error while checking the ciba authentication request status.
+     */
     private boolean isExpiredCibaAuthCode(CibaAuthCodeDO cibaAuthCodeDO) throws CibaCoreException {
 
         if (cibaAuthCodeDO == null) {
