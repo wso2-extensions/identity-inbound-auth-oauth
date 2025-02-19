@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
 import org.apache.commons.collections.map.HashedMap;
+import org.apache.commons.lang.StringUtils;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -51,6 +52,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -119,8 +122,10 @@ public class ClaimUtilTest {
     private RoleMapping[] roleMappings;
 
     private ClaimMapping[] requestedClaimMappings;
+    private ClaimMapping[] requestedClaimMappingsWithRoles;
 
     private Map<String, String> userClaimsMap;
+    private Map<String, String> userClaimsMapWithRoles;
 
     private Map<Object, Object> spToLocalClaimMappings;
 
@@ -132,35 +137,48 @@ public class ClaimUtilTest {
     private static final String USERNAME_CLAIM_URI = "http://wso2.org/claims/username";
     private static final String EMAIL_CLAIM_URI = "http://wso2.org/claims/emailaddress";
     private static final String ROLE_CLAIM_URI = "http://wso2.org/claims/role";
+    private static final String ROLES_CLAIM_URI = "http://wso2.org/claims/roles";
 
     @BeforeClass
     public void setup() {
 
         //Setting requested claims in SP
         requestedClaimMappings = new ClaimMapping[3];
+        requestedClaimMappingsWithRoles = new ClaimMapping[4];
 
         ClaimMapping claimMapping1 = new ClaimMapping();
         ClaimMapping claimMapping2 = new ClaimMapping();
         ClaimMapping claimMapping3 = new ClaimMapping();
+        ClaimMapping claimMapping4 = new ClaimMapping();
         Claim claim1 = new Claim();
         Claim claim2 = new Claim();
         Claim claim3 = new Claim();
+        Claim claim4 = new Claim();
 
         claim1.setClaimUri(USERNAME_CLAIM_URI);
         claimMapping1.setLocalClaim(claim1);
         claimMapping1.setRemoteClaim(claim1);
         requestedClaimMappings[0] = claimMapping1;
+        requestedClaimMappingsWithRoles[0] = claimMapping1;
 
         claim2.setClaimUri(ROLE_CLAIM_URI);
         claimMapping2.setLocalClaim(claim2);
         claimMapping2.setRemoteClaim(claim2);
         requestedClaimMappings[1] = claimMapping2;
+        requestedClaimMappingsWithRoles[1] = claimMapping2;
 
         claim3.setClaimUri(EMAIL_CLAIM_URI);
         claimMapping3.setLocalClaim(claim3);
         claimMapping3.setRemoteClaim(claim3);
         claimMapping3.setRequested(true);
         requestedClaimMappings[2] = claimMapping3;
+        requestedClaimMappingsWithRoles[2] = claimMapping3;
+
+        claim4.setClaimUri(ROLES_CLAIM_URI);
+        claimMapping4.setLocalClaim(claim4);
+        claimMapping4.setRemoteClaim(claim4);
+        claimMapping4.setRequested(true);
+        requestedClaimMappingsWithRoles[3] = claimMapping4;
 
         //Setting returning claims from user store
         userClaimsMap = new HashMap<>();
@@ -170,6 +188,10 @@ public class ClaimUtilTest {
 
         userClaimsMapWithSubject = new HashedMap();
         userClaimsMap.put(USERNAME_CLAIM_URI, AUTHORIZED_USER);
+
+        userClaimsMapWithRoles = new HashMap<>();
+        userClaimsMapWithRoles.putAll(userClaimsMap);
+        userClaimsMapWithRoles.put(ROLES_CLAIM_URI, "Internal/Role1,Internal/Role2,Internal/Role3");
 
         //Setting SP to local claim mapping
         spToLocalClaimMappings = new HashMap<>();
@@ -250,7 +272,9 @@ public class ClaimUtilTest {
                      mockStatic(OAuth2ServiceComponentHolder.class);
              MockedStatic<ClaimMetadataHandler> claimMetadataHandler =
                      mockStatic(ClaimMetadataHandler.class);
-             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(mockedOAuthServerConfiguration);
@@ -289,6 +313,8 @@ public class ClaimUtilTest {
                         mockedApplicationManagementService);
                 lenient().when(mockedApplicationManagementService.getServiceProviderNameByClientId(
                         anyString(), anyString(), anyString())).thenReturn("SP1");
+                organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                        .thenReturn(false);
 
                 if (mockServiceProvider) {
                     lenient().when(
@@ -302,6 +328,7 @@ public class ClaimUtilTest {
                 mockedUserStoreManager = mock(AbstractUserStoreManager.class);
                 when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
 
+                lenient().when(mockedServiceProvider.getTenantDomain()).thenReturn("carbon.super");
                 lenient().when(mockedServiceProvider.getClaimConfig()).thenReturn(mockedClaimConfig);
                 lenient().when(mockedClaimConfig.getClaimMappings()).thenReturn(claimMappings);
 
@@ -347,6 +374,121 @@ public class ClaimUtilTest {
                 } catch (UserInfoEndpointException e) {
                     Assert.assertEquals(expectedMapSize, -1, "Unexpected exception thrown");
                 }
+            }
+        }
+    }
+
+    @DataProvider(name = "provideDataForGetClaimsFromUserForSubOrgUsers")
+    public Object[][] provideDataForGetClaimsFromUserForSubOrgUsers() {
+
+        return new Object[][]{
+                {new String[]{"Internal/Role1", "Internal/Role2"}, "Internal/Role1,Internal/Role2", 3},
+                {new String[0], null, 2}
+        };
+    }
+
+    @Test(dataProvider = "provideDataForGetClaimsFromUserForSubOrgUsers")
+    public void testGetClaimsFromUserStoreForSubOrgUsers(String[] appAssociatedRoles, String expectedRolesClaim,
+                                                         int expectedMapSize) throws Exception {
+
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                     OAuthServerConfiguration.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
+                     mockStatic(OAuth2ServiceComponentHolder.class);
+             MockedStatic<ClaimMetadataHandler> claimMetadataHandler =
+                     mockStatic(ClaimMetadataHandler.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class);
+             MockedStatic<OIDCClaimUtil> oidcClaimUtil = mockStatic(OIDCClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockedOAuthServerConfiguration);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getRealm(anyString(), isNull()))
+                    .thenReturn(mockedUserRealm);
+            lenient().when(mockedOAuthServerConfiguration.isMapFederatedUsersToLocal())
+                    .thenReturn(false);
+
+            mockOAuth2Util(oAuth2Util);
+
+            AuthenticatedUser authenticatedUser = getAuthenticatedUser("subOrgTenant", "PRIMARY",
+                    "test-user", false, "4b4414e1-916b-4475-aaee-6b0751c29f11");
+
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn("4b4414e1-916b-4475-aaee-6b0751c29f11");
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(CLAIM_SEPARATOR);
+
+            AccessTokenDO accessTokenDO = getAccessTokenDO(CLIENT_ID, authenticatedUser);
+            oAuth2Util.when(() -> OAuth2Util.getAccessTokenIdentifier(any())).thenReturn("DummyIdentifier");
+            oAuth2Util.when(() -> OAuth2Util.getAccessTokenDOfromTokenIdentifier(anyString()))
+                    .thenReturn(accessTokenDO);
+            oAuth2Util.when(() -> OAuth2Util.findAccessToken(any(), anyBoolean())).thenReturn(accessTokenDO);
+
+            oAuth2ServiceComponentHolder.when(OAuth2ServiceComponentHolder::getApplicationMgtService).thenReturn(
+                    mockedApplicationManagementService);
+            lenient().when(mockedApplicationManagementService.getServiceProviderNameByClientId(
+                    anyString(), anyString(), anyString())).thenReturn("SP1");
+            organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyString()))
+                    .thenReturn(true);
+            lenient().when(
+                    mockedApplicationManagementService.getServiceProviderByClientId(anyString(), anyString(),
+                            anyString())).thenReturn(mockedServiceProvider);
+
+            lenient().when(mockedValidationTokenResponseDTO.getAuthorizedUser()).thenReturn(AUTHORIZED_USER);
+            when(mockedValidationTokenResponseDTO.getAuthorizationContextToken()).thenReturn(
+                    mockedAuthzContextToken);
+            mockedUserStoreManager = mock(AbstractUserStoreManager.class);
+            when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+
+            lenient().when(mockedServiceProvider.getTenantDomain()).thenReturn("subOrgTenant");
+            lenient().when(mockedServiceProvider.getApplicationResourceId()).thenReturn("appUuid");
+            lenient().when(mockedServiceProvider.getClaimConfig()).thenReturn(mockedClaimConfig);
+            lenient().when(mockedClaimConfig.getClaimMappings()).thenReturn(requestedClaimMappingsWithRoles);
+
+            lenient().when(mockedServiceProvider.getLocalAndOutBoundAuthenticationConfig()).thenReturn(
+                    mockedLocalAndOutboundConfig);
+            lenient().when(mockedLocalAndOutboundConfig.getSubjectClaimUri()).thenReturn(USERNAME_CLAIM_URI);
+
+            claimMetadataHandler.when(ClaimMetadataHandler::getInstance).thenReturn(mockedClaimMetadataHandler);
+            Map<String, String> spToLocalClaimMappingsWithRoles = new HashMap<>();
+            spToLocalClaimMappingsWithRoles.put(USERNAME_CLAIM_URI, USERNAME_CLAIM_URI);
+            spToLocalClaimMappingsWithRoles.put(ROLES_CLAIM_URI, ROLES_CLAIM_URI);
+            spToLocalClaimMappingsWithRoles.put(EMAIL_CLAIM_URI, EMAIL_CLAIM_URI);
+            lenient().when(mockedClaimMetadataHandler.getMappingsMapFromOtherDialectToCarbon(
+                    anyString(), isNull(), anyString(), anyBoolean())).thenReturn(spToLocalClaimMappingsWithRoles);
+
+            lenient().when(mockedUserStoreManager.getUserClaimValuesWithID(anyString(), any(String[].class),
+                            isNull())).
+                    thenReturn(userClaimsMapWithRoles);
+
+            identityUtil.when(() -> IdentityUtil.extractDomainFromName(anyString())).thenReturn("PRIMARY");
+
+            lenient().when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
+            lenient().when(mockedUserStoreManager.getSecondaryUserStoreManager(anyString())).thenReturn(
+                    mockedUserStoreManager);
+            lenient().when(mockedUserStoreManager.getRealmConfiguration()).thenReturn(mockedRealmConfiguration);
+            lenient().when(mockedRealmConfiguration.getUserStoreProperty(
+                    IdentityCoreConstants.MULTI_ATTRIBUTE_SEPARATOR)).thenReturn(CLAIM_SEPARATOR);
+
+            lenient().when(mockedServiceProvider.getPermissionAndRoleConfig())
+                    .thenReturn(mockedPermissionAndRoleConfig);
+            lenient().when(mockedPermissionAndRoleConfig.getRoleMappings()).thenReturn(roleMappings);
+
+            oidcClaimUtil.when(() -> OIDCClaimUtil.getAppAssociatedRolesOfUser(any(), anyString()))
+                    .thenReturn(appAssociatedRoles);
+
+            OAuth2ServiceComponentHolder oAuth2ServiceComponentHolderInstance =
+                    mock(OAuth2ServiceComponentHolder.class);
+            when(OAuth2ServiceComponentHolder.getInstance()).thenReturn(oAuth2ServiceComponentHolderInstance);
+            when(oAuth2ServiceComponentHolderInstance.getTokenProvider())
+                    .thenReturn(new DefaultTokenProvider());
+            Map<String, Object> claimsMap = ClaimUtil.getClaimsFromUserStore(mockedValidationTokenResponseDTO);
+            Assert.assertEquals(claimsMap.size(), expectedMapSize);
+            if (StringUtils.isNotBlank(expectedRolesClaim)) {
+                Assert.assertEquals(claimsMap.get(ROLES_CLAIM_URI), expectedRolesClaim);
             }
         }
     }

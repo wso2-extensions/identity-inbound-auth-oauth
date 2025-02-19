@@ -580,7 +580,7 @@ public class OIDCClaimUtil {
      * @return App associated roles of the user.
      * @throws ApplicationRolesException If an error occurred while getting app associated roles.
      */
-    private static String[] getAppAssociatedRolesOfUser(AuthenticatedUser authenticatedUser, String applicationId)
+    public static String[] getAppAssociatedRolesOfUser(AuthenticatedUser authenticatedUser, String applicationId)
             throws ApplicationRolesException {
 
         ApplicationRolesResolver appRolesResolver =
