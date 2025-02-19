@@ -12,6 +12,7 @@ import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.governance.IdentityMgtConstants;
 import org.wso2.carbon.identity.governance.exceptions.notiification.NotificationChannelManagerException;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannelManager;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannels;
@@ -76,16 +77,27 @@ public class CibaUserNotificationHandler {
                     .addParameter(CIBA_AUTH_CODE_KEY, cibaUserNotificationContext.getAuthCodeKey())
                     .addParameter(BINDING_MESSAGE, cibaUserNotificationContext.getBindingMessage())
                     .addParameter(LOGIN_HINT, user.toFullQualifiedUsername()).build().getAbsoluteInternalURL();
-            // Resolve the communication channel of the user.
-            String communicationChannel = notificationChannelManager
-                    .resolveCommunicationChannel(user.getUserName(), user.getTenantDomain(),
-                    user.getUserStoreDomain());
-            if (NotificationChannels.EMAIL_CHANNEL.getChannelType().equalsIgnoreCase(communicationChannel)) {
-                sendEmailNotification(cibaUserNotificationContext, userLoginRequestUrl);
-            } else if (NotificationChannels.SMS_CHANNEL.getChannelType().equalsIgnoreCase(communicationChannel)) {
-                sendSMSNotification(cibaUserNotificationContext, userLoginRequestUrl);
-            } else if (PUSH_NOTIFICATION_CHANNEL.equalsIgnoreCase(communicationChannel)) {
-                sendPushNotification(cibaUserNotificationContext, userLoginRequestUrl);
+            // Resolve the communication channel of the user. If the preferred channel is configured for push
+            // notification, we will send the notification with push notification. Otherwise, we will resolve the
+            // communication channel and send the notification. This need to be improved in the future when the push
+            // notification channel is registered in the notification channel manager.
+            if (!isUserConfiguredPreferredChannelAsPush(user)) {
+                String communicationChannel = notificationChannelManager
+                        .resolveCommunicationChannel(user.getUserName(), user.getTenantDomain(),
+                                user.getUserStoreDomain());
+                if (NotificationChannels.EMAIL_CHANNEL.getChannelType().equalsIgnoreCase(communicationChannel)) {
+                    sendEmailNotification(cibaUserNotificationContext, userLoginRequestUrl);
+                } else if (NotificationChannels.SMS_CHANNEL.getChannelType().equalsIgnoreCase(communicationChannel)) {
+                    sendSMSNotification(cibaUserNotificationContext, userLoginRequestUrl);
+                }
+            } else {
+                // Since push notification channel is not registered in the notification channel manager,
+                // we are sending the push notification if user has a registered device.
+                Device device = resolveDeviceOfAuthenticatedUser(cibaUserNotificationContext
+                        .getAuthenticatedUser());
+                if (device != null) {
+                    sendPushNotification(cibaUserNotificationContext, userLoginRequestUrl);
+                }
             }
         } catch (NotificationChannelManagerException e) {
             throw new CibaCoreException("Error in resolving the communication channel for the user", e);
@@ -190,9 +202,15 @@ public class CibaUserNotificationHandler {
         IdentityEventService eventService = CibaServiceComponentHolder.getIdentityEventService();
         Device device = resolveDeviceOfAuthenticatedUser(cibaUserNotificationContext
                 .getAuthenticatedUser());
+        if (device == null) {
+            throw new CibaCoreException("No registered device found for the user.");
+        }
+        AuthenticatedUser user = cibaUserNotificationContext.getAuthenticatedUser();
         properties.put(IdentityEventConstants.EventProperty.NOTIFICATION_CHANNEL, PUSH_NOTIFICATION_CHANNEL);
         properties.put(NOTIFICATION_SCENARIO, CIBA_NOTIFICATION_SCENARIO);
-
+        properties.put(IdentityEventConstants.EventProperty.USER_NAME, user.getUserName());
+        properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, user.getUserStoreDomain());
+        properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, user.getTenantDomain());
         properties.put(PUSH_ID, UUID.randomUUID().toString());
         properties.put(DEVICE_TOKEN, device.getDeviceToken());
         properties.put(NOTIFICATION_PROVIDER, device.getProvider());
@@ -208,6 +226,14 @@ public class CibaUserNotificationHandler {
         } catch (IdentityEventException e) {
             throw new CibaCoreException("Error in triggering the notification event", e);
         }
+    }
+
+    private boolean isUserConfiguredPreferredChannelAsPush(AuthenticatedUser user)
+            throws CibaCoreException {
+
+        String preferredChannel = getUserClaimValueFromUserStore(IdentityMgtConstants.Claim.PREFERED_CHANNEL_CLAIM,
+                user);
+        return PUSH_NOTIFICATION_CHANNEL.equalsIgnoreCase(preferredChannel);
     }
 
     private String resolveEmailOfAuthenticatedUser(AuthenticatedUser user)
