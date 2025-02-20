@@ -82,11 +82,10 @@ public class ApiAuthnHandler {
 
     public AuthzChallengeIncompleteResponse handleInitialAuthzChallengeResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
 
-        //TODO: Implement the logic to handle the response in specification's format.
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuth_session(authServiceResponse.getSessionDataKey());
         response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
-        response.setError_description("The presented authorization is insufficient.");
+        response.setError_description("The provided authorization is not sufficient; additional steps are required to complete the process.");
         NextStep nextStep = buildNextStep(authServiceResponse);
         response.setNextStep(nextStep);
 
@@ -97,7 +96,7 @@ public class ApiAuthnHandler {
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuth_session(authResponse.getFlowId());
         response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
-        response.setError_description("The presented authorization is insufficient.");
+        response.setError_description("The provided authorization is not sufficient; additional steps are required to complete the process.");
         response.setNextStep(authResponse.getNextStep());
 
         return response;

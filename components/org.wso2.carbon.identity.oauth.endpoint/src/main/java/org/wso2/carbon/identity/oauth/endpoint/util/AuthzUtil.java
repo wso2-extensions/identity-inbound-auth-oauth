@@ -4476,7 +4476,7 @@ public class AuthzUtil {
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
 
-                String jsonString = null;
+                String jsonString;
                 try {
                     jsonString = objectMapper.writeValueAsString(responseWrapper.getResponse());
                 } catch (JsonProcessingException e) {

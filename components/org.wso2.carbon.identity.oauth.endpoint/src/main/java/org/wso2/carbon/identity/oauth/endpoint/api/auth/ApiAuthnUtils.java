@@ -313,7 +313,7 @@ public class ApiAuthnUtils {
                 return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
             }
             if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
-                return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonString).build();
+                return Response.status(HttpServletResponse.SC_ACCEPTED).entity(jsonString).build();
             }
         }
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
