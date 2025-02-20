@@ -1116,7 +1116,7 @@ public final class OAuthUtil {
                             .getTokenManagementDAO().getAllTimeAuthorizedClientIds(authenticatedOrgUser));
                 }
 
-                Set<String> filteredClientIds = new HashSet<>();
+                Set<String> filteredClientIds = clientIds;
                 if (role != null && RoleConstants.ORGANIZATION.equals(role.getAudience())) {
                     filteredClientIds = filterClientIdsWithOrganizationAudience(new ArrayList<>(clientIds),
                             authenticatedUser.getTenantDomain());
