@@ -38,14 +38,19 @@ import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
+import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
+import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
@@ -64,8 +69,12 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -126,6 +135,8 @@ public class OAuthUtilTest {
     private AutoCloseable closeable;
     private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
     private MockedStatic<OAuth2Util> oAuth2Util;
+    private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+    private MockedStatic<AuthorizationGrantCache> authorizationGrantCache;
     private MockedStatic<OAuthTokenPersistenceFactory> oAuthTokenPersistenceFactory;
 
     @BeforeMethod
@@ -140,7 +151,9 @@ public class OAuthUtilTest {
         OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
         oAuth2Util = mockStatic(OAuth2Util.class);
+        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         oAuthTokenPersistenceFactory = mockStatic(OAuthTokenPersistenceFactory.class);
+        authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
     }
 
     @AfterMethod
@@ -148,7 +161,9 @@ public class OAuthUtilTest {
 
         organizationManagementUtil.close();
         oAuth2Util.close();
+        identityDatabaseUtil.close();
         oAuthTokenPersistenceFactory.close();
+        authorizationGrantCache.close();
         reset(organizationUserSharingService);
         reset(roleManagementService);
         reset(applicationManagementService);
@@ -474,6 +489,48 @@ public class OAuthUtilTest {
                 verify(mockUser, times(1)).getUserStoreDomain();
             }
         }
+    }
+
+    @Test
+    public void testRevokeAuthzCodes() throws Exception {
+
+        UserStoreManager userStoreManager = mock(UserStoreManager.class);
+
+        // Create a real instance of AuthorizationCodeDAO and spy on it
+        AuthorizationCodeDAO authorizationCodeDAO = Mockito.spy(new AuthorizationCodeDAOImpl());
+
+        when(userStoreManager.getTenantId()).thenReturn(-1234);
+        when(userStoreManager.getRealmConfiguration()).thenReturn(mock(RealmConfiguration.class));
+
+        OAuthTokenPersistenceFactory mockOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+        when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockOAuthTokenPersistenceFactory);
+        when(mockOAuthTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(authorizationCodeDAO);
+
+        List<AuthzCodeDO> authorizationCodes = new ArrayList<>();
+        AuthzCodeDO mockAuthzCodeDO = mock(AuthzCodeDO.class);
+        when(mockAuthzCodeDO.getConsumerKey()).thenReturn("consumer-key");
+        when(mockAuthzCodeDO.getAuthorizationCode()).thenReturn("auth-code");
+        when(mockAuthzCodeDO.getAuthzCodeId()).thenReturn("auth-code-id");
+
+        authorizationCodes.add(mockAuthzCodeDO);
+
+        // Mock the getAuthorizationCodesDataByUser method to return the list of authorization codes
+        Mockito.doReturn(authorizationCodes).when(authorizationCodeDAO)
+                .getAuthorizationCodesDataByUser(any(AuthenticatedUser.class));
+
+        when(OAuth2Util.buildCacheKeyStringForAuthzCode(anyString(), anyString())).thenReturn("testAuthzCode");
+
+        Connection connection = mock(Connection.class);
+        PreparedStatement preparedStatement = mock(PreparedStatement.class);
+        when(IdentityDatabaseUtil.getDBConnection()).thenReturn(connection);
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+
+        AuthorizationGrantCache mockAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
+        when(AuthorizationGrantCache.getInstance()).thenReturn(mockAuthorizationGrantCache);
+
+        boolean result = OAuthUtil.revokeAuthzCodes("testUser", userStoreManager);
+        // Verify the result
+        assertTrue(result, "Authorization code revocation failed.");
     }
 
     private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {

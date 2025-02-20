@@ -29,6 +29,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -121,25 +122,32 @@ public class OAuthClientAuthnServiceTest {
         return new Object[][]{
 
                 // Correct authorization header present with correct encoding for basic auth.
-                {headersWithClientIDandSecret, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID, false},
+                {headersWithClientIDandSecret, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID, false, true,
+                        null},
 
                 // Only client id is present with correct encoding for basic auth.
-                {headerWithClientId, new HashMap<String, List>(), false, true, "invalid_client", 0, null, false},
+                {headerWithClientId, new HashMap<String, List>(), false, true, "invalid_client", 0, null, false, true,
+                        "Client ID not found in the request."},
 
                 // Only client secret is present with correct encoding for basic auth.
-                {headersClientSecret, new HashMap<String, List>(), false, true, "invalid_client", 0, null, false},
+                {headersClientSecret, new HashMap<String, List>(), false, true, "invalid_client", 0, null, false, true,
+                        "Client ID not found in the request."},
 
                 // Multiple authenticators are engaged since multiple evaluation criteria are met.
                 {headersWithMultipleCreds, new HashMap<String, List>(), false, true, "invalid_request", 2, CLIENT_ID,
-                        false},
+                        false, true, "The client MUST NOT use more than one authentication method in each"},
 
                 // Multiple authentication criterias are satisfied. But sample authenticator is disabled.
                 {headersWithMultipleCreds, new HashMap<String, List>(), true, true, null, 1, CLIENT_ID,
-                        true},
+                        true, true, null},
 
                 // Basic authentication fails without exception from BasicClientAuthenticator.
                 {headersWithClientIDandSecret, new HashMap<String, List>(), false, false, "invalid_client", 1,
-                        CLIENT_ID, false},
+                        CLIENT_ID, false, true, "Client credentials are invalid."},
+
+                // Invalid Client ID and no valid client is present for that Client ID.
+                {headersWithClientIDandSecret, new HashMap<String, List>(), false, true, "invalid_client", 0, null,
+                        false, false, "Client credentials are invalid."},
 
         };
     }
@@ -147,7 +155,8 @@ public class OAuthClientAuthnServiceTest {
     @Test(dataProvider = "testAuthenticateClientData")
     public void testAuthenticateClient(Map<String, String> headers, Map<String, List> bodyParams, boolean
             isAuthenticated, boolean isBasicAuthenticated, String errorCode, int numberOfExecutedAuthenticators,
-                                       String clientId, boolean disableSampleAuthenticator) throws Exception {
+                                       String clientId, boolean disableSampleAuthenticator, boolean hasAuthAppDO,
+                                       String errorMsg) throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
             if (disableSampleAuthenticator) {
@@ -159,15 +168,21 @@ public class OAuthClientAuthnServiceTest {
             setHeaders(httpServletRequest, headers);
             oAuth2Util.when(() -> OAuth2Util.isFapiConformantApp(anyString())).thenReturn(false);
             ServiceProvider serviceProvider = new ServiceProvider();
-            OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuth2Util.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(serviceProvider);
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
-                    .thenReturn(oAuthAppDO);
+            if (hasAuthAppDO) {
+                OAuthAppDO oAuthAppDO = new OAuthAppDO();
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenReturn(oAuthAppDO);
+            } else {
+                oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
+                        .thenThrow(new InvalidOAuthClientException("application.not.found"));
+            }
             PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
             OAuthClientAuthnContext oAuthClientAuthnContext = oAuthClientAuthnService.authenticateClient
                     (httpServletRequest, bodyParams);
             assertEquals(oAuthClientAuthnContext.isAuthenticated(), isAuthenticated);
             assertEquals(oAuthClientAuthnContext.getErrorCode(), errorCode);
+            assertEquals(oAuthClientAuthnContext.getErrorMessage(), errorMsg);
             assertEquals(oAuthClientAuthnContext.getExecutedAuthenticators().size(), numberOfExecutedAuthenticators);
             assertEquals(oAuthClientAuthnContext.getClientId(), clientId);
         }

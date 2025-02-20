@@ -35,6 +35,9 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 import java.net.MalformedURLException;
+import java.security.PublicKey;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,6 +46,7 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
@@ -53,6 +57,9 @@ import static org.testng.Assert.assertTrue;
 public class JWKSBasedJWTValidatorTest {
 
     private JWKSBasedJWTValidator validator;
+    private X509Certificate mockCertificate;
+    private PublicKey mockNonRSAPublicKey;
+    private RSAPublicKey mockRSAPublicKey;
 
     private String jwtString =
             "eyJ4NXQiOiJObUptT0dVeE16WmxZak0yWkRSaE5UWmxZVEExWXpkaFpUUmlPV0UwTldJMk0ySm1PVGMxWkEiLCJhbGciOiJSUzI1NiJ9" +
@@ -74,6 +81,10 @@ public class JWKSBasedJWTValidatorTest {
     public void setUp() {
 
         initMocks(this);
+
+        mockCertificate = mock(X509Certificate.class);
+        mockNonRSAPublicKey = mock(PublicKey.class);
+        mockRSAPublicKey = mock(RSAPublicKey.class);
     }
 
     @Test(dataProvider = "validateDataForException")

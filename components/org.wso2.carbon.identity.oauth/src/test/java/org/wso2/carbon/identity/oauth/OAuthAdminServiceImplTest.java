@@ -105,6 +105,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 import static org.testng.Assert.assertThrows;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
@@ -234,6 +235,7 @@ public class OAuthAdminServiceImplTest {
             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
             oAuthAppDO.setApplicationName("testapp1");
             oAuthAppDO.setUser(authenticatedUser);
+            oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
             authenticatedUser.setUserName(userName);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
@@ -289,6 +291,7 @@ public class OAuthAdminServiceImplTest {
             oAuthConsumerAppDTO.setOauthConsumerSecret(consumerSecret);
             oAuthConsumerAppDTO.setOAuthVersion(oauthVersion);
             oAuthConsumerAppDTO.setRenewRefreshTokenEnabled("true");
+            oAuthConsumerAppDTO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
 
             try (MockedConstruction<OAuthAppDAO> mockedConstruction = Mockito.mockConstruction(OAuthAppDAO.class,
                     (mock, context) -> {
@@ -722,6 +725,7 @@ public class OAuthAdminServiceImplTest {
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setOauthConsumerKey(CONSUMER_KEY);
             oAuthAppDO.setOauthConsumerSecret(UPDATED_CONSUMER_SECRET);
+            oAuthAppDO.setBackChannelLogoutUrl(DEFAULT_BACKCHANNEL_LOGOUT_URL);
 
             AuthenticatedUser authenticatedUser = new AuthenticatedUser();
             authenticatedUser.setUserName("test_user");

@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -1514,10 +1515,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeBatch();
                 IdentityDatabaseUtil.commitTransaction(connection);
-                // To revoke request objects which have persisted against the access token.
-                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
                 if (isTokenCleanupFeatureEnabled) {
+                    if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                        /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                        Hence, invoke the event listener to revoke the request objects.*/
+                        revokeRequestObjectEntries(Arrays.asList(tokens));
+                    }
                     oldTokenCleanupObject.cleanupTokensInBatch(oldTokens, connection);
                 }
             } catch (SQLException e) {
@@ -1543,10 +1546,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeUpdate();
 
-                // To revoke request objects which have persisted against the access token.
-                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
+
                 if (isTokenCleanupFeatureEnabled) {
+                    if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                        /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                        Hence, invoke the event listener to revoke the request objects.*/
+                        revokeRequestObjectEntries(Arrays.asList(tokens));
+                    }
                     oldTokenCleanupObject.cleanupTokenByTokenValue(
                             getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]), connection);
                 }
@@ -1614,13 +1620,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 accessTokenId.add(getTokenIdByAccessToken(token));
             }
-            // To revoke request objects which have persisted against the access token.
-            if (accessTokenId.size() > 0) {
-                OAuth2TokenUtil.postUpdateAccessTokens(accessTokenId, OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
-            }
 
             if (isTokenCleanupFeatureEnabled) {
+                if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                    Hence, invoke the event listener to revoke the request objects.*/
+                    revokeRequestObjectEntries(accessTokenId);
+                }
                 for (String token : tokens) {
                     oldTokenCleanupObject.cleanupTokenByTokenValue(
                             getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token), connection);
@@ -3326,5 +3332,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             throw new IdentityOAuth2Exception("Error occurred while resolving root tenant domain by organization ID: " +
                     organizationId, e);
         }
+    }
+
+    /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+       Hence, invoke the event listener to revoke the request objects.*/
+    private void revokeRequestObjectEntries(List<String> tokens) throws IdentityOAuth2Exception {
+
+        if (CollectionUtils.isEmpty(tokens)) {
+            return;
+        }
+        OAuth2TokenUtil.postUpdateAccessTokens(tokens, OAuthConstants.TokenStates.
+                TOKEN_STATE_REVOKED);
     }
 }

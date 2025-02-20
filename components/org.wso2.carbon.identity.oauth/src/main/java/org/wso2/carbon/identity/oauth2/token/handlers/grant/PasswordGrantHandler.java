@@ -452,13 +452,14 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
             }
+            String errorCode = null;
             String message = e.getMessage();
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore, checking for possible client exception.
             Throwable rootCause = ExceptionUtils.getRootCause(e);
             if (rootCause instanceof UserStoreClientException) {
                 message = rootCause.getMessage();
-                String errorCode = ((UserStoreClientException) rootCause).getErrorCode();
+                errorCode = ((UserStoreClientException) rootCause).getErrorCode();
                 if (StringUtils.isNotBlank(errorCode)) {
                     message = errorCode + " " + message;
                 }
@@ -467,7 +468,8 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 IdentityException identityException = (IdentityException) (e.getCause());
                 // Set error code to message if available.
                 if (StringUtils.isNotBlank(identityException.getErrorCode())) {
-                    message = identityException.getErrorCode() + " " + e.getMessage();
+                    errorCode = identityException.getErrorCode();
+                    message = errorCode + " " + identityException.getMessage();
                 }
             }
             message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
