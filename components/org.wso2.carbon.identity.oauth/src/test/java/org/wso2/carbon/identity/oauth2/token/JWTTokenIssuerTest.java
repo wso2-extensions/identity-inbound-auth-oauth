@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -42,7 +42,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -61,6 +63,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaim
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -98,6 +101,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 
+@WithCarbonHome
 @WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_consumer_app.sql",
         "dbScripts/insert_local_idp.sql"})
 public class JWTTokenIssuerTest {
@@ -147,6 +151,10 @@ public class JWTTokenIssuerTest {
     @BeforeMethod
     public void setUp() throws Exception {
         initMocks(this);
+        System.setProperty(
+                CarbonBaseConstants.CARBON_HOME,
+                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
+        );
         oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
                 .thenReturn(this.mockOAuthServerConfiguration);
@@ -176,7 +184,11 @@ public class JWTTokenIssuerTest {
     public void testBuildJWTTokenFromTokenMsgContext(String requestScopes[],
                                                      List<String> expectedJWTAudiences) throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("DUMMY_TENANT.COM");
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
             OAuth2AccessTokenReqDTO accessTokenReqDTO = new OAuth2AccessTokenReqDTO();
             accessTokenReqDTO.setGrantType(USER_ACCESS_TOKEN_GRANT_TYPE);
             accessTokenReqDTO.setClientId(DUMMY_CLIENT_ID);
@@ -231,7 +243,11 @@ public class JWTTokenIssuerTest {
     public void testBuildJWTTokenFromAuthzMsgContext(String requestScopes[],
                                                      List<String> expectedJWTAudiences) throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("DUMMY_TENANT.COM");
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+        MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
             OAuth2AuthorizeReqDTO authorizeReqDTO = new OAuth2AuthorizeReqDTO();
             OAuthAuthzReqMessageContext authzReqMessageContext = new OAuthAuthzReqMessageContext(authorizeReqDTO);
             authzReqMessageContext.setApprovedScope(requestScopes);
@@ -284,13 +300,15 @@ public class JWTTokenIssuerTest {
     @Test(expectedExceptions = IdentityOAuth2Exception.class)
     public void testCreateJWTClaimSetForInvalidClient() throws Exception {
 
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class)) {
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(null))
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                     .thenThrow(new InvalidOAuthClientException("INVALID_CLIENT"));
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
             when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_HMAC);
             JWTTokenIssuer jwtTokenIssuer = new JWTTokenIssuer();
-            jwtTokenIssuer.createJWTClaimSet(null, null, null);
+            jwtTokenIssuer.createJWTClaimSet(null, null, DUMMY_CLIENT_ID);
         }
     }
 
@@ -370,15 +388,19 @@ public class JWTTokenIssuerTest {
                                       String sub,
                                       long expectedExpiry, boolean ppidEnabled) throws Exception {
 
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(-1234);
             OAuthAppDO appDO = spy(new OAuthAppDO());
             appDO.setSubjectType("pairwise");
             appDO.setSectorIdentifierURI(DUMMY_SECTOR_IDENTIFIER);
             appDO.setOauthConsumerKey(DUMMY_CLIENT_ID);
             mockGrantHandlers();
             mockCustomClaimsCallbackHandler();
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::getIDTokenIssuer).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer(anyString(), anyBoolean())).thenReturn(ID_TOKEN_ISSUER);
             oAuth2Util.when(() -> OAuth2Util.getOIDCAudience(anyString(), any())).thenReturn(Collections.singletonList
@@ -460,6 +482,8 @@ public class JWTTokenIssuerTest {
                                    String sub,
                                    long expectedExpiry, boolean ppidEnabled) throws Exception {
 
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
@@ -470,7 +494,7 @@ public class JWTTokenIssuerTest {
             mockCustomClaimsCallbackHandler();
             identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME))
                     .thenReturn(DUMMY_MTLS_TOKEN_ENDPOINT);
-            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+            oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
             oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
 
             System.setProperty(CarbonBaseConstants.CARBON_HOME,
@@ -780,7 +804,7 @@ public class JWTTokenIssuerTest {
         OAuthAppDO appDO = spy(new OAuthAppDO());
         mockGrantHandlers();
         mockCustomClaimsCallbackHandler();
-        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(appDO);
+        oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(appDO);
         oAuth2Util.when(() -> OAuth2Util.getTenantDomain(anyInt())).thenReturn("super.wso2");
         oAuth2Util.when(OAuth2Util::isTokenPersistenceEnabled).thenReturn(true);
     }
@@ -822,6 +846,8 @@ public class JWTTokenIssuerTest {
     @Test
     public void testIssueSubjectToken() throws Exception {
 
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(
+                MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
         when(mockOAuthServerConfiguration.getSignatureAlgorithm()).thenReturn(SHA256_WITH_RSA);
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {

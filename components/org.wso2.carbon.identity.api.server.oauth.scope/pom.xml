@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~  Copyright (c) 2021, WSO2 LLC. (http://www.wso2.com).
+  ~  Copyright (c) 2021-2025, WSO2 LLC. (http://www.wso2.com).
   ~
   ~  WSO2 LLC. licenses this file to you under the Apache License,
   ~  Version 2.0 (the "License"); you may not use this file except
@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
-        <version>7.0.190</version>
+        <version>7.0.239</version>
         <relativePath>../..</relativePath>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.api.server.oauth.scope</artifactId>
-    <version>7.0.190</version>
+    <version>7.0.239</version>
 
     <name>WSO2 Carbon - Identity OAuth 2.0 Scope Rest APIs</name>
     <description>Rest APIs for OAuth 2.0 Scope Handling</description>
@@ -80,25 +80,6 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
-            <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-annotations</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>

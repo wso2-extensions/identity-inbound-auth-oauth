@@ -117,6 +117,8 @@ public final class OAuthConstants {
 
     public static final String READ_AMR_VALUE_FROM_IDP = "OAuth.ReplaceDefaultAMRValuesWithIDPSentValues";
 
+    public static final String OAUTH_APP = "OAuthAppDO";
+
     public static final String CNF = "cnf";
     public static final String MTLS_AUTH_HEADER = "MutualTLS.ClientCertificateHeader";
     public static final String BEGIN_CERT = "-----BEGIN CERTIFICATE-----";
@@ -530,6 +532,8 @@ public final class OAuthConstants {
             public static final String CLIENT_IDS_NOT_MATCH = "par.client.id.not.match";
             public static final String REQUEST_URI_EXPIRED = "par.request.uri.expired";
             public static final String INVALID_RESPONSE_TYPE_FOR_QUERY_JWT = "invalid.response.type.for.query.jwt";
+            public static final String INVALID_RESPONSE_TYPE_FOR_HYBRID_FLOW =
+                    "invalid.response.type.for.hybrid.flow";
 
             private AuthorizationResponsei18nKey() {
 
@@ -579,6 +583,7 @@ public final class OAuthConstants {
         public static final String EMAIL_VERIFIED = "email_verified";
         public static final String ADDRESS = "address";
         public static final String ROLES = "roles";
+        public static final String APP_ROLES = "application_roles";
         public static final String CUSTOM = "custom";
         public static final String AZP = "azp";
         public static final String AUTH_TIME = "auth_time";
@@ -764,6 +769,9 @@ public final class OAuthConstants {
             public static final String VALIDATE_EXISTING_CONSENT = "validate-existing-consent";
             public static final String GENERATE_INTROSPECTION_RESPONSE = "generate-introspect-response";
             public static final String RECEIVE_REVOKE_REQUEST = "receive-revoke-request";
+            public static final String VALIDATE_AUTHORIZATION_DETAILS = "validate-authorization-details";
+            public static final String VALIDATE_AUTHORIZATION_DETAILS_BEFORE_CONSENT
+                    = "validate-authorization-details-before-consent";
         }
 
         /**
@@ -784,6 +792,7 @@ public final class OAuthConstants {
             public static final String PROMPT = "prompt";
             public static final String APP_STATE = "app state";
             public static final String IMPERSONATOR = "impersonator";
+            public static final String REQUESTED_AUTHORIZATION_DETAILS = "requested authorization details";
         }
 
         /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -232,6 +232,9 @@ public class OAuthServerConfiguration {
     private String defaultIdTokenEncryptionMethod = "A128GCM";
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
+    private boolean userInfoMultiValueSupportEnabled = true;
+    private boolean userInfoRemoveInternalPrefixFromRoles = false;
+
     private String authContextTTL = "15L";
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
@@ -325,6 +328,8 @@ public class OAuthServerConfiguration {
     private boolean enableIntrospectionDataProviders = false;
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
+    // Property to define the default requested scopes.
+    private List<String> defaultRequestedScopes = new ArrayList<>();
 
     // Property to define the filtered claims.
     private List<String> filteredIntrospectionClaims = new ArrayList<>();
@@ -342,6 +347,9 @@ public class OAuthServerConfiguration {
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
+    private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
+            "code id_token", "code id_token token");
+    private List<String> configuredHybridResponseTypes = new ArrayList<>();
 
     private final List<String> restrictedQueryParameters = new ArrayList<>();
 
@@ -529,6 +537,9 @@ public class OAuthServerConfiguration {
         // Read config for allowed scopes.
         parseAllowedScopesConfiguration(oauthElem);
 
+        // Read config for default requested scopes.
+        parseDefaultRequestedScopesConfiguration(oauthElem);
+
         // Read config for filtered claims for introspection response.
         parseFilteredClaimsForIntrospectionConfiguration(oauthElem);
 
@@ -598,6 +609,25 @@ public class OAuthServerConfiguration {
             while (scopeIterator.hasNext()) {
                 OMElement scopeElement = (OMElement) scopeIterator.next();
                 allowedScopes.add(scopeElement.getText());
+            }
+        }
+    }
+
+    /**
+     * Parse default requested scopes configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseDefaultRequestedScopesConfiguration(OMElement oauthConfigElem) {
+
+        OMElement defaultRequestedScopesElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.DEFAULT_REQUESTED_SCOPES_ELEMENT));
+        if (defaultRequestedScopesElem != null) {
+            Iterator scopeIterator = defaultRequestedScopesElem.getChildrenWithName(getQNameWithIdentityNS(
+                    ConfigElements.SCOPES_ELEMENT));
+            while (scopeIterator.hasNext()) {
+                OMElement scopeElement = (OMElement) scopeIterator.next();
+                defaultRequestedScopes.add(scopeElement.getText());
             }
         }
     }
@@ -716,6 +746,16 @@ public class OAuthServerConfiguration {
     public List<String> getFilteredIntrospectionClaims() {
 
         return filteredIntrospectionClaims;
+    }
+
+    /**
+     * Get the list of default requested scopes.
+     *
+     * @return String returns a list of default requested scope string.
+     */
+    public List<String> getDefaultRequestedScopes() {
+
+        return defaultRequestedScopes;
     }
 
     public String getOAuth1RequestTokenUrl() {
@@ -970,6 +1010,11 @@ public class OAuthServerConfiguration {
     public boolean useRetainOldAccessTokens() {
 
         return Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens);
+    }
+
+    public List<String> getConfiguredHybridResponseTypes() {
+
+        return configuredHybridResponseTypes;
     }
 
     public boolean isTokenCleanupEnabled() {
@@ -1562,6 +1607,26 @@ public class OAuthServerConfiguration {
 
     public String getUserInfoJWTSignatureAlgorithm() {
         return userInfoJWTSignatureAlgorithm;
+    }
+
+    /**
+     * Returns whether multi value support is enabled for userinfo response.
+     *
+     * @return True if multi value support is enabled for userinfo response.
+     */
+    public boolean getUserInfoMultiValueSupportEnabled() {
+
+        return userInfoMultiValueSupportEnabled;
+    }
+
+    /**
+     * Returns whether Internal prefix should be removed from the roles claim of the userinfo response.
+     *
+     * @return True if Internal prefix value should be removed from the role claim of userinfo response.
+     */
+    public boolean isUserInfoResponseRemoveInternalPrefixFromRoles() {
+
+        return userInfoRemoveInternalPrefixFromRoles;
     }
 
     public String getConsumerDialectURI() {
@@ -2955,6 +3020,11 @@ public class OAuthServerConfiguration {
                 }
                 if (responseTypeName != null && !"".equals(responseTypeName) &&
                         responseTypeHandlerImplClass != null && !"".equals(responseTypeHandlerImplClass)) {
+
+                    // check for the configured hybrid response type
+                    if (HYBRID_RESPONSE_TYPES.contains(responseTypeName)) {
+                        configuredHybridResponseTypes.add(responseTypeName);
+                    }
                     supportedResponseTypeClassNames.put(responseTypeName, responseTypeHandlerImplClass);
                     OMElement responseTypeValidatorClassNameElement = supportedResponseTypeElement
                             .getFirstChildWithName(
@@ -3486,6 +3556,20 @@ public class OAuthServerConfiguration {
                                 getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM))
                                 .getText().trim();
             }
+            OMElement userInfoMultiValueSupportEnabledElem = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED));
+            if (userInfoMultiValueSupportEnabledElem != null) {
+                userInfoMultiValueSupportEnabled = Boolean.parseBoolean(
+                        userInfoMultiValueSupportEnabledElem.getText().trim());
+            }
+
+            OMElement userInfoResponseRemoveInternalPrefixFromRoles = openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES));
+            if (userInfoResponseRemoveInternalPrefixFromRoles != null) {
+                userInfoRemoveInternalPrefixFromRoles =
+                        Boolean.parseBoolean(userInfoResponseRemoveInternalPrefixFromRoles.getText().trim());
+            }
+
             if (openIDConnectConfigElem.getFirstChildWithName(
                     getQNameWithIdentityNS(ConfigElements.OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY)) != null) {
                 isJWTSignedWithSPKey = Boolean.parseBoolean(openIDConnectConfigElem.getFirstChildWithName(
@@ -4113,6 +4197,10 @@ public class OAuthServerConfiguration {
         public static final String OPENID_CONNECT_USERINFO_ENDPOINT_RESPONSE_BUILDER =
                 "UserInfoEndpointResponseBuilder";
         public static final String OPENID_CONNECT_USERINFO_JWT_SIGNATURE_ALGORITHM = "UserInfoJWTSignatureAlgorithm";
+        public static final String OPENID_CONNECT_USERINFO_MULTI_VALUE_SUPPORT_ENABLED =
+                "UserInfoMultiValueSupportEnabled";
+        public static final String OPENID_CONNECT_USERINFO_REMOVE_INTERNAL_PREFIX_FROM_ROLES =
+                "UserInfoRemoveInternalPrefixFromRoles";
         public static final String OPENID_CONNECT_SIGN_JWT_WITH_SP_KEY = "SignJWTWithSPKey";
         public static final String OPENID_CONNECT_IDTOKEN_CUSTOM_CLAIM_CALLBACK_HANDLER =
                 "IDTokenCustomClaimsCallBackHandler";
@@ -4282,6 +4370,8 @@ public class OAuthServerConfiguration {
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
         // Allowed Scopes Config.
         private static final String ALLOWED_SCOPES_ELEMENT = "AllowedScopes";
+        // Allowed Default Requested Scopes Config.
+        private static final String DEFAULT_REQUESTED_SCOPES_ELEMENT = "DefaultRequestedScopes";
         private static final String SCOPES_ELEMENT = "Scope";
         // Filtered Claims For Introspection Response Config.
         private static final String FILTERED_CLAIMS = "FilteredClaims";

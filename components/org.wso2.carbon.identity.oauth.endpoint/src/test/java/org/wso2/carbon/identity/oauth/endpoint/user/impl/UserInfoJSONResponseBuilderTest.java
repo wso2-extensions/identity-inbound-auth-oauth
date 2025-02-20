@@ -23,7 +23,9 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.testng.MockitoTestNGListener;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -34,6 +36,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
@@ -49,6 +52,7 @@ import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -70,6 +74,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_ROLE_PREFIX;
 
 /**
  * This class contains tests for UserInfoJSONResponseBuilder.
@@ -78,6 +83,7 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME
 public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
 
     private UserInfoJSONResponseBuilder userInfoJSONResponseBuilder;
+    MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
 
     Connection con = null;
 
@@ -93,6 +99,20 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
         TestUtils.initiateH2Base();
         con = TestUtils.getConnection();
     }
+
+    @BeforeMethod
+    public void setUpMethod() {
+
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        oAuthServerConfiguration.close();
+    }
+
 
     private void setUpRequestObjectService() throws RequestObjectException {
 
@@ -129,46 +149,51 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                                       String[] requestedScopes,
                                       Map<String, Object> expectedClaims) throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
-            try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
-                         mockStatic(JDBCPersistenceManager.class);
-                 MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                         mockStatic(AuthorizationGrantCache.class);
-                 MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
-                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
-                         mockStatic(UserInfoEndpointConfig.class);) {
-                setUpRequestObjectService();
-                prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache,
-                        authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util, identityTenantUtil,
-                        userInfoEndpointConfig);
-                mockDataSource(jdbcPersistenceManager);
-                mockObjectsRelatedToTokenValidation(oAuth2Util);
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            setUpRequestObjectService();
+            prepareForResponseClaimTest(inputClaims, oidcScopeMap, getClaimsFromCache,
+                    authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util, identityTenantUtil,
+                    userInfoEndpointConfig);
+            mockDataSource(jdbcPersistenceManager);
+            mockObjectsRelatedToTokenValidation(oAuth2Util);
 
-                frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
-                        .thenReturn(AUTHORIZED_USER_ID);
+            frameworkUtils.when(() -> FrameworkUtils.resolveUserIdFromUsername(anyInt(), anyString(), anyString()))
+                    .thenReturn(AUTHORIZED_USER_ID);
 
-                AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-                authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
-                authenticatedUser.setTenantDomain(TENANT_DOT_COM);
-                authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
-                authenticatedUser.setUserId(AUTHORIZED_USER_ID);
-                authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
-                mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserName(AUTHORIZED_USER_NAME);
+            authenticatedUser.setTenantDomain(TENANT_DOT_COM);
+            authenticatedUser.setUserStoreDomain(JDBC_DOMAIN);
+            authenticatedUser.setUserId(AUTHORIZED_USER_ID);
+            authenticatedUser.setAuthenticatedSubjectIdentifier(AUTHORIZED_USER_ID);
+            mockAccessTokenDOInOAuth2Util(authenticatedUser, oAuth2Util);
 
+                if (Arrays.asList(requestedScopes).contains(OAuthConstants.OIDCClaims.ROLES)) {
+                    when(mockOAuthServerConfiguration.isUserInfoResponseRemoveInternalPrefixFromRoles())
+                            .thenReturn(true);
+                }
                 String responseString =
                         userInfoJSONResponseBuilder.getResponseString(
                                 getTokenResponseDTO(AUTHORIZED_USER_FULL_QUALIFIED, requestedScopes));
 
-                Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
-                assertNotNull(claimsInResponse);
-                assertFalse(claimsInResponse.isEmpty());
-                assertNotNull(claimsInResponse.get(sub));
+            Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
+            assertNotNull(claimsInResponse);
+            assertFalse(claimsInResponse.isEmpty());
+            assertNotNull(claimsInResponse.get(sub));
+
+                if (claimsInResponse.containsKey(OAuth2Util.OIDC_ROLE_CLAIM_URI)) {
+                    Object[] rolesArray = (Object[]) claimsInResponse.get(OAuth2Util.OIDC_ROLE_CLAIM_URI);
+                    assertFalse(rolesArray[0].toString().startsWith(INTERNAL_ROLE_PREFIX));
+                }
 
                 for (Map.Entry<String, Object> expectClaimEntry : expectedClaims.entrySet()) {
                     assertTrue(claimsInResponse.containsKey(expectClaimEntry.getKey()));
@@ -176,18 +201,15 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                     assertEquals(expectClaimEntry.getValue(), claimsInResponse.get(expectClaimEntry.getKey()));
                 }
 
-            } finally {
-                PrivilegedCarbonContext.endTenantFlow();
-            }
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
     @Test
     public void testEssentialClaims() throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);
-             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+        try (MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
                      mockStatic(AuthorizationGrantCache.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
              MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);) {
@@ -260,76 +282,59 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
     @Test
     public void testUpdateAtClaim() throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
-
-            try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
-                         mockStatic(JDBCPersistenceManager.class);
-                 MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                         mockStatic(AuthorizationGrantCache.class);
-                 MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
-                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
-                         mockStatic(UserInfoEndpointConfig.class);) {
-                String updateAtValue = "1509556412";
-                testLongClaimInUserInfoResponse(UPDATED_AT, updateAtValue, jdbcPersistenceManager, frameworkUtils,
-                        authorizationGrantCache, claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
-            }
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            String updateAtValue = "1509556412";
+            testLongClaimInUserInfoResponse(UPDATED_AT, updateAtValue, jdbcPersistenceManager, frameworkUtils,
+                    authorizationGrantCache, claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
         }
     }
 
     @Test
     public void testEmailVerified() throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
-
-            try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
-                         mockStatic(JDBCPersistenceManager.class);
-                 MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                         mockStatic(AuthorizationGrantCache.class);
-                 MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
-                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
-                         mockStatic(UserInfoEndpointConfig.class);) {
-                String emailVerifiedClaimValue = "true";
-                testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue, jdbcPersistenceManager,
-                        frameworkUtils, authorizationGrantCache, claimUtil, oAuth2Util, identityTenantUtil,
-                        userInfoEndpointConfig);
-            }
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            String emailVerifiedClaimValue = "true";
+            testBooleanClaimInUserInfoResponse(EMAIL_VERIFIED, emailVerifiedClaimValue, jdbcPersistenceManager,
+                    frameworkUtils, authorizationGrantCache, claimUtil, oAuth2Util, identityTenantUtil,
+                    userInfoEndpointConfig);
         }
     }
 
     @Test
     public void testPhoneNumberVerified() throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
-            try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
-                         mockStatic(JDBCPersistenceManager.class);
-                 MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                         mockStatic(AuthorizationGrantCache.class);
-                 MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
-                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
-                         mockStatic(UserInfoEndpointConfig.class);) {
-                String phoneNumberVerifiedClaimValue = "true";
-                testBooleanClaimInUserInfoResponse(PHONE_NUMBER_VERIFIED, phoneNumberVerifiedClaimValue,
-                        jdbcPersistenceManager, frameworkUtils, authorizationGrantCache,
-                        claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
-            }
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            String phoneNumberVerifiedClaimValue = "true";
+            testBooleanClaimInUserInfoResponse(PHONE_NUMBER_VERIFIED, phoneNumberVerifiedClaimValue,
+                    jdbcPersistenceManager, frameworkUtils, authorizationGrantCache,
+                    claimUtil, oAuth2Util, identityTenantUtil, userInfoEndpointConfig);
         }
     }
 
@@ -418,41 +423,36 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                                  boolean appendUserStoreDomain, boolean isPairwiseSubject,
                                  String expectedSubjectValue, String expectedPPID) throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
-            try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
-                         mockStatic(JDBCPersistenceManager.class);
-                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                         mockStatic(AuthorizationGrantCache.class);
-                 MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
-                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
-                         mockStatic(UserInfoEndpointConfig.class);) {
-                setUpRequestObjectService();
-                AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
-                prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain,
-                        isPairwiseSubject, authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util,
-                        identityTenantUtil, userInfoEndpointConfig);
-                updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
-                when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
-                        .thenReturn(inputClaims);
-                Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
-                mockDataSource(jdbcPersistenceManager);
-                mockObjectsRelatedToTokenValidation(oAuth2Util);
-                String responseString =
-                        userInfoJSONResponseBuilder
-                                .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            setUpRequestObjectService();
+            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authzUser, inputClaims, appendTenantDomain, appendUserStoreDomain,
+                    isPairwiseSubject, authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util,
+                    identityTenantUtil, userInfoEndpointConfig);
+            updateAuthenticatedSubjectIdentifier(authzUser, appendTenantDomain, appendUserStoreDomain, inputClaims);
+            when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+            Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            mockDataSource(jdbcPersistenceManager);
+            mockObjectsRelatedToTokenValidation(oAuth2Util);
+            String responseString =
+                    userInfoJSONResponseBuilder
+                            .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
 
-                Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
-                assertSubjectClaimPresent(claimsInResponse);
-                assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
-            } finally {
-                PrivilegedCarbonContext.endTenantFlow();
-            }
+            Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
+            assertSubjectClaimPresent(claimsInResponse);
+            assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 
@@ -464,45 +464,39 @@ public class UserInfoJSONResponseBuilderTest extends UserInfoResponseBaseTest {
                                                               String expectedSubjectValue, String expectedPPID)
             throws Exception {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration =
-                     mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
+        try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
+                     mockStatic(JDBCPersistenceManager.class);
+             MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
+                     mockStatic(AuthorizationGrantCache.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
+             MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
+                     mockStatic(UserInfoEndpointConfig.class);) {
+            setUpRequestObjectService();
+            AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
+            prepareForSubjectClaimTest(authzUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain,
+                    isPairwiseSubject, authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util,
+                    identityTenantUtil, userInfoEndpointConfig);
+            authzUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
+                    applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
+                            IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
 
-            try (MockedStatic<JDBCPersistenceManager> jdbcPersistenceManager =
-                         mockStatic(JDBCPersistenceManager.class);
-                 MockedStatic<AuthorizationGrantCache> authorizationGrantCache =
-                         mockStatic(AuthorizationGrantCache.class);
-                 MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-                 MockedStatic<ClaimUtil> claimUtil = mockStatic(ClaimUtil.class);
-                 MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class, Mockito.CALLS_REAL_METHODS);
-                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-                 MockedStatic<UserInfoEndpointConfig> userInfoEndpointConfig =
-                         mockStatic(UserInfoEndpointConfig.class);) {
-                setUpRequestObjectService();
-                AuthenticatedUser authzUser = (AuthenticatedUser) authorizedUser;
-                prepareForSubjectClaimTest(authzUser, inputClaims, !appendTenantDomain, !appendUserStoreDomain,
-                        isPairwiseSubject, authorizationGrantCache, frameworkUtils, claimUtil, oAuth2Util,
-                        identityTenantUtil, userInfoEndpointConfig);
-                authzUser.setAuthenticatedSubjectIdentifier(expectedSubjectValue,
-                        applicationManagementService.getServiceProviderByClientId(CLIENT_ID,
-                                IdentityApplicationConstants.OAuth2.NAME, SUPER_TENANT_DOMAIN_NAME));
+            when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
+                    .thenReturn(inputClaims);
+            Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
+            mockDataSource(jdbcPersistenceManager);
+            mockObjectsRelatedToTokenValidation(oAuth2Util);
+            String responseString =
+                    userInfoJSONResponseBuilder
+                            .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
 
-                when(userInfoJSONResponseBuilder.retrieveUserClaims(any(OAuth2TokenValidationResponseDTO.class)))
-                        .thenReturn(inputClaims);
-                Mockito.when(IdentityTenantUtil.getTenantId(isNull())).thenReturn(-1234);
-                mockDataSource(jdbcPersistenceManager);
-                mockObjectsRelatedToTokenValidation(oAuth2Util);
-                String responseString =
-                        userInfoJSONResponseBuilder
-                                .getResponseString(getTokenResponseDTO((authzUser).toFullQualifiedUsername()));
-
-                Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
-                assertSubjectClaimPresent(claimsInResponse);
-                assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
-            } finally {
-                PrivilegedCarbonContext.endTenantFlow();
-            }
+            Map<String, Object> claimsInResponse = JSONUtils.parseJSON(responseString);
+            assertSubjectClaimPresent(claimsInResponse);
+            assertEquals(claimsInResponse.get(sub), isPairwiseSubject ? expectedPPID : expectedSubjectValue);
+        } finally {
+            PrivilegedCarbonContext.endTenantFlow();
         }
     }
 }

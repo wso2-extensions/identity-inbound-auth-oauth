@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2019-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -27,6 +27,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
@@ -47,13 +48,17 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
 
 /**
@@ -507,6 +512,18 @@ public class TokenValidationHandler {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
                 accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                         .getVerifiedAccessToken(validationRequest.getAccessToken().getIdentifier(), false);
+                /*
+                 Check if the OAuth application is a fragment application. If that is not a fragment application,
+                 then getting the tenant domain from the token.
+                */
+                String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                if (OrganizationManagementUtil.isOrganization(appTenantDomain)) {
+                    ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
+                            accessTokenDO.getConsumerKey(), appTenantDomain).getSpProperties();
+                    if (!isFragmentApp(serviceProviderProperties)) {
+                        tenantDomain = appTenantDomain;
+                    }
+                }
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
@@ -536,6 +553,9 @@ public class TokenValidationHandler {
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 return buildIntrospectionErrorResponse(e.getMessage());
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while checking whether the application tenant is an " +
+                        "organization.", e);
             }
 
             if (hasAccessTokenExpired(accessTokenDO)) {
@@ -682,6 +702,17 @@ public class TokenValidationHandler {
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
+    }
+
+    private boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
+
+        if (serviceProviderProperties == null) {
+            return false;
+        }
+
+        return Arrays.stream(serviceProviderProperties).
+                anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                        Boolean.parseBoolean(property.getValue()));
     }
 
     private String getAuthzUser(AccessTokenDO accessTokenDO) throws IdentityOAuth2Exception {

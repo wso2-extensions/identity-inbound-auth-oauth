@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2;
 
 public class TestConstants {
+
     public static final String CARBON_TENANT_DOMAIN = "carbon.super";
     public static final String LOACALHOST_DOMAIN = "localhost";
     public static final String OAUTH2_TOKEN_EP = "https://localhost:9443/oauth2/token";
@@ -32,6 +33,8 @@ public class TestConstants {
     public static final String CLAIM_URI2 = "http://wso2.org/claimuri2";
     public static final String CLAIM_VALUE1 = "ClaimValue1";
     public static final String CLAIM_VALUE2 = "ClaimValue2";
+    public static final String MANAGED_ORG_CLAIM_URI = "http://wso2.org/claims/identity/managedOrg";
+    public static final String SAMPLE_ID = "76dedfb5-99ef-4bf3-92e6-56d296db55ec";
 
     public static final String USERSTORE_DOMAIN = "user_store_domain";
     public static final String NEW_ACCESS_TOKEN = "123456789";
@@ -88,4 +91,10 @@ public class TestConstants {
 
     public static final String FAPI_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
+
+    // Rich Authorization Requests
+    public static final String TEST_CONSENT_ID = "52481ccd-0927-4d17-8cfc-5110fc4aa009";
+    public static final String TEST_USER_ID = "c2179b58-b048-49d1-acb4-45b672d6fe5f";
+    public static final String TEST_APP_ID = "a49257ea-3d5d-4558-b0c5-f9b3b0ca2fb0";
+    public static final String TEST_TYPE = "test_type_v1";
 }

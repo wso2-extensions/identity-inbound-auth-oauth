@@ -23,7 +23,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>7.0.190</version>
+        <version>7.0.239</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -113,6 +113,10 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.rule.evaluation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.event</artifactId>
         </dependency>
         <dependency>
@@ -175,10 +179,6 @@
         <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.application.common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.wso2.carbon.identity.framework</groupId>
-            <artifactId>org.wso2.carbon.identity.entitlement</artifactId>
         </dependency>
 
         <!--SAML Common Util dependency-->
@@ -252,7 +252,6 @@
             <groupId>org.wso2.carbon.identity.organization.management</groupId>
             <artifactId>org.wso2.carbon.identity.organization.management.organization.user.sharing</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.scr.ds-annotations</artifactId>
@@ -265,6 +264,10 @@
         <dependency>
             <groupId>org.wso2.orbit.javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
+            <artifactId>org.wso2.carbon.identity.oauth.rar</artifactId>
         </dependency>
         <!--Test Dependencies-->
         <dependency>
@@ -403,6 +406,7 @@
                             org.apache.commons.collections.map; version="${commons-collections.wso2.osgi.version.range}",
                             org.apache.commons.lang; version="${commons-lang.wso2.osgi.version.range}",
                             org.apache.commons.logging; version="${commons-logging.osgi.version.range}",
+                            org.apache.commons.collections; version="${commons-collections.wso2.osgi.version.range}",
 
                             com.google.gdata.client.authn.oauth; version="${gdata-core.imp.pkg.version.range}",
 
@@ -421,7 +425,8 @@
                             org.osgi.framework; version="${osgi.framework.imp.pkg.version.range}",
                             org.osgi.service.component; version="${osgi.service.component.imp.pkg.version.range}",
 
-                            org.wso2.carbon.identity.entitlement; version="${carbon.identity.framework.imp.pkg.version.range}"; resolution:=optional,
+                            org.wso2.carbon.identity.entitlement;
+                            version="${identity.oauth.xacml.version.range}"; resolution:=optional,
                             org.wso2.carbon.idp.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.base; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version="${carbon.identity.framework.imp.pkg.version.range}",
@@ -430,6 +435,10 @@
                             org.wso2.carbon.identity.application.common.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.application.authentication.framework.*;version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.user.store.configuration.*;version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.model; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.exception; version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.rule.evaluation.provider; version="${carbon.identity.framework.imp.pkg.version.range}",
+
                             org.wso2.carbon.identity.oauth.common.token.bindings.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.saml.common.util.*; version="${saml.common.util.version.range}",
@@ -455,11 +464,14 @@
                             version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.api.resource.mgt; version="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.role.v2.mgt.core; version="${carbon.identity.framework.imp.pkg.version.range}",
-                            org.wso2.carbon.identity.configuration.mgt.core; version="${carbon.identity.framework.imp.pkg.version.range}"
+                            org.wso2.carbon.identity.configuration.mgt.core; version="${carbon.identity.framework.imp.pkg.version.range}",
+
+                            org.wso2.carbon.identity.oauth.rar.core; version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.internal,
                             !org.wso2.carbon.identity.oauth.common.*,
+                            !org.wso2.carbon.identity.oauth.rar.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.oauth2.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",
                             org.wso2.carbon.identity.openidconnect.*;version="${identity.inbound.auth.oauth.exp.pkg.version}",

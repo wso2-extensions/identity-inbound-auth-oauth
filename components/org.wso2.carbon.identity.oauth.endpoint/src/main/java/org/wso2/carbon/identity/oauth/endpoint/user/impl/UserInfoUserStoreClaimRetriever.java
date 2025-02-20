@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 import org.apache.commons.collections.MapUtils;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtil;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 
@@ -43,7 +44,10 @@ public class UserInfoUserStoreClaimRetriever implements UserInfoClaimRetriever {
                 }
                 String claimValue = entry.getValue();
                 String claimUri = entry.getKey().getRemoteClaim().getClaimUri();
-                if (ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
+                boolean isMultiValueSupportEnabledForUserinfoResponse = OAuthServerConfiguration.getInstance()
+                        .getUserInfoMultiValueSupportEnabled();
+                if (isMultiValueSupportEnabledForUserinfoResponse &&
+                        ClaimUtil.isMultiValuedAttribute(claimUri, claimValue)) {
                     String[] attributeValues = ClaimUtil.processMultiValuedAttribute(claimValue);
                     claims.put(entry.getKey().getRemoteClaim().getClaimUri(), attributeValues);
                 } else {

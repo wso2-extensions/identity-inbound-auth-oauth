@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
@@ -52,6 +53,9 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.rar.exception.AuthorizationDetailsProcessingException;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -65,6 +69,9 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
+import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
+import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -119,6 +126,7 @@ public class AccessTokenIssuer {
     private Map<String, AuthorizationGrantHandler> authzGrantHandlers;
     public static final String OAUTH_APP_DO = "OAuthAppDO";
     private static final String SERVICE_PROVIDERS_SUB_CLAIM = "ServiceProviders.UseUsernameAsSubClaim";
+    private final AuthorizationDetailsValidator authorizationDetailsValidator;
 
     /**
      * Private constructor which will not allow to create objects of this class from outside
@@ -126,6 +134,7 @@ public class AccessTokenIssuer {
     private AccessTokenIssuer() throws IdentityOAuth2Exception {
 
         authzGrantHandlers = OAuthServerConfiguration.getInstance().getSupportedGrantTypes();
+        this.authorizationDetailsValidator = new DefaultAuthorizationDetailsValidator();
         AppInfoCache appInfoCache = AppInfoCache.getInstance();
         if (appInfoCache != null) {
             if (log.isDebugEnabled()) {
@@ -308,6 +317,16 @@ public class AccessTokenIssuer {
         if (!isOfTypeApplicationUser) {
             tokReqMsgCtx.setAuthorizedUser(oAuthAppDO.getAppOwner());
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+             directly in the organization of the applicationResidentOrgId. Therefore, we are setting the authorized
+             user's accessing organization as the applicationResidentOrgId.
+            */
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tokReqMsgCtx.getAuthorizedUser().setAccessingOrganization(applicationResidentOrgId);
+            }
         } else {
             tokReqMsgCtx.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION_USER);
         }
@@ -447,6 +466,35 @@ public class AccessTokenIssuer {
             setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
             triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
             return tokenRespDTO;
+        }
+
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx)) {
+            try {
+                final AuthorizationDetails validatedAuthorizationDetails = this.authorizationDetailsValidator
+                        .getValidatedAuthorizationDetails(tokReqMsgCtx);
+                tokReqMsgCtx.setAuthorizationDetails(validatedAuthorizationDetails);
+            } catch (AuthorizationDetailsProcessingException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Invalid authorization details requested by client Id: " + tokenReqDTO.getClientId());
+                }
+
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.VALIDATE_AUTHORIZATION_DETAILS)
+                            .inputParam(LogConstants.InputKeys.CLIENT_ID, tokenReqDTO.getClientId())
+                            .inputParam(OAuthConstants.LogConstants.InputKeys.REQUESTED_AUTHORIZATION_DETAILS,
+                                    tokenReqDTO.getAuthorizationDetails().toSet())
+                            .resultMessage(AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                }
+                tokenRespDTO = handleError(AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_CODE,
+                        AuthorizationDetailsConstants.VALIDATION_FAILED_ERR_MSG, tokenReqDTO);
+                setResponseHeaders(tokReqMsgCtx, tokenRespDTO);
+                triggerPostListeners(tokenReqDTO, tokenRespDTO, tokReqMsgCtx, isRefreshRequest);
+                return tokenRespDTO;
+            }
         }
 
         handleTokenBinding(tokenReqDTO, grantType, tokReqMsgCtx, oAuthAppDO);
@@ -621,7 +669,13 @@ public class AccessTokenIssuer {
                 DeviceAuthorizationGrantCache.getInstance().getValueFromCache(deviceCodeCacheKey);
         if (cacheEntry != null) {
             Map<ClaimMapping, String> userAttributes = cacheEntry.getUserAttributes();
-            return Optional.of(new AuthorizationGrantCacheEntry(userAttributes));
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    new AuthorizationGrantCacheEntry(userAttributes);
+            if (cacheEntry.getMappedRemoteClaims() != null) {
+                authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
+                        .getMappedRemoteClaims());
+            }
+            return Optional.of(authorizationGrantCacheEntry);
         }
         return Optional.empty();
     }
@@ -1355,7 +1409,23 @@ public class AccessTokenIssuer {
     private OAuthAppDO getOAuthApplication(String consumerKey) throws InvalidOAuthClientException,
             IdentityOAuth2Exception {
 
-        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If the applicationResidentOrgId is not null, resolve the tenant domain from the organization id to get the
+         application information by passing the consumer key and the tenant domain.
+        */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
+        OAuthAppDO authAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         String appState = authAppDO.getState();
         if (StringUtils.isEmpty(appState)) {
             if (log.isDebugEnabled()) {

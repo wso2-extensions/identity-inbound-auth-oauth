@@ -37,11 +37,13 @@ import org.wso2.carbon.identity.oauth.dcr.factory.HttpRegistrationResponseFactor
 import org.wso2.carbon.identity.oauth.dcr.factory.HttpUnregistrationResponseFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.RegistrationRequestFactory;
 import org.wso2.carbon.identity.oauth.dcr.factory.UnregistrationRequestFactory;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.processor.DCRProcessor;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
 /**
  * OAuth DCRM service component.
@@ -52,7 +54,6 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
         name = "identity.oauth.dcr",
         immediate = true
 )
-@Deprecated
 public class DCRServiceComponent {
 
     private static final Log log = LogFactory.getLog(DCRServiceComponent.class);
@@ -253,5 +254,39 @@ public class DCRServiceComponent {
 
         log.debug("Unregistering the ConfigurationManager in DCR Service Component.");
         DCRDataHolder.getInstance().setConfigurationManager(null);
+    }
+
+    @Reference(
+            name = "organization.service",
+            service = OrganizationManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrganizationManager"
+    )
+    protected void setOrganizationManager(OrganizationManager organizationManager) {
+
+        DCRDataHolder.getInstance().setOrganizationManager(organizationManager);
+        log.debug("Set the organization management service.");
+    }
+
+    protected void unsetOrganizationManager(OrganizationManager organizationManager) {
+
+        DCRDataHolder.getInstance().setOrganizationManager(null);
+        log.debug("Unset organization management service.");
+    }
+
+    @Reference(name = "identity.oauth.dcr.attribute.filter",
+            service = AdditionalAttributeFilter.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAdditionalAttributeFilter")
+    protected void setAdditionalAttributeFilter(AdditionalAttributeFilter additionalAttributeFilter) {
+
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(additionalAttributeFilter);
+    }
+
+    protected void unsetAdditionalAttributeFilter(AdditionalAttributeFilter tokenBinderInfo) {
+
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(null);
     }
 }

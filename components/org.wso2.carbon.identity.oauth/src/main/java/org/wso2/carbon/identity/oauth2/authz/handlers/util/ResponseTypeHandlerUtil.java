@@ -299,6 +299,9 @@ public class ResponseTypeHandlerUtil {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(), appTenant,
                             authorizationReqDTO.getCallbackUrl(), authzCodeDO);
+
+            OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                    .storeAuthorizationCodeAuthorizationDetails(authzCodeDO, oauthAuthzMsgCtx);
         } else {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
                     .insertAuthorizationCode(authorizationCode, authorizationReqDTO.getConsumerKey(),
@@ -487,6 +490,11 @@ public class ResponseTypeHandlerUtil {
             userAttributes.put(key, sub);
         }
 
+        if (authorizeReqDTO.getMappedRemoteClaims() != null) {
+            authorizationGrantCacheEntry.setMappedRemoteClaims(
+                    authorizeReqDTO.getMappedRemoteClaims());
+        }
+
         authorizationGrantCacheEntry
                 .setValidityPeriod(TimeUnit.MILLISECONDS.toNanos(accessTokenDO.getValidityPeriodInMillis()));
         AuthorizationGrantCache.getInstance().addToCacheByToken(authorizationGrantCacheKey,
@@ -624,6 +632,9 @@ public class ResponseTypeHandlerUtil {
         // Persist the access token in database
         persistAccessTokenInDB(oauthAuthzMsgCtx, existingTokenBean, newTokenBean);
         deactivateCurrentAuthorizationCode(newTokenBean.getAuthorizationCode(), newTokenBean.getTokenId());
+        // Persist access token authorization details in database
+        OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService()
+                .storeAccessTokenAuthorizationDetails(newTokenBean, oauthAuthzMsgCtx);
         //update cache with newly added token
         if (isHashDisabled && cacheEnabled) {
             addTokenToCache(getOAuthCacheKey(consumerKey, scope, authorizedUserId, authenticatedIDP),

@@ -23,7 +23,6 @@ public class RegistrationRequestDTO  {
   @NotNull
   private String clientName = null;
   private List<String> grantTypes = new ArrayList<>();
-  private String applicationType = null;
   private String jwksUri = null;
   private String url = null;
   private String clientId = null;
@@ -31,7 +30,6 @@ public class RegistrationRequestDTO  {
   private List<String> contacts = new ArrayList<>();
   private List<String> postLogoutRedirectUris = new ArrayList<>();
   private List<String> requestUris = new ArrayList<>();
-  private List<String> responseTypes = new ArrayList<>();
   private String tokenType = null;
   private String spTemplateName = null;
   private String backchannelLogoutUri = null;
@@ -91,15 +89,6 @@ public class RegistrationRequestDTO  {
   }
   public void setGrantTypes(List<String> grantTypes) {
     this.grantTypes = grantTypes;
-  }
-
-  @ApiModelProperty
-  @JsonProperty("application_type")
-  public String getApplicationType() {
-    return applicationType;
-  }
-  public void setApplicationType(String applicationType) {
-    this.applicationType = applicationType;
   }
 
   @ApiModelProperty
@@ -170,16 +159,6 @@ public class RegistrationRequestDTO  {
 
   public void setRequestUris(List<String> requestUris) {
     this.requestUris = requestUris;
-  }
-
-  @ApiModelProperty
-  @JsonProperty("response_types")
-  public List<String> getResponseTypes() {
-    return responseTypes;
-  }
-
-  public void setResponseTypes(List<String> responseTypes) {
-    this.responseTypes = responseTypes;
   }
 
   @ApiModelProperty
@@ -505,7 +484,6 @@ public class RegistrationRequestDTO  {
     sb.append("  redirect_uris: ").append(redirectUris).append("\n");
     sb.append("  client_name: ").append(clientName).append("\n");
     sb.append("  grant_types: ").append(grantTypes).append("\n");
-    sb.append("  application_type: ").append(applicationType).append("\n");
     sb.append("  jwks_uri: ").append(jwksUri).append("\n");
     sb.append("  url: ").append(url).append("\n");
     sb.append("  ext_param_client_id: ").append(clientId).append("\n");
@@ -513,7 +491,6 @@ public class RegistrationRequestDTO  {
     sb.append("  contacts: ").append(contacts).append("\n");
     sb.append("  post_logout_redirect_uris: ").append(postLogoutRedirectUris).append("\n");
     sb.append("  request_uris: ").append(requestUris).append("\n");
-    sb.append("  response_types: ").append(responseTypes).append("\n");
     sb.append("  token_type_extension: ").append(tokenType).append("\n");
     sb.append("  ext_param_sp_template: ").append(spTemplateName).append("\n");
     sb.append("  backchannel_logout_uri: ").append(backchannelLogoutUri).append("\n");

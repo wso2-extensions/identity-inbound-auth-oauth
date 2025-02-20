@@ -72,24 +72,15 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeIncompleteResponse;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
-import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
-import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.utils.DiagnosticLog;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
@@ -104,31 +95,6 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PRO
 @Path("/authorize-challenge")
 @InInterceptors(classes = {OAuthClientAuthenticatorProxy.class, ClientAttestationProxy.class})
 public class AuthzChallengeEndpoint {
-
-    private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
-
-    private static ScopeMetadataService scopeMetadataService;
-
-    public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
-
-        return openIDConnectClaimFilter;
-    }
-
-    public static void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
-
-        AuthzChallengeEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
-    }
-
-    public static ScopeMetadataService getScopeMetadataService() {
-
-        return scopeMetadataService;
-    }
-
-    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
-
-        AuthzChallengeEndpoint.scopeMetadataService = scopeMetadataService;
-    }
-    private static DeviceAuthService deviceAuthService;
 
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
@@ -260,16 +226,6 @@ public class AuthzChallengeEndpoint {
             throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
                     "Error while building JSON response.", e);
         }
-    }
-
-    /**
-     * Set the device authentication service.
-     *
-     * @param deviceAuthService Device authentication service.
-     */
-    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
-
-        AuthzChallengeEndpoint.deviceAuthService = deviceAuthService;
     }
 
     @POST

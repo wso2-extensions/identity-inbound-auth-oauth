@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -24,11 +24,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationDataPublisher;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationResultCacheEntry;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.ApplicationConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.config.model.SequenceConfig;
@@ -65,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserStoreClientException;
@@ -89,7 +92,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ALLOW_SESSION_CREATION;
-
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.BASIC_AUTHENTICATOR_CLASS;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 
 /**
  * Handles the Password Grant Type of the OAuth 2.0 specification. Resource owner sends his
@@ -167,6 +171,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         if (log.isDebugEnabled()) {
             log.debug("user " + tokenReq.getResourceOwnerUsername() + " authenticated: " + authenticated);
         }
+        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
+                userTenantDomain, userStoreManager, true);
+        if (log.isDebugEnabled()) {
+            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+        }
         if (authenticated) {
             AuthenticatedUser authenticatedUser =
                     new AuthenticatedUser(authenticationResult.getAuthenticatedUser().get());
@@ -176,11 +185,6 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             return Optional.of(authenticatedUser);
         }
 
-        triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
-                userTenantDomain, userStoreManager, true);
-        if (log.isDebugEnabled()) {
-            log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
-        }
         return Optional.empty();
     }
 
@@ -271,13 +275,30 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
         tokReqMsgCtx.setScope(tokenReq.getScope());
     }
 
-    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider) {
+    private String getFullQualifiedUsername(OAuth2AccessTokenReqDTO tokenReq, ServiceProvider serviceProvider)
+            throws IdentityOAuth2Exception {
 
         boolean isEmailUserNameEnabled = MultitenantUtils.isEmailUserName();
         boolean isSaasApp = serviceProvider.isSaasApp();
         boolean isLegacySaaSAuthenticationEnabled = IdentityTenantUtil.isLegacySaaSAuthenticationEnabled();
         String usernameFromRequest = tokenReq.getResourceOwnerUsername();
         String tenantDomainFromContext = IdentityTenantUtil.resolveTenantDomain();
+        String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        /*
+         If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+         directly in the organization of the applicationResidentOrgId. In this scenario the user is also in the
+         organization level and the tenant domain of the user should be resolved from the organization id.
+        */
+        if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+            try {
+                tenantDomainFromContext = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                        + applicationResidentOrgId, e);
+            }
+        }
 
         if (!isSaasApp) {
             /*
@@ -334,6 +355,9 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
 
         boolean isPublishPasswordGrantLoginEnabled = Boolean.parseBoolean(
                 IdentityUtil.getProperty(PUBLISH_PASSWORD_GRANT_LOGIN));
+        boolean isShowAuthFailureReason = Boolean.parseBoolean(
+                getBasicAuthenticatorConfigs().getParameterMap().get(SHOW_AUTHFAILURE_RESON_CONFIG));
+        String genericErrorUserName = tokenReq.getResourceOwnerUsername();
         try {
             // Get the user store preference order supplier.
             UserStorePreferenceOrderSupplier<List<String>> userStorePreferenceOrderSupplier =
@@ -365,6 +389,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 tokenReq.setResourceOwnerUsername(tenantAwareUserName + "@" + userTenantDomain);
             }
 
+            if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equalsIgnoreCase(MultitenantUtils.getTenantDomain
+                    (tokenReq.getResourceOwnerUsername())) || IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+                genericErrorUserName = tenantAwareUserName;
+            }
+
             AbstractUserStoreManager userStoreManager = getUserStoreManager(userTenantDomain);
             Optional<AuthenticatedUser> authenticatedUser;
             ServiceProviderProperty[] spProps = serviceProvider.getSpProperties();
@@ -377,13 +406,24 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 authenticatedUser = authenticateUserAtUserStore(tokenReq, userId, userStoreManager,
                         tenantAwareUserName, isPublishPasswordGrantLoginEnabled, userTenantDomain, serviceProvider);
             }
-            if (authenticatedUser.isPresent()) {
-                return authenticatedUser.get();
-            }
             triggerPasswordExpiryValidationEvent(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT, tenantAwareUserName,
                     userTenantDomain, userStoreManager, false);
             if (log.isDebugEnabled()) {
                 log.debug(PASSWORD_GRANT_POST_AUTHENTICATION_EVENT + " event is triggered");
+            }
+            if (authenticatedUser.isPresent()) {
+                String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                        .getApplicationResidentOrganizationId();
+                /*
+                 If applicationResidentOrgId is not empty, then the request comes for an application which is
+                 registered directly in the organization of the applicationResidentOrgId. In this scenario the user's
+                 accessing and resident organization will be the organization of the applicationResidentOrgId.
+                */
+                if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                    authenticatedUser.get().setAccessingOrganization(applicationResidentOrgId);
+                    authenticatedUser.get().setUserResidentOrganization(applicationResidentOrgId);
+                }
+                return authenticatedUser.get();
             }
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
@@ -406,18 +446,20 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
             if (StringUtils.isNotBlank(e.getErrorCode())) {
                 message = e.getErrorCode() + " " + e.getMessage();
             }
+            message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
             throw new IdentityOAuth2Exception(message, e);
         } catch (UserStoreException e) {
             if (isPublishPasswordGrantLoginEnabled) {
                 publishAuthenticationData(tokenReq, false, serviceProvider);
             }
+            String errorCode = null;
             String message = e.getMessage();
             // Sometimes client exceptions are wrapped in the super class.
             // Therefore, checking for possible client exception.
             Throwable rootCause = ExceptionUtils.getRootCause(e);
             if (rootCause instanceof UserStoreClientException) {
                 message = rootCause.getMessage();
-                String errorCode = ((UserStoreClientException) rootCause).getErrorCode();
+                errorCode = ((UserStoreClientException) rootCause).getErrorCode();
                 if (StringUtils.isNotBlank(errorCode)) {
                     message = errorCode + " " + message;
                 }
@@ -426,9 +468,11 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                 IdentityException identityException = (IdentityException) (e.getCause());
                 // Set error code to message if available.
                 if (StringUtils.isNotBlank(identityException.getErrorCode())) {
-                    message = identityException.getErrorCode() + " " + e.getMessage();
+                    errorCode = identityException.getErrorCode();
+                    message = errorCode + " " + identityException.getMessage();
                 }
             }
+            message = isShowAuthFailureReason ? message : "Authentication failed for " + genericErrorUserName;
             throw new IdentityOAuth2Exception(message, e);
         } catch (AuthenticationFailedException e) {
             String message = "Authentication failed for the user: " + tokenReq.getResourceOwnerUsername();
@@ -490,6 +534,16 @@ public class PasswordGrantHandler extends AbstractAuthorizationGrantHandler {
                         unmodifiableParamMap);
             }
         }
+    }
+
+    /**
+     * This method will return the basic authenticator configurations.
+     *
+     * @return AuthenticatorConfig - Basic authenticator configurations.
+     */
+    private AuthenticatorConfig getBasicAuthenticatorConfigs() {
+
+        return FileBasedConfigurationBuilder.getInstance().getAuthenticatorBean(BASIC_AUTHENTICATOR_CLASS);
     }
 
     /**

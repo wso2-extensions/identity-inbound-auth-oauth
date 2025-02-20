@@ -2232,12 +2232,13 @@ public class OAuth2UtilTest {
             appDO.setTokenType(tokenType);
 
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-            when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+            when(mockAppInfoCache.getValueFromCache(clientId, clientTenantDomain)).thenReturn(appDO);
 
             appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
 
             OauthTokenIssuer oauthTokenIssuer = mock(OauthTokenIssuer.class);
             when(oauthServerConfigurationMock.getIdentityOauthTokenIssuer()).thenReturn(oauthTokenIssuer);
+            identityTenantUtil.when(IdentityTenantUtil::resolveTenantDomain).thenReturn(clientTenantDomain);
             assertEquals(OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId), oauthTokenIssuer);
         }
     }
@@ -2247,11 +2248,12 @@ public class OAuth2UtilTest {
 
         try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-            when(mockAppInfoCache.getValueFromCache(clientId)).
+            when(mockAppInfoCache.getValueFromCache(clientId, clientTenantDomain)).
                     thenAnswer(i -> {
                         throw new IdentityOAuth2Exception("IdentityOAuth2Exception");
                     });
             appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
+            identityTenantUtil.when(IdentityTenantUtil::resolveTenantDomain).thenReturn(clientTenantDomain);
 
             try {
                 OAuth2Util.getOAuthTokenIssuerForOAuthApp(clientId);
@@ -2603,7 +2605,7 @@ public class OAuth2UtilTest {
         appDO.setUser(user);
 
         AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-        lenient().when(mockAppInfoCache.getValueFromCache(clientId)).thenReturn(appDO);
+        lenient().when(mockAppInfoCache.getValueFromCache(clientId, SUPER_TENANT_DOMAIN_NAME)).thenReturn(appDO);
         appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
     }
 
@@ -2612,7 +2614,7 @@ public class OAuth2UtilTest {
 
         try (MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class)) {
             AppInfoCache mockAppInfoCache = mock(AppInfoCache.class);
-            when(mockAppInfoCache.getValueFromCache(clientId)).
+            when(mockAppInfoCache.getValueFromCache(clientId, SUPER_TENANT_DOMAIN_NAME)).
                     thenAnswer(i -> {
                         throw new InvalidOAuthClientException("InvalidOAuthClientException");
                     });

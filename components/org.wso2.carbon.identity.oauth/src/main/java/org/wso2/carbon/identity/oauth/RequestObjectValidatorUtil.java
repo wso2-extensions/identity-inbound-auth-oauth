@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -57,6 +58,7 @@ public class RequestObjectValidatorUtil {
     private static final Log log = LogFactory.getLog(RequestObjectValidatorUtil.class);
     private static final String FAPI_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
+    private static final String SHA256_WITH_RSA = "SHA256withRSA";
 
     /**
      * Validate the signature of the request object
@@ -76,9 +78,16 @@ public class RequestObjectValidatorUtil {
             oAuthAppDO = OAuth2Util.getAppInformationByClientId(oAuth2Parameters.getClientId(),
                     oAuth2Parameters.getTenantDomain());
             String algorithm = oAuthAppDO.getRequestObjectSignatureAlgorithm();
-            if (StringUtils.isNotEmpty(algorithm) && !algorithm.equals(jwt.getHeader().getAlgorithm().getName())) {
-                throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Request Object signature verification failed. Invalid signature algorithm.");
+            if (StringUtils.isNotEmpty(algorithm)) {
+                if (SHA256_WITH_RSA.equals(algorithm)) {
+                    algorithm = JWSAlgorithm.RS256.getName();
+                }
+
+                String jwtAlgorithm = jwt.getHeader().getAlgorithm().getName();
+                if (!algorithm.equals(jwtAlgorithm)) {
+                    throw new RequestObjectException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Request Object signature verification failed due to an invalid signature algorithm.");
+                }
             }
         } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
             throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, "Error while retrieving Oauth application "

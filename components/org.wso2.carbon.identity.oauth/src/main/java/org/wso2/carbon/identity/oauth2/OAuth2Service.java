@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.AbstractAdmin;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
@@ -63,6 +64,7 @@ import org.wso2.carbon.identity.oauth2.token.SubjectTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.Claim;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -676,7 +678,9 @@ public class OAuth2Service extends AbstractAdmin {
 
                 } else if (accessTokenDO != null) {
                     if (revokeRequestDTO.getConsumerKey().equals(accessTokenDO.getConsumerKey())) {
-                        if ((OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey()).
+                        // Extracting the application details with consumer key and tenant domain.
+                        String tenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                        if ((OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain).
                                 isTokenBindingValidationEnabled()) && (!isValidTokenBinding(accessTokenDO.
                                 getTokenBinding(), revokeRequestDTO.getRequest()))) {
                             if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -981,7 +985,24 @@ public class OAuth2Service extends AbstractAdmin {
     public String getOauthApplicationState(String consumerKey) {
 
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            String tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            /*
+             If appOrgId is not empty, then the request comes for an application which is registered directly in the
+             organization of the appOrgId. Therefore, we need to resolve the tenant domain of the organization.
+            */
+            if (StringUtils.isNotEmpty(appOrgId)) {
+                try {
+                    tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(appOrgId);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain for the organization ID: " +
+                            appOrgId, e);
+                }
+            }
+            // Getting the application information by consumer key and tenant domain.
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             return appDO.getState();
         } catch (IdentityOAuth2Exception e) {
             log.error("Error while finding application state for application with client_id: " + consumerKey, e);

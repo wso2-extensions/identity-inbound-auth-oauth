@@ -20,9 +20,11 @@ package org.wso2.carbon.identity.oauth.dcr.internal;
 
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.configuration.mgt.core.ConfigurationManager;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.handler.RegistrationHandler;
 import org.wso2.carbon.identity.oauth.dcr.handler.UnRegistrationHandler;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +35,6 @@ import java.util.List;
  * This was deprecated as part of deprecating the legacy identity/register DCR endpoint.
  * The recommendation is to use /identity/oauth2/dcr/v1.1 instead.
  */
-@Deprecated
 public class DCRDataHolder {
 
     private static DCRDataHolder thisInstance = new DCRDataHolder();
@@ -41,7 +42,9 @@ public class DCRDataHolder {
     private List<RegistrationHandler> registrationHandlerList = new ArrayList<>();
     private List<UnRegistrationHandler> unRegistrationHandlerList = new ArrayList<>();
     private List<TokenBinder> tokenBinders = new ArrayList<>();
+    private AdditionalAttributeFilter additionalAttributeFilter = null;
     private ConfigurationManager configurationManager;
+    private OrganizationManager organizationManager;
 
     private DCRDataHolder() {
 
@@ -110,5 +113,25 @@ public class DCRDataHolder {
     public void setConfigurationManager(ConfigurationManager configurationManager) {
 
         this.configurationManager = configurationManager;
+    }
+
+    public OrganizationManager getOrganizationManager() {
+
+        return organizationManager;
+    }
+
+    public void setOrganizationManager(OrganizationManager organizationManager) {
+
+        this.organizationManager = organizationManager;
+    }
+
+    public AdditionalAttributeFilter getAdditionalAttributeFilter() {
+
+        return additionalAttributeFilter;
+    }
+
+    public void setAdditionalAttributeFilter(AdditionalAttributeFilter additionalAttributeFilter) {
+
+        this.additionalAttributeFilter = additionalAttributeFilter;
     }
 }

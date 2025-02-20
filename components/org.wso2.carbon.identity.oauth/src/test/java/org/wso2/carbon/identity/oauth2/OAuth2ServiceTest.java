@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -72,9 +73,11 @@ import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
+import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
@@ -345,24 +348,82 @@ public class OAuth2ServiceTest {
         }
     }
 
-    @Test(dataProvider = "ValidateClientInfoDataProvider")
-    public void testValidateHybridFlowValidRequest(String clientId, String grantType,
-                                                   String callbackUrl, String tenantDomain,
-                                                   int tenantId, String callbackURI) throws Exception {
+    @DataProvider(name = "HybridFlowValidationDataProvider")
+    public Object[][] hybridFlowValidationDataProvider() {
+
+        return new Object[][]{
+                // Valid hybrid flow
+                {true, "code token", "code token",
+                        true, null, null},
+
+                // Valid hybrid flow
+                {true, "code token,code id_token", "code token",
+                        true, null, null},
+
+                // Hybrid flow disabled
+                {false, "code token", "code token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "Hybrid flow is not enabled for the application."},
+
+                // Hybrid flow enabled but configured response type is null.
+                {true, null, "code id_token token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "No hybrid flow response types are configured " +
+                        "for the application with client ID: testClient."},
+
+                // Hybrid flow enabled but configured response type is empty.
+                {true, "", "code id_token token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "No hybrid flow response types are configured " +
+                        "for the application with client ID: testClient."},
+
+                // Hybrid flow enabled but configured response type is different than requested.
+                {true, "code id_token token", "code token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "invalid.response.type.for.hybrid.flow"},
+
+                {true, "code id_token token, code id_token", "code token",
+                        false, OAuth2ErrorCodes.INVALID_CLIENT, "invalid.response.type.for.hybrid.flow"}
+        };
+    }
+
+    @Test(dataProvider = "HybridFlowValidationDataProvider")
+    public void testValidateHybridFlow(boolean hybridFlowEnabled, String hybridFlowResponseType, String responseType,
+                                       boolean expectedValidClient, String expectedErrorCode,
+                                       String expectedErrorMsg) throws Exception {
 
         try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
-            OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, grantType, callbackUrl, tenantDomain,
-                    tenantId, identityTenantUtil, oAuth2Util);
-            oAuthAppDO.setHybridFlowEnabled(true);
-            oAuthAppDO.setHybridFlowResponseType("code token");
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+
+            String clientId = "testClient";
+            String callbackUrl = "dummyCallBackUrl";
+
+            // Set up the mocked OAuthAppDO
+            OAuthAppDO oAuthAppDO = getOAuthAppDO(clientId, "dummyGrantType",
+                    callbackUrl, "carbon.super", -1234, identityTenantUtil, oAuth2Util);
+            oAuthAppDO.setHybridFlowEnabled(hybridFlowEnabled);
+            oAuthAppDO.setHybridFlowResponseType(hybridFlowResponseType);
+            oAuthAppDO.setOauthConsumerKey(clientId);
+
+            // Mock static utility methods
+            identityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants
+                    .ENABLE_HYBRID_FLOW_APPLICATION_LEVEL_VALIDATION)).thenReturn("true");
+            oAuth2Util.when(() -> OAuth2Util.isHybridResponseType(anyString())).thenCallRealMethod();
+
+            // Mock request parameters
             when(mockHttpServletRequest.getParameter(CLIENT_ID)).thenReturn(clientId);
-            when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackURI);
-            when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn("code token");
-            OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service.
-                    validateClientInfo(mockHttpServletRequest);
+            when(mockHttpServletRequest.getParameter(REDIRECT_URI)).thenReturn(callbackUrl);
+            when(mockHttpServletRequest.getParameter(RESPONSE_TYPE)).thenReturn(responseType);
+
+            // Call the service
+            OAuth2ClientValidationResponseDTO oAuth2ClientValidationResponseDTO = oAuth2Service
+                    .validateClientInfo(mockHttpServletRequest);
+
+            // Assert results
             assertNotNull(oAuth2ClientValidationResponseDTO);
-            assertTrue(oAuth2ClientValidationResponseDTO.isValidClient());
+            assertEquals(oAuth2ClientValidationResponseDTO.isValidClient(), expectedValidClient);
+
+            if (!expectedValidClient) {
+                assertEquals(oAuth2ClientValidationResponseDTO.getErrorCode(), expectedErrorCode);
+                assertEquals(oAuth2ClientValidationResponseDTO.getErrorMsg(), expectedErrorMsg);
+            }
         }
     }
 
@@ -608,7 +669,8 @@ public class OAuth2ServiceTest {
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
             setUpRevokeToken(oAuthComponentServiceHolder, oAuth2Util, oAuthUtil);
             AccessTokenDO accessTokenDO = getAccessToken();
             TokenBinding tokenBinding = new TokenBinding();
@@ -621,9 +683,11 @@ public class OAuth2ServiceTest {
             setPrivateField(oAuthTokenPersistenceFactory, "managementDAO", mockTokenManagementDAOImpl);
             AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
             setPrivateField(oAuthTokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
-            when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
 
             OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
             oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO);
@@ -651,14 +715,17 @@ public class OAuth2ServiceTest {
         try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
              MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
             setUpRevokeToken(oAuthComponentServiceHolder, oAuth2Util, oAuthUtil);
             AccessTokenDO accessTokenDO = getAccessToken();
             when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setTokenBindingValidationEnabled(true);
-            when(OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
 
             OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
             OAuthRevocationResponseDTO oAuthRevocationResponseDTO = oAuth2Service
@@ -899,7 +966,10 @@ public class OAuth2ServiceTest {
     @Test
     public void testGetOauthApplicationState() throws Exception {
 
-        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+        try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class)) {
+
+            authzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
             String id = "clientId1";
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             oAuthAppDO.setState("ACTIVE");
@@ -920,6 +990,7 @@ public class OAuth2ServiceTest {
     public void testGetOauthApplicationStateWithIdentityOAuth2Exception() throws Exception {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
 
@@ -939,6 +1010,7 @@ public class OAuth2ServiceTest {
     public void testGetOauthApplicationStateWithInvalidOAuthClientException() throws Exception {
 
         try (MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(1)).thenReturn("test.tenant");
 

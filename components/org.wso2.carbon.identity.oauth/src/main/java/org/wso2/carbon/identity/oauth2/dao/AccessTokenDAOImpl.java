@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,11 +19,13 @@
 package org.wso2.carbon.identity.oauth2.dao;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.database.utils.jdbc.JdbcTemplate;
 import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -251,6 +253,23 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             insertTokenPrepStmt.setString(19, authorizedOrganization);
 
             int appTenantId = IdentityTenantUtil.getLoginTenantId();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+             directly in the organization of the applicationResidentOrgId. Therefore, we need to resolve the
+             tenant domain of the organization to get the application tenant id.
+            */
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                try {
+                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(applicationResidentOrgId);
+                    appTenantId = OAuth2Util.getTenantId(tenantDomain);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: "
+                            + applicationResidentOrgId, e);
+                }
+            }
             if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                 if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
                     insertTokenPrepStmt.setString(20, Boolean.toString(accessTokenDO.isConsentedToken()));
@@ -1496,10 +1515,12 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeBatch();
                 IdentityDatabaseUtil.commitTransaction(connection);
-                // To revoke request objects which have persisted against the access token.
-                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
                 if (isTokenCleanupFeatureEnabled) {
+                    if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                        /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                        Hence, invoke the event listener to revoke the request objects.*/
+                        revokeRequestObjectEntries(Arrays.asList(tokens));
+                    }
                     oldTokenCleanupObject.cleanupTokensInBatch(oldTokens, connection);
                 }
             } catch (SQLException e) {
@@ -1525,10 +1546,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 ps.executeUpdate();
 
-                // To revoke request objects which have persisted against the access token.
-                OAuth2TokenUtil.postUpdateAccessTokens(Arrays.asList(tokens), OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
+
                 if (isTokenCleanupFeatureEnabled) {
+                    if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                        /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                        Hence, invoke the event listener to revoke the request objects.*/
+                        revokeRequestObjectEntries(Arrays.asList(tokens));
+                    }
                     oldTokenCleanupObject.cleanupTokenByTokenValue(
                             getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(tokens[0]), connection);
                 }
@@ -1596,13 +1620,13 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 }
                 accessTokenId.add(getTokenIdByAccessToken(token));
             }
-            // To revoke request objects which have persisted against the access token.
-            if (accessTokenId.size() > 0) {
-                OAuth2TokenUtil.postUpdateAccessTokens(accessTokenId, OAuthConstants.TokenStates.
-                        TOKEN_STATE_REVOKED);
-            }
 
             if (isTokenCleanupFeatureEnabled) {
+                if (connection.getMetaData().getDriverName().contains("Microsoft")) {
+                    /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+                    Hence, invoke the event listener to revoke the request objects.*/
+                    revokeRequestObjectEntries(accessTokenId);
+                }
                 for (String token : tokens) {
                     oldTokenCleanupObject.cleanupTokenByTokenValue(
                             getHashingPersistenceProcessor().getProcessedAccessTokenIdentifier(token), connection);
@@ -3308,5 +3332,16 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
             throw new IdentityOAuth2Exception("Error occurred while resolving root tenant domain by organization ID: " +
                     organizationId, e);
         }
+    }
+
+    /* When token is deleted, the request objects get on delete cascade except for the SQL server.
+       Hence, invoke the event listener to revoke the request objects.*/
+    private void revokeRequestObjectEntries(List<String> tokens) throws IdentityOAuth2Exception {
+
+        if (CollectionUtils.isEmpty(tokens)) {
+            return;
+        }
+        OAuth2TokenUtil.postUpdateAccessTokens(tokens, OAuthConstants.TokenStates.
+                TOKEN_STATE_REVOKED);
     }
 }

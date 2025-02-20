@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -59,6 +59,8 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -66,6 +68,7 @@ import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.sql.Timestamp;
@@ -81,10 +84,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.JWT;
 
 /**
  * Abstract authorization grant handler.
@@ -99,6 +105,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final String EXISTING_TOKEN_ISSUED = "existingTokenUsed";
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    protected AuthorizationDetailsService authorizationDetailsService;
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -108,6 +115,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             cacheEnabled = true;
             oauthCache = OAuthCache.getInstance();
         }
+        this.authorizationDetailsService = OAuth2ServiceComponentHolder.getInstance().getAuthorizationDetailsService();
     }
 
     @Override
@@ -169,18 +177,75 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
-        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
-            AccessTokenDO existingTokenBean = null;
+        AccessTokenDO existingTokenBean = null;
+        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
+        String tokenType = oauthTokenIssuer.getAccessTokenType();
+
+        /*
+        This segment handles access token requests that neither require generating a new token
+        nor renewing an existing one. Instead, it returns the existing token if it is still valid.
+        As a result, no synchronization lock is needed for these operations.
+        Additionally, this segment should strictly avoid any write or update operations.
+        It was introduced to minimize traffic at the token issuance lock for certain token requests.
+         */
+        if (!(JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
+                OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                        .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()))) {
+
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
                         getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
                                 tokenBindingReference, authorizedOrganization));
             }
 
+            if (existingTokenBean != null && !accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
+
+                String requestGrantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
+                boolean isConsentRequiredGrant = OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(requestGrantType);
+                boolean isRichAuthRequest = AuthorizationDetailsUtils.isRichAuthorizationRequest(
+                        tokReqMsgCtx.getAuthorizationDetails());
+
+                if (!isConsentRequiredGrant && !isRichAuthRequest) {
+
+                    long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
+                    if (isExistingTokenValid(existingTokenBean, expireTime)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
+                                    authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
+                        }
+                        return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime,
+                                existingTokenBean);
+                    }
+                }
+            }
+        }
+
+        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
+
+            /*
+            Check if the token type is JWT and renew without revoking existing tokens is enabled.
+            Additionally, ensure that the grant type used for the token request is allowed to renew without revoke,
+            based on the config.
+            */
+            if (JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
+                    OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                            .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
+                /*
+                If the application does not have a token binding type (i.e., no specific binding type is set),
+                binding reference will be randomly generated UUID, in that case we can generate a new access token
+                without looking up the existing tokens in the token table.
+                */
+                if (oAuthAppDO.getTokenBindingType() == null) {
+                    return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean,
+                            false, oauthTokenIssuer);
+                }
+            }
+
             if (existingTokenBean != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Latest access token is found in the OAuthCache for the app: " + consumerKey);
                 }
+
                 if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
                     if (log.isDebugEnabled()) {
                         log.debug("TokenRenewalPerRequest is enabled. " +
@@ -196,7 +261,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
                                 authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
                     }
-                    return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
+                    return issueExistingAccessTokenWithConsent(tokReqMsgCtx, scope, expireTime, existingTokenBean);
                 }
             }
 
@@ -412,16 +477,79 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 oauthTokenIssuer);
     }
 
-    private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
-                                                              long expireTime, AccessTokenDO existingTokenBean)
+    /**
+     * Issues an existing access token by preparing the necessary details in the token request context
+     * and creating a response with the existing token. This method avoids generating a new token
+     * when a valid token already exists and can be reused.
+     *
+     * @param tokReqMsgCtx      The OAuth token request message context containing the details of the current token
+     *                          request.
+     * @param scope             The scope associated with the token request.
+     * @param expireTime        The expiration time of the existing token.
+     * @param existingTokenBean The existing access token object to be reused for the current request.
+     * @return An OAuth2AccessTokenRespDTO object containing the response details of the
+     * reused token.
+     * @throws IdentityOAuth2Exception If an error occurs while setting details to the message context
+     *                                 or creating the token response.
+     */
+    private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                              String scope,
+                                                              long expireTime,
+                                                              AccessTokenDO existingTokenBean)
             throws IdentityOAuth2Exception {
 
         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
+        setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
+        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
+    }
+
+    /**
+     * Issues an existing access token while ensuring that it complies with the consent requirements
+     * of the current grant type. If the existing token was originally issued for a grant type that did
+     * not require consent but the current grant type does, the token's consent status is updated accordingly.
+     * This method avoids unnecessary token generation by reusing an existing token whenever possible,
+     * while updating its properties to meet the requirements of the current request.
+     *
+     * @param tokReqMsgCtx      The OAuth token request message context containing the details of the current token
+     *                          request.
+     * @param scope             The scope associated with the token request.
+     * @param expireTime        The expiration time of the existing token.
+     * @param existingTokenBean The existing access token object to be evaluated, updated, and reused if valid.
+     * @return An {@link OAuth2AccessTokenRespDTO} object containing the response details of the
+     * issued token.
+     * @throws IdentityOAuth2Exception If an error occurs while handling consent or issuing the existing access token.
+     */
+    private OAuth2AccessTokenRespDTO issueExistingAccessTokenWithConsent(OAuthTokenReqMessageContext tokReqMsgCtx,
+                                                                         String scope,
+                                                                         long expireTime,
+                                                                         AccessTokenDO existingTokenBean)
+            throws IdentityOAuth2Exception {
+
+        handleConsent(tokReqMsgCtx, existingTokenBean);
+
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx.getAuthorizationDetails())) {
+            this.authorizationDetailsService.replaceAccessTokenAuthorizationDetails(existingTokenBean.getTokenId(),
+                    existingTokenBean, tokReqMsgCtx);
+        }
+
+        return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
+    }
+
+    /**
+     * Handles consent updates for an existing access token when issuing it for a new grant type.
+     * If the existing access token was originally issued for a grant type that does not require consent,
+     * but the current grant type does require consent, this method updates the existing token to
+     * reflect that it is now consented.
+     *
+     * @param tokReqMsgCtx      The OAuth token request message context containing the details
+     *                          of the current token request.
+     * @param existingTokenBean The existing access token to be evaluated and updated as needed.
+     * @throws IdentityOAuth2Exception If an error occurs while updating the consent status of the token.
+     */
+    private void handleConsent(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean)
+            throws IdentityOAuth2Exception {
+
         String requestGrantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
-        /* When issuing the existing access token, that access token may be originated from a different grant
-        type. The origin grant type can be a consent required one. If the existing token is issued previously
-        for a consent not required grant and the current grant requires consent, we update the existing token as
-        a consented token. */
         boolean isConsentRequiredGrant = OIDCClaimUtil.
                 isConsentBasedClaimFilteringApplicable(requestGrantType);
         if (isConsentRequiredGrant && !existingTokenBean.isConsentedToken()) {
@@ -429,9 +557,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenIsConsented(
                     existingTokenBean.getTokenId(), true);
         }
-
-        setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
-        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
@@ -645,6 +770,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
         storeAccessToken(tokenReq, getUserStoreDomain(tokReqMsgCtx.getAuthorizedUser()), newTokenBean, newAccessToken,
                 existingTokenBean);
+        this.authorizationDetailsService
+                .storeOrReplaceAccessTokenAuthorizationDetails(newTokenBean, existingTokenBean, tokReqMsgCtx);
     }
 
     private void updateCacheIfEnabled(AccessTokenDO newTokenBean, String scope, OauthTokenIssuer oauthTokenIssuer)
@@ -704,6 +831,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             // Adding AccessTokenDO to improve validation performance
             OAuth2Util.addTokenDOtoCache(newTokenBean);
         }
+    }
+
+    private boolean getRenewWithoutRevokingExistingStatus() {
+
+        return Boolean.parseBoolean(IdentityUtil.
+                getProperty(RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG));
     }
 
     private String getNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, OauthTokenIssuer oauthTokenIssuer)
@@ -805,10 +938,24 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuthAppDO oAuthAppDO;
         String consumerKey = existingAccessTokenDO.getConsumerKey();
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey);
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+             directly in the organization of the applicationResidentOrgId. Therefore, the tenant domain should be
+             extracted from the organization id to get the information of the application.
+            */
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            }
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for client_id : " + consumerKey,
                     e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: ", e);
         }
 
         if (issueRefreshToken(existingAccessTokenDO.getTokenType()) &&
@@ -852,7 +999,19 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     private OAuthAppDO getoAuthApp(String consumerKey) throws IdentityOAuth2Exception {
         OAuthAppDO oAuthAppBean;
         try {
-            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey);
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+            String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            /*
+             If applicationResidentOrgId is not empty, then the request comes for an application which is registered
+             directly in the organization of the applicationResidentOrgId. Therefore, the tenant domain should be
+             extracted from the organization id to get the information of the application.
+            */
+            if (StringUtils.isNotEmpty(applicationResidentOrgId)) {
+                tenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(applicationResidentOrgId);
+            }
+            oAuthAppBean = OAuth2Util.getAppInformationByClientId(consumerKey, tenantDomain);
             if (log.isDebugEnabled()) {
                 log.debug("Service Provider specific expiry time enabled for application : " + consumerKey +
                         ". Application access token expiry time : " + oAuthAppBean.getApplicationAccessTokenExpiryTime()
@@ -861,6 +1020,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             }
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: " + consumerKey, e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while resolving tenant domain from the organization id: ", e);
         }
         return oAuthAppBean;
     }
@@ -1137,7 +1298,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         return OAuthServerConfiguration.getInstance().isTokenRenewalPerRequestEnabled();
     }
 
-    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx, AccessTokenDO existingTokenBean) {
+    private void clearExistingTokenFromCache(OAuthTokenReqMessageContext tokenMsgCtx, AccessTokenDO existingTokenBean)
+            throws IdentityOAuth2Exception {
 
         if (cacheEnabled) {
             String tokenBindingReference = getTokenBindingReference(tokenMsgCtx);
@@ -1174,18 +1336,68 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
      * @param tokReqMsgCtx OAuthTokenReqMessageContext.
      * @return token binding reference.
      */
-    protected String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    protected String getTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
 
-        if (tokReqMsgCtx.getTokenBinding() == null) {
-            if (log.isDebugEnabled()) {
-                log.debug("Token binding data is null.");
+        /**
+         * If OAuth.JWT.RenewTokenWithoutRevokingExisting is enabled from configurations, and current token
+         * binding is null,then we will add a new token binding (request binding) to the token binding with
+         * a value of a random UUID.
+         * The purpose of this new token binding type is to add a random value to the token binding so that
+         * "User, Application, Scope, Binding" combination will be unique for each token.
+         * Previously, if a token issue request come for the same combination of "User, Application, Scope, Binding",
+         * the existing JWT token will be revoked and issue a new token. but with this way, we can issue new tokens
+         * without revoking the old ones.
+         *
+         * Add following configuration to deployment.toml file to enable this feature.
+         *     [oauth.jwt.renew_token_without_revoking_existing]
+         *     enable = true
+         *
+         * By default, the allowed grant type for this feature is "client_credentials". If you need to enable for
+         * other grant types, add the following configuration to deployment.toml file.
+         *     [oauth.jwt.renew_token_without_revoking_existing]
+         *     enable = true
+         *     allowed_grant_types = ["client_credentials","password", ...]
+         */
+        String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        OauthTokenIssuer oauthTokenIssuer;
+
+        try {
+            oauthTokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(consumerKey);
+        } catch (InvalidOAuthClientException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
+        }
+
+        String tokenType = oauthTokenIssuer.getAccessTokenType();
+
+        if (JWT.equalsIgnoreCase(tokenType)) {
+            if (getRenewWithoutRevokingExistingStatus()
+                    && tokReqMsgCtx != null && (tokReqMsgCtx.getTokenBinding() == null
+                    || StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference()))) {
+                if (OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
+                        .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType())) {
+                    return UUID.randomUUID().toString();
+                }
+                return NONE;
             }
+        }
+        return getExistingTokenBindingReference(tokReqMsgCtx);
+    }
+
+    /**
+     * Retrieves the existing token binding reference if available, otherwise returns NONE.
+     *
+     * @param tokReqMsgCtx OAuthTokenReqMessageContext.
+     * @return token binding reference.
+     */
+    private String getExistingTokenBindingReference(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx == null || tokReqMsgCtx.getTokenBinding() == null) {
             return NONE;
         }
-        if (StringUtils.isBlank(tokReqMsgCtx.getTokenBinding().getBindingReference())) {
-            return NONE;
-        }
-        return tokReqMsgCtx.getTokenBinding().getBindingReference();
+        String bindingReference = tokReqMsgCtx.getTokenBinding().getBindingReference();
+        return StringUtils.isBlank(bindingReference) ? NONE : bindingReference;
     }
 
     /**

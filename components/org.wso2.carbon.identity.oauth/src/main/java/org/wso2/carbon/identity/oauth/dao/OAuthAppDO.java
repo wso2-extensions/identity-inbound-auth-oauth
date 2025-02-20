@@ -19,10 +19,23 @@ package org.wso2.carbon.identity.oauth.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.InboundConfigurationProtocol;
+import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.io.Serializable;
+import java.util.Arrays;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -30,6 +43,11 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+
+
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
+import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
+import static org.wso2.carbon.identity.configuration.mgt.core.constant.ConfigurationConstants.TENANT_CONTEXT_PATH_COMPONENT;
 
 /**
  * OAuth application data object.
@@ -299,6 +317,9 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
 
     public String getBackChannelLogoutUrl() {
 
+        if (StringUtils.isBlank(backChannelLogoutUrl)) {
+            this.backChannelLogoutUrl = resolveBackChannelLogoutURLForSharedApps();
+        }
         return backChannelLogoutUrl;
     }
 
@@ -533,5 +554,66 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setAccessTokenClaims(String[] accessTokenClaims) {
 
         this.accessTokenClaims = accessTokenClaims;
+    }
+
+    /**
+     * Resolves the back-channel logout URL for the shared oAuth apps in organizations.
+     *
+     * @return Back-channel logout URL.
+     */
+    private String resolveBackChannelLogoutURLForSharedApps() {
+
+        String tenantDomain = getTenantDomain();
+        try {
+            if (OrganizationManagementUtil.isOrganization(tenantDomain)) {
+                ServiceProvider orgApplication = getOrgApplication(oauthConsumerKey, tenantDomain);
+                boolean isFragmentApp = Arrays.stream(orgApplication.getSpProperties())
+                        .anyMatch(property -> IS_FRAGMENT_APP.equals(property.getName()) &&
+                                Boolean.parseBoolean(property.getValue()));
+
+                if (isFragmentApp) {
+                    String rootOrganizationId = getOrganizationManager().getPrimaryOrganizationId(tenantDomain);
+                    return resolveBackChannelLogoutURL(rootOrganizationId);
+                }
+            }
+        } catch (OrganizationManagementException | URLBuilderException | IdentityApplicationManagementException e) {
+            return null;
+        }
+        return null;
+    }
+
+    private String resolveBackChannelLogoutURL(String organizationId)
+            throws URLBuilderException, OrganizationManagementException {
+
+        String tenantDomain = getOrganizationManager().resolveTenantDomain(organizationId);
+        if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
+            return ServiceURLBuilder.create()
+                    .addPath(DEFAULT_BACKCHANNEL_LOGOUT_URL)
+                    .setTenant(tenantDomain).build().getAbsolutePublicURL();
+        }
+        String context = String.format(TENANT_CONTEXT_PATH_COMPONENT, tenantDomain)
+                + DEFAULT_BACKCHANNEL_LOGOUT_URL;
+        return ServiceURLBuilder.create().addPath(context).build().getAbsolutePublicURL();
+    }
+
+    private OrganizationManager getOrganizationManager() {
+
+        return OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+    }
+
+    private String getTenantDomain() {
+
+        String tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        if (getAppOwner() != null) {
+            tenantDomain = getAppOwner().getTenantDomain();
+        }
+        return tenantDomain;
+    }
+
+    public static ServiceProvider getOrgApplication(String clientId, String tenantDomain)
+            throws IdentityApplicationManagementException {
+
+        return OAuth2ServiceComponentHolder.getApplicationMgtService().getServiceProviderByClientId(
+                clientId, IdentityApplicationConstants.OAuth2.NAME, tenantDomain);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -61,6 +62,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
+import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
@@ -168,6 +170,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             // sets accessToken, refreshToken and validity data
             setTokenData(accessTokenBean, tokReqMsgCtx, validationBean, tokenReq, accessTokenBean.getIssuedTime());
             persistNewToken(tokReqMsgCtx, accessTokenBean, tokenReq.getClientId());
+            super.authorizationDetailsService
+                    .replaceAccessTokenAuthorizationDetails(validationBean.getTokenId(), accessTokenBean, tokReqMsgCtx);
 
             if (log.isDebugEnabled()) {
                 log.debug("Persisted an access token for the refresh token, " +
@@ -275,6 +279,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Store the old access token as a OAuthTokenReqMessageContext property, this is already
         // a preprocessed token.
         tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
+        this.setRARPropertiesForTokenGeneration(tokReqMsgCtx, validationBean);
 
         /*
         Add the session id from the last access token to OAuthTokenReqMessageContext. First check whether the
@@ -576,11 +581,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         return respHeaders;
     }
 
-    private OAuthAppDO getOAuthApp(String clientId) throws IdentityOAuth2Exception {
+    private OAuthAppDO getOAuthApp(String clientId, String tenantDomain) throws IdentityOAuth2Exception {
 
         OAuthAppDO oAuthAppDO;
         try {
-            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId, tenantDomain);
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error while retrieving app information for clientId: "
                     + clientId, e);
@@ -644,7 +649,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                               RefreshTokenValidationDataDO validationBean, OAuth2AccessTokenReqDTO tokenReq,
                               Timestamp timestamp) throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId());
+        OAuthAppDO oAuthAppDO = getOAuthApp(tokenReq.getClientId(), validationBean.getAuthorizedUser().
+                getTenantDomain());
         createTokens(accessTokenDO, tokReqMsgCtx);
         setRefreshTokenData(accessTokenDO, tokenReq, validationBean, oAuthAppDO, accessTokenDO.getRefreshToken(),
                 timestamp, tokReqMsgCtx);
@@ -864,7 +870,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                                                             OAuthTokenReqMessageContext tokenReqMessageContext)
             throws IdentityOAuth2Exception {
 
-        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId());
+        OAuthAppDO oAuthAppBean = getOAuthApp(tokenReqMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                refreshTokenValidationDataDO.getAuthorizedUser().getTenantDomain());
         String grantType = refreshTokenValidationDataDO.getGrantType();
 
         // Allow if refresh token is issued for token requests from following grant types and,
@@ -955,5 +962,32 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
     private RefreshTokenGrantProcessor getRefreshTokenGrantProcessor() {
 
         return OAuth2ServiceComponentHolder.getInstance().getRefreshTokenGrantProcessor();
+    }
+
+    /**
+     * Sets the RAR properties for token generation.
+     * <p> It retrieves the token authorization details based on the provided OAuth token request context. </p>
+     *
+     * @param oAuthTokenReqMessageContext Context of the OAuth token request message.
+     * @param validationBean              Refresh token validation data.
+     * @throws IdentityOAuth2Exception If an error occurs while retrieving authorization details.
+     */
+    private void setRARPropertiesForTokenGeneration(final OAuthTokenReqMessageContext oAuthTokenReqMessageContext,
+                                                      final RefreshTokenValidationDataDO validationBean)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving token authorization details for user: "
+                    + oAuthTokenReqMessageContext.getAuthorizedUser().getLoggableMaskedUserId());
+        }
+
+        final int tenantId =
+                OAuth2Util.getTenantId(oAuthTokenReqMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+
+        AuthorizationDetails tokenAuthorizationDetails = super.authorizationDetailsService
+                .getAccessTokenAuthorizationDetails(validationBean.getTokenId(), tenantId);
+
+        oAuthTokenReqMessageContext.setAuthorizationDetails(AuthorizationDetailsUtils
+                .getTrimmedAuthorizationDetails(tokenAuthorizationDetails));
     }
 }

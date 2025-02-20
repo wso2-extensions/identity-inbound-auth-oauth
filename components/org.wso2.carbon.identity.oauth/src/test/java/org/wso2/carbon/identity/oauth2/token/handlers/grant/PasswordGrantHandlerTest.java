@@ -18,18 +18,25 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant;
 
+import org.apache.commons.logging.Log;
 import org.mockito.MockedStatic;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.config.builder.FileBasedConfigurationBuilder;
+import org.wso2.carbon.identity.application.authentication.framework.config.model.AuthenticatorConfig;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProviderProperty;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockException;
 import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
@@ -48,22 +55,33 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.SHOW_AUTHFAILURE_RESON_CONFIG;
 import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN_NAME;
 
+@WithCarbonHome
 public class PasswordGrantHandlerTest {
 
     private OAuthTokenReqMessageContext tokReqMsgCtx;
     private OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO;
     private ApplicationManagementService applicationManagementService;
+    private FileBasedConfigurationBuilder fileBasedConfigurationBuilder;
     private ServiceProvider serviceProvider;
     private OAuthComponentServiceHolder oAuthComponentServiceHolder;
     private RealmService realmService;
@@ -75,12 +93,15 @@ public class PasswordGrantHandlerTest {
 
     private static final String CLIENT_ID = "IbWwXLf5MnKSY6x6gnR_7gd7f1wa";
 
+    private Log mockLog;
+
     @BeforeMethod
-    public void init() {
+    public void init() throws Exception {
 
         tokReqMsgCtx = mock(OAuthTokenReqMessageContext.class);
         oAuth2AccessTokenReqDTO = mock(OAuth2AccessTokenReqDTO.class);
         applicationManagementService = mock(ApplicationManagementService.class);
+        fileBasedConfigurationBuilder = mock(FileBasedConfigurationBuilder.class);
         serviceProvider = mock(ServiceProvider.class);
         oAuthComponentServiceHolder = mock(OAuthComponentServiceHolder.class);
         realmService = mock(RealmService.class);
@@ -89,6 +110,27 @@ public class PasswordGrantHandlerTest {
         serverConfiguration = mock(OAuthServerConfiguration.class);
         oauthIssuer = mock(OauthTokenIssuer.class);
         localAndOutboundAuthenticationConfig = mock(LocalAndOutboundAuthenticationConfig.class);
+        mockLog = mock(Log.class);
+        Field logField =
+                PasswordGrantHandler.class.getDeclaredField("log");
+        logField.setAccessible(true);
+
+        // Remove the 'final' modifier using reflection
+        Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(logField, logField.getModifiers() & ~Modifier.FINAL);
+
+        // Set the static field to the mock object
+        logField.set(null, mockLog);
+
+        PrivilegedCarbonContext.startTenantFlow();
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(null);
+    }
+
+    @AfterMethod
+    public void tearDown() {
+
+        PrivilegedCarbonContext.endTenantFlow();
     }
 
     @DataProvider(name = "ValidateGrantDataProvider")
@@ -108,13 +150,26 @@ public class PasswordGrantHandlerTest {
              MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);
              MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigBuilder = mockStatic(
+                     FileBasedConfigurationBuilder.class)) {
+
+            fileBasedConfigBuilder.when(FileBasedConfigurationBuilder::getInstance)
+                    .thenReturn(fileBasedConfigurationBuilder);
+            AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
+            Map<String, String> parameterMap = new HashMap<>();
+            parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+            basicAuthenticatorConfig.setParameterMap(parameterMap);
+            when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
+                    basicAuthenticatorConfig);
 
             when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
             when(oAuth2AccessTokenReqDTO.getResourceOwnerUsername()).thenReturn(username + "wso2.com");
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(CLIENT_ID);
             when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn("wso2.com");
             when(oAuth2AccessTokenReqDTO.getResourceOwnerPassword()).thenReturn("randomPassword");
+
+            when(mockLog.isDebugEnabled()).thenReturn(true);
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfiguration);
 
@@ -167,6 +222,7 @@ public class PasswordGrantHandlerTest {
 
             PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
             boolean isValid = passwordGrantHandler.validateGrant(tokReqMsgCtx);
+            verify(mockLog, times(2)).debug(eq("PASSWORD_GRANT_POST_AUTHENTICATION event is triggered"));
             assertTrue(isValid, "Password grant validation should be successful");
         }
     }
@@ -176,22 +232,52 @@ public class PasswordGrantHandlerTest {
 
         return new Object[][]{
                 {"carbon.super", true, true, new IdentityApplicationManagementException("Error"),
-                        "Error while retrieving service provider"},
-                {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store"},
-                {"wso2.com", false, true, null, "Authentication failed for user"}
+                        "Error while retrieving service provider", false},
+                {"carbon.super", true, true, new UserStoreException(), "Error while retrieving user store", false},
+                {"carbon.super", true, true, new UserStoreException(
+                        new AccountLockException(
+                                "17003:AdminInitiated",
+                                "Account is locked by admin for user: a*****r in user store: PRIMARY in tenant: " +
+                                        "carbon.super. Cannot login until the account is unlocked.")),
+                        "17003:AdminInitiated Account is locked by admin for user: a*****r in user store: PRIMARY in " +
+                                "tenant: carbon.super. Cannot login until the account is unlocked.",
+                        true},
+                {"carbon.super", true, true, new UserStoreException(
+                        new AccountLockException(
+                                "17003:AdminInitiated",
+                                "Account is locked by admin for user: a*****r in user store: PRIMARY in tenant: " +
+                                        "carbon.super. Cannot login until the account is unlocked.")),
+                        "Authentication failed for username",
+                        false},
+                {"wso2.com", false, true, null, "Authentication failed for user", false}
         };
     }
 
     @Test(dataProvider = "GetValidateGrantForExceptionDataProvider", expectedExceptions = IdentityOAuth2Exception.class)
     public void testValidateGrantForException(String tenantDomain, boolean authenticated, boolean isSaas, Exception e,
-                                              String reasonForError) throws Exception {
+                                              String reasonForError, boolean isShowAuthFailureReason) throws Exception {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                 OAuthServerConfiguration.class);
              MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
+             MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigBuilder = mockStatic(
+                     FileBasedConfigurationBuilder.class)) {
+
+            fileBasedConfigBuilder.when(FileBasedConfigurationBuilder::getInstance)
+                    .thenReturn(fileBasedConfigurationBuilder);
+            AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
+            Map<String, String> parameterMap = new HashMap<>();
+            if (isShowAuthFailureReason) {
+                parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "true");
+            } else {
+                parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
+            }
+            basicAuthenticatorConfig.setParameterMap(parameterMap);
+            when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
+                    basicAuthenticatorConfig);
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfiguration);
             when(serverConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
@@ -228,7 +314,10 @@ public class PasswordGrantHandlerTest {
             }
             when(realmService.getTenantUserRealm(anyInt())).thenReturn(userRealm);
 
-            if (e instanceof UserStoreException) {
+            if (e != null && e.getCause() instanceof AccountLockException) {
+                when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
+                when(userStoreManager.authenticateWithID(anyString(), anyString(), any(), anyString())).thenThrow(e);
+            } else if (e instanceof UserStoreException) {
                 when(userRealm.getUserStoreManager()).thenThrow(e);
             } else {
                 when(userRealm.getUserStoreManager()).thenReturn(userStoreManager);
@@ -248,15 +337,28 @@ public class PasswordGrantHandlerTest {
                 authenticationResult = new AuthenticationResult(AuthenticationResult.AuthenticationStatus.FAIL);
             }
 
-            when(userStoreManager.authenticateWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI),
-                    anyString(), any(), eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(authenticationResult);
+            if (e == null || !(e.getCause() instanceof AccountLockException)) {
+                when(userStoreManager.authenticateWithID(eq(UserCoreClaimConstants.USERNAME_CLAIM_URI),
+                        anyString(), any(), eq(UserCoreConstants.DEFAULT_PROFILE))).thenReturn(authenticationResult);
+            }
 
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantIdOfUser(anyString())).thenReturn(1);
             frameworkUtils.when(() -> FrameworkUtils.preprocessUsername(anyString(), any(ServiceProvider.class)))
                     .thenReturn("randomUserwso2.com");
             PasswordGrantHandler passwordGrantHandler = new PasswordGrantHandler();
-            passwordGrantHandler.validateGrant(tokReqMsgCtx);
-            fail("Password grant validation should fail with the reason " + reasonForError);
+
+            if (e != null && e.getCause() instanceof AccountLockException) {
+                try {
+                    passwordGrantHandler.validateGrant(tokReqMsgCtx);
+                } catch (IdentityOAuth2Exception ex) {
+                    assertEquals(ex.getMessage(), reasonForError, "Error message should contain the " +
+                            "account lock exception message");
+                    throw ex;
+                }
+            } else {
+                passwordGrantHandler.validateGrant(tokReqMsgCtx);
+                fail("Password grant validation should fail with the reason " + reasonForError);
+            }
         }
     }
 

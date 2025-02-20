@@ -23,12 +23,12 @@
     <parent>
         <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
         <artifactId>identity-inbound-auth-oauth</artifactId>
-        <version>7.0.190</version>
+        <version>7.0.239</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>org.wso2.carbon.identity.api.server.dcr</artifactId>
-    <version>7.0.190</version>
+    <version>7.0.239</version>
     <name>WSO2 Carbon -  User DCR Rest API</name>
     <description>WSO2 Carbon - User DCR Rest API</description>
 
@@ -46,11 +46,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -150,6 +145,10 @@
             <groupId>com.sun.xml.parsers</groupId>
             <artifactId>jaxp-ri</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.testutil</artifactId>
         </dependency>
     </dependencies>
 

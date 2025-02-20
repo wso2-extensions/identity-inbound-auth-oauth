@@ -52,12 +52,9 @@ import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
-import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
-import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
@@ -88,31 +85,6 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PRO
 @Path("/authorize")
 @InInterceptors(classes = {OAuthClientAuthenticatorProxy.class, ClientAttestationProxy.class})
 public class OAuth2AuthzEndpoint {
-
-    private static OpenIDConnectClaimFilterImpl openIDConnectClaimFilter;
-
-    private static ScopeMetadataService scopeMetadataService;
-
-    public static OpenIDConnectClaimFilterImpl getOpenIDConnectClaimFilter() {
-
-        return openIDConnectClaimFilter;
-    }
-
-    public static void setOpenIDConnectClaimFilter(OpenIDConnectClaimFilterImpl openIDConnectClaimFilter) {
-
-        OAuth2AuthzEndpoint.openIDConnectClaimFilter = openIDConnectClaimFilter;
-    }
-
-    public static ScopeMetadataService getScopeMetadataService() {
-
-        return scopeMetadataService;
-    }
-
-    public static void setScopeMetadataService(ScopeMetadataService scopeMetadataService) {
-
-        OAuth2AuthzEndpoint.scopeMetadataService = scopeMetadataService;
-    }
-    private static DeviceAuthService deviceAuthService;
 
     private static final Log log = LogFactory.getLog(OAuth2AuthzEndpoint.class);
 
@@ -225,16 +197,6 @@ public class OAuth2AuthzEndpoint {
         return authorize(httpRequest, response);
     }
 
-    /**
-     * Set the device authentication service.
-     *
-     * @param deviceAuthService Device authentication service.
-     */
-    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
-
-        OAuth2AuthzEndpoint.deviceAuthService = deviceAuthService;
-    }
-
     private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage)
             throws URISyntaxException, InvalidRequestParentException {
 
@@ -270,7 +232,6 @@ public class OAuth2AuthzEndpoint {
         oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
                 .UNKNOWN);
         return authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
-
     }
 
     private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage)
@@ -309,6 +270,16 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
+    /**
+     * This method use to call authentication framework directly via API other than using HTTP redirects.
+     * Sending wrapper request object to doGet method since other original request doesn't exist required parameters
+     * Doesn't check SUCCESS_COMPLETED since taking decision with INCOMPLETE status
+     *
+     * @param type authenticator type
+     * @throws URISyntaxException
+     * @throws InvalidRequestParentException
+     * @Param type OAuthMessage
+     */
     private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type, String redirectUrl)
             throws URISyntaxException, InvalidRequestParentException {
 

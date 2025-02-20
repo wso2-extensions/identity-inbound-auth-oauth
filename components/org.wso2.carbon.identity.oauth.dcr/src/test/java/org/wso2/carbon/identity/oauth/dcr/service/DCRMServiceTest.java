@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
+import org.wso2.carbon.identity.oauth.dcr.handler.AdditionalAttributeFilter;
 import org.wso2.carbon.identity.oauth.dcr.internal.DCRDataHolder;
 import org.wso2.carbon.identity.oauth.dcr.util.DCRConstants;
 import org.wso2.carbon.identity.oauth.dcr.util.ErrorCodes;
@@ -108,6 +109,7 @@ public class DCRMServiceTest {
     private String dummyCallbackUrl = "dummyCallbackUrl";
     private final String dummyTemplateName = "dummyTemplateName";
     private final String dummyBackchannelLogoutUri = "http://backchannel.com/";
+    private static final String ORG_ROLE_AUDIENCE = "organization";
 
     @Mock
     private OAuthConsumerAppDTO dto;
@@ -131,6 +133,7 @@ public class DCRMServiceTest {
         mockOAuthAdminService = mock(OAuthAdminService.class);
         applicationRegistrationRequest = new ApplicationRegistrationRequest();
         applicationRegistrationRequest.setClientName(dummyClientName);
+        applicationRegistrationRequest.setAdditionalAttributes(new HashMap<>());
         dcrmService = new DCRMService();
         mockApplicationManagementService = mock(ApplicationManagementService.class);
         DCRDataHolder dcrDataHolder = DCRDataHolder.getInstance();
@@ -147,6 +150,17 @@ public class DCRMServiceTest {
         mockedUserStoreManager = mock(AbstractUserStoreManager.class);
         mockConfigurationManager = mock(ConfigurationManager.class);
         DCRDataHolder.getInstance().setConfigurationManager(mockConfigurationManager);
+
+        List<String> responseKeys = new ArrayList<>();
+        Map<String, Object> processedAttributes = new HashMap<>();
+        AdditionalAttributeFilter additionalAttributeFilter = mock(AdditionalAttributeFilter.class);
+        lenient().when(additionalAttributeFilter.filterDCRRegisterAttributes(any(), any()))
+                .thenReturn(processedAttributes);
+        lenient().when(additionalAttributeFilter.filterDCRUpdateAttributes(any(), any(), any()))
+                .thenReturn(processedAttributes);
+        lenient().when(additionalAttributeFilter.processDCRGetAttributes(any())).thenReturn(processedAttributes);
+        lenient().when(additionalAttributeFilter.getResponseAttributeKeys()).thenReturn(responseKeys);
+        DCRDataHolder.getInstance().setAdditionalAttributeFilter(additionalAttributeFilter);
     }
 
     @AfterMethod
@@ -199,12 +213,12 @@ public class DCRMServiceTest {
     public void getApplicationNullDTOTest(String dtoStatus) throws Exception {
 
         if (dtoStatus == null) {
-            when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(null);
+            when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(null);
             lenient().when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
         } else {
             OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
             dto.setApplicationName("");
-            when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+            when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
             lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
                     .thenReturn(new OAuthConsumerAppDTO[]{dto});
         }
@@ -222,7 +236,7 @@ public class DCRMServiceTest {
     public void getApplicationDTOTestWithIOAException() throws Exception {
 
         doThrow(new IdentityOAuthAdminException("")).when(mockOAuthAdminService)
-                .getOAuthApplicationData(dummyConsumerKey);
+                .getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain);
         lenient().when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
@@ -239,7 +253,7 @@ public class DCRMServiceTest {
     public void getApplicationDTOTestWithIOCException() throws Exception {
 
         doThrow(new IdentityOAuthAdminException("", new InvalidOAuthClientException(""))).when(mockOAuthAdminService)
-                .getOAuthApplicationData(dummyConsumerKey);
+                .getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain);
         lenient().when(mockOAuthAdminService.getAllOAuthApplicationData()).thenReturn(new OAuthConsumerAppDTO[0]);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
@@ -256,7 +270,7 @@ public class DCRMServiceTest {
     public void getApplicationDTOTestUserUnauthorized() throws Exception {
 
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
         try {
@@ -276,7 +290,7 @@ public class DCRMServiceTest {
             UserStoreException, NoSuchFieldException, IllegalAccessException {
 
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
         try {
@@ -304,7 +318,7 @@ public class DCRMServiceTest {
         dto.setCallbackUrl(dummyCallbackUrl);
         dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
-        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
         PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserRealm(mockedUserRealm);
         when(mockedUserRealm.getUserStoreManager()).thenReturn(mockedUserStoreManager);
@@ -328,7 +342,8 @@ public class DCRMServiceTest {
     public void validateRequestTenantDomainTestWitInvalidOAuthClientException()
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        when(OAuth2Util.getTenantDomainOfOauthApp(dummyConsumerKey)).thenThrow(new InvalidOAuthClientException(""));
+        when(OAuth2Util.getTenantDomainOfOauthApp(dummyConsumerKey, dummyTenantDomain)).
+                thenThrow(new InvalidOAuthClientException(""));
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (DCRMException ex) {
@@ -343,7 +358,8 @@ public class DCRMServiceTest {
     public void validateRequestTenantDomainTestWitIdentityOAuth2Exception()
             throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
-        when(OAuth2Util.getTenantDomainOfOauthApp(dummyConsumerKey)).thenThrow(new IdentityOAuth2Exception(""));
+        when(OAuth2Util.getTenantDomainOfOauthApp(dummyConsumerKey, dummyTenantDomain)).
+                thenThrow(new IdentityOAuth2Exception(""));
         try {
             dcrmService.getApplication(dummyConsumerKey);
         } catch (DCRMException ex) {
@@ -535,7 +551,7 @@ public class DCRMServiceTest {
         applicationRegistrationRequest.setGrantTypes(dummyGrantTypes);
         applicationRegistrationRequest.setConsumerKey(dummyConsumerKey);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
-        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey))
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain))
                 .thenReturn(dto);
         when(dto.getApplicationName()).thenReturn(dummyClientName);
 
@@ -915,7 +931,8 @@ public class DCRMServiceTest {
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         IdentityOAuthAdminException identityOAuthAdminException = mock(IdentityOAuthAdminException.class);
-        doThrow(identityOAuthAdminException).when(mockOAuthAdminService).getOAuthApplicationData(dummyConsumerKey);
+        doThrow(identityOAuthAdminException).when(mockOAuthAdminService).getOAuthApplicationData(dummyConsumerKey,
+                dummyTenantDomain);
         try {
             dcrmService.registerApplication(applicationRegistrationRequest);
         } catch (IdentityException ex) {
@@ -974,7 +991,7 @@ public class DCRMServiceTest {
         lenient().when(mockOAuthAdminService
                 .getOAuthApplicationDataByAppName(dummyClientName)).thenReturn(oAuthConsumerApp);
         lenient().when(mockOAuthAdminService
-                .getOAuthApplicationData("dummyConsumerKey")).thenReturn(oAuthConsumerApp);
+                .getOAuthApplicationData("dummyConsumerKey", dummyTenantDomain)).thenReturn(oAuthConsumerApp);
         lenient().when(mockOAuthAdminService.getAllOAuthApplicationData())
                 .thenReturn(new OAuthConsumerAppDTO[]{oAuthConsumerApp});
         lenient().when(mockOAuthAdminService.registerAndRetrieveOAuthApplicationData(any(OAuthConsumerAppDTO.class))).
@@ -1004,6 +1021,7 @@ public class DCRMServiceTest {
         assertEquals(application.getClientId(), dummyConsumerKey);
         assertEquals(application.getClientName(), dummyClientName);
         assertEquals(application.getClientSecret(), dummyConsumerSecret);
+        assertEquals(application.getExtAllowedAudience(), roleAudience);
     }
 
     @Test
@@ -1099,6 +1117,8 @@ public class DCRMServiceTest {
         applicationUpdateRequest.setGrantTypes(dummyGrantTypes);
         applicationUpdateRequest.setTokenType(dummyTokenType);
         applicationUpdateRequest.setBackchannelLogoutUri(dummyBackchannelLogoutUri);
+        applicationUpdateRequest.setAdditionalAttributes(new HashMap<>());
+
 
         OAuthConsumerAppDTO dto = new OAuthConsumerAppDTO();
         dto.setApplicationName(dummyClientName);
@@ -1107,7 +1127,7 @@ public class DCRMServiceTest {
         dto.setCallbackUrl(dummyCallbackUrl);
         dto.setUsername(dummyUserName.concat("@").concat(dummyTenantDomain));
 
-        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey)).thenReturn(dto);
+        when(mockOAuthAdminService.getOAuthApplicationData(dummyConsumerKey, dummyTenantDomain)).thenReturn(dto);
         setInternalState(dcrmService, "oAuthAdminService", mockOAuthAdminService);
 
         ServiceProvider serviceProvider = new ServiceProvider();

@@ -157,6 +157,16 @@ public class OAuthAppDAO {
 
         AuthenticatedUser appOwner = consumerAppDO.getAppOwner();
         String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appOrgId)) {
+            try {
+                tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appOrgId);
+            } catch (OrganizationManagementException e) {
+                throw handleError("Error occurred while resolving tenant domain for organization id: "
+                        + appOrgId, e);
+            }
+        }
         int spTenantId = IdentityTenantUtil.getTenantId(tenantDomain);
         String userStoreDomain = appOwner.getUserStoreDomain();
         if (!isDuplicateApplication(appOwner.getUserName(), spTenantId, userStoreDomain, consumerAppDO)) {
@@ -212,6 +222,7 @@ public class OAuthAppDAO {
                         }
                         appId = getAppIdByClientId(connection, consumerAppDO.getOauthConsumerKey());
                     }
+                    consumerAppDO.setId(appId);
                     addScopeValidators(connection, appId, consumerAppDO.getScopeValidators());
                     addAccessTokenClaims(connection, appId, consumerAppDO.getAccessTokenClaims());
                     // Handle OIDC Related Properties. These are persisted in IDN_OIDC_PROPERTY table.
@@ -686,6 +697,18 @@ public class OAuthAppDAO {
 
         OAuthAppDO oauthApp;
         try (Connection connection = IdentityDatabaseUtil.getDBConnection(false)) {
+            String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getApplicationResidentOrganizationId();
+            if (StringUtils.isNotEmpty(appOrgId)) {
+                try {
+                    String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(appOrgId);
+                    tenantID = IdentityTenantUtil.getTenantId(tenantDomain);
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for " +
+                            "organization id: " + appOrgId, e);
+                }
+            }
             String sqlQuery = SQLQueries.OAuthAppDAOSQLQueries.GET_APP_INFO_BY_APP_NAME_WITH_PKCE;
 
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
@@ -877,6 +900,18 @@ public class OAuthAppDAO {
         prepStmt.setString(11, oauthAppDO.getAppOwner().getUserStoreDomain());
         prepStmt.setString(12, persistenceProcessor.getProcessedClientId(oauthAppDO.getOauthConsumerKey()));
         prepStmt.setInt(13, IdentityTenantUtil.getLoginTenantId());
+        String appOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                .getApplicationResidentOrganizationId();
+        if (StringUtils.isNotEmpty(appOrgId)) {
+            try {
+                String tenantDomain = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(appOrgId);
+                prepStmt.setInt(13, IdentityTenantUtil.getTenantId(tenantDomain));
+            } catch (OrganizationManagementException e) {
+                throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for " +
+                        "organization id: " + appOrgId, e);
+            }
+        }
     }
 
     private void setValuesToStatementWithPKCENoOwnerUpdate(OAuthAppDO oauthAppDO, PreparedStatement prepStmt)
@@ -1957,14 +1992,41 @@ public class OAuthAppDAO {
             oauthApp.setSubjectTokenExpiryTime(Integer.parseInt(subjectTokenExpiryTime));
         }
 
-        boolean hybridFlowEnabled = Boolean.parseBoolean(getFirstPropertyValue(spOIDCProperties,
-                HYBRID_FLOW_ENABLED));
-        oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+        String hybridFlowEnabledProperty = getFirstPropertyValue(spOIDCProperties, HYBRID_FLOW_ENABLED);
 
-        String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
-                OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+        // Check if the application has the `hybridFlowEnabled` property configured
+        if (hybridFlowEnabledProperty == null) {
+            // No hybridFlowEnabled property; use server's default behavior for hybrid flow.
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("The application with consumer key %s does not have the 'hybridFlowEnabled' " +
+                        "property configured. Using server default behavior to enable hybrid flow with all " +
+                        "configured response types.", oauthApp.getOauthConsumerKey()));
+            }
 
-        oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+            List<String> configuredHybridResponseTypes = OAuthServerConfiguration.getInstance()
+                    .getConfiguredHybridResponseTypes();
+
+            if (configuredHybridResponseTypes.isEmpty()) {
+                // No configured hybrid response types; hybrid flow is disabled
+                oauthApp.setHybridFlowEnabled(false);
+                oauthApp.setHybridFlowResponseType(null);
+            } else {
+                // Enable hybrid flow with all configured response types
+                oauthApp.setHybridFlowEnabled(true);
+                String hybridFlowResponseType = String.join(",", configuredHybridResponseTypes);
+                oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+            }
+        } else {
+            // Hybrid flow property is defined; parse and configure
+            boolean hybridFlowEnabled = Boolean.parseBoolean(hybridFlowEnabledProperty);
+            oauthApp.setHybridFlowEnabled(hybridFlowEnabled);
+
+            String hybridFlowResponseType = getFirstPropertyValue(spOIDCProperties,
+                    OAuthConstants.OIDCConfigProperties.HYBRID_FLOW_RESPONSE_TYPE);
+
+            // Configure the hybrid flow response type (null if not explicitly set)
+            oauthApp.setHybridFlowResponseType(hybridFlowResponseType);
+        }
     }
 
     private String getFirstPropertyValue(Map<String, List<String>> propertyMap, String key) {
