@@ -25,6 +25,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -69,13 +72,20 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
+import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeIncompleteResponse;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
@@ -119,6 +129,7 @@ public class AuthzChallengeEndpoint {
         AuthzChallengeEndpoint.scopeMetadataService = scopeMetadataService;
     }
     private static DeviceAuthService deviceAuthService;
+
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
     private final AuthenticationService authenticationService = new AuthenticationService();
@@ -126,7 +137,7 @@ public class AuthzChallengeEndpoint {
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
 
     public Response handleInitialAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, boolean isInternalRequest)
-            throws URISyntaxException, InvalidRequestParentException {
+            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
 
         OAuthMessage oAuthMessage;
 
@@ -144,7 +155,6 @@ public class AuthzChallengeEndpoint {
         }
 
         // Perform request authentication
-
         if(!isInternalRequest){
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
@@ -160,7 +170,15 @@ public class AuthzChallengeEndpoint {
                 return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
             }
         }
-
+//        String thumbprint = null;
+//        if(request.getHeader("DPoP") != null){
+//            HttpRequestHeader[] requestHeaders = getRequestHeaders(request);
+//            OAuthEventInterceptor oAuthEventInterceptor = OAuth2ServiceComponentHolder.getInstance().getOAuthEventInterceptorProxy();
+//            if (oAuthEventInterceptor != null && oAuthEventInterceptor.isEnabled()) {
+//                thumbprint = oAuthEventInterceptor.validateAndExtractThumbprintFromDPoPHeader(requestHeaders, request);
+//            }
+//            // TODO: Add a way to relate use of DPoP in the same flow.
+//        }
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
@@ -188,6 +206,9 @@ public class AuthzChallengeEndpoint {
                 oauthResponse = AuthzUtil.handleInvalidRequest(oAuthMessage);
             }
             oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, true);
+//            String authSession = extractAuthSession(oauthResponse);
+//            System.out.println("Auth Session: " + authSession);
+//            System.out.println("Thumbprint: " + thumbprint);
             return oauthResponse;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -195,7 +216,10 @@ public class AuthzChallengeEndpoint {
         } catch (OAuthSystemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return AuthzUtil.handleOAuthSystemException(oAuthMessage, e);
-        } finally {
+//        } catch (JsonProcessingException e) {
+//            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+//                    "Error while extracting auth_session.", e);
+        }finally {
             AuthzUtil.handleCachePersistence(oAuthMessage);
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
                 FrameworkUtils.endTenantFlow();
@@ -205,7 +229,9 @@ public class AuthzChallengeEndpoint {
 
     private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) throws AuthServiceException {
         try {
-            payload = renameAuthSessionToFlowId(payload);
+            if(isSubsequentAuthzChallengeRequest(payload)) {
+                payload = renameAuthSessionToFlowId(payload);
+            }
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
             AuthServiceResponse authServiceResponse = authenticationService.handleAuthentication(authServiceRequest);
@@ -236,7 +262,15 @@ public class AuthzChallengeEndpoint {
         }
     }
 
+    /**
+     * Set the device authentication service.
+     *
+     * @param deviceAuthService Device authentication service.
+     */
+    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
 
+        AuthzChallengeEndpoint.deviceAuthService = deviceAuthService;
+    }
 
     @POST
     @Path("/")
@@ -269,7 +303,7 @@ public class AuthzChallengeEndpoint {
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
-        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
+        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException | IdentityOAuth2Exception e) {
             log.error("Error occurred while handling authorize challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -299,28 +333,29 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-
-    /**
-     * Set the device authentication service.
-     *
-     * @param deviceAuthService Device authentication service.
-     */
-    public static void setDeviceAuthService(DeviceAuthService deviceAuthService) {
-
-        AuthzChallengeEndpoint.deviceAuthService = deviceAuthService;
-    }
-
     private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(payload);
 
-        if (jsonNode.has("auth_session")) {
-            ObjectNode objectNode = (ObjectNode) jsonNode;
-            JsonNode authSessionValue = objectNode.remove("auth_session");
-            objectNode.set("flowId", authSessionValue);
-            return objectMapper.writeValueAsString(objectNode);
-        }
-        return payload;
+        ObjectNode objectNode = (ObjectNode) jsonNode;
+        JsonNode authSessionValue = objectNode.remove("auth_session");
+        objectNode.set("flowId", authSessionValue);
+        return objectMapper.writeValueAsString(objectNode);
+    }
+
+    private String extractAuthSession(Response response) throws JsonProcessingException {
+
+        String responseJson = response.getEntity().toString();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(responseJson);
+        return jsonNode.get("auth_session").asText();
+    }
+
+    private boolean isSubsequentAuthzChallengeRequest(String payload) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(payload);
+
+        return jsonNode.has("auth_session");
     }
 
     private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage)
@@ -330,7 +365,7 @@ public class AuthzChallengeEndpoint {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
             AuthzUtil.invokeCommonauthFlow(oAuthMessage, responseWrapper);
             return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
-        } catch (ServletException | IOException | URLBuilderException e) {
+        } catch (ServletException | IOException | URLBuilderException | AuthServiceException | IdentityOAuth2Exception e) {
             log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -339,7 +374,8 @@ public class AuthzChallengeEndpoint {
     private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage,
                                                       CommonAuthResponseWrapper
                                                               responseWrapper)
-            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException {
+            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException,
+            AuthServiceException, IdentityOAuth2Exception {
 
         if (AuthzUtil.isAuthFlowStateExists(oAuthMessage)) {
             if (AuthzUtil.isFlowStateIncomplete(oAuthMessage)) {
@@ -353,7 +389,7 @@ public class AuthzChallengeEndpoint {
     }
 
     private Response handleUnknownFlowState(OAuthMessage oAuthMessage)
-    throws URISyntaxException, InvalidRequestParentException {
+            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
 
         oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
                 .UNKNOWN);
@@ -362,7 +398,7 @@ public class AuthzChallengeEndpoint {
     }
 
     private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage)
-            throws URISyntaxException, InvalidRequestParentException {
+            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
 
         return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse(),true);
     }
@@ -461,7 +497,7 @@ public class AuthzChallengeEndpoint {
             }
         } catch (AuthServiceException e) {
             return AuthzUtil.handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
-        } catch (IOException | URLBuilderException e) {
+        } catch (IOException | URLBuilderException | IdentityOAuth2Exception e) {
             return AuthzUtil.handleAuthenticationFrameworkError(oAuthMessage, e);
         }
     }
@@ -479,8 +515,37 @@ public class AuthzChallengeEndpoint {
         } catch (InvalidRequestParentException | URISyntaxException e) {
             throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
                     "Error while processing the final oauth authorization request.", e);
+        } catch (IdentityOAuth2Exception e) {
+            throw new RuntimeException(e);
         }
     }
+
+//    public static HttpRequestHeader[] getRequestHeaders(HttpServletRequest request) {
+//        Enumeration<String> headerNames = request.getHeaderNames();
+//
+//        if (headerNames == null || !headerNames.hasMoreElements()) {
+//            return null; // No headers found
+//        }
+//
+//        List<HttpRequestHeader> httpHeaderList = new ArrayList<>();
+//
+//        while (headerNames.hasMoreElements()) {
+//            String headerName = headerNames.nextElement();
+//            Enumeration<String> headerValues = request.getHeaders(headerName);
+//
+//            List<String> headerValueList = new ArrayList<>();
+//            while (headerValues != null && headerValues.hasMoreElements()) {
+//                headerValueList.add(headerValues.nextElement());
+//            }
+//
+//            httpHeaderList.add(new HttpRequestHeader(
+//                    headerName,
+//                    headerValueList.toArray(new String[0])
+//            ));
+//        }
+//
+//        return httpHeaderList.toArray(new HttpRequestHeader[0]);
+//    }
 
 }
 
