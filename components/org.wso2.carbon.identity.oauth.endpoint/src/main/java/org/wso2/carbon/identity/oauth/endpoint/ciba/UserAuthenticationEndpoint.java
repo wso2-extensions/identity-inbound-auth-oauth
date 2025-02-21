@@ -7,6 +7,8 @@ import org.apache.oltu.oauth2.as.response.OAuthASResponse;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.apache.oltu.oauth2.common.message.OAuthResponse;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -33,8 +35,8 @@ import javax.ws.rs.core.Response;
 
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.BINDING_MESSAGE;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_AUTH_CODE_KEY;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_SUCCESS_ENDPOINT_PATH;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LOGIN_HINT;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
 
 /**
  * Rest implementation for ciba user authentication flow.
@@ -44,6 +46,8 @@ public class UserAuthenticationEndpoint {
 
     private static final Log log = LogFactory.getLog(UserAuthenticationEndpoint.class);
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    public static final String ERROR = "error";
+    public static final String INVALID_CODE_ERROR_KEY = "invalid.authCodeKey";
 
     @GET
     @Path("/")
@@ -63,10 +67,9 @@ public class UserAuthenticationEndpoint {
                 if (log.isDebugEnabled()) {
                     log.debug("authCodeKey is missing in the request.");
                 }
-                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(
-                        new URI(getErrorPageURL(request, OAuth2ErrorCodes.INVALID_REQUEST,
-                                OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
-                                "Invalid ciba user authorization request", null))).build();
+                String error = ServiceURLBuilder.create().addPath(CIBA_SUCCESS_ENDPOINT_PATH)
+                        .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(URI.create(error)).build();
             }
             CibaAuthCodeDO cibaAuthCodeDO = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                     .getCibaAuthCode(authCodeKey);
@@ -89,15 +92,16 @@ public class UserAuthenticationEndpoint {
                 commonAuthRequestWrapper.setAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW, true);
                 return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
             } else {
-                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(
-                        new URI(getErrorPageURL(request, OAuth2ErrorCodes.INVALID_REQUEST,
-                                OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
-                                "Invalid ciba user authorization request", null))).build();
+                String error = ServiceURLBuilder.create().addPath(CIBA_SUCCESS_ENDPOINT_PATH)
+                        .addParameter(ERROR, INVALID_CODE_ERROR_KEY).build().getAbsolutePublicURL();
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).location(URI.create(error)).build();
             }
         } catch (CibaCoreException e) {
             return handleCibaCoreException(e);
         } catch (URISyntaxException e) {
             return handleURISyntaxException(e);
+        } catch (URLBuilderException e) {
+            return handleURLBuilderException(e);
         }
     }
 
@@ -129,6 +133,23 @@ public class UserAuthenticationEndpoint {
     private Response handleURISyntaxException(URISyntaxException e) throws OAuthSystemException {
 
         log.error("Error while parsing string as an URI reference.", e);
+        OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
+                setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
+                .buildJSONMessage();
+        return Response.status(response.getResponseStatus()).header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE,
+                EndpointUtil.getRealmInfo()).entity(response.getBody()).build();
+    }
+
+    /**
+     * Handle URLBuilderException.
+     *
+     * @param e URLBuilderException
+     * @return
+     * @throws OAuthSystemException
+     */
+    private Response handleURLBuilderException(URLBuilderException e) throws OAuthSystemException {
+
+        log.error("Error occurred while sending request to authentication framework.", e);
         OAuthResponse response = OAuthASResponse.errorResponse(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).
                 setError(OAuth2ErrorCodes.SERVER_ERROR).setErrorDescription("Internal Server Error")
                 .buildJSONMessage();
