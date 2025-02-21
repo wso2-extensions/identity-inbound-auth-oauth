@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,9 +23,7 @@ import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
@@ -34,7 +32,6 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
-import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
@@ -112,17 +109,15 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     private static final String TEST_AUTH_CODE_KEY = "testAuthCodeKey";
     private static final String TEST_URL = "testURL";
 
-    private static CibaAuthCodeDO cibaDOAsNotExpired = new CibaAuthCodeDO();
-    private static CibaAuthCodeDO cibaDOAsExpired = new CibaAuthCodeDO();
-
-    MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+    private static CibaAuthCodeDO validCibaDOA = new CibaAuthCodeDO();
+    private static CibaAuthCodeDO invalidCibaDOA = new CibaAuthCodeDO();
 
     @BeforeClass
     public void setUp() throws Exception {
 
-        cibaDOAsNotExpired.setAuthReqStatus(AuthReqStatus.REQUESTED);
+        validCibaDOA.setAuthReqStatus(AuthReqStatus.REQUESTED);
 
-        cibaDOAsExpired.setAuthReqStatus(AuthReqStatus.EXPIRED);
+        invalidCibaDOA.setAuthReqStatus(AuthReqStatus.EXPIRED);
 
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
@@ -136,19 +131,6 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
 
         cleanData();
         PrivilegedCarbonContext.endTenantFlow();
-    }
-
-    @BeforeMethod
-    public void setUpBeforeMethod() {
-
-        identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
-        mockDatabase(identityDatabaseUtil);
-    }
-
-    @AfterMethod
-    public void tearDownAfterMethod() {
-
-        identityDatabaseUtil.close();
     }
 
     /**
@@ -170,7 +152,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
             lenient().when(mockPrivilegedCarbonContext.getOSGiService(CibaAuthService.class, null))
                     .thenReturn(cibaAuthService);
 
-            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
             setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
             try (MockedStatic<CibaDAOFactory> cibaDAOFactory =
@@ -182,7 +165,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 cibaDAOFactory.when(
                         CibaDAOFactory::getInstance).thenReturn(mockCibaDAOFactory);
                 lenient().when(mockCibaDAOFactory.getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
-                lenient().when(cibaMgtDAO.getCibaAuthCode(anyString())).thenReturn(cibaDOAsNotExpired);
+                lenient().when(cibaMgtDAO.getCibaAuthCode(anyString())).thenReturn(validCibaDOA);
                 when(httpServletRequest.getParameter(CIBA_AUTH_CODE_KEY)).thenReturn(TEST_AUTH_CODE_KEY);
 
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString())).thenReturn(oAuthAppDO);
@@ -253,7 +236,8 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
             lenient().when(mockPrivilegedCarbonContext.getOSGiService(CibaAuthService.class, null))
                     .thenReturn(cibaAuthService);
 
-            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
             setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
             try (MockedStatic<CibaDAOFactory> cibaDAOFactory =
@@ -263,7 +247,7 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 cibaDAOFactory.when(
                         CibaDAOFactory::getInstance).thenReturn(mockCibaDAOFactory);
                 lenient().when(mockCibaDAOFactory.getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
-                lenient().when(cibaMgtDAO.getCibaAuthCode(anyString())).thenReturn(cibaDOAsExpired);
+                lenient().when(cibaMgtDAO.getCibaAuthCode(anyString())).thenReturn(invalidCibaDOA);
                 when(httpServletRequest.getParameter(CIBA_AUTH_CODE_KEY)).thenReturn(TEST_AUTH_CODE_KEY);
 
                 serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
@@ -277,23 +261,6 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 Assert.assertEquals(HttpServletResponse.SC_BAD_REQUEST, response.getStatus());
             }
         }
-    }
-
-
-
-    /**
-     * Mock oauth server configuration.
-     *
-     * @throws Exception Error while mocking oauth server configuration.
-     */
-    private void mockOAuthServerConfiguration(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
-            throws Exception {
-
-        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
-        lenient().when(mockOAuthServerConfiguration.getPersistenceProcessor()).thenReturn(tokenPersistenceProcessor);
-        lenient().when(mockOAuthServerConfiguration.isRedirectToRequestedRedirectUriEnabled()).thenReturn(false);
-        lenient().when(tokenPersistenceProcessor.getProcessedClientId(anyString())).thenAnswer(
-                invocation -> invocation.getArguments()[0]);
     }
 
     private void setInternalState(Object object, String fieldName, Object value)

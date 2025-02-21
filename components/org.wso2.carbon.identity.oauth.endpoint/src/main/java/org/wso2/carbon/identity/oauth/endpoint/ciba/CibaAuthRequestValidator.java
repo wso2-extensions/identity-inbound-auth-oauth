@@ -390,10 +390,10 @@ public class CibaAuthRequestValidator {
             throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, "Algorithm must not be null.");
         }
 
-//        if (alg.startsWith("RS")) {
-//            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
-//                    "Provided algorithm: " + alg + " not supported.");
-//        }
+        if (alg.startsWith("RS")) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Provided algorithm: " + alg + " not supported.");
+        }
         return true;
     }
 
