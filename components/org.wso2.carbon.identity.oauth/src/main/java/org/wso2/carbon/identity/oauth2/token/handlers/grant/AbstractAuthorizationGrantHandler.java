@@ -175,50 +175,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
-        AccessTokenDO existingTokenBean = null;
-        OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
-        String tokenType = oauthTokenIssuer.getAccessTokenType();
-
-        /*
-        This segment handles access token requests that neither require generating a new token
-        nor renewing an existing one. Instead, it returns the existing token if it is still valid.
-        As a result, no synchronization lock is needed for these operations.
-        Additionally, this segment should strictly avoid any write or update operations.
-        It was introduced to minimize traffic at the token issuance lock for certain token requests.
-         */
-        if (!(JWT.equalsIgnoreCase(tokenType) && getRenewWithoutRevokingExistingStatus() &&
-                OAuth2ServiceComponentHolder.getJwtRenewWithoutRevokeAllowedGrantTypes()
-                        .contains(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType()))) {
-
-            if (isHashDisabled) {
-                existingTokenBean = getExistingToken(tokReqMsgCtx,
-                        getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
-                                tokenBindingReference, authorizedOrganization));
-            }
-
-            if (existingTokenBean != null && !accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
-
-                String requestGrantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
-                boolean isConsentRequiredGrant = OIDCClaimUtil.isConsentBasedClaimFilteringApplicable(requestGrantType);
-                boolean isRichAuthRequest = AuthorizationDetailsUtils.isRichAuthorizationRequest(
-                        tokReqMsgCtx.getAuthorizationDetails());
-
-                if (!isConsentRequiredGrant && !isRichAuthRequest) {
-
-                    long expireTime = getAccessTokenExpiryTimeMillis(existingTokenBean);
-                    if (isExistingTokenValid(existingTokenBean, expireTime)) {
-                        if (log.isDebugEnabled()) {
-                            log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
-                                    authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
-                        }
-                        return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime,
-                                existingTokenBean);
-                    }
-                }
-            }
-        }
-
         synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
+            AccessTokenDO existingTokenBean = null;
+
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
+            String tokenType = oauthTokenIssuer.getAccessTokenType();
 
             /*
             Check if the token type is JWT and renew without revoking existing tokens is enabled.
@@ -239,11 +200,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 }
             }
 
+            if (isHashDisabled) {
+                existingTokenBean = getExistingToken(tokReqMsgCtx,
+                        getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
+                                tokenBindingReference, authorizedOrganization));
+            }
+
             if (existingTokenBean != null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Latest access token is found in the OAuthCache for the app: " + consumerKey);
                 }
-
                 if (accessTokenRenewedPerRequest(oauthTokenIssuer, tokReqMsgCtx)) {
                     if (log.isDebugEnabled()) {
                         log.debug("TokenRenewalPerRequest is enabled. " +
@@ -259,7 +225,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
                                 authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
                     }
-                    return issueExistingAccessTokenWithConsent(tokReqMsgCtx, scope, expireTime, existingTokenBean);
+                    return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
                 }
             }
 
@@ -475,79 +441,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 oauthTokenIssuer);
     }
 
-    /**
-     * Issues an existing access token by preparing the necessary details in the token request context
-     * and creating a response with the existing token. This method avoids generating a new token
-     * when a valid token already exists and can be reused.
-     *
-     * @param tokReqMsgCtx      The OAuth token request message context containing the details of the current token
-     *                          request.
-     * @param scope             The scope associated with the token request.
-     * @param expireTime        The expiration time of the existing token.
-     * @param existingTokenBean The existing access token object to be reused for the current request.
-     * @return An OAuth2AccessTokenRespDTO object containing the response details of the
-     * reused token.
-     * @throws IdentityOAuth2Exception If an error occurs while setting details to the message context
-     *                                 or creating the token response.
-     */
-    private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                              String scope,
-                                                              long expireTime,
-                                                              AccessTokenDO existingTokenBean)
+    private OAuth2AccessTokenRespDTO issueExistingAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
+                                                              long expireTime, AccessTokenDO existingTokenBean)
             throws IdentityOAuth2Exception {
 
         tokReqMsgCtx.addProperty(EXISTING_TOKEN_ISSUED, true);
-        setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
-        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
-    }
-
-    /**
-     * Issues an existing access token while ensuring that it complies with the consent requirements
-     * of the current grant type. If the existing token was originally issued for a grant type that did
-     * not require consent but the current grant type does, the token's consent status is updated accordingly.
-     * This method avoids unnecessary token generation by reusing an existing token whenever possible,
-     * while updating its properties to meet the requirements of the current request.
-     *
-     * @param tokReqMsgCtx      The OAuth token request message context containing the details of the current token
-     *                          request.
-     * @param scope             The scope associated with the token request.
-     * @param expireTime        The expiration time of the existing token.
-     * @param existingTokenBean The existing access token object to be evaluated, updated, and reused if valid.
-     * @return An {@link OAuth2AccessTokenRespDTO} object containing the response details of the
-     * issued token.
-     * @throws IdentityOAuth2Exception If an error occurs while handling consent or issuing the existing access token.
-     */
-    private OAuth2AccessTokenRespDTO issueExistingAccessTokenWithConsent(OAuthTokenReqMessageContext tokReqMsgCtx,
-                                                                         String scope,
-                                                                         long expireTime,
-                                                                         AccessTokenDO existingTokenBean)
-            throws IdentityOAuth2Exception {
-
-        handleConsent(tokReqMsgCtx, existingTokenBean);
-
-        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx.getAuthorizationDetails())) {
-            this.authorizationDetailsService.replaceAccessTokenAuthorizationDetails(existingTokenBean.getTokenId(),
-                    existingTokenBean, tokReqMsgCtx);
-        }
-
-        return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
-    }
-
-    /**
-     * Handles consent updates for an existing access token when issuing it for a new grant type.
-     * If the existing access token was originally issued for a grant type that does not require consent,
-     * but the current grant type does require consent, this method updates the existing token to
-     * reflect that it is now consented.
-     *
-     * @param tokReqMsgCtx      The OAuth token request message context containing the details
-     *                          of the current token request.
-     * @param existingTokenBean The existing access token to be evaluated and updated as needed.
-     * @throws IdentityOAuth2Exception If an error occurs while updating the consent status of the token.
-     */
-    private void handleConsent(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean)
-            throws IdentityOAuth2Exception {
-
         String requestGrantType = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getGrantType();
+        /* When issuing the existing access token, that access token may be originated from a different grant
+        type. The origin grant type can be a consent required one. If the existing token is issued previously
+        for a consent not required grant and the current grant requires consent, we update the existing token as
+        a consented token. */
         boolean isConsentRequiredGrant = OIDCClaimUtil.
                 isConsentBasedClaimFilteringApplicable(requestGrantType);
         if (isConsentRequiredGrant && !existingTokenBean.isConsentedToken()) {
@@ -555,6 +458,14 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO().updateTokenIsConsented(
                     existingTokenBean.getTokenId(), true);
         }
+
+        if (AuthorizationDetailsUtils.isRichAuthorizationRequest(tokReqMsgCtx.getAuthorizationDetails())) {
+            this.authorizationDetailsService.replaceAccessTokenAuthorizationDetails(existingTokenBean.getTokenId(),
+                    existingTokenBean, tokReqMsgCtx);
+        }
+
+        setDetailsToMessageContext(tokReqMsgCtx, existingTokenBean);
+        return createResponseWithTokenBean(existingTokenBean, expireTime, scope);
     }
 
     private OAuth2AccessTokenRespDTO generateNewAccessToken(OAuthTokenReqMessageContext tokReqMsgCtx, String scope,
