@@ -28,18 +28,26 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
+import org.wso2.carbon.identity.core.ServiceURL;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaMgtDAOImpl;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_SUCCESS_ENDPOINT_PATH;
 
 @WithH2Database(files = {"dbScripts/h2.sql", "dbScripts/identity.sql"})
 @Listeners(MockitoTestNGListener.class)
@@ -64,6 +72,7 @@ public class CibaResponseTypeHandlerTest {
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<CibaDAOFactory> cibaDAOFactory;
+    private OAuthAppDO oAuthAppDO = new OAuthAppDO();
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -88,6 +97,8 @@ public class CibaResponseTypeHandlerTest {
                 = new OAuthAuthzReqMessageContext(authorizationReqDTO);
         authAuthzReqMessageContext
                 .setApprovedScope(new String[]{"scope1", "scope2", OAuthConstants.Scope.OPENID});
+        oAuthAppDO.setApplicationName("testApplicationName");
+        authAuthzReqMessageContext.addProperty("OAuthAppDO", oAuthAppDO);
     }
 
     @AfterMethod
@@ -99,11 +110,11 @@ public class CibaResponseTypeHandlerTest {
     @Test
     public void testIssue() throws Exception {
 
-        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+        try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
             CibaResponseTypeHandler cibaResponseTypeHandler = new CibaResponseTypeHandler();
 
             when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
-
             oAuth2Util.when(() -> OAuth2Util.getTenantId(anyString())).thenReturn(1234);
 
             AuthenticatedUser user = new AuthenticatedUser();
@@ -111,8 +122,10 @@ public class CibaResponseTypeHandlerTest {
             user.setUserName("testUser");
             user.setFederatedIdPName("LOCAL");
 
+            mockServiceURLBuilder(CIBA_SUCCESS_ENDPOINT_PATH, serviceURLBuilder);
+
             Assert.assertEquals(cibaResponseTypeHandler.issue(authAuthzReqMessageContext).getCallbackURI(),
-                    TEST_CALLBACK_URL + "?authenticationStatus=AUTHENTICATED");
+                    "/authenticationendpoint/device_success.do?app_name=testApplicationName");
         }
     }
 
@@ -160,5 +173,17 @@ public class CibaResponseTypeHandlerTest {
         when(CibaDAOFactory.getInstance().getCibaAuthMgtDAO()).thenReturn(cibaAuthMgtDAO);
         Assert.assertEquals(expected,
                 cibaResponseTypeHandler.handleUserConsentDenial(oAuth2Parameters).getErrorDescription());
+    }
+
+    private void mockServiceURLBuilder(String url, MockedStatic<ServiceURLBuilder> serviceURLBuilder)
+            throws URLBuilderException {
+
+        ServiceURLBuilder mockServiceURLBuilder = mock(ServiceURLBuilder.class);
+        serviceURLBuilder.when(ServiceURLBuilder::create).thenReturn(mockServiceURLBuilder);
+        lenient().when(mockServiceURLBuilder.addPath(any())).thenReturn(mockServiceURLBuilder);
+
+        ServiceURL serviceURL = mock(ServiceURL.class);
+        lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
+        lenient().when(mockServiceURLBuilder.build()).thenReturn(serviceURL);
     }
 }

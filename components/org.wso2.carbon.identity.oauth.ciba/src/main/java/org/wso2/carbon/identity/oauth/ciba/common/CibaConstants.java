@@ -55,7 +55,7 @@ public class CibaConstants {
     public static final String SMS_EVENT_TRIGGER_NAME = "TRIGGER_SMS_NOTIFICATION_LOCAL";
     public static final String TEMPLATE_TYPE = "TEMPLATE_TYPE";
     public static final String ARBITRARY_SEND_TO = "send-to";
-    public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/ciba_success.do";
+    public static final String CIBA_SUCCESS_ENDPOINT_PATH = "/authenticationendpoint/device_success.do";
     public static final String PUSH_NOTIFICATION_CHANNEL = "PUSH_NOTIFICATION";
     public static final String NOTIFICATION_SCENARIO = "NOTIFICATION_SCENARIO";
     public static final String CIBA_NOTIFICATION_SCENARIO = "AUTHENTICATION";
