@@ -899,6 +899,11 @@ public class OAuth2AuthzEndpoint {
                 List<ClaimMetaData> requestedOidcClaimsList =
                         getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain, false);
                 value.setRequestedClaims(requestedOidcClaimsList);
+                // The instance value contains the configured mandatory claims values. But if the client was not
+                // requested any mandatory claim, then we have to remove it from the values.
+                List<ClaimMetaData> mandatoryOidcClaimsList =
+                        getRequestedOidcClaimsList(value, oauth2Params, spTenantDomain, true);
+                value.setMandatoryClaims(mandatoryOidcClaimsList);
             }
 
             // Call framework and create the consent receipt.
