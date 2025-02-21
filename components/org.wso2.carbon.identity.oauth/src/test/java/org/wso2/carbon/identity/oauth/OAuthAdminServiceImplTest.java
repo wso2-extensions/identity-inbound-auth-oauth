@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.axis2.context.ConfigurationContext;
 import org.apache.axis2.engine.AxisConfiguration;
 import org.apache.commons.lang.StringUtils;
+import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -34,6 +35,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.core.util.CryptoException;
+import org.wso2.carbon.core.util.CryptoUtil;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -58,10 +61,13 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
+import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.user.api.RealmConfiguration;
@@ -98,6 +104,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -116,6 +123,10 @@ public class OAuthAdminServiceImplTest {
     private static final String CONSUMER_SECRET = "consumer:secret";
     private static final String UPDATED_CONSUMER_SECRET = "updated:consumer:secret";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String ACCESS_TOKEN = "access:token";
+    private static final String USER_ID = "user:id";
+    private static final String DECRYPTION_FAILED_MESSAGE = "Failed to decrypt access token";
+    private static final String HASHING_FAILED_MESSAGE = "Failed to hash the access token";
 
     @Mock
     private RealmConfiguration realmConfiguration;
@@ -141,6 +152,14 @@ public class OAuthAdminServiceImplTest {
     ServiceProvider mockServiceProvider;
     @Mock
     OAuthServerConfiguration mockOAuthServerConfiguration;
+    @Mock
+    AccessTokenDAO mockAccessTokenDAO;
+    @Mock
+    OauthTokenIssuer mockOauthTokenIssuer;
+    @Mock
+    AuthorizationCodeDAO mockAuthorizationCodeDAO;
+    @Mock
+    TokenManagementDAO mockTokenManagementDAO;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
 
@@ -755,6 +774,132 @@ public class OAuthAdminServiceImplTest {
                     oAuthAdminServiceImpl).updateAppAndRevokeTokensAndAuthzCodes(anyString(), any(Properties.class));
             oAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
         }
+    }
+
+    @DataProvider(name = "tokenCacheClearHashStateProvider")
+    public Object[][] tokenCacheClearHashStateProvider() {
+
+        return new Object[][]{
+                {true}, {false}
+        };
+    }
+
+    @Test(dataProvider = "tokenCacheClearHashStateProvider")
+    public void testHashingAccessTokenWhenHashingIsDisabled(boolean isHashDisabled) throws Exception {
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<CryptoUtil> mockedCryptoUtil = mockStatic(CryptoUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+
+            Set<AccessTokenDO> activeDetailedTokens = getDetailedTokens();
+
+            OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(mockTokenPersistenceFactory);
+            when(mockTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(mockAuthorizationCodeDAO);
+            when(mockTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(mockTokenManagementDAO);
+            when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(CONSUMER_KEY))
+                    .thenReturn(activeDetailedTokens);
+
+            CryptoUtil mockCryptoUtilInstance = mock(CryptoUtil.class);
+            mockedCryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtilInstance);
+
+            byte[] mockDecryptedData = CONSUMER_KEY.getBytes();
+            when(mockCryptoUtilInstance.base64DecodeAndDecrypt(anyString())).thenReturn(mockDecryptedData);
+
+            oAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(CONSUMER_KEY))
+                    .thenReturn(mockOauthTokenIssuer);
+            when(mockOauthTokenIssuer.getAccessTokenHash(CONSUMER_KEY)).thenReturn(CONSUMER_KEY);
+            identityUtil.when(() -> IdentityUtil.isUserStoreInUsernameCaseSensitive(anyString())).thenReturn(true);
+
+            oAuth2Util.when(OAuth2Util::isHashDisabled).thenReturn(isHashDisabled);
+
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            oAuthAdminServiceImpl.updateAppAndRevokeTokensAndAuthzCodes(CONSUMER_KEY, new Properties());
+
+            if (isHashDisabled) {
+                verify(mockCryptoUtilInstance, times(2)).base64DecodeAndDecrypt(anyString());
+            } else {
+                verify(mockCryptoUtilInstance, never()).base64DecodeAndDecrypt(anyString());
+            }
+        }
+    }
+
+    @DataProvider(name = "testHashingAccessTokenExceptionProvider")
+    public Object[][] testHashingAccessTokenExceptionProvider() {
+
+        return new Object[][]{
+                {new CryptoException("Decryption failed"), DECRYPTION_FAILED_MESSAGE},
+                {new IdentityOAuth2Exception("Hashing failed"), HASHING_FAILED_MESSAGE},
+                {new InvalidOAuthClientException("Invalid client"), HASHING_FAILED_MESSAGE},
+                {new OAuthSystemException("System error"), HASHING_FAILED_MESSAGE}
+        };
+    }
+
+    @Test(dataProvider = "testHashingAccessTokenExceptionProvider")
+    public void testHashingAccessTokenExceptions(Exception thrownException, String expectedMessage) throws Exception {
+
+        try (
+                MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory
+                        = mockStatic(OAuthTokenPersistenceFactory.class);
+                MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+                MockedStatic<CryptoUtil> mockedCryptoUtil = mockStatic(CryptoUtil.class)) {
+
+            Set<AccessTokenDO> activeDetailedTokens = getDetailedTokens();
+
+            OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(mockTokenPersistenceFactory);
+            when(mockTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(CONSUMER_KEY))
+                    .thenReturn(activeDetailedTokens);
+
+            CryptoUtil mockCryptoUtilInstance = mock(CryptoUtil.class);
+            mockedCryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtilInstance);
+
+            oAuth2Util.when(OAuth2Util::isHashDisabled).thenReturn(true);
+
+            if (thrownException instanceof CryptoException) {
+                when(mockCryptoUtilInstance.base64DecodeAndDecrypt(anyString())).thenThrow(thrownException);
+            } else {
+                byte[] mockDecryptedData = CONSUMER_KEY.getBytes();
+                when(mockCryptoUtilInstance.base64DecodeAndDecrypt(anyString())).thenReturn(mockDecryptedData);
+
+                if (thrownException instanceof OAuthSystemException) {
+                    oAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(CONSUMER_KEY))
+                            .thenReturn(mockOauthTokenIssuer);
+                    when(mockOauthTokenIssuer.getAccessTokenHash(anyString())).thenThrow(thrownException);
+                } else {
+                    oAuth2Util.when(() -> OAuth2Util.getOAuthTokenIssuerForOAuthApp(anyString()))
+                            .thenThrow(thrownException);
+                }
+            }
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+            Exception exception = Assert.expectThrows(IdentityOAuthAdminException.class, () ->
+                    oAuthAdminServiceImpl.updateAppAndRevokeTokensAndAuthzCodes(CONSUMER_KEY, new Properties()));
+
+            Assert.assertTrue(exception.getMessage().contains(expectedMessage));
+        }
+    }
+
+    private static Set<AccessTokenDO> getDetailedTokens() {
+
+        Set<AccessTokenDO> activeDetailedTokens = new HashSet<>();
+        AccessTokenDO accessTokenDO1 = new AccessTokenDO();
+        AccessTokenDO accessTokenDO2 = new AccessTokenDO();
+        accessTokenDO1.setAccessToken(ACCESS_TOKEN);
+        accessTokenDO2.setAccessToken(ACCESS_TOKEN);
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserId(USER_ID);
+        accessTokenDO1.setAuthzUser(authenticatedUser);
+        accessTokenDO2.setAuthzUser(authenticatedUser);
+        activeDetailedTokens.add(accessTokenDO1);
+        activeDetailedTokens.add(accessTokenDO2);
+        return activeDetailedTokens;
     }
 
     @Test
