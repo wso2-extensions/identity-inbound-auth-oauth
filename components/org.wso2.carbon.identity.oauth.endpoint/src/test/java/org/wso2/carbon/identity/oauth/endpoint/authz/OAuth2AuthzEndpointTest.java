@@ -107,6 +107,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
@@ -2996,13 +2997,13 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         OAuthErrorDTO oAuthErrorDTO = (OAuthErrorDTO) oAuthErrorDTOObject;
         AuthenticationResult authenticationResult = (AuthenticationResult) authenticationResultObject;
 
-        Assert.assertEquals(expectedCode, oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
+        Assert.assertEquals(expectedCode, AuthzUtil.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getError());
 
-        Assert.assertEquals(expectedMessage, oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
+        Assert.assertEquals(expectedMessage, AuthzUtil.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getDescription());
 
-        Assert.assertEquals(expectedURI, oAuth2AuthzEndpoint.buildOAuthProblemException(authenticationResult,
+        Assert.assertEquals(expectedURI, AuthzUtil.buildOAuthProblemException(authenticationResult,
                 oAuthErrorDTO).getUri());
     }
 
