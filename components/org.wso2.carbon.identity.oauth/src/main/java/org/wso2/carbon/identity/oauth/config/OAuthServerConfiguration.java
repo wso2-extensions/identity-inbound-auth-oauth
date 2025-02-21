@@ -340,8 +340,6 @@ public class OAuthServerConfiguration {
     // CIBA configurations
     private String defaultCibaUserResolverClassName =
             "org.wso2.carbon.identity.oauth.ciba.validators.impl.DefaultCibaUserResolverImpl";
-    private String defaultCibaUserNotificationServiceClassName =
-            "package org.wso2.carbon.identity.oauth.ciba.notification.impl.DefaultCibaUserNotificationServiceImpl";
 
     // Properties for OAuth2 Device Code Grant type.
     private int deviceCodeKeyLength = 6;

@@ -50,7 +50,6 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.par.OAuth2ParEndpointTest" />
-            <class name="org.wso2.carbon.identity.oauth.endpoint.ciba.UserAuthenticationEndpointTest"/>
         </classes>
     </test>
 
