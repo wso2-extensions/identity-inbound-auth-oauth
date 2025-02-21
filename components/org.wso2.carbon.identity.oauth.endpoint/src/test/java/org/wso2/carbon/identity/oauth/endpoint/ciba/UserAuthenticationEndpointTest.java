@@ -1,7 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -108,15 +106,11 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
     private static final String TEST_AUTH_CODE_KEY = "testAuthCodeKey";
     private static final String TEST_URL = "testURL";
 
-    private static CibaAuthCodeDO validCibaDOA = new CibaAuthCodeDO();
-    private static CibaAuthCodeDO invalidCibaDOA = new CibaAuthCodeDO();
 
     @BeforeClass
     public void setUp() throws Exception {
 
-        validCibaDOA.setAuthReqStatus(AuthReqStatus.REQUESTED);
 
-        invalidCibaDOA.setAuthReqStatus(AuthReqStatus.EXPIRED);
 
         System.setProperty(
                 CarbonBaseConstants.CARBON_HOME,
@@ -163,7 +157,6 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
                 cibaDAOFactory.when(
                         CibaDAOFactory::getInstance).thenReturn(mockCibaDAOFactory);
                 lenient().when(mockCibaDAOFactory.getCibaAuthMgtDAO()).thenReturn(cibaMgtDAO);
-                lenient().when(cibaMgtDAO.getCibaAuthCode(anyString())).thenReturn(validCibaDOA);
                 when(httpServletRequest.getParameter(CIBA_AUTH_CODE_KEY)).thenReturn(TEST_AUTH_CODE_KEY);
 
                 identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
@@ -232,8 +225,6 @@ public class UserAuthenticationEndpointTest extends TestOAuthEndpointBase {
             lenient().when(mockPrivilegedCarbonContext.getOSGiService(CibaAuthService.class, null))
                     .thenReturn(cibaAuthService);
 
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
             setInternalState(userAuthenticationEndpoint, "oAuth2AuthzEndpoint", oAuth2AuthzEndpoint);
 
             try (MockedStatic<CibaDAOFactory> cibaDAOFactory =
