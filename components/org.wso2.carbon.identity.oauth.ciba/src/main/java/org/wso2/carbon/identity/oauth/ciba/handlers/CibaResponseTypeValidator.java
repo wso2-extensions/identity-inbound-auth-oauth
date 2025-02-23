@@ -54,4 +54,9 @@ public class CibaResponseTypeValidator extends AbstractValidator {
         }
     }
 
+    @Override
+    public void validateContentType(HttpServletRequest request) throws OAuthProblemException {
+
+    }
+
 }

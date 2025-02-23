@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeResponse;
+import org.wso2.carbon.identity.oauth.ciba.model.CibaUserNotificationContext;
 
 /**
  * Provides authentication services.
@@ -33,9 +34,23 @@ public interface CibaAuthService {
      *
      * @param cibaAuthCodeRequest CIBA Authentication Request Data Transfer Object.
      * @return CibaAuthCodeResponse CIBA Authentication Response Data Transfer Object.
-     * @throws CibaCoreException Core exception from CIBA module.
+     * @throws CibaCoreException   Core exception from CIBA module.
      * @throws CibaClientException Client exception from CIBA core component.
      */
     CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException,
             CibaClientException;
+
+    default String resolveUser(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException, CibaClientException {
+
+        return null;
+    }
+
+    default void triggerNotification(CibaUserNotificationContext cibaUserNotificationContext)
+            throws CibaCoreException {
+
+    }
+
+    default void updateStatus(String authCodeKey, Enum authenticationStatus) throws CibaCoreException {
+
+    }
 }
