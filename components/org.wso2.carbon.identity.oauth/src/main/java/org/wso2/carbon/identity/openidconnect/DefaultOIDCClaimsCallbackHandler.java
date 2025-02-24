@@ -323,7 +323,7 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
             OauthTokenIssuer tokenIssuer = getTokenIssuer(requestMsgCtx);
             String accessToken = getAccessToken(requestMsgCtx);
             String accessTokenHash = accessToken;
-            if (tokenIssuer != null) {
+            if (tokenIssuer != null && accessToken != null) {
                 // For the JWT tokens the hash is the JTI.
                 accessTokenHash = tokenIssuer.getAccessTokenHash(accessToken);
             }
