@@ -104,6 +104,9 @@ public class AuthorizationGrantCache extends
                 log.debug("Getting cache entry from session store using tokenId: " + tokenId);
             }
             cacheEntry = getFromSessionStore(tokenId);
+            if (cacheEntry != null) {
+                super.addToCache(key, cacheEntry);
+            }
         }
         return cacheEntry;
     }
@@ -126,6 +129,9 @@ public class AuthorizationGrantCache extends
                 }
             }
             cacheEntry = getFromSessionStore(replaceFromTokenId(key.getUserAttributesId()));
+            if (cacheEntry != null) {
+                super.addToCache(key, cacheEntry);
+            }
         }
         return cacheEntry;
     }
@@ -182,6 +188,9 @@ public class AuthorizationGrantCache extends
                 }
             }
             cacheEntry = getFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
+            if (cacheEntry != null) {
+                super.addToCache(key, cacheEntry);
+            }
         }
         return cacheEntry;
     }
