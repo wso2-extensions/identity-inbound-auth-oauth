@@ -30,7 +30,10 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.store.SessionDataStore;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
@@ -51,15 +54,14 @@ import static org.mockito.Mockito.when;
 /**
  * Unit tests for AuthorizationGrantCacheTest class.
  */
+@WithCarbonHome
+@WithRealmService(injectToSingletons = {OAuthComponentServiceHolder.class})
 public class AuthorizationGrantCacheTest {
 
     @Mock
     private AccessTokenDAO accessTokenDAO;
 
     private AuthorizationGrantCache cache;
-
-    @Mock
-    private OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory;
 
     @Mock
     private AuthorizationCodeDAO authorizationCodeDAO;
@@ -102,6 +104,7 @@ public class AuthorizationGrantCacheTest {
              MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
              MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
 
+            OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
             when(mockLog.isDebugEnabled()).thenReturn(true);
             mockedFactory.when(OAuthTokenPersistenceFactory::getInstance).thenReturn(
                     mockedOAuthTokenPersistenceFactory);
@@ -192,6 +195,7 @@ public class AuthorizationGrantCacheTest {
              MockedStatic<SessionDataStore> mockedSessionDataStore = mockStatic(SessionDataStore.class);
              MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
 
+            OAuthTokenPersistenceFactory mockedOAuthTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
             mockedSessionDataStore.when(SessionDataStore::getInstance).thenReturn(sessionDataStore);
             when(sessionDataStore.getSessionData(codeId, "AuthorizationGrantCache")).thenReturn(expectedEntry);
 
