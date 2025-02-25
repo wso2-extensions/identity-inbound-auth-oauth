@@ -4219,7 +4219,7 @@ public class OAuth2AuthzEndpoint {
                 }
             }
             return resultantAuthMethods;
-        }//implement the logic using for loops
+        }
 
         boolean readAMRValueFromIdp = Boolean.parseBoolean(IdentityUtil.getProperty(
                 OAuthConstants.READ_AMR_VALUE_FROM_IDP));
