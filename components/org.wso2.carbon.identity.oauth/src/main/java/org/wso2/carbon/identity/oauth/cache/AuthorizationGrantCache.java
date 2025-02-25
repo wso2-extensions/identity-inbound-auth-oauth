@@ -182,6 +182,7 @@ public class AuthorizationGrantCache extends
                 }
             }
             cacheEntry = getFromSessionStore(replaceFromCodeId(key.getUserAttributesId()));
+            log.info("Cache entry is not updated.");
         }
         return cacheEntry;
     }
