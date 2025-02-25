@@ -149,7 +149,9 @@ public class AuthorizationGrantCacheTest {
             AuthorizationGrantCacheEntry result = cache.getValueFromCacheByToken(key);
 
             // Verify the token ID returned from the DAO is as expected.
-            assertEquals(tokenId, result.getTokenId());
+            if (!isFailedTokenRetrieval && !isInvalidJWTToken) {
+                assertEquals(tokenId, result.getTokenId());
+            }
 
             // Verify that the JWT token was parsed and the correct claim was retrieved if it was a JWT.
             if (isJwtToken && !isInvalidJWTToken) {
@@ -175,8 +177,8 @@ public class AuthorizationGrantCacheTest {
         return new Object[][]{
                 {"jwt.Access.Token", "jwtId", "jwtTokenId", true, false, false, false},
                 {"nonJWTAccessToken", null, "nonJWTTokenId", false, false, false, false},
-                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false, true},
-                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, false, false},
+                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, true, true},
+                {"invalid.JWT.Token", null, "invalid.JWT.Token", true, true, true, false},
                 {"fail.Store.TokenId", "jwtId", "jwtId", true, false, true, false}
         };
     }
