@@ -4212,8 +4212,8 @@ public class OAuth2AuthzEndpoint {
             for (Map.Entry<String, AuthenticatedIdPData> entry : authenticatedIdPs.entrySet()) {
                 if (entry.getValue() != null && entry.getValue().getAuthenticators() != null) {
                     for (AuthenticatorConfig authenticatorConfig : entry.getValue().getAuthenticators()) {
-                        if (authenticatorConfig != null && authenticatorConfig.getAmrValues() != null) {
-                            resultantAuthMethods.addAll(Arrays.asList(authenticatorConfig.getAmrValues()));
+                        if (authenticatorConfig != null && authenticatorConfig.getAmrValue() != null) {
+                            resultantAuthMethods.addAll(Arrays.asList(authenticatorConfig.getAmrValue()));
                         }
                     }
                 }
