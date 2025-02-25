@@ -4211,6 +4211,21 @@ public class OAuth2AuthzEndpoint {
      */
     private List<String> getAMRValues(List<String> authMethods, Map<String, AuthenticatedIdPData> authenticatedIdPs) {
 
+        boolean authenticatorAMREnabled = true;
+        if (authenticatorAMREnabled) {
+            List<String> resultantAuthMethods = new ArrayList<>();
+            for (Map.Entry<String, AuthenticatedIdPData> entry : authenticatedIdPs.entrySet()) {
+                if (entry.getValue() != null && entry.getValue().getAuthenticators() != null) {
+                    for (AuthenticatorConfig authenticatorConfig : entry.getValue().getAuthenticators()) {
+                        if (authenticatorConfig != null && authenticatorConfig.getAmrValue() != null) {
+                            resultantAuthMethods.addAll(Arrays.asList(authenticatorConfig.getAmrValue()));
+                        }
+                    }
+                }
+            }
+            return resultantAuthMethods;
+        }
+
         boolean readAMRValueFromIdp = Boolean.parseBoolean(IdentityUtil.getProperty(
                 OAuthConstants.READ_AMR_VALUE_FROM_IDP));
         if (readAMRValueFromIdp) {
