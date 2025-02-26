@@ -55,6 +55,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -66,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
@@ -1774,5 +1776,40 @@ public class OAuth2ServiceComponent {
             log.debug("Unregistering the AuthorizationDetailsSchemaValidator service.");
         }
         OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeEventInterceptor",
+            service = AuthzChallengeInterceptor.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAuthzChallengeInterceptor"
+    )
+    protected void setAuthzChallengeInterceptorProxy(AuthzChallengeInterceptor authzChallengeInterceptor) {
+        if (authzChallengeInterceptor == null) {
+            log.warn("Null authorize challenge interceptor received, hence not registering");
+        } else if (!"AuthzChallengeDPoPInterceptorHandlerProxy".equalsIgnoreCase(authzChallengeInterceptor.getName())) {
+            log.debug("Non proxy authorize challenge interceptor received, hence not registering");
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Setting authorize challenge interceptor proxy :" + authzChallengeInterceptor.getClass().getName());
+            }
+
+            OAuth2ServiceComponentHolder.getInstance().addAuthzChallengeInterceptorHandlerProxy(authzChallengeInterceptor);
+        }
+    }
+
+    protected void unsetAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+        if (authzChallengeInterceptor == null) {
+            log.warn("Null authorize challenge interceptor received, hence not registering");
+        } else if (!"OauthDataInterceptorHandlerProxy".equalsIgnoreCase(authzChallengeInterceptor.getName())) {
+            log.debug("Non proxy authorize challenge interceptor received, hence not un-setting");
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Un-setting authorize challenge interceptor proxy :" + authzChallengeInterceptor.getClass().getName());
+            }
+
+            OAuth2ServiceComponentHolder.getInstance().addAuthzChallengeInterceptorHandlerProxy(null);
+        }
     }
 }

@@ -4790,4 +4790,17 @@ public class AuthzUtil {
         LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
     }
 
+    public static Response handleIdentityOAuth2Exception(IdentityOAuth2Exception exception) {
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        String error = exception.getErrorCode();
+
+        String errorDescription = exception.getMessage();
+
+        authzChallengeFailResponse.setError(error);
+        authzChallengeFailResponse.setError_description(errorDescription);
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
 }

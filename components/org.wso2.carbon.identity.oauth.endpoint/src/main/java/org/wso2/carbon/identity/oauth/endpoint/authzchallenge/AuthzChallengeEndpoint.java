@@ -75,8 +75,12 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthzChallengeReqDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
@@ -136,15 +140,14 @@ public class AuthzChallengeEndpoint {
                 return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
             }
         }
-//        String thumbprint = null;
-//        if(request.getHeader("DPoP") != null){
-//            HttpRequestHeader[] requestHeaders = getRequestHeaders(request);
-//            OAuthEventInterceptor oAuthEventInterceptor = OAuth2ServiceComponentHolder.getInstance().getOAuthEventInterceptorProxy();
-//            if (oAuthEventInterceptor != null && oAuthEventInterceptor.isEnabled()) {
-//                thumbprint = oAuthEventInterceptor.validateAndExtractThumbprintFromDPoPHeader(requestHeaders, request);
-//            }
-//            // TODO: Add a way to relate use of DPoP in the same flow.
-//        }
+
+
+        AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
+        if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+            OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+            authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+        }
+
         try {
             // Start tenant domain flow if the tenant configuration is not enabled.
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
@@ -259,7 +262,10 @@ public class AuthzChallengeEndpoint {
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
-        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException | IdentityOAuth2Exception e) {
+        }catch (IdentityOAuth2Exception e){
+            log.error("Error occurred while handling authorize challenge request.", e);
+            return AuthzUtil.handleIdentityOAuth2Exception(e);
+        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
             log.error("Error occurred while handling authorize challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -476,32 +482,50 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-//    public static HttpRequestHeader[] getRequestHeaders(HttpServletRequest request) {
-//        Enumeration<String> headerNames = request.getHeaderNames();
-//
-//        if (headerNames == null || !headerNames.hasMoreElements()) {
-//            return null; // No headers found
-//        }
-//
-//        List<HttpRequestHeader> httpHeaderList = new ArrayList<>();
-//
-//        while (headerNames.hasMoreElements()) {
-//            String headerName = headerNames.nextElement();
-//            Enumeration<String> headerValues = request.getHeaders(headerName);
-//
-//            List<String> headerValueList = new ArrayList<>();
-//            while (headerValues != null && headerValues.hasMoreElements()) {
-//                headerValueList.add(headerValues.nextElement());
-//            }
-//
-//            httpHeaderList.add(new HttpRequestHeader(
-//                    headerName,
-//                    headerValueList.toArray(new String[0])
-//            ));
-//        }
-//
-//        return httpHeaderList.toArray(new HttpRequestHeader[0]);
-//    }
+    public static OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
+        OAuth2AuthzChallengeReqDTO dto = new OAuth2AuthzChallengeReqDTO();
+
+        dto.setClientId(request.getParameter("client_id"));
+        dto.setResponseType(request.getParameter("response_type"));
+        dto.setRedirectUri(request.getParameter("redirect_uri"));
+        dto.setState(request.getParameter("state"));
+        dto.setScope(request.getParameter("scope"));
+
+        // Extract HTTP request headers
+        dto.setHttpRequestHeaders(extractHeaders(request));
+
+        // Wrap the request
+        dto.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
+
+        return dto;
+    }
+
+    private static HttpRequestHeader[] extractHeaders(HttpServletRequest request) {
+        Enumeration<String> headerNames = request.getHeaderNames();
+
+        if (headerNames == null || !headerNames.hasMoreElements()) {
+            return null; // No headers found
+        }
+
+        List<HttpRequestHeader> httpHeaderList = new ArrayList<>();
+
+        while (headerNames.hasMoreElements()) {
+            String headerName = headerNames.nextElement();
+            Enumeration<String> headerValues = request.getHeaders(headerName);
+
+            List<String> headerValueList = new ArrayList<>();
+            while (headerValues != null && headerValues.hasMoreElements()) {
+                headerValueList.add(headerValues.nextElement());
+            }
+
+            httpHeaderList.add(new HttpRequestHeader(
+                    headerName,
+                    headerValueList.toArray(new String[0])
+            ));
+        }
+
+        return httpHeaderList.toArray(new HttpRequestHeader[0]);
+    }
 
 }
 

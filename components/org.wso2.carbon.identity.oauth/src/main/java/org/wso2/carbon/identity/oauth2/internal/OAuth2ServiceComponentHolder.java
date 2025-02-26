@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
+import org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
@@ -136,6 +137,8 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsValidator authorizationDetailsValidator;
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
+
+    private AuthzChallengeInterceptor authzChallengeInterceptorHandlerProxy;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1027,5 +1030,14 @@ public class OAuth2ServiceComponentHolder {
     public void setAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
 
         this.authorizationDetailsSchemaValidator = schemaValidator;
+    }
+
+    public void addAuthzChallengeInterceptorHandlerProxy(AuthzChallengeInterceptor authzChallengeInterceptorHandlerProxy) {
+
+        this.authzChallengeInterceptorHandlerProxy = authzChallengeInterceptorHandlerProxy;
+    }
+
+    public AuthzChallengeInterceptor getAuthzChallengeInterceptorHandlerProxy() {
+        return this.authzChallengeInterceptorHandlerProxy;
     }
 }
