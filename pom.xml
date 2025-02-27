@@ -1091,7 +1091,7 @@
         <mockito-testng.version>0.5.2</mockito-testng.version>
         <maven.surefire.plugin.version>3.2.5</maven.surefire.plugin.version>
         <javaee.web.api.version>7.0</javaee.web.api.version>
-        <h2database.version>2.1.210</h2database.version>
+        <h2database.version>2.2.220</h2database.version>
         <commons-codec.test.version>1.4</commons-codec.test.version>
         <jaxp-ri.version>1.4.5</jaxp-ri.version>
         <jose4j.version>0.9.5</jose4j.version>
