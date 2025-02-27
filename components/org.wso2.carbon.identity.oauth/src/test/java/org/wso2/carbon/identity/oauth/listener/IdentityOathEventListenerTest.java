@@ -22,6 +22,7 @@ import org.mockito.MockedStatic;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
@@ -37,6 +38,7 @@ import org.wso2.carbon.user.api.UserRealm;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
 import org.wso2.carbon.user.core.common.User;
+import org.wso2.carbon.user.core.common.UserStore;
 import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.ArrayList;
@@ -45,12 +47,14 @@ import java.util.List;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 public class IdentityOathEventListenerTest extends IdentityBaseTest {
 
     private final String credentialUpdateUsername = "testUsername";
     private final String newCredential = "newPassword1$";
+    private final String usernameAssociation = "TestAssociateUsername";
     @Mock
     OAuth2ServiceComponentHolder oAuth2ServiceComponentHolder;
     private IdentityOathEventListener identityOathEventListener;
@@ -111,7 +115,7 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         int tenantId = 1234;
         String tenant = "testTenant";
         String orgId = "testOrg";
-        String usernameAssociation = "TestAssociateUsername";
+
         String orgIdUserAssociation = "TestAssociateOrg";
         String tenantUserAssociation = "TestAssociateTenant";
         int userAssociationTenantId = 3245;
@@ -145,25 +149,83 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         when(userRealm.getUserStoreManager()).thenReturn(abstractUserStoreManager);
     }
 
-    @Test
-    public void testDoPostUpdateCredential() throws UserStoreException, OrganizationManagementException {
+    @Test(dataProvider = "testDoPostUpdateCredentialData")
+    public void testDoPostUpdateCredential(boolean revokeTokensSuccess, boolean revokeAssociateTokensSuccess,
+                                           boolean revokeAuthzCodeSuccess, boolean updateSuccess)
+            throws UserStoreException,
+            OrganizationManagementException {
 
         prepareForCredentialUpdate();
+        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).
+                thenReturn(revokeTokensSuccess);
+        when(oAuth2RevocationProcessor.revokeTokens(usernameAssociation, abstractUserStoreManager)).
+                thenReturn(revokeAssociateTokensSuccess);
+        when(OAuthUtil.revokeAuthzCodes(credentialUpdateUsername, abstractUserStoreManager)).
+                thenReturn(revokeAuthzCodeSuccess);
+
         boolean isUpdateSuccess = identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername,
                 newCredential,
                 abstractUserStoreManager);
-        assertTrue(isUpdateSuccess);
+        assertEquals(isUpdateSuccess, updateSuccess);
     }
 
-    @Test
-    public void testDoPostUpdateCredentialByAdmin() throws UserStoreException, OrganizationManagementException {
+    @Test(dataProvider = "testDoPostUpdateCredentialData")
+    public void testDoPostUpdateCredentialByAdmin(boolean revokeTokensSuccess, boolean revokeAssociateTokensSuccess,
+                                                  boolean revokeAuthzCodeSuccess, boolean updateSuccess)
+            throws UserStoreException, OrganizationManagementException {
 
         prepareForCredentialUpdate();
+        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).
+                thenReturn(revokeTokensSuccess);
+        when(oAuth2RevocationProcessor.revokeTokens(usernameAssociation, abstractUserStoreManager)).
+                thenReturn(revokeAssociateTokensSuccess);
+        when(OAuthUtil.revokeAuthzCodes(credentialUpdateUsername, abstractUserStoreManager)).
+                thenReturn(revokeAuthzCodeSuccess);
         boolean isUpdateSuccess = identityOathEventListener.doPostUpdateCredentialByAdmin(credentialUpdateUsername,
                 newCredential,
                 abstractUserStoreManager);
-        assertTrue(isUpdateSuccess);
+        assertEquals(isUpdateSuccess, updateSuccess);
 
+    }
+
+    @DataProvider(name = "testDoPostUpdateCredentialData")
+    public Object[][] testDoPostUpdateCredentialData() {
+
+        return new Object[][]{
+                {true, true, true, true},   // All revocations succeed -> update success
+                {true, true, false, false}, // Authz code revocation fails -> update fails
+                {true, false, true, false}, // Associate token revocation fails -> update fails
+                {true, false, false, false}, // Associate & Authz code revocation fail -> update fails
+                {false, true, true, false}, // Token revocation fails -> update fails
+                {false, true, false, false}, // Token & Authz code revocation fail -> update fails
+                {false, false, true, false}, // Token & Associate token revocation fail -> update fails
+                {false, false, false, false} // All revocations fail -> update fails
+        };
+    }
+
+    @Test(expectedExceptions = org.wso2.carbon.user.core.UserStoreException.class)
+    public void testDoPostUpdateCredentialByAdminWithException() throws UserStoreException,
+            OrganizationManagementException {
+
+        prepareForCredentialUpdate();
+        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenThrow(
+                new org.wso2.carbon.user.core.UserStoreException("Error occurred while revoking tokens"));
+
+        identityOathEventListener.doPostUpdateCredentialByAdmin(credentialUpdateUsername,
+                newCredential,
+                abstractUserStoreManager);
+    }
+
+    @Test(expectedExceptions = org.wso2.carbon.user.core.UserStoreException.class)
+    public void testDoPostUpdateCredentialWithException() throws UserStoreException, OrganizationManagementException {
+
+        prepareForCredentialUpdate();
+        when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenThrow(
+                new org.wso2.carbon.user.core.UserStoreException("Error occurred while revoking tokens"));
+        boolean isUpdateSuccess = identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername,
+                newCredential,
+                abstractUserStoreManager);
+        Assert.assertFalse(isUpdateSuccess);
     }
 
 //
