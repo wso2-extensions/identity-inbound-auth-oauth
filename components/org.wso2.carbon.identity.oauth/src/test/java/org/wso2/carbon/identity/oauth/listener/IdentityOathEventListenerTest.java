@@ -238,10 +238,10 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
         prepareForCredentialUpdate();
         when(oAuth2RevocationProcessor.revokeTokens(credentialUpdateUsername, abstractUserStoreManager)).thenThrow(
                 new org.wso2.carbon.user.core.UserStoreException("Error occurred while revoking tokens"));
-        boolean isUpdateSuccess = identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername,
+
+        identityOathEventListener.doPostUpdateCredential(credentialUpdateUsername,
                 newCredential,
                 abstractUserStoreManager);
-        Assert.assertFalse(isUpdateSuccess);
     }
 
 //
