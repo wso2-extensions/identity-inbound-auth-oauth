@@ -192,15 +192,31 @@ public class IdentityOathEventListenerTest extends IdentityBaseTest {
     public Object[][] testDoPostUpdateCredentialData() {
 
         return new Object[][]{
-                {true, true, true, true},   // All revocations succeed -> update success
-                {true, true, false, false}, // Authz code revocation fails -> update fails
-                {true, false, true, false}, // Associate token revocation fails -> update fails
-                {true, false, false, false}, // Associate & Authz code revocation fail -> update fails
-                {false, true, true, false}, // Token revocation fails -> update fails
-                {false, true, false, false}, // Token & Authz code revocation fail -> update fails
-                {false, false, true, false}, // Token & Associate token revocation fail -> update fails
-                {false, false, false, false} // All revocations fail -> update fails
+                // All revocations succeed -> update success.
+                {true, true, true, true},
+
+                // Authz code revocation fails -> update fails.
+                {true, true, false, false},
+
+                // Associate token revocation fails -> update fails.
+                {true, false, true, false},
+
+                // Associate & Authz code revocation fail -> update fails.
+                {true, false, false, false},
+
+                // Token revocation fails -> update fails.
+                {false, true, true, false},
+
+                // Token & Authz code revocation fail -> update fails.
+                {false, true, false, false},
+
+                // Token & Associate token revocation fail -> update fails.
+                {false, false, true, false},
+
+                // All revocations fail -> update fails.
+                {false, false, false, false}
         };
+
     }
 
     @Test(expectedExceptions = org.wso2.carbon.user.core.UserStoreException.class)
