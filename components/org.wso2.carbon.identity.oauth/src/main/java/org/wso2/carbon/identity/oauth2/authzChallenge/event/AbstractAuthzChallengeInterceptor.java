@@ -9,8 +9,8 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 public class AbstractAuthzChallengeInterceptor extends AbstractIdentityHandler implements AuthzChallengeInterceptor {
 
     @Override
-    public void handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
-        // Nothing to implement
+    public String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
+        return "";
     }
 
     public boolean isEnabled() {

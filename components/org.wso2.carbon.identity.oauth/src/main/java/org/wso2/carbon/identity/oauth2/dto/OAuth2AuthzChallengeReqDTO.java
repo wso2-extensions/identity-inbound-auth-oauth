@@ -4,6 +4,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 
 public class OAuth2AuthzChallengeReqDTO {
+    private String authSession;
     private String clientId;
     private String responseType;
     private String redirectUri;
@@ -17,6 +18,10 @@ public class OAuth2AuthzChallengeReqDTO {
     }
 
     // Getters and Setters
+    public String getAuthSession() { return authSession; }
+
+    public void setAuthSession(String authSession) { this.authSession = authSession; }
+
     public String getClientId() { return clientId; }
 
     public void setClientId(String clientId) { this.clientId = clientId; }

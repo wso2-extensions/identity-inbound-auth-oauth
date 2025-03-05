@@ -5,7 +5,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthzChallengeReqDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
 public interface AuthzChallengeInterceptor extends IdentityHandler {
-    default void handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
-
+    default String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
+        return "";
     }
 }

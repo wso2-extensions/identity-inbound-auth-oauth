@@ -65,6 +65,9 @@ import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -126,6 +129,17 @@ public class AuthzChallengeEndpoint {
 
         // Perform request authentication
         if(!isInternalRequest){
+            if(hasDPoPHeader(request)){
+                AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
+                if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+                    OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+                    String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+                    if (StringUtils.isNotBlank(thumbprint)) {
+                        oAuthMessage.setDPoPThumbprint(thumbprint);
+                    }
+                }
+            }
+
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
                 return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext, true);
@@ -139,13 +153,6 @@ public class AuthzChallengeEndpoint {
             if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
                 return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
             }
-        }
-
-
-        AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
-        if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-            OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
-            authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
         }
 
         try {
@@ -175,9 +182,6 @@ public class AuthzChallengeEndpoint {
                 oauthResponse = AuthzUtil.handleInvalidRequest(oAuthMessage);
             }
             oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, true);
-//            String authSession = extractAuthSession(oauthResponse);
-//            System.out.println("Auth Session: " + authSession);
-//            System.out.println("Thumbprint: " + thumbprint);
             return oauthResponse;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -185,9 +189,6 @@ public class AuthzChallengeEndpoint {
         } catch (OAuthSystemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
             return AuthzUtil.handleOAuthSystemException(oAuthMessage, e);
-//        } catch (JsonProcessingException e) {
-//            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
-//                    "Error while extracting auth_session.", e);
         }finally {
             AuthzUtil.handleCachePersistence(oAuthMessage);
             if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
@@ -196,7 +197,8 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload) throws AuthServiceException {
+    private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request, @Context HttpServletResponse response, String payload)
+            throws AuthServiceException, InvalidRequestParentException, URISyntaxException {
         try {
             if(isSubsequentAuthzChallengeRequest(payload)) {
                 payload = renameAuthSessionToFlowId(payload);
@@ -204,6 +206,8 @@ public class AuthzChallengeEndpoint {
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
             AuthServiceResponse authServiceResponse = authenticationService.handleAuthentication(authServiceRequest);
+
+            validateDPoPThumbprint(request, authServiceResponse);
 
             switch (authServiceResponse.getFlowStatus()) {
                 case INCOMPLETE:
@@ -225,6 +229,8 @@ public class AuthzChallengeEndpoint {
             return ApiAuthnUtils.buildResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
             return ApiAuthnUtils.buildResponseForServerError(e, LOG);
+        } catch (IdentityOAuth2Exception e) {
+            return AuthzUtil.handleIdentityOAuth2Exception(e);
         } catch (JsonProcessingException e) {
             throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
                     "Error while building JSON response.", e);
@@ -262,7 +268,7 @@ public class AuthzChallengeEndpoint {
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
-        }catch (IdentityOAuth2Exception e){
+        } catch (IdentityOAuth2Exception e){
             log.error("Error occurred while handling authorize challenge request.", e);
             return AuthzUtil.handleIdentityOAuth2Exception(e);
         } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
@@ -289,7 +295,7 @@ public class AuthzChallengeEndpoint {
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
-        } catch (AuthServiceException e) {
+        } catch (AuthServiceException | InvalidRequestParentException | URISyntaxException e) {
             log.error("Error occurred while handling authorize challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -490,11 +496,10 @@ public class AuthzChallengeEndpoint {
         dto.setRedirectUri(request.getParameter("redirect_uri"));
         dto.setState(request.getParameter("state"));
         dto.setScope(request.getParameter("scope"));
+        dto.setAuthSession(request.getParameter("auth_session"));
 
-        // Extract HTTP request headers
         dto.setHttpRequestHeaders(extractHeaders(request));
 
-        // Wrap the request
         dto.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
 
         return dto;
@@ -504,7 +509,7 @@ public class AuthzChallengeEndpoint {
         Enumeration<String> headerNames = request.getHeaderNames();
 
         if (headerNames == null || !headerNames.hasMoreElements()) {
-            return null; // No headers found
+            return null;
         }
 
         List<HttpRequestHeader> httpHeaderList = new ArrayList<>();
@@ -517,14 +522,51 @@ public class AuthzChallengeEndpoint {
             while (headerValues != null && headerValues.hasMoreElements()) {
                 headerValueList.add(headerValues.nextElement());
             }
-
             httpHeaderList.add(new HttpRequestHeader(
                     headerName,
                     headerValueList.toArray(new String[0])
             ));
         }
-
         return httpHeaderList.toArray(new HttpRequestHeader[0]);
+    }
+
+    public static boolean hasDPoPHeader(HttpServletRequest request) {
+        return request.getHeader("DPoP") != null;
+    }
+
+    public static void validateDPoPThumbprint(HttpServletRequest request, AuthServiceResponse authServiceResponse)
+            throws AuthServiceException, IdentityOAuth2Exception {
+
+        SessionDataCacheKey key = new SessionDataCacheKey(authServiceResponse.getSessionDataKey());
+        SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache(key);
+
+        if (entry == null) {
+            throw new AuthServiceException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Session data cache entry not found. Restart the flow"
+            );
+        }
+
+        String cachedThumbprint = entry.getDPoPThumbprint();
+
+        if (!StringUtils.isBlank(cachedThumbprint)) {
+            AuthzChallengeInterceptor authzChallengeInterceptor =
+                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
+
+            if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+
+                OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+                String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+
+                if (!cachedThumbprint.equals(thumbprint)) {
+                    throw new AuthServiceException(
+                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "Invalid thumbprint value."
+                    );
+                }
+            }
+
+        }
     }
 
 }

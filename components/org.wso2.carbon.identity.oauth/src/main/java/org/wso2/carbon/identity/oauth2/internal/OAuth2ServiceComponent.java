@@ -1802,7 +1802,7 @@ public class OAuth2ServiceComponent {
     protected void unsetAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
         if (authzChallengeInterceptor == null) {
             log.warn("Null authorize challenge interceptor received, hence not registering");
-        } else if (!"OauthDataInterceptorHandlerProxy".equalsIgnoreCase(authzChallengeInterceptor.getName())) {
+        } else if (!"AuthzChallengeDPoPInterceptorHandlerProxy".equalsIgnoreCase(authzChallengeInterceptor.getName())) {
             log.debug("Non proxy authorize challenge interceptor received, hence not un-setting");
         } else {
             if (log.isDebugEnabled()) {

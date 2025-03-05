@@ -2124,6 +2124,9 @@ public class AuthzUtil {
         if (oAuthMessage.getRequest().getParameterMap() != null) {
             sessionDataCacheEntryNew.setParamMap(new ConcurrentHashMap<>(oAuthMessage.getRequest().getParameterMap()));
         }
+        if(oAuthMessage.getDPoPThumbprint() != null){
+            sessionDataCacheEntryNew.setDPoPThumbprint(oAuthMessage.getDPoPThumbprint());
+        }
         sessionDataCacheEntryNew.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
         oAuthMessage.setSessionDataCacheEntry(sessionDataCacheEntryNew);
