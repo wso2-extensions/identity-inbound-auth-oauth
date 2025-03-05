@@ -4269,6 +4269,12 @@ public class OAuth2Util {
             return true;
         }
 
+        /* The request token binding type can't be validated, as it is an auto generated UUID to issue unique JWT tokens
+           by avoiding revocation of already issued JWT tokens. */
+        if (OAuthConstants.REQUEST_BINDING_TYPE.equals(tokenBinding.getBindingType())) {
+            return true;
+        }
+
         Optional<TokenBinder> tokenBinderOptional = OAuth2ServiceComponentHolder.getInstance()
                 .getTokenBinder(tokenBinding.getBindingType());
         if (!tokenBinderOptional.isPresent()) {
