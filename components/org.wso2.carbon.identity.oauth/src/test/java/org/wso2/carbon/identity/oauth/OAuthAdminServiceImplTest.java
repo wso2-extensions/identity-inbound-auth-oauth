@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017-2024, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (https://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -34,6 +34,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.core.util.CryptoException;
+import org.wso2.carbon.core.util.CryptoUtil;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -54,11 +56,17 @@ import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.dto.OAuthRevocationResponseDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.EncryptionDecryptionPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAOImpl;
+import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
+import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAOImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -98,6 +106,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -116,6 +125,8 @@ public class OAuthAdminServiceImplTest {
     private static final String CONSUMER_SECRET = "consumer:secret";
     private static final String UPDATED_CONSUMER_SECRET = "updated:consumer:secret";
     private static final String INBOUND_AUTH2_TYPE = "oauth2";
+    private static final String ACCESS_TOKEN = "access:token";
+    private static final String USER_ID = "user:id";
 
     @Mock
     private RealmConfiguration realmConfiguration;
@@ -141,6 +152,12 @@ public class OAuthAdminServiceImplTest {
     ServiceProvider mockServiceProvider;
     @Mock
     OAuthServerConfiguration mockOAuthServerConfiguration;
+    @Mock
+    AccessTokenDAO mockAccessTokenDAO;
+    @Mock
+    AuthorizationCodeDAO mockAuthorizationCodeDAO;
+    @Mock
+    TokenManagementDAO mockTokenManagementDAO;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
 
@@ -755,6 +772,89 @@ public class OAuthAdminServiceImplTest {
                     oAuthAdminServiceImpl).updateAppAndRevokeTokensAndAuthzCodes(anyString(), any(Properties.class));
             oAuthAdminServiceImpl.updateAndRetrieveOauthSecretKey(CONSUMER_KEY);
         }
+    }
+
+    @DataProvider(name = "persistenceProcessorDataProvider")
+    public Object[][] persistenceProcessorDataProvider() {
+
+        return new Object[][]{
+                {new EncryptionDecryptionPersistenceProcessor(), false},
+                {new EncryptionDecryptionPersistenceProcessor(), true},
+                {new HashingPersistenceProcessor(), false},
+                {new PlainTextPersistenceProcessor(), false}
+        };
+    }
+
+    @Test(dataProvider = "persistenceProcessorDataProvider")
+    public void testClearTokenCacheForEachPersistenceProcessor(
+            TokenPersistenceProcessor tokenPersistenceProcessor, boolean expectException) throws Exception {
+
+        try (MockedStatic<OAuthTokenPersistenceFactory> mockedOAuthTokenPersistenceFactory =
+                     mockStatic(OAuthTokenPersistenceFactory.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<CryptoUtil> mockedCryptoUtil = mockStatic(CryptoUtil.class);
+             MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class)) {
+
+            Set<AccessTokenDO> activeTokens = getDetailedTokens();
+            OAuthAdminServiceImpl oAuthAdminServiceImpl = new OAuthAdminServiceImpl();
+
+            OAuthTokenPersistenceFactory mockTokenPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
+            mockedOAuthTokenPersistenceFactory.when(OAuthTokenPersistenceFactory::getInstance)
+                    .thenReturn(mockTokenPersistenceFactory);
+            when(mockTokenPersistenceFactory.getAccessTokenDAO()).thenReturn(mockAccessTokenDAO);
+            when(mockTokenPersistenceFactory.getAuthorizationCodeDAO()).thenReturn(mockAuthorizationCodeDAO);
+            when(mockTokenPersistenceFactory.getTokenManagementDAO()).thenReturn(mockTokenManagementDAO);
+            when(mockAccessTokenDAO.getActiveAcessTokenDataByConsumerKey(CONSUMER_KEY)).thenReturn(activeTokens);
+
+            CryptoUtil mockCryptoUtilInstance = mock(CryptoUtil.class);
+            mockedCryptoUtil.when(CryptoUtil::getDefaultCryptoUtil).thenReturn(mockCryptoUtilInstance);
+            oAuth2Util.when(OAuth2Util::getPersistenceProcessor).thenReturn(tokenPersistenceProcessor);
+
+            if (expectException) {
+                when(mockCryptoUtilInstance.base64DecodeAndDecrypt(anyString())).thenThrow(new CryptoException());
+                oAuthUtil.when(() -> OAuthUtil.handleError(anyString(), any(Exception.class)))
+                        .thenAnswer(invocation -> {
+                            String msg = invocation.getArgument(0);
+                            Exception ex = invocation.getArgument(1);
+                            return new IdentityOAuthAdminException(msg, ex);
+                        });
+                try {
+                    oAuthAdminServiceImpl.updateAppAndRevokeTokensAndAuthzCodes(CONSUMER_KEY, new Properties());
+                    Assert.fail("Expected IdentityOAuthAdminException to be thrown.");
+                } catch (IdentityOAuthAdminException e) {
+                    Assert.assertTrue(e.getMessage().contains(
+                            "Failed to retrieve the pre-processed access token for consumer key"));
+                    verify(mockCryptoUtilInstance, times(1)).base64DecodeAndDecrypt(anyString());
+                }
+            } else {
+                byte[] mockDecryptedData = CONSUMER_KEY.getBytes();
+                when(mockCryptoUtilInstance.base64DecodeAndDecrypt(anyString())).thenReturn(mockDecryptedData);
+                oAuthAdminServiceImpl.updateAppAndRevokeTokensAndAuthzCodes(CONSUMER_KEY, new Properties());
+
+                if (tokenPersistenceProcessor instanceof EncryptionDecryptionPersistenceProcessor) {
+                    verify(mockCryptoUtilInstance, times(2)).base64DecodeAndDecrypt(anyString());
+                } else {
+                    verify(mockCryptoUtilInstance, never()).base64DecodeAndDecrypt(anyString());
+                }
+            }
+        }
+    }
+
+    private static Set<AccessTokenDO> getDetailedTokens() {
+
+        Set<AccessTokenDO> activeDetailedTokens = new HashSet<>();
+        AccessTokenDO accessTokenDO1 = new AccessTokenDO();
+        AccessTokenDO accessTokenDO2 = new AccessTokenDO();
+        accessTokenDO1.setAccessToken(ACCESS_TOKEN);
+        accessTokenDO2.setAccessToken(ACCESS_TOKEN);
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserId(USER_ID);
+        accessTokenDO1.setAuthzUser(authenticatedUser);
+        accessTokenDO2.setAuthzUser(authenticatedUser);
+        activeDetailedTokens.add(accessTokenDO1);
+        activeDetailedTokens.add(accessTokenDO2);
+        return activeDetailedTokens;
     }
 
     @Test
