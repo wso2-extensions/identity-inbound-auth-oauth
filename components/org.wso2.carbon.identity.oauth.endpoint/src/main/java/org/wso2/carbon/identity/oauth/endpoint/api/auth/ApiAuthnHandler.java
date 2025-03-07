@@ -80,29 +80,32 @@ public class ApiAuthnHandler {
         return authResponse;
     }
 
-    public AuthzChallengeIncompleteResponse handleInitialAuthzChallengeResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
+    public AuthzChallengeIncompleteResponse handleInitialAuthzChallengeResponse(AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
 
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuth_session(authServiceResponse.getSessionDataKey());
         response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
-        response.setError_description("The provided authorization is not sufficient; additional steps are required to complete the process.");
+        response.setError_description("The provided authorization is not sufficient; " +
+                "additional steps are required to complete the process.");
         NextStep nextStep = buildNextStep(authServiceResponse);
         response.setNextStep(nextStep);
 
         return response;
     }
 
-    public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) throws AuthServiceException {
+    public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) {
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuth_session(authResponse.getFlowId());
         response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
-        response.setError_description("The provided authorization is not sufficient; additional steps are required to complete the process.");
+        response.setError_description("The provided authorization is not sufficient; " +
+                "additional steps are required to complete the process.");
         response.setNextStep(authResponse.getNextStep());
 
         return response;
     }
 
-    public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) throws AuthServiceException {
+    public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) {
         AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
         response.setAuth_session(authResponse.getFlowId());
         response.setError(AuthzChallengeErrorEnum.REDIRECT_TO_WEB.getValue());

@@ -22,14 +22,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,8 +42,16 @@ import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErro
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
@@ -291,12 +291,13 @@ public class ApiAuthnUtils {
 
         String jsonString = null;
         Object authzChallengeResponse;
-        if (isAuthzChallenge){
+        if (isAuthzChallenge) {
             if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
                 authzChallengeResponse = API_AUTHN_HANDLER.handleIncompleteAuthzChallengeResponse(response);
-            }else if(response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED || response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_INCOMPLETE) {
+            } else if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED ||
+                    response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_INCOMPLETE) {
                 authzChallengeResponse = API_AUTHN_HANDLER.handleFailedAuthzChallengeResponse(response);
-            }else{
+            } else {
                 throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
                         "Error while building JSON. Invalid flow status.");
             }
@@ -309,7 +310,7 @@ public class ApiAuthnUtils {
                         "Error while building JSON response.", e);
             }
 
-            if(response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
+            if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
                 return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
             }
             if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
@@ -359,24 +360,28 @@ public class ApiAuthnUtils {
                 StandardCharsets.UTF_8);
     }
 
-    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
+    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
 
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(authResponse);
     }
 
-    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean isAuthzChallenge) throws AuthServiceException {
+    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean
+            isAuthzChallenge) throws AuthServiceException {
 
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(authResponse, isAuthzChallenge);
     }
 
-    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse) throws AuthServiceException {
+    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(authResponse);
     }
 
-    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean isAuthzChallenge) throws AuthServiceException {
+    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean
+            isAuthzChallenge) throws AuthServiceException {
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(authResponse, isAuthzChallenge);
     }

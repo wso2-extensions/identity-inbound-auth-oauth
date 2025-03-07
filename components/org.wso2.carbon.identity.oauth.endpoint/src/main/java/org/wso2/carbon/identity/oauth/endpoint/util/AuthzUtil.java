@@ -114,11 +114,9 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
-import org.wso2.carbon.identity.oauth.endpoint.AuthResponseWrapper;
-import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
+import org.wso2.carbon.identity.oauth.endpoint.OAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeCompletedResponse;
@@ -155,7 +153,6 @@ import org.wso2.carbon.identity.oauth2.responsemode.provider.ResponseModeProvide
 import org.wso2.carbon.identity.oauth2.scopeservice.ScopeMetadataService;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.identity.oauth2.util.RequestUtil;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionState;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
@@ -4475,7 +4472,7 @@ public class AuthzUtil {
                     authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
                 }
 
-                AuthResponseWrapper responseWrapper = new AuthResponseWrapper(authResponse);
+                OAuthResponseWrapper responseWrapper = new OAuthResponseWrapper(authResponse);
 
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);

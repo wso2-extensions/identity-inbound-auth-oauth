@@ -155,11 +155,9 @@ public class OAuth2AuthzEndpoint {
             } else {
                 oauthResponse = AuthzUtil.handleInvalidRequest(oAuthMessage);
             }
-
             if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
                 oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, false);
             }
-
             return oauthResponse;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -174,7 +172,6 @@ public class OAuth2AuthzEndpoint {
             }
         }
     }
-
 
 
     @POST

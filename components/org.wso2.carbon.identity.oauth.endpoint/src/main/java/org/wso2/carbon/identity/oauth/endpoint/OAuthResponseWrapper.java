@@ -1,9 +1,9 @@
 package org.wso2.carbon.identity.oauth.endpoint;
 
-public class AuthResponseWrapper {
+public class OAuthResponseWrapper {
     private Object response;
 
-    public AuthResponseWrapper(Object response) {
+    public OAuthResponseWrapper(Object response) {
         this.response = response;
     }
 

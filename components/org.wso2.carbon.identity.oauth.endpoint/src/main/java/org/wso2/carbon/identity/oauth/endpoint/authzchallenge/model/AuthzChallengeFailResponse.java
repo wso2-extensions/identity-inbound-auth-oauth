@@ -12,7 +12,8 @@ public class AuthzChallengeFailResponse {
 
     }
 
-    public AuthzChallengeFailResponse(String auth_session, String error, String error_description, String error_uri, String request_uri, String expires_in) {
+    public AuthzChallengeFailResponse(String auth_session, String error, String error_description,
+                                      String error_uri, String request_uri, String expires_in) {
         this.auth_session = auth_session;
         this.error = error;
         this.error_description = error_description;
