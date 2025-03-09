@@ -27,13 +27,13 @@ import java.util.Map;
 public class SelectedAuthenticator {
 
     private String authenticatorId;
-    private Map<String, String> params = new HashMap<String, String>();
+    private Map<String, Object> params = new HashMap<String, Object>();
 
     public SelectedAuthenticator() {
 
     }
 
-    public SelectedAuthenticator(String authenticatorId, Map<String, String> params) {
+    public SelectedAuthenticator(String authenticatorId, Map<String, Object> params) {
 
         this.authenticatorId = authenticatorId;
         this.params = params;
@@ -49,12 +49,12 @@ public class SelectedAuthenticator {
         this.authenticatorId = authenticatorId;
     }
 
-    public Map<String, String> getParams() {
+    public Map<String, Object> getParams() {
 
         return params;
     }
 
-    public void setParams(Map<String, String> params) {
+    public void setParams(Map<String, Object> params) {
 
         this.params = params;
     }
