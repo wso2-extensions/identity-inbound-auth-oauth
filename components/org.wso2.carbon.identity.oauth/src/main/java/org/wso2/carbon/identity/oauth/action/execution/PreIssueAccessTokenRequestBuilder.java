@@ -29,7 +29,6 @@ import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.api.model.Event;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.api.model.Operation;
-import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Request;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
@@ -45,7 +44,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
@@ -56,7 +54,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -112,8 +109,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         boolean isAuthorizedForUser = isAccessTokenAuthorizedForUser(tokenReqDTO.getGrantType(), tokenMessageContext);
         if (isAuthorizedForUser) {
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
-            setOrganizationForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(),
-                    tokenReqDTO.getGrantType());
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
 
@@ -135,26 +130,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                 LOG.debug(String.format(
                         "Error occurred while retrieving user id of the authorized user for application: " + clientID +
                                 "for grantType: " + grantType), e);
-            }
-        }
-    }
-
-    private void setOrganizationForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder, AuthenticatedUser user,
-                                                String clientID, String grantType) {
-
-        try {
-            String organizationId = user.getUserResidentOrganization();
-            if (organizationId != null && !organizationId.isEmpty()) {
-                String organizationName = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .getOrganizationNameById(user.getUserResidentOrganization());
-                eventBuilder.organization(new Organization(user.getUserResidentOrganization(),
-                        organizationName));
-            }
-        } catch (OrganizationManagementException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format(
-                        "Error occurred while retrieving organization name of the authorized user for application: " +
-                                clientID + "for grantType: " + grantType), e);
             }
         }
     }
