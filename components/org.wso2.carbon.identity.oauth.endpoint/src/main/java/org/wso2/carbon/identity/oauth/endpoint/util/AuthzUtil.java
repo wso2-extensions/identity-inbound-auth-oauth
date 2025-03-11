@@ -1,49 +1,12 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.nimbusds.jwt.SignedJWT;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.StringJoiner;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
-import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -162,6 +125,47 @@ import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.StringJoiner;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
@@ -525,7 +529,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Method to check a successful form_post flow
+     * Method to check a successful form_post flow.
      * @param oAuthMessage OAuthMessage instance
      * @param authorizationResponseDTO AuthorizationResponseDTO instance
      * @return true if response mode is form_post without errors
@@ -539,7 +543,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Method to check form_post flow with error
+     * Method to check form_post flow with error.
      * @param authorizationResponseDTO AuthorizationResponseDTO instance
      * @param responseModeProvider ResponseModeProvider instance
      * @return true if response mode is form_post with errors
@@ -872,7 +876,7 @@ public class AuthzUtil {
     private static void handleEmptyConsent(AuthorizationResponseDTO authorizationResponseDTO) {
 
         if (log.isDebugEnabled()) {
-            log.debug("Invalid authorization request. \'sessionDataKey\' parameter found but \'consent\' " +
+            log.debug("Invalid authorization request. 'sessionDataKey' parameter found but 'consent' " +
                     "parameter could not be found in request");
         }
 
@@ -942,8 +946,8 @@ public class AuthzUtil {
         }
     }
 
-    private static void handleDeniedConsent(OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO,
-                                     ResponseModeProvider responseModeProvider) throws OAuthSystemException {
+    private static void handleDeniedConsent(OAuthMessage oAuthMessage, AuthorizationResponseDTO
+            authorizationResponseDTO, ResponseModeProvider responseModeProvider) throws OAuthSystemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
@@ -1198,7 +1202,7 @@ public class AuthzUtil {
         String appName = getOauth2Params(oAuthMessage).getApplicationName();
 
         if (log.isDebugEnabled()) {
-            log.debug("Invalid authorization request. \'sessionDataKey\' attribute found but " +
+            log.debug("Invalid authorization request. 'sessionDataKey' attribute found but " +
                     "corresponding AuthenticationResult does not exist in the cache.");
         }
 
@@ -1279,8 +1283,7 @@ public class AuthzUtil {
     private static String createBaseFormPage(String params, String redirectURI) {
 
         if (StringUtils.isNotBlank(formPostRedirectPage)) {
-            String newPage = formPostRedirectPage;
-            String pageWithRedirectURI = newPage.replace("$redirectURI", redirectURI);
+            String pageWithRedirectURI = formPostRedirectPage.replace("$redirectURI", redirectURI);
             return pageWithRedirectURI.replace("<!--$params-->", params);
         }
 
@@ -1457,7 +1460,8 @@ public class AuthzUtil {
         return false;
     }
 
-    private static String buildOIDCResponseWithURIFragment(OAuthResponse oauthResponse, OAuth2AuthorizeRespDTO authzRespDTO) {
+    private static String buildOIDCResponseWithURIFragment(OAuthResponse oauthResponse,
+                                                           OAuth2AuthorizeRespDTO authzRespDTO) {
 
         if (authzRespDTO.getCallbackURI().contains("?")) {
             return authzRespDTO.getCallbackURI() + "#" + StringUtils.substring(oauthResponse.getLocationUri()
@@ -1498,7 +1502,8 @@ public class AuthzUtil {
         }
     }
 
-    private static boolean isFormPostModeAndResponseBodyExists(OAuth2Parameters oauth2Params, OAuthResponse oauthResponse) {
+    private static boolean isFormPostModeAndResponseBodyExists(OAuth2Parameters oauth2Params,
+                                                               OAuthResponse oauthResponse) {
 
         return (OAuthConstants.ResponseModes.FORM_POST.equals(oauth2Params.getResponseMode()) ||
                 OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode()))
@@ -1570,8 +1575,8 @@ public class AuthzUtil {
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
     }
 
-    private static String handleAuthorizationFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                                           OAuth2AuthorizeRespDTO authzRespDTO) {
+    private static String handleAuthorizationFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters
+            oauth2Params, OAuth2AuthorizeRespDTO authzRespDTO) {
 
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
                 : "Error occurred while processing authorization request.";
@@ -1923,7 +1928,7 @@ public class AuthzUtil {
     }
 
     /**
-     * http://tools.ietf.org/html/rfc6749#section-4.1.2
+     * <a href="http://tools.ietf.org/html/rfc6749#section-4.1.2">Reference</a>
      * <p/>
      * 4.1.2.1. Error Response
      * <p/>
@@ -2042,7 +2047,7 @@ public class AuthzUtil {
      * Checks whether the given authentication flow requires {@code nonce} as a mandatory parameter.
      *
      * @param responseType Response type from the authentication request.
-     * @return {@true} {@code true} if parameter is mandatory, {@code false} if not.
+     * @return {@code true} if parameter is mandatory, {@code false} if not.
      */
     public static boolean isNonceMandatory(String responseType) {
 
@@ -2077,7 +2082,7 @@ public class AuthzUtil {
                 LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
             }
             throw OAuthProblemException.error(OAuthError.TokenResponse.INVALID_REQUEST)
-                    .description("\'response_type\' contains \'id_token\'; but \'nonce\' parameter not found");
+                    .description("'response_type' contains 'id_token'; but 'nonce' parameter not found");
         }
         if (log.isDebugEnabled()) {
             log.debug("Mandatory " + NONCE + " parameter is successfully validated");
@@ -2111,7 +2116,8 @@ public class AuthzUtil {
         throw new OAuthSystemException("Error when encoding login page URL");
     }
 
-    public static void addDataToSessionCache(OAuthMessage oAuthMessage, OAuth2Parameters params, String sessionDataKey) {
+    public static void addDataToSessionCache(OAuthMessage oAuthMessage, OAuth2Parameters params,
+                                             String sessionDataKey) {
 
         SessionDataCacheKey cacheKey = new SessionDataCacheKey(sessionDataKey);
         SessionDataCacheEntry sessionDataCacheEntryNew = new SessionDataCacheEntry();
@@ -2121,7 +2127,7 @@ public class AuthzUtil {
         if (oAuthMessage.getRequest().getParameterMap() != null) {
             sessionDataCacheEntryNew.setParamMap(new ConcurrentHashMap<>(oAuthMessage.getRequest().getParameterMap()));
         }
-        if(oAuthMessage.getDPoPThumbprint() != null){
+        if (oAuthMessage.getDPoPThumbprint() != null) {
             sessionDataCacheEntryNew.setDPoPThumbprint(oAuthMessage.getDPoPThumbprint());
         }
         sessionDataCacheEntryNew.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
@@ -2191,8 +2197,8 @@ public class AuthzUtil {
         return null;
     }
 
-    private static String handleInvalidPromptValues(OAuthMessage oAuthMessage, OAuth2Parameters params, String prompt, String
-            message) {
+    private static String handleInvalidPromptValues(OAuthMessage oAuthMessage, OAuth2Parameters params, String prompt,
+                                                    String message) {
 
         if (log.isDebugEnabled()) {
             log.debug(message + " " + prompt);
@@ -2525,7 +2531,8 @@ public class AuthzUtil {
         }
     }
 
-    private static String getLoginTenantDomain(OAuthMessage oAuthMessage, String clientId) throws InvalidRequestException {
+    private static String getLoginTenantDomain(OAuthMessage oAuthMessage, String clientId)
+            throws InvalidRequestException {
 
         if (!IdentityTenantUtil.isTenantedSessionsEnabled()) {
             return EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
@@ -2773,7 +2780,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Return ServiceProvider for the given clientId
+     * Return ServiceProvider for the given clientId.
      *
      * @param clientId clientId
      * @return ServiceProvider ServiceProvider
@@ -3046,7 +3053,7 @@ public class AuthzUtil {
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
             throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
-                    "Request with \'prompt=none\' but user session does not exist");
+                    "Request with 'prompt=none' but user session does not exist");
         }
 
         if (isIdTokenHintExists(oauth2Params)) {
@@ -3105,8 +3112,8 @@ public class AuthzUtil {
      * @throws ConsentHandlingFailedException
      * @throws OAuthSystemException
      */
-    private static String handlePreConsent(OAuth2Parameters oauth2Params, AuthenticatedUser user, boolean useExistingConsents)
-            throws ConsentHandlingFailedException, OAuthSystemException {
+    private static String handlePreConsent(OAuth2Parameters oauth2Params, AuthenticatedUser user, boolean
+            useExistingConsents) throws ConsentHandlingFailedException, OAuthSystemException {
 
         String additionalQueryParam = StringUtils.EMPTY;
         String clientId = oauth2Params.getClientId();
@@ -3380,7 +3387,8 @@ public class AuthzUtil {
         return joiner.toString();
     }
 
-    private static String buildConsentClaimString(List<ClaimMetaData> consentClaimsData) throws UnsupportedEncodingException {
+    private static String buildConsentClaimString(List<ClaimMetaData> consentClaimsData)
+            throws UnsupportedEncodingException {
 
         StringJoiner joiner = new StringJoiner(",");
         for (ClaimMetaData claimMetaData : consentClaimsData) {
@@ -3418,8 +3426,8 @@ public class AuthzUtil {
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw OAuthProblemException.error(OAuth2ErrorCodes.ACCESS_DENIED,
-                        "Request with \'id_token_hint=" + idTokenHint +
-                                "\' but ID Token validation failed");
+                        "Request with 'id_token_hint=" + idTokenHint +
+                                "' but ID Token validation failed");
             }
 
             String loggedInUserSubjectId = loggedInUser.getAuthenticatedSubjectIdentifier();
@@ -3434,8 +3442,8 @@ public class AuthzUtil {
                     LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
                 }
                 throw OAuthProblemException.error(OAuth2ErrorCodes.LOGIN_REQUIRED,
-                        "Request with \'id_token_hint=" + idTokenHint +
-                                "\' but user has denied the consent");
+                        "Request with 'id_token_hint=" + idTokenHint +
+                                "' but user has denied the consent");
             }
         } catch (ParseException e) {
             String msg = "Error while getting clientId from the IdTokenHint.";
@@ -3533,9 +3541,8 @@ public class AuthzUtil {
         }
     }
 
-    private static String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                                              OAuth2Parameters oauth2Params, AuthorizationResponseDTO
-                                                                      authorizationResponseDTO)
+    private static String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState
+            sessionState, OAuth2Parameters oauth2Params, AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
@@ -3703,7 +3710,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Get authentication result from request
+     * Get authentication result from request.
      *
      * @param request Http servlet request
      * @return AuthenticationResult
@@ -3711,64 +3718,6 @@ public class AuthzUtil {
     private static AuthenticationResult getAuthenticationResultFromRequest(HttpServletRequest request) {
 
         return (AuthenticationResult) request.getAttribute(FrameworkConstants.RequestAttribute.AUTH_RESULT);
-    }
-
-    public static Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, BiFunction<HttpServletRequest, HttpServletResponse, Response> handler)
-            throws URISyntaxException, InvalidRequestParentException {
-
-        try {
-            CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
-            invokeCommonauthFlow(oAuthMessage, responseWrapper);
-            return processAuthResponseFromFramework(oAuthMessage, responseWrapper, handler);
-        } catch (ServletException | IOException | URLBuilderException e) {
-            log.error("Error occurred while sending request to authentication framework.");
-            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    private static Response processAuthResponseFromFramework(OAuthMessage oAuthMessage,
-                                                      CommonAuthResponseWrapper responseWrapper , BiFunction<HttpServletRequest, HttpServletResponse, Response> handler)
-            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException {
-
-        if (isAuthFlowStateExists(oAuthMessage)) {
-            if (isFlowStateIncomplete(oAuthMessage)) {
-                return handleIncompleteFlow(oAuthMessage, responseWrapper);
-            } else {
-                return handleSuccessfullyCompletedFlow(oAuthMessage, handler);
-            }
-        } else {
-            return handleUnknownFlowState(oAuthMessage, handler);
-        }
-    }
-
-//    private Response handleUnknownFlowState(OAuthMessage oAuthMessage)
-//            throws URISyntaxException, InvalidRequestParentException {
-//
-//        oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
-//                .UNKNOWN);
-//        return authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
-//    }
-//
-//    private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage)
-//            throws URISyntaxException, InvalidRequestParentException {
-//
-//        return authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
-//    }
-
-    // Handled the parent class issue by adding a Bi
-    private static Response handleUnknownFlowState(OAuthMessage oAuthMessage,
-                                            BiFunction<HttpServletRequest, HttpServletResponse, Response> handler) {
-
-        oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
-                .UNKNOWN);
-        return handler.apply(oAuthMessage.getRequest(), oAuthMessage.getResponse());
-
-    }
-
-    private static Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage, BiFunction<HttpServletRequest, HttpServletResponse, Response> handler)
-            throws URISyntaxException, InvalidRequestParentException {
-
-        return handler.apply(oAuthMessage.getRequest(), oAuthMessage.getResponse());
     }
 
     public static boolean isFlowStateIncomplete(OAuthMessage oAuthMessage) {
@@ -3798,100 +3747,6 @@ public class AuthzUtil {
         CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
         commonAuthenticationHandler.doGet(oAuthMessage.getRequest(), responseWrapper);
     }
-
-//    /**
-//     * This method use to call authentication framework directly via API other than using HTTP redirects.
-//     * Sending wrapper request object to doGet method since other original request doesn't exist required parameters
-//     * Doesn't check SUCCESS_COMPLETED since taking decision with INCOMPLETE status
-//     *
-//     * @param type authenticator type
-//     * @throws URISyntaxException
-//     * @throws InvalidRequestParentException
-//     * @Param type OAuthMessage
-//     */
-//    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type, String redirectUrl)
-//            throws URISyntaxException, InvalidRequestParentException {
-//
-//        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-//            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-//                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-//                    OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
-//                    .resultMessage("Forward authorization request to framework for user authentication.")
-//                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-//                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
-//                    .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
-//            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-//        }
-//        try {
-//            String sessionDataKey =
-//                    (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);
-//
-//
-//            CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(oAuthMessage.getRequest());
-//            requestWrapper.setParameter(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
-//            requestWrapper.setParameter(FrameworkConstants.RequestParams.TYPE, type);
-//
-//            CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
-//
-//            if (isApiBasedAuthenticationFlow(oAuthMessage)) {
-//                // Marking the initial request as additional validation will be done from the auth service.
-//                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
-//                requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
-//
-//                AuthenticationService authenticationService = new AuthenticationService();
-//                AuthServiceResponse authServiceResponse = authenticationService.
-//                        handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
-//                // This is done to provide a way to propagate the auth service response to needed places.
-//                attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
-//            } else {
-//                CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
-//                commonAuthenticationHandler.doGet(requestWrapper, responseWrapper);
-//            }
-//
-//            Object attribute = oAuthMessage.getRequest().getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
-//            if (attribute != null) {
-//                if (attribute == AuthenticatorFlowStatus.INCOMPLETE) {
-//
-//                    if (responseWrapper.isRedirect()) {
-//                        return Response.status(HttpServletResponse.SC_FOUND)
-//                                .location(buildURI(responseWrapper.getRedirectURL())).build();
-//                    } else {
-//                        return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
-//                    }
-//                } else {
-//                    try {
-//                        String serviceProviderId =
-//                                getServiceProvider(oAuthMessage.getRequest().getParameter(CLIENT_ID))
-//                                        .getApplicationResourceId();
-//                        requestWrapper.setParameter(SERVICE_PROVIDER_ID, serviceProviderId);
-//                    } catch (Exception e) {
-//                        // The value is set to be used for branding purposes. Therefore, if an error occurs,
-//                        // the process should continue without breaking.
-//                        log.error("Error occurred while getting service provider id.");
-//                    }
-//                    return authorize(requestWrapper, oAuthMessage.getResponse());
-//                }
-//            } else {
-//                requestWrapper
-//                        .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
-//                return authorize(requestWrapper, oAuthMessage.getResponse());
-//            }
-//        } catch (AuthServiceException e) {
-//            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
-//        } catch (ServletException | IOException | URLBuilderException e) {
-//            log.error("Error occurred while sending request to authentication framework.");
-//            if (LoggerUtils.isDiagnosticLogsEnabled()) {
-//                LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
-//                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-//                        OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
-//                        .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
-//                        .resultMessage("Server error occurred.")
-//                        .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM)
-//                        .resultStatus(DiagnosticLog.ResultStatus.FAILED));
-//            }
-//            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-//        }
-//    }
 
     public static URI buildURI(String redirectUrl) throws URISyntaxException, URLBuilderException {
 
@@ -4025,7 +3880,8 @@ public class AuthzUtil {
      * @param authMethods       The list of authentication methods set by resident IDP.
      * @param authenticatedIdPs The authenticated IDPs.
      */
-    private static List<String> getAMRValues(List<String> authMethods, Map<String, AuthenticatedIdPData> authenticatedIdPs) {
+    private static List<String> getAMRValues(List<String> authMethods, Map<String,
+            AuthenticatedIdPData> authenticatedIdPs) {
 
         boolean readAMRValueFromIdp = Boolean.parseBoolean(IdentityUtil.getProperty(
                 OAuthConstants.READ_AMR_VALUE_FROM_IDP));
@@ -4173,7 +4029,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State
+     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State.
      *
      * @param sessionState
      */
@@ -4443,7 +4299,8 @@ public class AuthzUtil {
         request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
     }
 
-    public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse, boolean isAuthzChallenge) {
+    public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse,
+                                                                boolean isAuthzChallenge) {
 
         // API based auth response transformation has already been handled no need for further handling.
         if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(IS_API_BASED_AUTH_HANDLED))) {
@@ -4510,10 +4367,12 @@ public class AuthzUtil {
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             // Keeping the app native flow as it is.
                             if (isAuthzChallenge) {
-                                if(attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED){
-                                    AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse = new AuthzChallengeCompletedResponse(queryParams);
+                                if (attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED) {
+                                    AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse =
+                                            new AuthzChallengeCompletedResponse(queryParams);
                                     String challengeJsonPayload = new Gson().toJson(authzChallengeCompleteAuthResponse);
-                                    return Response.status(HttpServletResponse.SC_OK).entity(challengeJsonPayload).build();
+                                    return Response.status(HttpServletResponse.SC_OK).entity(challengeJsonPayload)
+                                            .build();
                                 }
                                 return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonPayload).build();
                             } else {
@@ -4535,9 +4394,9 @@ public class AuthzUtil {
                 }
             }
         } catch (AuthServiceException e) {
-            if(isAuthzChallenge){
+            if (isAuthzChallenge) {
                 return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e, isAuthzChallenge);
-            }else {
+            } else {
                 return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
             }
 
@@ -4558,8 +4417,9 @@ public class AuthzUtil {
         }
     }
 
-    public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e, boolean isAuthzChallenge) {
-        if(isAuthzChallenge){
+    public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e,
+                                                           boolean isAuthzChallenge) {
+        if (isAuthzChallenge) {
             if (e instanceof AuthServiceClientException) {
                 request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return ApiAuthnUtils.buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
@@ -4567,12 +4427,12 @@ public class AuthzUtil {
                 request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return ApiAuthnUtils.buildResponseForServerError(e, log);
             }
-        }else{
+        } else {
             return handleApiBasedAuthErrorResponse(request, e);
         }
     }
 
-    public static Response handleAuthenticationFrameworkError (OAuthMessage oAuthMessage, Exception e){
+    public static Response handleAuthenticationFrameworkError (OAuthMessage oAuthMessage, Exception e) {
         log.error("Error occurred while sending request to authentication framework.");
         if (LoggerUtils.isDiagnosticLogsEnabled()) {
             LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -4696,7 +4556,8 @@ public class AuthzUtil {
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
     }
 
-    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext, boolean isAuthzChallenge) {
+    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext,
+                                                     boolean isAuthzChallenge) {
 
         if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
             String msg = "Server encountered an error while authorizing the request.";
@@ -4713,9 +4574,9 @@ public class AuthzUtil {
 
         AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
         authzChallengeFailResponse.setError(AuthzChallengeErrorEnum.INVALID_CLIENT.getValue());
-        if(StringUtils.isNotBlank(description)){
+        if (StringUtils.isNotBlank(description)) {
             authzChallengeFailResponse.setError_description(description);
-        }else {
+        } else {
             authzChallengeFailResponse.setError_description("Authorization failure. Authorization information " +
                     "was invalid or missing from your request.");
         }

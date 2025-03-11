@@ -36,7 +36,6 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Commo
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
-import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponseData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
@@ -70,6 +69,7 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
+import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.io.IOException;
@@ -79,7 +79,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -93,11 +92,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.getErrorPageURL;
-import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validateParams;
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PROVIDER_ID;
-
 
 /**
  * Class containing the REST API for API based authentication.
@@ -106,6 +100,10 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PRO
 @Path("/authorize-challenge")
 @InInterceptors(classes = {OAuthClientAuthenticatorProxy.class, ClientAttestationProxy.class})
 public class AuthzChallengeEndpoint {
+
+    private static final String AUTH_SESSION = "auth_session";
+    private static final String FLOW_ID = "flowId";
+    private static final String DPOP = "DPoP";
 
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
@@ -255,11 +253,12 @@ public class AuthzChallengeEndpoint {
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
-            if (parameterMap.containsKey("client_id") && parameterMap.containsKey("response_type")) {
+            if (parameterMap.containsKey(OAuthConstants.OAuth20Params.CLIENT_ID) &&
+                    parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE)) {
 
-                if (!validateParams(request, paramMap)) {
+                if (!EndpointUtil.validateParams(request, paramMap)) {
                     return Response.status(HttpServletResponse.SC_BAD_REQUEST)
-                            .location(new URI(getErrorPageURL(request,
+                            .location(new URI(EndpointUtil.getErrorPageURL(request,
                                     OAuth2ErrorCodes.INVALID_REQUEST,
                                     OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
                                     "Invalid authorization request with repeated parameters", null)))
@@ -292,7 +291,7 @@ public class AuthzChallengeEndpoint {
     public Response authorizeChallengeSubsequentPost(@Context HttpServletRequest request,
                                                      @Context HttpServletResponse response, String payload) {
         try {
-            if (payload != null && payload.contains("\"auth_session\"")) {
+            if (payload != null && payload.contains(AUTH_SESSION)) {
                 return handleSubsequentAuthzChallengeRequest(request, response, payload);
             }
 
@@ -316,8 +315,8 @@ public class AuthzChallengeEndpoint {
         JsonNode jsonNode = objectMapper.readTree(payload);
 
         ObjectNode objectNode = (ObjectNode) jsonNode;
-        JsonNode authSessionValue = objectNode.remove("auth_session");
-        objectNode.set("flowId", authSessionValue);
+        JsonNode authSessionValue = objectNode.remove(AUTH_SESSION);
+        objectNode.set(FLOW_ID, authSessionValue);
         return objectMapper.writeValueAsString(objectNode);
     }
 
@@ -325,9 +324,19 @@ public class AuthzChallengeEndpoint {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonNode = objectMapper.readTree(payload);
 
-        return jsonNode.has("auth_session");
+        return jsonNode.has(AUTH_SESSION);
     }
 
+    /**
+     * This method use to call authentication framework directly via API other than using HTTP redirects.
+     * Sending wrapper request object to doGet method since other original request doesn't exist required parameters
+     * Doesn't check SUCCESS_COMPLETED since taking decision with INCOMPLETE status
+     *
+     * @param oAuthMessage authenticator
+     * @throws URISyntaxException
+     * @throws InvalidRequestParentException
+     * @Param type OAuthMessage
+     */
     private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage)
             throws URISyntaxException, InvalidRequestParentException {
 
@@ -384,7 +393,7 @@ public class AuthzChallengeEndpoint {
         String type = AuthzUtil.getRequestProtocolType(oAuthMessage);
         try {
             // Add the service provider id to the redirect URL. This is needed to support application wise branding.
-            String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
+            String clientId = oAuthMessage.getRequest().getParameter(OAuthConstants.OAuth20Params.CLIENT_ID);
             if (StringUtils.isNotBlank(clientId)) {
                 ServiceProvider serviceProvider = AuthzUtil.getServiceProvider(clientId);
                 if (serviceProvider != null) {
@@ -451,10 +460,9 @@ public class AuthzChallengeEndpoint {
                     }
                 } else {
                     try {
-                        String serviceProviderId =
-                                AuthzUtil.getServiceProvider(oAuthMessage.getRequest().getParameter(CLIENT_ID))
-                                        .getApplicationResourceId();
-                        requestWrapper.setParameter(SERVICE_PROVIDER_ID, serviceProviderId);
+                        String serviceProviderId = AuthzUtil.getServiceProvider(oAuthMessage.getRequest()
+                                .getParameter(OAuthConstants.OAuth20Params.CLIENT_ID)).getApplicationResourceId();
+                        requestWrapper.setParameter(Constants.SERVICE_PROVIDER_ID, serviceProviderId);
                     } catch (Exception e) {
                         // The value is set to be used for branding purposes. Therefore, if an error occurs,
                         // the process should continue without breaking.
@@ -495,12 +503,12 @@ public class AuthzChallengeEndpoint {
     public static OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
         OAuth2AuthzChallengeReqDTO dto = new OAuth2AuthzChallengeReqDTO();
 
-        dto.setClientId(request.getParameter("client_id"));
-        dto.setResponseType(request.getParameter("response_type"));
-        dto.setRedirectUri(request.getParameter("redirect_uri"));
-        dto.setState(request.getParameter("state"));
-        dto.setScope(request.getParameter("scope"));
-        dto.setAuthSession(request.getParameter("auth_session"));
+        dto.setClientId(request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
+        dto.setResponseType(request.getParameter(OAuthConstants.OAuth20Params.RESPONSE_TYPE));
+        dto.setRedirectUri(request.getParameter(OAuthConstants.OAuth20Params.REDIRECT_URI));
+        dto.setState(request.getParameter(OAuthConstants.OAuth20Params.STATE));
+        dto.setScope(request.getParameter(OAuthConstants.OAuth20Params.SCOPE));
+        dto.setAuthSession(request.getParameter(AUTH_SESSION));
 
         dto.setHttpRequestHeaders(extractHeaders(request));
 
@@ -535,7 +543,7 @@ public class AuthzChallengeEndpoint {
     }
 
     public static boolean hasDPoPHeader(HttpServletRequest request) {
-        return request.getHeader("DPoP") != null;
+        return request.getHeader(DPOP) != null;
     }
 
     public static void validateDPoPThumbprint(HttpServletRequest request, String sessionDataCacheKey)
