@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Commo
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponseData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
@@ -78,6 +79,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -208,11 +210,12 @@ public class AuthzChallengeEndpoint {
             if (isSubsequentAuthzChallengeRequest(payload)) {
                 payload = renameAuthSessionToFlowId(payload);
             }
+
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
+            String sessionDataCacheKey = authenticationService.getSessionDataCacheKey(authServiceRequest);
+            validateDPoPThumbprint(request, sessionDataCacheKey);
             AuthServiceResponse authServiceResponse = authenticationService.handleAuthentication(authServiceRequest);
-
-            validateDPoPThumbprint(request, authServiceResponse);
 
             switch (authServiceResponse.getFlowStatus()) {
                 case INCOMPLETE:
@@ -293,6 +296,7 @@ public class AuthzChallengeEndpoint {
                 return handleSubsequentAuthzChallengeRequest(request, response, payload);
             }
 
+            //TODO: Proper exception management
             throw new AuthServiceException(
                     AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
                     "Invalid request parameters for /authorize-challenge."
@@ -315,14 +319,6 @@ public class AuthzChallengeEndpoint {
         JsonNode authSessionValue = objectNode.remove("auth_session");
         objectNode.set("flowId", authSessionValue);
         return objectMapper.writeValueAsString(objectNode);
-    }
-
-    private String extractAuthSession(Response response) throws JsonProcessingException {
-
-        String responseJson = response.getEntity().toString();
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.readTree(responseJson);
-        return jsonNode.get("auth_session").asText();
     }
 
     private boolean isSubsequentAuthzChallengeRequest(String payload) throws JsonProcessingException {
@@ -542,10 +538,10 @@ public class AuthzChallengeEndpoint {
         return request.getHeader("DPoP") != null;
     }
 
-    public static void validateDPoPThumbprint(HttpServletRequest request, AuthServiceResponse authServiceResponse)
+    public static void validateDPoPThumbprint(HttpServletRequest request, String sessionDataCacheKey)
             throws AuthServiceException, IdentityOAuth2Exception {
 
-        SessionDataCacheKey key = new SessionDataCacheKey(authServiceResponse.getSessionDataKey());
+        SessionDataCacheKey key = new SessionDataCacheKey(sessionDataCacheKey);
         SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache(key);
 
         if (entry == null) {
@@ -562,7 +558,6 @@ public class AuthzChallengeEndpoint {
                     OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
 
             if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-
                 OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
                 String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
 
@@ -573,9 +568,7 @@ public class AuthzChallengeEndpoint {
                     );
                 }
             }
-
         }
     }
-
 }
 
