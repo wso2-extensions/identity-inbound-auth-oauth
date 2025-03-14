@@ -160,13 +160,15 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
         if (!isEnable()) {
             return true;
         }
-        boolean isErrorOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
+        boolean isSuccessOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
 
-        boolean isErrorOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+        boolean isSuccessOnRevokeAuthzCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
-        return isErrorOnRevokeTokens || isErrorOnRevokeAssociateUsersTokens;
+        boolean isSuccessOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+
+        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthzCodes;
     }
 
     @Override
@@ -177,13 +179,15 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             return true;
         }
 
-        boolean isErrorOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
+        boolean isSuccessOnRevokeTokens = OAuth2ServiceComponentHolder.getInstance()
                 .getRevocationProcessor()
                 .revokeTokens(userName, userStoreManager);
 
-        boolean isErrorOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+        boolean isSuccessOnRevokeAuthzCodes = OAuthUtil.revokeAuthzCodes(userName, userStoreManager);
 
-        return isErrorOnRevokeTokens || isErrorOnRevokeAssociateUsersTokens;
+        boolean isSuccessOnRevokeAssociateUsersTokens = revokeTokensOfAssociatedUsers(userName, userStoreManager);
+
+        return isSuccessOnRevokeTokens && isSuccessOnRevokeAssociateUsersTokens && isSuccessOnRevokeAuthzCodes;
     }
 
     @Override
@@ -426,7 +430,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
      *
      * @param username         Username of the user.
      * @param userStoreManager User store manager of the user.
-     * @return boolean true if any error occurred while revoking the tokens.
+     * @return true if revocation is successfull. Else return false
      */
     private boolean revokeTokensOfAssociatedUsers(String username, UserStoreManager userStoreManager) {
 
@@ -434,7 +438,7 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
             log.debug("Revoking access tokens of associated users of user: " + username);
         }
 
-        boolean isErrorOnRevoking = false;
+        boolean isSuccessOnRevoking = true;
         try {
             String userId = ((AbstractUserStoreManager) userStoreManager).getUser(null, username).getUserID();
             String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
@@ -453,18 +457,18 @@ public class IdentityOathEventListener extends AbstractIdentityUserOperationEven
                                 IdentityTenantUtil.getTenantId(tenantDomainOfUserAssociation)).getUserStoreManager();
                 String usernameOfUserAssociation = ((AbstractUserStoreManager) userStoreManagerOfUserAssociation)
                         .getUserNameFromUserID(userAssociation.getUserId());
-                boolean isErrorOnSingleRevoke = OAuth2ServiceComponentHolder.getInstance()
+                boolean isSuccessOnSingleRevoke = OAuth2ServiceComponentHolder.getInstance()
                         .getRevocationProcessor()
                         .revokeTokens(usernameOfUserAssociation, userStoreManagerOfUserAssociation);
-                if (isErrorOnSingleRevoke) {
-                    isErrorOnRevoking = true;
+                if (!isSuccessOnSingleRevoke) {
+                    isSuccessOnRevoking = false;
                 }
             }
         } catch (OrganizationManagementException | org.wso2.carbon.user.api.UserStoreException e) {
             log.error("Error occurred while revoking access tokens of associated users.", e);
-            return true;
+            return false;
         }
 
-        return isErrorOnRevoking;
+        return isSuccessOnRevoking;
     }
 }

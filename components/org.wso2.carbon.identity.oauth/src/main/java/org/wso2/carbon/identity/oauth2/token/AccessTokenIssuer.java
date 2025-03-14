@@ -1278,18 +1278,29 @@ public class AccessTokenIssuer {
                                                        OAuth2AccessTokenRespDTO tokenRespDTO) {
 
         AuthorizationGrantCacheKey newCacheKey = new AuthorizationGrantCacheKey(tokenRespDTO.getAccessToken());
-        authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
-        if (log.isDebugEnabled()) {
-            if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
-                log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
-                        DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
-            } else {
-                log.debug("Adding AuthorizationGrantCache entry for the access token");
+        if (AuthorizationGrantCache.getInstance().getValueFromCache(newCacheKey) == null) {
+            authorizationGrantCacheEntry.setTokenId(tokenRespDTO.getTokenId());
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("Adding AuthorizationGrantCache entry for the access token(hashed):" +
+                            DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()));
+                } else {
+                    log.debug("Adding AuthorizationGrantCache entry for the access token");
+                }
+            }
+            authorizationGrantCacheEntry.setValidityPeriod(
+                    TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
+            AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
+        } else {
+            if (log.isDebugEnabled()) {
+                if (IdentityUtil.isTokenLoggable(IdentityConstants.IdentityTokens.ACCESS_TOKEN)) {
+                    log.debug("AuthorizationGrantCache entry for the access token(hashed):" +
+                            DigestUtils.sha256Hex(newCacheKey.getUserAttributesId()) + " already exists.");
+                } else {
+                    log.debug("AuthorizationGrantCache entry for the access token already exists.");
+                }
             }
         }
-        authorizationGrantCacheEntry.setValidityPeriod(
-                TimeUnit.MILLISECONDS.toNanos(tokenRespDTO.getExpiresInMillis()));
-        AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
     }
 
     private void addUserAttributesAgainstAccessTokenForPasswordGrant(OAuth2AccessTokenRespDTO tokenRespDTO,
