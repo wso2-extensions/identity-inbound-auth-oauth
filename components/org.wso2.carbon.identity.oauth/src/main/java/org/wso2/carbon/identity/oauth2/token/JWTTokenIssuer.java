@@ -41,6 +41,9 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -49,11 +52,13 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.RefreshTokenValidationDataDO;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
+import org.wso2.carbon.identity.openidconnect.DefaultIDTokenBuilder;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
@@ -71,6 +76,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
@@ -109,6 +115,9 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
+
+    private static final String AUTHORIZATION_CODE = "AuthorizationCode";
+    private static final String PREVIOUS_ACCESS_TOKEN = "previousAccessToken";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -580,6 +589,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         String applicationResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getApplicationResidentOrganizationId();
+
+        DefaultIDTokenBuilder defaultIDTokenBuilder = new DefaultIDTokenBuilder();
         try {
             /*
              If applicationResidentOrgId is not empty, then the request comes for an application which is registered
@@ -642,6 +653,28 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             sub = OIDCClaimUtil.getSubjectClaim(sub, oAuthAppDO);
         }
 
+        long authTime = 0;
+        String acrValue = "";
+        List<String> amrValues = null;
+
+        AuthorizationGrantCacheEntry authzGrantCacheEntry;
+
+        // AuthorizationCode only available for authorization code grant type
+        if (tokenReqMessageContext != null) {
+            if (getAuthorizationCode(tokenReqMessageContext) != null) {
+                authzGrantCacheEntry = getAuthorizationGrantCacheEntryFromCode
+                        (getAuthorizationCode(tokenReqMessageContext));
+
+            } else {
+                authzGrantCacheEntry = getAuthorizationGrantCacheEntryFromToken
+                        (getPreviousAccessToken(tokenReqMessageContext));
+            }
+
+            acrValue = authzGrantCacheEntry.getSelectedAcrValue();
+            authTime = authzGrantCacheEntry.getAuthTime();
+            amrValues = authzGrantCacheEntry.getAmrList();
+        }
+
         // Set the default claims.
         JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
         jwtClaimsSetBuilder.issuer(issuer);
@@ -651,6 +684,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.jwtID(UUID.randomUUID().toString());
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
+        if (authTime != 0) {
+            jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
+        }
+        if (StringUtils.isNotEmpty(acrValue)) {
+            jwtClaimsSetBuilder.claim(OAuthConstants.ACR, acrValue);
+        }
+        if (amrValues != null) {
+            jwtClaimsSetBuilder.claim(OAuthConstants.AMR, defaultIDTokenBuilder.translateAmrToResponse(amrValues));
+        }
+
         setClaimsForNonPersistence(jwtClaimsSetBuilder, authAuthzReqMessageContext, tokenReqMessageContext,
                 authenticatedUser, oAuthAppDO);
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
@@ -698,6 +741,28 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         }
 
         return jwtClaimsSet;
+    }
+
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromCode(String authorizationCode) {
+
+        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
+    }
+
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromToken(String accessToken) {
+
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByToken(cacheKey);
+    }
+
+    private String getAuthorizationCode(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+        return (String) tokenReqMsgCtxt.getProperty(AUTHORIZATION_CODE);
+    }
+
+    private String getPreviousAccessToken(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+        RefreshTokenValidationDataDO refreshTokenValidationDataDO =
+                (RefreshTokenValidationDataDO) tokenReqMsgCtxt.getProperty(PREVIOUS_ACCESS_TOKEN);
+        return (String) refreshTokenValidationDataDO.getAccessToken();
     }
 
     /**
