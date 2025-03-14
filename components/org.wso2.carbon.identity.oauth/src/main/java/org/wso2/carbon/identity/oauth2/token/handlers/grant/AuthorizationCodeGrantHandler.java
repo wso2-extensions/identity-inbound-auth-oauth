@@ -669,8 +669,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private String resolveUserResidentOrganization(Map<ClaimMapping, String> userAttributes) {
 
         for (Map.Entry<ClaimMapping, String> attributes : userAttributes.entrySet()) {
-            if (FrameworkConstants.USER_ORGANIZATION_CLAIM.equals(
-                    attributes.getKey().getLocalClaim().getClaimUri())) {
+            if (attributes.getKey() != null && attributes.getKey().getLocalClaim() != null &&
+                    FrameworkConstants.USER_ORGANIZATION_CLAIM
+                            .equals(attributes.getKey().getLocalClaim().getClaimUri())) {
                 return attributes.getValue();
             }
         }
