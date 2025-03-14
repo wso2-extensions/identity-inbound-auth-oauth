@@ -46,7 +46,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -158,7 +157,15 @@ public class ApiAuthnEndpoint {
         }
 
         Map<String, String[]> authParams = authRequest.getSelectedAuthenticator().getParams().entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> new String[]{e.getValue()}));
+                .collect(HashMap::new, (m, v) -> {
+                    Object value = v.getValue();
+                    if (value instanceof String) {
+                        m.put(v.getKey(), new String[]{(String) value});
+                    } else if (value instanceof List) {
+                        List<?> list = (List<?>) value;
+                        m.put(v.getKey(), list.stream().map(Object::toString).toArray(String[]::new));
+                    }
+                }, HashMap::putAll);
         params.putAll(authParams);
 
         return new AuthServiceRequest(request, response, params);
