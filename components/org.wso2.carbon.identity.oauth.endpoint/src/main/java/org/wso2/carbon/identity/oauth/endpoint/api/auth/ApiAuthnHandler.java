@@ -37,7 +37,7 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Message;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Param;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.StepTypeEnum;
-import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeConstants;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeIncompleteResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -85,7 +85,7 @@ public class ApiAuthnHandler {
 
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuth_session(authServiceResponse.getSessionDataKey());
-        response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
+        response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
         response.setError_description("The provided authorization is not sufficient; " +
                 "additional steps are required to complete the process.");
         NextStep nextStep = buildNextStep(authServiceResponse);
@@ -97,7 +97,7 @@ public class ApiAuthnHandler {
     public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) {
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuth_session(authResponse.getFlowId());
-        response.setError(AuthzChallengeErrorEnum.INSUFFICIENT_AUTHORIZATION.getValue());
+        response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
         response.setError_description("The provided authorization is not sufficient; " +
                 "additional steps are required to complete the process.");
         response.setNextStep(authResponse.getNextStep());
@@ -108,7 +108,7 @@ public class ApiAuthnHandler {
     public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) {
         AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
         response.setAuth_session(authResponse.getFlowId());
-        response.setError(AuthzChallengeErrorEnum.REDIRECT_TO_WEB.getValue());
+        response.setError(AuthzChallengeConstants.Error.REDIRECT_TO_WEB.value());
         response.setError_description("Authorization failed. Start a web-based flow.");
 
         return response;

@@ -1,6 +1,5 @@
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +11,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.NameValuePair;
@@ -81,7 +81,7 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
-import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeErrorEnum;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeConstants;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeCompletedResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
@@ -151,7 +151,6 @@ import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -200,6 +199,10 @@ import static org.wso2.carbon.identity.openidconnect.model.Constants.PROMPT;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.SERVICE_PROVIDER_ID;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.STATE;
+
+/**
+ * Utility methods for the authorization related functionality in /authorize and /authorize-challenge endpoints.
+ */
 
 public class AuthzUtil {
 
@@ -1210,9 +1213,9 @@ public class AuthzUtil {
         authorizationResponseDTO.setError(HttpServletResponse.SC_FOUND, "Invalid authorization request",
                 OAuth2ErrorCodes.INVALID_REQUEST);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(
-                getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes
-                                .OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", appName,
-                        oAuth2Parameters)
+                getErrorPageURL(oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST,
+                        OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
+                        "Invalid authorization request", appName, oAuth2Parameters)
         )).build();
     }
 
@@ -3088,14 +3091,14 @@ public class AuthzUtil {
         return StringUtils.isNotBlank(preConsentQueryParams);
     }
 
-    private static String handlePreConsentExcludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser user)
-            throws ConsentHandlingFailedException, OAuthSystemException {
+    private static String handlePreConsentExcludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser
+            user) throws ConsentHandlingFailedException, OAuthSystemException {
 
         return handlePreConsent(oauth2Params, user, false);
     }
 
-    private static String handlePreConsentIncludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser user)
-            throws ConsentHandlingFailedException, OAuthSystemException {
+    private static String handlePreConsentIncludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser
+            user) throws ConsentHandlingFailedException, OAuthSystemException {
 
         return handlePreConsent(oauth2Params, user, true);
     }
@@ -4299,8 +4302,7 @@ public class AuthzUtil {
         request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
     }
 
-    public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse,
-                                                                boolean isAuthzChallenge) {
+    public static Response handleApiBasedAuthenticationResponse(OAuthMessage oAuthMessage, Response oauthResponse) {
 
         // API based auth response transformation has already been handled no need for further handling.
         if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute(IS_API_BASED_AUTH_HANDLED))) {
@@ -4323,7 +4325,7 @@ public class AuthzUtil {
                 }
                 Object authResponse;
 
-                if (isAuthzChallenge) {
+                if (isAuthzChallenge(oAuthMessage.getRequest())) {
                     authResponse = API_AUTHN_HANDLER.handleInitialAuthzChallengeResponse(authServiceResponse);
                 } else {
                     authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
@@ -4342,7 +4344,7 @@ public class AuthzUtil {
                             "Error while building JSON response.", e);
                 }
                 oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                if (isAuthzChallenge) {
+                if (isAuthzChallenge(oAuthMessage.getRequest())) {
                     return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonString).build();
                 } else {
                     return Response.status(HttpServletResponse.SC_OK).entity(jsonString).build();
@@ -4366,7 +4368,7 @@ public class AuthzUtil {
                             String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             // Keeping the app native flow as it is.
-                            if (isAuthzChallenge) {
+                            if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute("isAuthzChallenge"))) {
                                 if (attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED) {
                                     AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse =
                                             new AuthzChallengeCompletedResponse(queryParams);
@@ -4394,12 +4396,7 @@ public class AuthzUtil {
                 }
             }
         } catch (AuthServiceException e) {
-            if (isAuthzChallenge) {
-                return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e, isAuthzChallenge);
-            } else {
-                return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
-            }
-
+            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
         }
 
         // Returning the original response as it hasn't been handled as an API based authentication response.
@@ -4408,27 +4405,22 @@ public class AuthzUtil {
 
     public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e) {
 
-        if (e instanceof AuthServiceClientException) {
-            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
-        } else {
-            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForServerError(e, log);
-        }
-    }
-
-    public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e,
-                                                           boolean isAuthzChallenge) {
-        if (isAuthzChallenge) {
+        if (isAuthzChallenge(request)) {
             if (e instanceof AuthServiceClientException) {
                 request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                return ApiAuthnUtils.buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
+                return buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
             } else {
                 request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return ApiAuthnUtils.buildResponseForServerError(e, log);
             }
         } else {
-            return handleApiBasedAuthErrorResponse(request, e);
+            if (e instanceof AuthServiceClientException) {
+                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+                return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
+            } else {
+                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+                return ApiAuthnUtils.buildResponseForServerError(e, log);
+            }
         }
     }
 
@@ -4514,6 +4506,12 @@ public class AuthzUtil {
         }
     }
 
+    /**
+     * Get the client authentication context from the request.
+     *
+     * @param request HTTP servlet request.
+     * @return Client authentication context.
+     */
     public static OAuthClientAuthnContext getClientAuthnContext(HttpServletRequest request) {
 
         OAuthClientAuthnContext oAuthClientAuthnContext;
@@ -4528,6 +4526,12 @@ public class AuthzUtil {
         return oAuthClientAuthnContext;
     }
 
+    /**
+     * Get the client attestation context from the request.
+     *
+     * @param request HTTP servlet request.
+     * @return Client attestation context.
+     */
     public static ClientAttestationContext getClientAttestationContext(HttpServletRequest request) {
 
         ClientAttestationContext clientAttestationContext;
@@ -4547,25 +4551,25 @@ public class AuthzUtil {
      * @param oAuthClientAuthnContext OAuth client authentication context.
      * @return Auth failure response.
      */
-    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext) {
+    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext,
+                                                     HttpServletRequest request) {
 
         if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
             String msg = "Server encountered an error while authorizing the request.";
             return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
+        }
+        if (isAuthzChallenge(request)) {
+            return buildAuthzChallengeResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
         }
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
     }
 
-    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext,
-                                                     boolean isAuthzChallenge) {
-
-        if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
-            String msg = "Server encountered an error while authorizing the request.";
-            return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
-        }
-        return buildAuthzChallengeResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
-    }
-
+    /**
+     * Handle the authentication failure response for API based authentication.
+     *
+     * @param description Error Message in ClientAuthnContext.
+     * @return Auth failure response.
+     */
     private static Response buildAuthzChallengeResponseForAuthorizationFailure(String description, Log log) {
 
         if (log.isDebugEnabled()) {
@@ -4573,7 +4577,7 @@ public class AuthzUtil {
         }
 
         AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
-        authzChallengeFailResponse.setError(AuthzChallengeErrorEnum.INVALID_CLIENT.getValue());
+        authzChallengeFailResponse.setError(AuthzChallengeConstants.Error.INVALID_CLIENT.value());
         if (StringUtils.isNotBlank(description)) {
             authzChallengeFailResponse.setError_description(description);
         } else {
@@ -4587,17 +4591,35 @@ public class AuthzUtil {
                 .entity(jsonString).build();
     }
 
+    /**
+     * Handle the attestation failure response for API based authentication.
+     *
+     * @param clientAttestationContext Client attestation context.
+     * @return Authorization failure response.
+     */
     public static Response handleAttestationFailureResponse(ClientAttestationContext clientAttestationContext) {
 
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(
                 clientAttestationContext.getValidationFailureMessage(), log);
     }
 
-    public static Response handleUnsupportedGrantForApiBasedAuth() {
+    /**
+     * Handle unsupported grant types in API based authentication request.
+     *
+     * @param request HTTP servlet request.
+     * @return Auth failure response.
+     */
+    public static Response handleUnsupportedGrantForApiBasedAuth(HttpServletRequest request) {
 
-        return ApiAuthnUtils.buildResponseForClientError(
-                new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                        "App native authentication is only supported with code response type."), log);
+        if (isAuthzChallenge(request)) {
+            return buildAuthzChallengeResponseForClientError(
+                    new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "Authorize challenge endpoint only supports 'code' response type."), log);
+        } else {
+            return ApiAuthnUtils.buildResponseForClientError(
+                    new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "App native authentication is only supported with code response type."), log);
+        }
     }
 
     public static String addServiceProviderIdToRedirectURI(String redirectURI, String serviceProviderId) {
@@ -4662,6 +4684,54 @@ public class AuthzUtil {
         authzChallengeFailResponse.setError_description(errorDescription);
         String jsonString = new Gson().toJson(authzChallengeFailResponse);
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    private static Boolean isAuthzChallenge(HttpServletRequest request) {
+
+            return Boolean.TRUE.equals(request.getAttribute("isAuthzChallenge"));
+    }
+
+    public static Response buildAuthzChallengeResponseForClientError(AuthServiceClientException exception, Log log) {
+        if (log.isDebugEnabled()) {
+            log.debug("Client error while handling authentication request.", exception);
+        }
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        Pair<String, String> errorMapping = mapFrameworkError(exception.getErrorCode());
+        String error = errorMapping.getLeft();
+        String errorDescription = errorMapping.getRight();
+
+        if (errorDescription == null) {
+            errorDescription = exception.getMessage();
+        }
+
+        authzChallengeFailResponse.setError(error);
+        authzChallengeFailResponse.setError_description(errorDescription);
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    /**
+     * Map the framework error code to the authz challenge error and error description.
+     *
+     * @param frameworkErrorCode Framework error code.
+     * @return Error code and error description.
+     */
+    public static Pair<String, String> mapFrameworkError(String frameworkErrorCode) {
+        switch (frameworkErrorCode) {
+            case "60002":
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_CLIENT.value(), null);
+            case "60007":
+                return Pair.of(AuthzChallengeConstants.Error.UNAUTHORIZED_CLIENT.value(),
+                        "This client is not authorized to use this endpoint.");
+            case "60009":
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_SESSION.value(),
+                        "The provided auth_session is invalid.");
+            case "60011":
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_CLIENT.value(), null);
+            default:
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_REQUEST.value(), null);
+        }
     }
 
 }

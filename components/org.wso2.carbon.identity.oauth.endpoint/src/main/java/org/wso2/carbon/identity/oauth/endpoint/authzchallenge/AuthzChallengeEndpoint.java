@@ -22,7 +22,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
@@ -34,6 +36,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.a
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
 import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -56,6 +59,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
@@ -79,6 +83,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -121,6 +126,7 @@ public class AuthzChallengeEndpoint {
 
         try {
             request = RequestUtil.buildRequest(request);
+            request.setAttribute("isAuthzChallenge", true);
             oAuthMessage = AuthzUtil.buildOAuthMessage(request, response);
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -146,7 +152,7 @@ public class AuthzChallengeEndpoint {
 
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext, true);
+                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext, request);
             }
 
             ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
@@ -155,7 +161,7 @@ public class AuthzChallengeEndpoint {
             }
 
             if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
-                return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
+                return AuthzUtil.handleUnsupportedGrantForApiBasedAuth(request);
             }
         }
 
@@ -185,7 +191,7 @@ public class AuthzChallengeEndpoint {
             } else {
                 oauthResponse = AuthzUtil.handleInvalidRequest(oAuthMessage);
             }
-            oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, true);
+            oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
             return oauthResponse;
         } catch (OAuthProblemException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -211,7 +217,7 @@ public class AuthzChallengeEndpoint {
 
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
-            String sessionDataCacheKey = authenticationService.getSessionDataCacheKey(authServiceRequest);
+            Optional<String> sessionDataCacheKey = authenticationService.getSessionDataCacheKey(authServiceRequest);
             validateDPoPThumbprint(request, sessionDataCacheKey);
             AuthServiceResponse authServiceResponse = authenticationService.handleAuthentication(authServiceRequest);
 
@@ -223,7 +229,7 @@ public class AuthzChallengeEndpoint {
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse, true);
                 case FAIL_COMPLETED:
-                    return ApiAuthnUtils.handleFailCompletedAuthResponse(authServiceResponse);
+                    return handleFailCompletedAuthResponse(authServiceResponse);
                 default:
                     throw new AuthServiceException(
                             AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS.code(),
@@ -232,7 +238,7 @@ public class AuthzChallengeEndpoint {
             }
 
         } catch (AuthServiceClientException e) {
-            return ApiAuthnUtils.buildResponseForClientError(e, LOG);
+            return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
             return ApiAuthnUtils.buildResponseForServerError(e, LOG);
         } catch (IdentityOAuth2Exception e) {
@@ -254,7 +260,8 @@ public class AuthzChallengeEndpoint {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
             if (parameterMap.containsKey(OAuthConstants.OAuth20Params.CLIENT_ID) &&
-                    parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE)) {
+                    parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE) &&
+            parameterMap.containsKey(OAuthConstants.OAuth20Params.REDIRECT_URI)) {
 
                 if (!EndpointUtil.validateParams(request, paramMap)) {
                     return Response.status(HttpServletResponse.SC_BAD_REQUEST)
@@ -266,12 +273,13 @@ public class AuthzChallengeEndpoint {
                 }
                 HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
                 return handleInitialAuthzChallengeRequest(httpRequest, response, false);
+            } else {
+                return AuthzUtil.buildAuthzChallengeResponseForClientError(
+                        new AuthServiceClientException(AuthServiceConstants.ErrorMessage
+                                .ERROR_INVALID_AUTH_REQUEST.code(),
+                                "Invalid or missing request parameters."), LOG);
             }
 
-            throw new AuthServiceException(
-                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Invalid request parameters for /authorize-challenge."
-            );
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
             return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
@@ -293,13 +301,12 @@ public class AuthzChallengeEndpoint {
         try {
             if (payload != null && payload.contains(AUTH_SESSION)) {
                 return handleSubsequentAuthzChallengeRequest(request, response, payload);
+            } else {
+                return AuthzUtil.buildAuthzChallengeResponseForClientError(
+                        new AuthServiceClientException(AuthServiceConstants.ErrorMessage
+                                .ERROR_INVALID_AUTH_REQUEST.code(),
+                                "Invalid or missing request parameters."), LOG);
             }
-
-            //TODO: Proper exception management
-            throw new AuthServiceException(
-                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Invalid request parameters for /authorize-challenge."
-            );
 
         } catch (AuthServiceClientException e) {
             log.error("Client error while handling authentication request.", e);
@@ -500,6 +507,34 @@ public class AuthzChallengeEndpoint {
         }
     }
 
+    public static Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
+
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+        if (authServiceResponse.getErrorInfo().isPresent()) {
+            AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
+            String errorCode = errorInfo.getErrorCode();
+            Pair<String, String> errorMapping = AuthzUtil.mapFrameworkError(errorCode.split("-")[1]);
+            String error = errorMapping.getLeft();
+            String errorDescription = errorMapping.getRight();
+
+            if (errorDescription == null) {
+                errorDescription = errorInfo.getErrorDescription();
+            }
+
+            response.setError(error);
+            response.setError_description(errorDescription);
+        } else {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Error info is not present in the authentication service response. " +
+                        "Setting default error details.");
+            }
+            response.setError(ApiAuthnUtils.getDefaultAuthenticationFailureError().message());
+            response.setError_description(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
+        }
+        String jsonString = new Gson().toJson(response);
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
     public static OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
         OAuth2AuthzChallengeReqDTO dto = new OAuth2AuthzChallengeReqDTO();
 
@@ -546,34 +581,31 @@ public class AuthzChallengeEndpoint {
         return request.getHeader(DPOP) != null;
     }
 
-    public static void validateDPoPThumbprint(HttpServletRequest request, String sessionDataCacheKey)
+    public static void validateDPoPThumbprint(HttpServletRequest request, Optional<String> sessionDataCacheKey)
             throws AuthServiceException, IdentityOAuth2Exception {
 
-        SessionDataCacheKey key = new SessionDataCacheKey(sessionDataCacheKey);
-        SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache(key);
+        if (sessionDataCacheKey.isPresent()) {
+            SessionDataCacheKey key = new SessionDataCacheKey(sessionDataCacheKey.toString());
+            SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache(key);
 
-        if (entry == null) {
-            throw new AuthServiceException(
-                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Session data cache entry not found. Restart the flow"
-            );
-        }
+            if (entry != null) {
+                String cachedThumbprint = entry.getDPoPThumbprint();
 
-        String cachedThumbprint = entry.getDPoPThumbprint();
+                if (!StringUtils.isBlank(cachedThumbprint)) {
+                    AuthzChallengeInterceptor authzChallengeInterceptor =
+                            OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
 
-        if (!StringUtils.isBlank(cachedThumbprint)) {
-            AuthzChallengeInterceptor authzChallengeInterceptor =
-                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
+                    if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+                        OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+                        String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
 
-            if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-                OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
-                String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
-
-                if (!cachedThumbprint.equals(thumbprint)) {
-                    throw new AuthServiceException(
-                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                            "Invalid thumbprint value."
-                    );
+                        if (!cachedThumbprint.equals(thumbprint)) {
+                            throw new AuthServiceException(
+                                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                                    "Invalid thumbprint value."
+                            );
+                        }
+                    }
                 }
             }
         }

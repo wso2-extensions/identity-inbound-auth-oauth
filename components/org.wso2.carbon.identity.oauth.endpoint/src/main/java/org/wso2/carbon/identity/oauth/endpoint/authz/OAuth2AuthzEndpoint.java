@@ -117,7 +117,7 @@ public class OAuth2AuthzEndpoint {
         if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext);
+                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext,request);
             }
 
             ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
@@ -126,7 +126,7 @@ public class OAuth2AuthzEndpoint {
             }
 
             if (!OAuth2Util.isApiBasedAuthSupportedGrant(request)) {
-                return AuthzUtil.handleUnsupportedGrantForApiBasedAuth();
+                return AuthzUtil.handleUnsupportedGrantForApiBasedAuth(request);
             }
         }
 
@@ -156,7 +156,7 @@ public class OAuth2AuthzEndpoint {
                 oauthResponse = AuthzUtil.handleInvalidRequest(oAuthMessage);
             }
             if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
-                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse, false);
+                oauthResponse = AuthzUtil.handleApiBasedAuthenticationResponse(oAuthMessage, oauthResponse);
             }
             return oauthResponse;
         } catch (OAuthProblemException e) {
