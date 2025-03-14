@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -86,6 +86,7 @@ public class OIDProviderConfigResponse {
     private String mtlsTokenEndpoint;
     private String mtlsPushedAuthorizationRequestEndpoint;
     private String[] authorizationDetailsTypesSupported;
+    private String[] supportedDPoPSigningAlgorithms;
 
     private static final String MUTUAL_TLS_ALIASES_ENABLED = "OAuth.MutualTLSAliases.Enabled";
 
@@ -541,6 +542,10 @@ public class OIDProviderConfigResponse {
         this.authorizationDetailsTypesSupported = authorizationDetailsTypesSupported;
     }
 
+    public void setDPoPSupportedSigningAlgorithms(String[] supportedDPoPSigningAlgorithms) {
+        this.supportedDPoPSigningAlgorithms = supportedDPoPSigningAlgorithms; ;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -608,6 +613,10 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);
         configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN.toLowerCase(),
                 this.tlsClientCertificateBoundAccessTokens);
+        if (DiscoveryUtil.isDPoPEnabled()) {
+            configMap.put(DiscoveryConstants.DPOP_SIGNING_ALGORITHMS_SUPPORTED, this.supportedDPoPSigningAlgorithms);
+        }
+        configMap.put(DiscoveryConstants.DPOP_SIGNING_ALGORITHMS_SUPPORTED, this.supportedDPoPSigningAlgorithms);
         if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED))) {
             Map<String, String> mtlsAliases = new HashMap<String, String>();
             mtlsAliases.put(DiscoveryConstants.TOKEN_ENDPOINT.toLowerCase(), this.mtlsTokenEndpoint);
