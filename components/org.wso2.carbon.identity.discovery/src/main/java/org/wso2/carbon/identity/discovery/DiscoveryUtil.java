@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2019-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,12 +19,17 @@
 package org.wso2.carbon.identity.discovery;
 
 import org.apache.commons.lang.StringUtils;
+import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
+import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 
 /**
  * Utility to handle OIDC Discovery related functionality.
  */
 public class DiscoveryUtil {
+
+    private static final String DPOP_EVENT_LISTENER_NAME = "org.wso2.carbon.identity.oauth2.dpop.listener.O" +
+            "authDPoPInterceptorHandlerProxy";
 
     public static final String OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY = "OAuth" +
             ".UseEntityIdAsIssuerInOidcDiscovery";
@@ -43,4 +48,16 @@ public class DiscoveryUtil {
         return Boolean.parseBoolean(useEntityIdAsIssuerInDiscovery);
     }
 
+    /**
+     * Check whether DPoP is enabled.
+     *
+     * @return True if DPoP is enabled.
+     */
+    public static boolean isDPoPEnabled() {
+
+        IdentityEventListenerConfig identityEventListenerConfig = IdentityUtil.readEventListenerProperty
+                (AbstractIdentityHandler.class.getName(), DPOP_EVENT_LISTENER_NAME);
+        return identityEventListenerConfig == null ||
+                Boolean.parseBoolean(identityEventListenerConfig.getEnable());
+    }
 }

@@ -345,6 +345,7 @@ public class OAuthServerConfiguration {
     private String deviceAuthzEPUrl = null;
     private String deviceAuthzEPUrlV2 = null;
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
+    private List<String> supportedDPoPSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
     private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
@@ -3662,6 +3663,16 @@ public class OAuthServerConfiguration {
                 }
             }
 
+            if (openIDConnectConfigElem.getFirstChildWithName(
+                    getQNameWithIdentityNS(ConfigElements.SUPPORTED_DPOP_SIGNING_ALGORITHMS)) != null) {
+                try {
+                    parseSupportedDPoPSigningAlgorithms(openIDConnectConfigElem.getFirstChildWithName(
+                            getQNameWithIdentityNS(ConfigElements.SUPPORTED_DPOP_SIGNING_ALGORITHMS)));
+                } catch (ServerConfigurationException e) {
+                    log.error("Error while parsing supported dpop signing algorithms.", e);
+                }
+            }
+
             OMElement oAuthAuthzRequest = openIDConnectConfigElem.getFirstChildWithName(getQNameWithIdentityNS
                     (ConfigElements.OAUTH_AUTHZ_REQUEST_CLASS));
             oAuthAuthzRequestClassName = (oAuthAuthzRequest != null) ? oAuthAuthzRequest.getText().trim() :
@@ -4041,6 +4052,11 @@ public class OAuthServerConfiguration {
         return supportedTokenEndpointSigningAlgorithms;
     }
 
+    public List<String> getSupportedDPoPSigningAlgorithms() {
+
+        return supportedDPoPSigningAlgorithms;
+    }
+
     /**
      * Parse supported signing algorithms and add them to the supportedTokenEndpointSigningAlgorithms list.
      *
@@ -4061,6 +4077,36 @@ public class OAuthServerConfiguration {
                 if (algorithm != null) {
                     try {
                         supportedTokenEndpointSigningAlgorithms.add(String.valueOf(
+                                OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm.getText())));
+                    } catch (IdentityOAuth2Exception e) {
+                        throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse supported DPoP signing algorithms and add them to the supportedDPoPSigningAlgorithms list.
+     *
+     * @param algorithms OMElement of supported algorithms.
+     */
+
+    private void parseSupportedDPoPSigningAlgorithms(OMElement algorithms)
+            throws ServerConfigurationException {
+
+        if (algorithms == null) {
+            return;
+        }
+
+        Iterator iterator = algorithms.getChildrenWithLocalName(
+                ConfigElements.SUPPORTED_DPOP_SIGNING_ALGORITHM);
+        if (iterator != null) {
+            while (iterator.hasNext()) {
+                OMElement algorithm = (OMElement) iterator.next();
+                if (algorithm != null) {
+                    try {
+                        supportedDPoPSigningAlgorithms.add(String.valueOf(
                                 OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm(algorithm.getText())));
                     } catch (IdentityOAuth2Exception e) {
                         throw new ServerConfigurationException("Unsupported signature algorithm configured.", e);
@@ -4410,6 +4456,10 @@ public class OAuthServerConfiguration {
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+
+        // Supported DPoP Signing Algorithms
+        private static final String SUPPORTED_DPOP_SIGNING_ALGORITHMS = "SupportedDPoPSigningAlgorithms";
+        private static final String SUPPORTED_DPOP_SIGNING_ALGORITHM = "SupportedDPoPSigningAlgorithm";
     }
 
 }

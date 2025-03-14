@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -384,4 +384,10 @@ public class DiscoveryConstants {
      * @see <a href='https://datatracker.ietf.org/doc/html/rfc9396.txt#name-metadata'>rfc9396</a>
      */
     public static final String AUTHORIZATION_DETAILS_TYPES_SUPPORTED = "authorization_details_types_supported";
+
+    /**
+     * DPoP_signing_algorithms_supported
+     * OPTIONAL. JSON array containing a list of the DPoP signing algorithms supported by the AS.
+     */
+    public static final String DPOP_SIGNING_ALGORITHMS_SUPPORTED = "dpop_signing_alg_values_supported";
 }
