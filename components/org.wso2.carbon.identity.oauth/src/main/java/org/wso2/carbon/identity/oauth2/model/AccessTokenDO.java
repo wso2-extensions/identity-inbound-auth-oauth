@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -78,6 +79,36 @@ public class AccessTokenDO extends CacheEntry {
     private String authorizedOrganizationId;
 
     private int appResidentTenantId = MultitenantConstants.INVALID_TENANT_ID;
+
+    public String getAcr() {
+        return acr;
+    }
+
+    public void setAcr(String acr) {
+        this.acr = acr;
+    }
+
+    public long getAuthTime() {
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+        this.authTime = authTime;
+    }
+
+    private String acr;
+
+    public List<String> getAmrValues() {
+        return amrValues;
+    }
+
+    public void setAmrValues(List<String> amrValues) {
+        this.amrValues = amrValues;
+    }
+
+    private List<String> amrValues;
+
+    private long authTime;
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,

@@ -316,4 +316,18 @@ public class IntrospectionResponseBuilder {
         }
         return this;
     }
+
+    public IntrospectionResponseBuilder setAcr(String acr) {
+        if (StringUtils.isNotBlank(acr)) {
+            parameters.put(IntrospectionResponse.ACR, acr);
+        }
+        return this;
+    }
+
+    public IntrospectionResponseBuilder setAuthTime(long authTime) {
+        if (authTime != 0) {
+            parameters.put(IntrospectionResponse.AUTH_TIME, authTime);
+        }
+        return this;
+    }
 }
