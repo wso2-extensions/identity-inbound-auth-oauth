@@ -48,6 +48,7 @@ public class DiscoveryUtil {
         return Boolean.parseBoolean(useEntityIdAsIssuerInDiscovery);
     }
 
+    // TODO: Remove this method once DPoP is enabled by default.
     /**
      * Check whether DPoP is enabled.
      *

@@ -66,8 +66,10 @@ public class DiscoveryUtilTest {
         }
     }
 
+    // TODO: Remove the IsDPoPEnabled tests once DPoP is enabled by default.
     @Test
     public void testIsDPoPEnabledWhenConfigIsTrue() {
+
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
             IdentityEventListenerConfig config = Mockito.mock(IdentityEventListenerConfig.class);
             when(config.getEnable()).thenReturn("true");
@@ -83,6 +85,7 @@ public class DiscoveryUtilTest {
 
     @Test
     public void testIsDPoPEnabledWhenConfigIsNull() {
+
         try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
             identityUtil.when(() -> IdentityUtil.readEventListenerProperty(
                     eq(AbstractIdentityHandler.class.getName()), eq(DPOP_EVENT_LISTENER_NAME))).thenReturn(null);

@@ -543,7 +543,8 @@ public class OIDProviderConfigResponse {
     }
 
     public void setDPoPSupportedSigningAlgorithms(String[] supportedDPoPSigningAlgorithms) {
-        this.supportedDPoPSigningAlgorithms = supportedDPoPSigningAlgorithms; ;
+
+        this.supportedDPoPSigningAlgorithms = supportedDPoPSigningAlgorithms;
     }
 
     public Map<String, Object> getConfigMap() {
