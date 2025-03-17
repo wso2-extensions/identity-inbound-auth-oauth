@@ -28,7 +28,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
  */
 public class DiscoveryUtil {
 
-    private static final String DPOP_EVENT_LISTENER_NAME = "org.wso2.carbon.identity.oauth2.dpop.listener.O" +
+    public static final String DPOP_EVENT_LISTENER_NAME = "org.wso2.carbon.identity.oauth2.dpop.listener.O" +
             "authDPoPInterceptorHandlerProxy";
 
     public static final String OIDC_USE_ENTITY_ID_AS_ISSUER_IN_DISCOVERY = "OAuth" +
@@ -57,7 +57,7 @@ public class DiscoveryUtil {
 
         IdentityEventListenerConfig identityEventListenerConfig = IdentityUtil.readEventListenerProperty
                 (AbstractIdentityHandler.class.getName(), DPOP_EVENT_LISTENER_NAME);
-        return identityEventListenerConfig == null ||
-                Boolean.parseBoolean(identityEventListenerConfig.getEnable());
+
+        return identityEventListenerConfig != null && Boolean.parseBoolean(identityEventListenerConfig.getEnable());
     }
 }

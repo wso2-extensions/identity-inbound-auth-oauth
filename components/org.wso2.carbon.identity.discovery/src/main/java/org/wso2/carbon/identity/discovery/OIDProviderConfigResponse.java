@@ -616,7 +616,6 @@ public class OIDProviderConfigResponse {
         if (DiscoveryUtil.isDPoPEnabled()) {
             configMap.put(DiscoveryConstants.DPOP_SIGNING_ALGORITHMS_SUPPORTED, this.supportedDPoPSigningAlgorithms);
         }
-        configMap.put(DiscoveryConstants.DPOP_SIGNING_ALGORITHMS_SUPPORTED, this.supportedDPoPSigningAlgorithms);
         if (Boolean.parseBoolean(IdentityUtil.getProperty(MUTUAL_TLS_ALIASES_ENABLED))) {
             Map<String, String> mtlsAliases = new HashMap<String, String>();
             mtlsAliases.put(DiscoveryConstants.TOKEN_ENDPOINT.toLowerCase(), this.mtlsTokenEndpoint);
