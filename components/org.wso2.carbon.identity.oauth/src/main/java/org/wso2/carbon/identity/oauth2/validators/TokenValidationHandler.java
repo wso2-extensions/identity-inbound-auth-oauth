@@ -449,15 +449,7 @@ public class TokenValidationHandler {
         // subject identifier is built based in the SP config.
         introResp.setAuthorizedUser(refreshTokenDataDO.getAuthzUser());
         // Add acr and auth_time
-
-        // AuthorizationCode only available for authorization code grant type
-        AuthorizationGrantCacheEntry authzGrantCacheEntry =
-                getAuthorizationGrantCacheEntryFromCode
-                        (validationRequest.getAccessToken().getIdentifier());
-
-        // Add acr and auth_time
-        introResp.setAcr(authzGrantCacheEntry.getSelectedAcrValue());
-        introResp.setAuthTime(authzGrantCacheEntry.getAuthTime() / 1000);
+        setAcrAndAuthTimeClaims(introResp, validationRequest);
 
         // Validate access delegation.
         if (!tokenValidator.validateAccessDelegation(messageContext)) {
@@ -653,15 +645,8 @@ public class TokenValidationHandler {
             if (!OAuth2Util.isJWT(validationRequest.getAccessToken().getIdentifier())) {
                 addAudienceToIntrospectionResponse(introResp, accessTokenDO);
             }
-
-            // AuthorizationCode only available for authorization code grant type
-            AuthorizationGrantCacheEntry authzGrantCacheEntry =
-                    getAuthorizationGrantCacheEntryFromCode
-                            (validationRequest.getAccessToken().getIdentifier());
-
             // Add acr and auth_time
-            introResp.setAcr(authzGrantCacheEntry.getSelectedAcrValue());
-            introResp.setAuthTime(authzGrantCacheEntry.getAuthTime() / 1000);
+            setAcrAndAuthTimeClaims(introResp, validationRequest);
         }
 
         if (messageContext.getProperty(OAuth2Util.JWT_ACCESS_TOKEN) != null
@@ -733,6 +718,17 @@ public class TokenValidationHandler {
         return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
     }
 
+    private void setAcrAndAuthTimeClaims(OAuth2IntrospectionResponseDTO introResp, OAuth2TokenValidationRequestDTO validationRequest){
+
+        // AuthorizationCode only available for authorization code grant type
+        AuthorizationGrantCacheEntry authzGrantCacheEntry =
+                getAuthorizationGrantCacheEntryFromCode
+                        (validationRequest.getAccessToken().getIdentifier());
+
+        // Add acr and auth_time
+        introResp.setAcr(authzGrantCacheEntry.getSelectedAcrValue());
+        introResp.setAuthTime(authzGrantCacheEntry.getAuthTime() / 1000);
+    }
 
     private boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {
 

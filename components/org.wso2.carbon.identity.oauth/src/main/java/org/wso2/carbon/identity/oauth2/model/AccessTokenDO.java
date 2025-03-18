@@ -80,31 +80,7 @@ public class AccessTokenDO extends CacheEntry {
 
     private int appResidentTenantId = MultitenantConstants.INVALID_TENANT_ID;
 
-    public String getAcr() {
-        return acr;
-    }
-
-    public void setAcr(String acr) {
-        this.acr = acr;
-    }
-
-    public long getAuthTime() {
-        return authTime;
-    }
-
-    public void setAuthTime(long authTime) {
-        this.authTime = authTime;
-    }
-
     private String acr;
-
-    public List<String> getAmrValues() {
-        return amrValues;
-    }
-
-    public void setAmrValues(List<String> amrValues) {
-        this.amrValues = amrValues;
-    }
 
     private List<String> amrValues;
 
@@ -128,6 +104,16 @@ public class AccessTokenDO extends CacheEntry {
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
+                         long refreshTokenValidityPeriodInMillis, String tokenType, String acr, long authTime) {
+
+        this(consumerKey, authzUser, scope, issuedTime, refreshTokenIssuedTime, validityPeriodInMillis,
+                refreshTokenValidityPeriodInMillis, tokenType);
+        this.acr = acr;
+        this.authTime = authTime;
+    }
+
+    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
+                         Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
                          long refreshTokenValidityPeriodInMillis, String tokenType, String authorizationCode) {
 
         this(consumerKey, authzUser, scope, issuedTime, refreshTokenIssuedTime, validityPeriodInMillis,
@@ -135,9 +121,20 @@ public class AccessTokenDO extends CacheEntry {
         this.authorizationCode = authorizationCode;
     }
 
+    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
+                         Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
+                         long refreshTokenValidityPeriodInMillis, String tokenType, String authorizationCode,
+                         String acr, long authTime) {
+
+        this(consumerKey, authzUser, scope, issuedTime, refreshTokenIssuedTime, validityPeriodInMillis,
+                refreshTokenValidityPeriodInMillis, tokenType, authorizationCode);
+        this.acr = acr;
+        this.authTime = authTime;
+    }
+
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
-            TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
-            long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
+                        TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
+                        long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
 
         this.consumerKey = consumerKey;
         this.authzUser = authzUser;
@@ -148,6 +145,17 @@ public class AccessTokenDO extends CacheEntry {
         this.refreshTokenValidityPeriodInMillis = refreshTokenValidityPeriodInMillis;
         this.tokenType = tokenType;
         this.tokenBinding = tokenBinding;
+    }
+
+    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
+                         TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
+                         long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType,
+                         String acr, long authTime) {
+
+        this(consumerKey, authzUser, scope, tokenBinding, issuedTime, refreshTokenIssuedTime, validityPeriodInMillis,
+                refreshTokenValidityPeriodInMillis, tokenType);
+        this.acr = acr;
+        this.authTime = authTime;
     }
 
     /**
@@ -165,7 +173,9 @@ public class AccessTokenDO extends CacheEntry {
                 tokenDO.getRefreshTokenIssuedTime(),
                 tokenDO.getValidityPeriodInMillis(),
                 tokenDO.getRefreshTokenValidityPeriodInMillis(),
-                tokenDO.getTokenType()
+                tokenDO.getTokenType(),
+                tokenDO.getAcr(),
+                tokenDO.getAuthTime()
         );
         newTokenDO.setTenantID(tokenDO.getTenantID());
         newTokenDO.setTokenState(tokenDO.getTokenState());
@@ -177,6 +187,8 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setTokenBinding(tokenDO.getTokenBinding());
         newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
         newTokenDO.setAppResidentTenantId(tokenDO.getAppResidentTenantId());
+        newTokenDO.setAcr(tokenDO.getAcr());
+        newTokenDO.setAuthTime(tokenDO.getAuthTime());
 
         return newTokenDO;
     }
@@ -388,5 +400,35 @@ public class AccessTokenDO extends CacheEntry {
     public void setAppResidentTenantId(int appResidentTenantId) {
 
         this.appResidentTenantId = appResidentTenantId;
+    }
+
+    public String getAcr() {
+
+        return acr;
+    }
+
+    public void setAcr(String acr) {
+
+        this.acr = acr;
+    }
+
+    public long getAuthTime() {
+
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+
+        this.authTime = authTime;
+    }
+
+    public List<String> getAmrValues() {
+
+        return amrValues;
+    }
+
+    public void setAmrValues(List<String> amrValues) {
+
+        this.amrValues = amrValues;
     }
 }

@@ -232,8 +232,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                 .addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(),
                         tokenMessageContext.getValidityPeriod() / 1000)
                 .addClaim(AccessToken.ClaimNames.AUD.getName(), audience)
-                .addClaim(AccessToken.ClaimNames.ACR.getName(), "acr_test")
-                .addClaim(AccessToken.ClaimNames.AUTH_TIME.getName(), "auth_time_test")
                 .scopes(Arrays.asList(tokenMessageContext.getScope()));
     }
 

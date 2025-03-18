@@ -592,16 +592,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         validateGrantTypeParam(tokenReq);
 
-        long authTime;
-        String acrValue;
-        List<String> amrValues;
-
         AuthorizationGrantCacheEntry authzGrantCacheEntry =
                 getAuthorizationGrantCacheEntryFromCode(getAuthorizationCode(tokReqMsgCtx));
-
-        acrValue = authzGrantCacheEntry.getSelectedAcrValue();
-        amrValues = authzGrantCacheEntry.getAmrList();
-        authTime = authzGrantCacheEntry.getAuthTime() / 1000;
 
         AccessTokenDO newTokenBean = new AccessTokenDO();
         newTokenBean.setTokenState(TOKEN_STATE_ACTIVE);
@@ -620,15 +612,16 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setValidityPeriod(tokReqMsgCtx.getValidityPeriod() / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
         newTokenBean.setAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes());
-        newTokenBean.setAcr(acrValue);
-        newTokenBean.setAuthTime(authTime);
-        newTokenBean.setAmrValues(amrValues);
+        newTokenBean.setAcr(authzGrantCacheEntry.getSelectedAcrValue());
+        newTokenBean.setAuthTime(authzGrantCacheEntry.getAuthTime() / 1000);
+        newTokenBean.setAmrValues(authzGrantCacheEntry.getAmrList());
         setRefreshTokenDetails(tokReqMsgCtx, existingTokenBean, newTokenBean, oauthTokenIssuer);
 
         return newTokenBean;
     }
 
     private String getAuthorizationCode(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
         return (String) tokenReqMsgCtxt.getProperty(AUTHORIZATION_CODE);
     }
 
@@ -639,18 +632,22 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     public boolean isAuthTimeRequired(AuthorizationGrantCacheEntry authzGrantCacheEntry) {
+
         return isMaxAgePresentInAuthzRequest(authzGrantCacheEntry) || isEssentialClaim(authzGrantCacheEntry, AUTH_TIME);
     }
 
     private boolean isMaxAgePresentInAuthzRequest(AuthorizationGrantCacheEntry authorizationGrantCacheEntry) {
+
         return authorizationGrantCacheEntry.getMaxAge() != 0;
     }
 
     private boolean isEssentialClaim(AuthorizationGrantCacheEntry authorizationGrantCacheEntry, String oidcClaimUri) {
+
         return isEssentialClaim(authorizationGrantCacheEntry.getEssentialClaims(), oidcClaimUri);
     }
 
     private boolean isEssentialClaim(String essentialClaims, String oidcClaimUri) {
+
         return StringUtils.isNotBlank(essentialClaims) &&
                 OAuth2Util.getEssentialClaims(essentialClaims, OAuthConstants.ID_TOKEN).contains(oidcClaimUri);
     }

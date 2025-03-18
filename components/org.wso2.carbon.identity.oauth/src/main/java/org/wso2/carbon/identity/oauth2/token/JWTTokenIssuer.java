@@ -115,7 +115,6 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
-
     private static final String AUTHORIZATION_CODE = "AuthorizationCode";
     private static final String PREVIOUS_ACCESS_TOKEN = "previousAccessToken";
 
@@ -687,7 +686,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         if (authTime != 0) {
             jwtClaimsSetBuilder.claim(AUTH_TIME, authTime / 1000);
         }
-        if (StringUtils.isNotEmpty(acrValue)) {
+        if (StringUtils.isNotBlank(acrValue)) {
             jwtClaimsSetBuilder.claim(OAuthConstants.ACR, acrValue);
         }
         if (amrValues != null) {
@@ -756,10 +755,12 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     }
 
     private String getAuthorizationCode(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
         return (String) tokenReqMsgCtxt.getProperty(AUTHORIZATION_CODE);
     }
 
     private String getPreviousAccessToken(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
         RefreshTokenValidationDataDO refreshTokenValidationDataDO =
                 (RefreshTokenValidationDataDO) tokenReqMsgCtxt.getProperty(PREVIOUS_ACCESS_TOKEN);
         return (String) refreshTokenValidationDataDO.getAccessToken();
