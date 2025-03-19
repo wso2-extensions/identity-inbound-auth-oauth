@@ -139,15 +139,7 @@ public class AuthzChallengeEndpoint {
         // Perform request authentication
         if (!isInternalRequest) {
             if (hasDPoPHeader(request)) {
-                AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance()
-                        .getAuthzChallengeInterceptorHandlerProxy();
-                if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-                    OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
-                    String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
-                    if (StringUtils.isNotBlank(thumbprint)) {
-                        oAuthMessage.setDPoPThumbprint(thumbprint);
-                    }
-                }
+                processDPoPHeader(request, oAuthMessage);
             }
 
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
@@ -494,7 +486,6 @@ public class AuthzChallengeEndpoint {
             throws AuthServiceException {
 
         String callerSessionDataKey = authServiceResponse.getSessionDataKey();
-
         OAuthRequestWrapper internalRequest = ApiAuthnUtils.createInternalRequest(request, callerSessionDataKey);
 
         try {
@@ -552,6 +543,12 @@ public class AuthzChallengeEndpoint {
         return dto;
     }
 
+    /**
+     * Extracts HTTP headers from the request and converts them into an array of HttpRequestHeader objects.
+     *
+     * @param request The HTTP servlet request from which to extract headers
+     * @return An array of HttpRequestHeader objects containing the header name and values
+     */
     private static HttpRequestHeader[] extractHeaders(HttpServletRequest request) {
         Enumeration<String> headerNames = request.getHeaderNames();
 
@@ -577,35 +574,97 @@ public class AuthzChallengeEndpoint {
         return httpHeaderList.toArray(new HttpRequestHeader[0]);
     }
 
-    public static boolean hasDPoPHeader(HttpServletRequest request) {
+    private boolean hasDPoPHeader(HttpServletRequest request) {
         return request.getHeader(DPOP) != null;
     }
 
-    public static void validateDPoPThumbprint(HttpServletRequest request, Optional<String> sessionDataCacheKey)
+    /**
+     * Process the DPoP header and extract thumbprint if available. The extracted thumbprint is then stored in the
+     * OAuthMessage to be persisted in the session data cache for later validation in subsequent requests.
+     *
+     * @param request The HTTP servlet request containing the DPoP header
+     * @param oAuthMessage The OAuth message to update with the thumbprint
+     */
+    private void processDPoPHeader(HttpServletRequest request, OAuthMessage oAuthMessage)
+            throws IdentityOAuth2Exception {
+        AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance()
+                .getAuthzChallengeInterceptorHandlerProxy();
+
+        if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+            OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+            String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+            if (StringUtils.isNotBlank(thumbprint)) {
+                oAuthMessage.setDPoPThumbprint(thumbprint);
+                if (log.isDebugEnabled()) {
+                    log.debug("DPoP thumbprint successfully processed and set");
+                }
+            }
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("AuthzChallengeInterceptor is not available or not enabled. " +
+                        "Skipping DPoP thumbprint processing.");
+            }
+        }
+    }
+
+    /**
+     * Validates that the DPoP thumbprint in the current request matches the one stored in the session cache.
+     *
+     * @param request The HTTP servlet request containing the DPoP header
+     * @param sessionDataCacheKey Optional containing the session data cache key
+     * @throws AuthServiceException If validation fails or any error occurs during validation
+     * @throws IdentityOAuth2Exception If any OAuth2 related error occurs
+     */
+    private void validateDPoPThumbprint(HttpServletRequest request, Optional<String> sessionDataCacheKey)
             throws AuthServiceException, IdentityOAuth2Exception {
 
-        if (sessionDataCacheKey.isPresent()) {
-            SessionDataCacheKey key = new SessionDataCacheKey(sessionDataCacheKey.toString());
-            SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache(key);
+        if (!sessionDataCacheKey.isPresent()) {
+            if (log.isDebugEnabled()) {
+                log.debug("No session data cache key found in the request. Skipping DPoP thumbprint validation.");
+            }
+            throw new AuthServiceException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Invalid session data cache key."
+            );
+        }
+        SessionDataCacheKey key = new SessionDataCacheKey(sessionDataCacheKey.orElse(""));
+        SessionDataCacheEntry entry = SessionDataCache.getInstance().getValueFromCache(key);
 
-            if (entry != null) {
-                String cachedThumbprint = entry.getDPoPThumbprint();
+        if (entry == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("No session data cache entry found for the given key.");
+            }
+            throw new AuthServiceException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Session data cache entry not found."
+            );
+        }
 
-                if (!StringUtils.isBlank(cachedThumbprint)) {
-                    AuthzChallengeInterceptor authzChallengeInterceptor =
-                            OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
+        String cachedThumbprint = entry.getDPoPThumbprint();
 
-                    if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-                        OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
-                        String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+        if (!StringUtils.isBlank(cachedThumbprint)) {
+            AuthzChallengeInterceptor authzChallengeInterceptor =
+                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
 
-                        if (!cachedThumbprint.equals(thumbprint)) {
-                            throw new AuthServiceException(
-                                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                                    "Invalid thumbprint value."
-                            );
-                        }
+            if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+                OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+                String currentThumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+
+                if (StringUtils.isBlank(currentThumbprint)) {
+                    throw new AuthServiceException(
+                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "DPoP thumbprint is missing in the current request."
+                    );
+                }
+
+                if (!cachedThumbprint.equals(currentThumbprint)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("DPoP thumbprint validation failed. Cached and current thumbprints do not match.");
                     }
+                    throw new AuthServiceException(
+                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "Invalid DPoP thumbprint value."
+                    );
                 }
             }
         }

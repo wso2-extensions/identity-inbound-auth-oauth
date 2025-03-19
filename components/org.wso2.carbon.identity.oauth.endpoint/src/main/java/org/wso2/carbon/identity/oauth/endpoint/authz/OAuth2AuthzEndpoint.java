@@ -117,7 +117,7 @@ public class OAuth2AuthzEndpoint {
         if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext,request);
+                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext, request);
             }
 
             ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
@@ -208,8 +208,7 @@ public class OAuth2AuthzEndpoint {
     }
 
     private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage,
-                                                      CommonAuthResponseWrapper
-                                                              responseWrapper)
+                                                      CommonAuthResponseWrapper responseWrapper)
             throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException {
 
         if (AuthzUtil.isAuthFlowStateExists(oAuthMessage)) {

@@ -77,7 +77,6 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
-import org.wso2.carbon.identity.oauth.endpoint.OAuthResponseWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
@@ -4331,14 +4330,12 @@ public class AuthzUtil {
                     authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
                 }
 
-                OAuthResponseWrapper responseWrapper = new OAuthResponseWrapper(authResponse);
-
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
 
                 String jsonString;
                 try {
-                    jsonString = objectMapper.writeValueAsString(responseWrapper.getResponse());
+                    jsonString = objectMapper.writeValueAsString(authResponse);
                 } catch (JsonProcessingException e) {
                     throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
                             "Error while building JSON response.", e);
@@ -4565,7 +4562,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Handle the authentication failure response for API based authentication.
+     * Handle the authentication failure response for authorize-challenge flow.
      *
      * @param description Error Message in ClientAuthnContext.
      * @return Auth failure response.
@@ -4686,11 +4683,24 @@ public class AuthzUtil {
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
     }
 
+    /**
+     * Checks if the request is being processed as an authorize-challenge flow.
+     *
+     * @param request The HTTP servlet request to check
+     * @return {@code true} if this is an authorization challenge request, {@code false} otherwise
+     */
     private static Boolean isAuthzChallenge(HttpServletRequest request) {
 
             return Boolean.TRUE.equals(request.getAttribute("isAuthzChallenge"));
     }
 
+    /**
+     * Builds an HTTP response for client errors that occur during authorize-challenge flow.
+     *
+     * @param exception The client exception containing error details
+     * @param log Logger instance
+     * @return Response object with HTTP 400 (Bad Request)
+     */
     public static Response buildAuthzChallengeResponseForClientError(AuthServiceClientException exception, Log log) {
         if (log.isDebugEnabled()) {
             log.debug("Client error while handling authentication request.", exception);
