@@ -4689,7 +4689,7 @@ public class AuthzUtil {
      * @param request The HTTP servlet request to check
      * @return {@code true} if this is an authorization challenge request, {@code false} otherwise
      */
-    private static Boolean isAuthzChallenge(HttpServletRequest request) {
+    public static Boolean isAuthzChallenge(HttpServletRequest request) {
 
             return Boolean.TRUE.equals(request.getAttribute("isAuthzChallenge"));
     }

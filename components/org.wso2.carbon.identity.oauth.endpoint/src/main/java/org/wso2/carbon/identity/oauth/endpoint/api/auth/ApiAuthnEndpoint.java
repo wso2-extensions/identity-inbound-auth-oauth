@@ -66,11 +66,11 @@ public class ApiAuthnEndpoint {
 
             switch (authServiceResponse.getFlowStatus()) {
                 case INCOMPLETE:
-                    return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse);
+                    return ApiAuthnUtils.handleIncompleteAuthResponse(request, authServiceResponse);
                 case SUCCESS_COMPLETED:
                     return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
-                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse);
+                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(request, authServiceResponse);
                 case FAIL_COMPLETED:
                     return ApiAuthnUtils.handleFailCompletedAuthResponse(authServiceResponse);
                 default:

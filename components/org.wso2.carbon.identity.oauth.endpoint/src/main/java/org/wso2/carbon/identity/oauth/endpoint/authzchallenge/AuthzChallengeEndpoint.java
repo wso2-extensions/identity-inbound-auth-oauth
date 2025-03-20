@@ -203,10 +203,9 @@ public class AuthzChallengeEndpoint {
                                                            @Context HttpServletResponse response, String payload)
             throws AuthServiceException, InvalidRequestParentException, URISyntaxException {
         try {
-            if (isSubsequentAuthzChallengeRequest(payload)) {
-                payload = renameAuthSessionToFlowId(payload);
-            }
 
+            payload = renameAuthSessionToFlowId(payload);
+            request.setAttribute("isAuthzChallenge", true);
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
             Optional<String> sessionDataCacheKey = authenticationService.getSessionDataCacheKey(authServiceRequest);
@@ -215,11 +214,11 @@ public class AuthzChallengeEndpoint {
 
             switch (authServiceResponse.getFlowStatus()) {
                 case INCOMPLETE:
-                    return ApiAuthnUtils.handleIncompleteAuthResponse(authServiceResponse, true);
+                    return ApiAuthnUtils.handleIncompleteAuthResponse(request, authServiceResponse);
                 case SUCCESS_COMPLETED:
                     return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
-                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(authServiceResponse, true);
+                    return ApiAuthnUtils.handleFailIncompleteAuthResponse(request, authServiceResponse);
                 case FAIL_COMPLETED:
                     return handleFailCompletedAuthResponse(authServiceResponse);
                 default:
@@ -317,13 +316,6 @@ public class AuthzChallengeEndpoint {
         JsonNode authSessionValue = objectNode.remove(AUTH_SESSION);
         objectNode.set(FLOW_ID, authSessionValue);
         return objectMapper.writeValueAsString(objectNode);
-    }
-
-    private boolean isSubsequentAuthzChallengeRequest(String payload) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.readTree(payload);
-
-        return jsonNode.has(AUTH_SESSION);
     }
 
     /**
@@ -513,14 +505,14 @@ public class AuthzChallengeEndpoint {
             }
 
             response.setError(error);
-            response.setError_description(errorDescription);
+            response.setErrorDescription(errorDescription);
         } else {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Error info is not present in the authentication service response. " +
                         "Setting default error details.");
             }
             response.setError(ApiAuthnUtils.getDefaultAuthenticationFailureError().message());
-            response.setError_description(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
+            response.setErrorDescription(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
         }
         String jsonString = new Gson().toJson(response);
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();

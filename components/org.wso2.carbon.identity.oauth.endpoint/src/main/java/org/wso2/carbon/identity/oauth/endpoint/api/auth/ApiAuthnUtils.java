@@ -38,6 +38,8 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeGenericResponse;
+import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 
 import java.nio.charset.StandardCharsets;
@@ -245,25 +247,14 @@ public class ApiAuthnUtils {
         }
     }
 
-    public static Response buildResponse(AuthResponse response) throws AuthServiceException {
+    public static Response buildResponse(HttpServletRequest request, AuthResponse response) throws AuthServiceException {
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
         String jsonString;
-        try {
-            jsonString = objectMapper.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
-                    "Error while building JSON response.", e);
-        }
-        return Response.ok().entity(jsonString).build();
-    }
+        AuthzChallengeGenericResponse authzChallengeResponse;
 
-    public static Response buildResponse(AuthResponse response, boolean isAuthzChallenge) throws AuthServiceException {
-
-        String jsonString = null;
-        Object authzChallengeResponse;
-        if (isAuthzChallenge) {
+        if (AuthzUtil.isAuthzChallenge(request)) {
             if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
                 authzChallengeResponse = API_AUTHN_HANDLER.handleIncompleteAuthzChallengeResponse(response);
             } else if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED ||
@@ -273,8 +264,7 @@ public class ApiAuthnUtils {
                 throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
                         "Error while building JSON. Invalid flow status.");
             }
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+
             try {
                 jsonString = objectMapper.writeValueAsString(authzChallengeResponse);
             } catch (JsonProcessingException e) {
@@ -288,8 +278,16 @@ public class ApiAuthnUtils {
             if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
                 return Response.status(HttpServletResponse.SC_ACCEPTED).entity(jsonString).build();
             }
+        } else {
+            try {
+                jsonString = objectMapper.writeValueAsString(response);
+            } catch (JsonProcessingException e) {
+                throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                        "Error while building JSON response.", e);
+            }
+            return Response.ok().entity(jsonString).build();
         }
-        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
     }
 
     public static AuthServiceRequest getAuthServiceRequest(HttpServletRequest request, HttpServletResponse response,
@@ -332,30 +330,17 @@ public class ApiAuthnUtils {
                 StandardCharsets.UTF_8);
     }
 
-    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
+    public static Response handleIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse
+            authServiceResponse) throws AuthServiceException {
 
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
-        return buildResponse(authResponse);
+        return buildResponse(request, authResponse);
     }
 
-    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean
-            isAuthzChallenge) throws AuthServiceException {
-
-        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
-        return buildResponse(authResponse, isAuthzChallenge);
-    }
-
-    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
+    public static Response handleFailIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse authServiceResponse)
             throws AuthServiceException {
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
-        return buildResponse(authResponse);
-    }
-
-    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse, boolean
-            isAuthzChallenge) throws AuthServiceException {
-        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
-        return buildResponse(authResponse, isAuthzChallenge);
+        return buildResponse(request, authResponse);
     }
 
     public static Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
