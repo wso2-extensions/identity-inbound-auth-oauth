@@ -38,10 +38,15 @@ import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeGenericResponse;
+import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Collections;
@@ -68,6 +73,8 @@ public class ApiAuthnUtils {
     private static final String AUTHENTICATOR = "authenticator";
     private static final String IDP = "idp";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
+    private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
     private ApiAuthnUtils() {
 
@@ -247,7 +254,8 @@ public class ApiAuthnUtils {
         }
     }
 
-    public static Response buildResponse(HttpServletRequest request, AuthResponse response) throws AuthServiceException {
+    public static Response buildResponse(HttpServletRequest request, AuthResponse response)
+            throws AuthServiceException {
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
@@ -337,8 +345,29 @@ public class ApiAuthnUtils {
         return buildResponse(request, authResponse);
     }
 
-    public static Response handleFailIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
+    public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse
+            response, AuthServiceResponse authServiceResponse) throws AuthServiceException {
+
+        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
+
+        Map<String, List<String>> internalParamsList = new HashMap<>();
+        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
+        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
+        internalRequest.setInternalRequest(true);
+
+        try {
+            if (AuthzUtil.isAuthzChallenge(request)) {
+                return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
+            }
+            return oAuth2AuthzEndpoint.authorize(internalRequest, response);
+        } catch (InvalidRequestParentException | URISyntaxException | IdentityOAuth2Exception e) {
+            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Error while processing the final oauth authorization request.", e);
+        }
+    }
+
+    public static Response handleFailIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse
+            authServiceResponse) throws AuthServiceException {
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(request, authResponse);
     }

@@ -109,11 +109,11 @@ public class AuthzChallengeEndpoint {
     private static final String AUTH_SESSION = "auth_session";
     private static final String FLOW_ID = "flowId";
     private static final String DPOP = "DPoP";
+    private static final String ATTR_AUTHZ_CHALLENGE = "isAuthzChallenge";
 
     private static final Log log = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
     private final AuthenticationService authenticationService = new AuthenticationService();
-    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
     private static final Log LOG = LogFactory.getLog(AuthzChallengeEndpoint.class);
 
     public Response handleInitialAuthzChallengeRequest(@Context HttpServletRequest request,
@@ -126,7 +126,7 @@ public class AuthzChallengeEndpoint {
 
         try {
             request = RequestUtil.buildRequest(request);
-            request.setAttribute("isAuthzChallenge", true);
+            request.setAttribute(ATTR_AUTHZ_CHALLENGE, true);
             oAuthMessage = AuthzUtil.buildOAuthMessage(request, response);
         } catch (InvalidRequestParentException e) {
             EndpointUtil.triggerOnAuthzRequestException(e, request);
@@ -205,7 +205,7 @@ public class AuthzChallengeEndpoint {
         try {
 
             payload = renameAuthSessionToFlowId(payload);
-            request.setAttribute("isAuthzChallenge", true);
+            request.setAttribute(ATTR_AUTHZ_CHALLENGE, true);
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
             AuthServiceRequest authServiceRequest = ApiAuthnUtils.getAuthServiceRequest(request, response, authRequest);
             Optional<String> sessionDataCacheKey = authenticationService.getSessionDataCacheKey(authServiceRequest);
@@ -216,7 +216,7 @@ public class AuthzChallengeEndpoint {
                 case INCOMPLETE:
                     return ApiAuthnUtils.handleIncompleteAuthResponse(request, authServiceResponse);
                 case SUCCESS_COMPLETED:
-                    return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
+                    return ApiAuthnUtils.handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(request, authServiceResponse);
                 case FAIL_COMPLETED:
@@ -470,23 +470,6 @@ public class AuthzChallengeEndpoint {
             return AuthzUtil.handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
         } catch (IOException | URLBuilderException | IdentityOAuth2Exception e) {
             return AuthzUtil.handleAuthenticationFrameworkError(oAuthMessage, e);
-        }
-    }
-
-    private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
-                                                        AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
-
-        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
-        OAuthRequestWrapper internalRequest = ApiAuthnUtils.createInternalRequest(request, callerSessionDataKey);
-
-        try {
-            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
-        } catch (InvalidRequestParentException | URISyntaxException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Error while processing the final oauth authorization request.", e);
-        } catch (IdentityOAuth2Exception e) {
-            throw new RuntimeException(e);
         }
     }
 

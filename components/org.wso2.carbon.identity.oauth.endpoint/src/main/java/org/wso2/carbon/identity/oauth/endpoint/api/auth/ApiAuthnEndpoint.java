@@ -26,12 +26,7 @@ import org.wso2.carbon.identity.application.authentication.framework.exception.a
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
-import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
-import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
-import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
-
-import java.net.URISyntaxException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -48,7 +43,6 @@ import javax.ws.rs.core.Response;
 @Path("/authn")
 public class ApiAuthnEndpoint {
 
-    private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
     private final AuthenticationService authenticationService = new AuthenticationService();
     private static final Log LOG = LogFactory.getLog(ApiAuthnEndpoint.class);
 
@@ -68,7 +62,7 @@ public class ApiAuthnEndpoint {
                 case INCOMPLETE:
                     return ApiAuthnUtils.handleIncompleteAuthResponse(request, authServiceResponse);
                 case SUCCESS_COMPLETED:
-                    return handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
+                    return ApiAuthnUtils.handleSuccessCompletedAuthResponse(request, response, authServiceResponse);
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(request, authServiceResponse);
                 case FAIL_COMPLETED:
@@ -84,22 +78,6 @@ public class ApiAuthnEndpoint {
             return ApiAuthnUtils.buildResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
             return ApiAuthnUtils.buildResponseForServerError(e, LOG);
-        }
-    }
-
-    private Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
-                                                              AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
-
-        String callerSessionDataKey = authServiceResponse.getSessionDataKey();
-
-        OAuthRequestWrapper internalRequest = ApiAuthnUtils.createInternalRequest(request, callerSessionDataKey);
-
-        try {
-            return oAuth2AuthzEndpoint.authorize(internalRequest, response);
-        } catch (InvalidRequestParentException | URISyntaxException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Error while processing the final oauth authorization request.", e);
         }
     }
 
