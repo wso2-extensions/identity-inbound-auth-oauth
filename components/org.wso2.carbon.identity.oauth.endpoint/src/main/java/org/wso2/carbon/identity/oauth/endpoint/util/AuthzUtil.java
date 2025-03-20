@@ -4576,9 +4576,9 @@ public class AuthzUtil {
         AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
         authzChallengeFailResponse.setError(AuthzChallengeConstants.Error.INVALID_CLIENT.value());
         if (StringUtils.isNotBlank(description)) {
-            authzChallengeFailResponse.setError_description(description);
+            authzChallengeFailResponse.setErrorDescription(description);
         } else {
-            authzChallengeFailResponse.setError_description("Authorization failure. Authorization information " +
+            authzChallengeFailResponse.setErrorDescription("Authorization failure. Authorization information " +
                     "was invalid or missing from your request.");
         }
         String jsonString = new Gson().toJson(authzChallengeFailResponse);
@@ -4678,7 +4678,7 @@ public class AuthzUtil {
         String errorDescription = exception.getMessage();
 
         authzChallengeFailResponse.setError(error);
-        authzChallengeFailResponse.setError_description(errorDescription);
+        authzChallengeFailResponse.setErrorDescription(errorDescription);
         String jsonString = new Gson().toJson(authzChallengeFailResponse);
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
     }
@@ -4716,7 +4716,7 @@ public class AuthzUtil {
         }
 
         authzChallengeFailResponse.setError(error);
-        authzChallengeFailResponse.setError_description(errorDescription);
+        authzChallengeFailResponse.setErrorDescription(errorDescription);
         String jsonString = new Gson().toJson(authzChallengeFailResponse);
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
     }

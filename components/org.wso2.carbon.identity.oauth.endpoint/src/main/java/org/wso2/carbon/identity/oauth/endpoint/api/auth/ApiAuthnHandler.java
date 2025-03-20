@@ -84,9 +84,9 @@ public class ApiAuthnHandler {
             throws AuthServiceException {
 
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
-        response.setAuth_session(authServiceResponse.getSessionDataKey());
+        response.setAuthSession(authServiceResponse.getSessionDataKey());
         response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
-        response.setError_description("The provided authorization is not sufficient; " +
+        response.setErrorDescription("The provided authorization is not sufficient; " +
                 "additional steps are required to complete the process.");
         NextStep nextStep = buildNextStep(authServiceResponse);
         response.setNextStep(nextStep);
@@ -96,9 +96,9 @@ public class ApiAuthnHandler {
 
     public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) {
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
-        response.setAuth_session(authResponse.getFlowId());
+        response.setAuthSession(authResponse.getFlowId());
         response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
-        response.setError_description("The provided authorization is not sufficient; " +
+        response.setErrorDescription("The provided authorization is not sufficient; " +
                 "additional steps are required to complete the process.");
         response.setNextStep(authResponse.getNextStep());
 
@@ -107,9 +107,9 @@ public class ApiAuthnHandler {
 
     public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) {
         AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
-        response.setAuth_session(authResponse.getFlowId());
+        response.setAuthSession(authResponse.getFlowId());
         response.setError(AuthzChallengeConstants.Error.REDIRECT_TO_WEB.value());
-        response.setError_description("Authorization failed. Start a web-based flow.");
+        response.setErrorDescription("Authorization failed. Start a web-based flow.");
 
         return response;
     }
