@@ -59,8 +59,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
-
 /**
  * This class is responsible for processing the response received from the action execution
  * of the pre issue access token.
@@ -75,6 +73,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
     private static final String LAST_ELEMENT_CHARACTER = "-";
     private static final char PATH_SEPARATOR = '/';
+    private static final String SCOPE = "scope";
 
     @Override
     public ActionType getSupportedActionType() {
