@@ -59,6 +59,8 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static org.wso2.carbon.identity.openidconnect.model.Constants.SCOPE;
+
 /**
  * This class is responsible for processing the response received from the action execution
  * of the pre issue access token.
@@ -369,7 +371,11 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             AccessToken.Claim claim = objectMapper.convertValue(claimToAdd, AccessToken.Claim.class);
-            if (requestAccessToken.getClaim(claim.getName()) != null) {
+            if (SCOPE.equalsIgnoreCase(claim.getName())){
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "Invalid operation path for the scope.");
+            }
+            else if (requestAccessToken.getClaim(claim.getName()) != null) {
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                         "An access token claim already exists.");
             }
