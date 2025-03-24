@@ -66,7 +66,7 @@ public class ApiAuthnEndpoint {
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(request, authServiceResponse);
                 case FAIL_COMPLETED:
-                    return ApiAuthnUtils.handleFailCompletedAuthResponse(authServiceResponse);
+                    return ApiAuthnUtils.handleFailCompletedAuthResponse(request, authServiceResponse);
                 default:
                     throw new AuthServiceException(
                             AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS.code(),

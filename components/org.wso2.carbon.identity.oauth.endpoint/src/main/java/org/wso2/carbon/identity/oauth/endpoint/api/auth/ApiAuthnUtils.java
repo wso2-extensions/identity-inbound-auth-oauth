@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.MDC;
@@ -40,6 +41,7 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeGenericResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
@@ -372,25 +374,53 @@ public class ApiAuthnUtils {
         return buildResponse(request, authResponse);
     }
 
-    public static Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
+    public static Response handleFailCompletedAuthResponse(HttpServletRequest request, AuthServiceResponse authServiceResponse) {
 
-        APIError apiError = new APIError();
-        if (authServiceResponse.getErrorInfo().isPresent()) {
-            AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
-            apiError.setCode(errorInfo.getErrorCode());
-            apiError.setMessage(errorInfo.getErrorMessage());
-            apiError.setDescription(errorInfo.getErrorDescription());
-        } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Error info is not present in the authentication service response. " +
-                        "Setting default error details.");
+        String jsonString;
+        if (AuthzUtil.isAuthzChallenge(request)) {
+            AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+            if (authServiceResponse.getErrorInfo().isPresent()) {
+                AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
+                String errorCode = errorInfo.getErrorCode();
+                Pair<String, String> errorMapping = AuthzUtil.mapFrameworkError(errorCode.split("-")[1]);
+                String error = errorMapping.getLeft();
+                String errorDescription = errorMapping.getRight();
+
+                if (errorDescription == null) {
+                    errorDescription = errorInfo.getErrorDescription();
+                }
+
+                response.setError(error);
+                response.setErrorDescription(errorDescription);
+            } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error info is not present in the authentication service response. " +
+                            "Setting default error details.");
+                }
+                response.setError(ApiAuthnUtils.getDefaultAuthenticationFailureError().message());
+                response.setErrorDescription(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
             }
-            apiError.setCode(getDefaultAuthenticationFailureError().code());
-            apiError.setMessage(getDefaultAuthenticationFailureError().message());
-            apiError.setDescription(getDefaultAuthenticationFailureError().description());
+            jsonString = new Gson().toJson(response);
+        } else {
+            APIError apiError = new APIError();
+            if (authServiceResponse.getErrorInfo().isPresent()) {
+                AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
+                apiError.setCode(errorInfo.getErrorCode());
+                apiError.setMessage(errorInfo.getErrorMessage());
+                apiError.setDescription(errorInfo.getErrorDescription());
+            } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error info is not present in the authentication service response. " +
+                            "Setting default error details.");
+                }
+                apiError.setCode(getDefaultAuthenticationFailureError().code());
+                apiError.setMessage(getDefaultAuthenticationFailureError().message());
+                apiError.setDescription(getDefaultAuthenticationFailureError().description());
+            }
+            apiError.setTraceId(ApiAuthnUtils.getCorrelationId());
+            jsonString = new Gson().toJson(apiError);
         }
-        apiError.setTraceId(ApiAuthnUtils.getCorrelationId());
-        String jsonString = new Gson().toJson(apiError);
+
         /* Authentication FAIL_COMPLETED status could happen due to both client errors and server errors.
          Generally FAIL_COMPLETED status is received when an authenticator throws a AuthenticationFailedException
          and this exception could be thrown for both client and server errors and with the current framework

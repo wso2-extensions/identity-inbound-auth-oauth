@@ -173,9 +173,9 @@ public class AuthzChallengeEndpoint {
 
             Response oauthResponse;
             if (AuthzUtil.isPassthroughToFramework(oAuthMessage)) {
-                oauthResponse = handleAuthFlowThroughFramework(oAuthMessage);
+                oauthResponse = AuthzUtil.handleAuthFlowThroughFramework(oAuthMessage);
             } else if (AuthzUtil.isInitialRequestFromClient(oAuthMessage)) {
-                oauthResponse = handleInitialAuthorizationRequest(oAuthMessage);
+                oauthResponse = AuthzUtil.handleInitialAuthorizationRequest(oAuthMessage);
             } else if (AuthzUtil.isAuthenticationResponseFromFramework(oAuthMessage)) {
                 oauthResponse = AuthzUtil.handleAuthenticationResponse(oAuthMessage);
             } else if (AuthzUtil.isConsentResponseFromUser(oAuthMessage)) {
@@ -220,7 +220,7 @@ public class AuthzChallengeEndpoint {
                 case FAIL_INCOMPLETE:
                     return ApiAuthnUtils.handleFailIncompleteAuthResponse(request, authServiceResponse);
                 case FAIL_COMPLETED:
-                    return handleFailCompletedAuthResponse(authServiceResponse);
+                    return ApiAuthnUtils.handleFailCompletedAuthResponse(request, authServiceResponse);
                 default:
                     throw new AuthServiceException(
                             AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS.code(),
@@ -308,200 +308,7 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.readTree(payload);
-
-        ObjectNode objectNode = (ObjectNode) jsonNode;
-        JsonNode authSessionValue = objectNode.remove(AUTH_SESSION);
-        objectNode.set(FLOW_ID, authSessionValue);
-        return objectMapper.writeValueAsString(objectNode);
-    }
-
-    /**
-     * This method use to call authentication framework directly via API other than using HTTP redirects.
-     * Sending wrapper request object to doGet method since other original request doesn't exist required parameters
-     * Doesn't check SUCCESS_COMPLETED since taking decision with INCOMPLETE status
-     *
-     * @param oAuthMessage authenticator
-     * @throws URISyntaxException
-     * @throws InvalidRequestParentException
-     * @Param type OAuthMessage
-     */
-    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage)
-            throws URISyntaxException, InvalidRequestParentException {
-
-        try {
-            CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
-            AuthzUtil.invokeCommonauthFlow(oAuthMessage, responseWrapper);
-            return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
-        } catch (ServletException | IOException | URLBuilderException | AuthServiceException |
-                 IdentityOAuth2Exception e) {
-            log.error("Error occurred while sending request to authentication framework.");
-            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    private Response processAuthResponseFromFramework(OAuthMessage oAuthMessage,
-                                                      CommonAuthResponseWrapper
-                                                              responseWrapper)
-            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException,
-            AuthServiceException, IdentityOAuth2Exception {
-
-        if (AuthzUtil.isAuthFlowStateExists(oAuthMessage)) {
-            if (AuthzUtil.isFlowStateIncomplete(oAuthMessage)) {
-                return AuthzUtil.handleIncompleteFlow(oAuthMessage, responseWrapper);
-            } else {
-                return handleSuccessfullyCompletedFlow(oAuthMessage);
-            }
-        } else {
-            return handleUnknownFlowState(oAuthMessage);
-        }
-    }
-
-    private Response handleUnknownFlowState(OAuthMessage oAuthMessage)
-            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
-
-        oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
-                .UNKNOWN);
-        return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse(), true);
-
-    }
-
-    private Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage)
-            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
-
-        return handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse(), true);
-    }
-
-    public Response handleInitialAuthorizationRequest(OAuthMessage oAuthMessage) throws OAuthSystemException,
-            OAuthProblemException, URISyntaxException, InvalidRequestParentException {
-
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            AuthzUtil.logOAuth2InitialRequest(oAuthMessage);
-        }
-        String redirectURL = AuthzUtil.handleOAuthAuthorizationRequest(oAuthMessage);
-        String type = AuthzUtil.getRequestProtocolType(oAuthMessage);
-        try {
-            // Add the service provider id to the redirect URL. This is needed to support application wise branding.
-            String clientId = oAuthMessage.getRequest().getParameter(OAuthConstants.OAuth20Params.CLIENT_ID);
-            if (StringUtils.isNotBlank(clientId)) {
-                ServiceProvider serviceProvider = AuthzUtil.getServiceProvider(clientId);
-                if (serviceProvider != null) {
-                    redirectURL = AuthzUtil.addServiceProviderIdToRedirectURI(redirectURL,
-                            serviceProvider.getApplicationResourceId());
-                }
-            }
-        } catch (OAuthSystemException e) {
-            // The value is set to be used for branding purposes. Therefore, if an error occurs, the process should
-            // continue without breaking.
-            log.debug("Error while getting the service provider id", e);
-        }
-        if (AuthenticatorFlowStatus.SUCCESS_COMPLETED == oAuthMessage.getFlowStatus()) {
-            return handleAuthFlowThroughFramework(oAuthMessage, type, redirectURL);
-        } else {
-            return Response.status(HttpServletResponse.SC_FOUND).location(new URI(redirectURL)).build();
-        }
-    }
-
-    private Response handleAuthFlowThroughFramework(OAuthMessage oAuthMessage, String type, String redirectUrl)
-            throws URISyntaxException, InvalidRequestParentException {
-
-        if (LoggerUtils.isDiagnosticLogsEnabled()) {
-            DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                    OAuthConstants.LogConstants.ActionIDs.HAND_OVER_TO_FRAMEWORK)
-                    .resultMessage("Forward authorization request to framework for user authentication.")
-                    .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
-                    .inputParam(LogConstants.InputKeys.CLIENT_ID, oAuthMessage.getClientId())
-                    .logDetailLevel(DiagnosticLog.LogDetailLevel.INTERNAL_SYSTEM);
-            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-        }
-        try {
-            String sessionDataKey =
-                    (String) oAuthMessage.getRequest().getAttribute(FrameworkConstants.SESSION_DATA_KEY);
-
-
-            CommonAuthRequestWrapper requestWrapper = new CommonAuthRequestWrapper(oAuthMessage.getRequest());
-            requestWrapper.setParameter(FrameworkConstants.SESSION_DATA_KEY, sessionDataKey);
-            requestWrapper.setParameter(FrameworkConstants.RequestParams.TYPE, type);
-
-            CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
-
-            // Marking the initial request as additional validation will be done from the auth service.
-            requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
-            requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
-
-            AuthenticationService authenticationService = new AuthenticationService();
-            AuthServiceResponse authServiceResponse = authenticationService.
-                    handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
-            // This is done to provide a way to propagate the auth service response to needed places.
-            AuthzUtil.attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
-
-            Object attribute = oAuthMessage.getRequest().getAttribute(FrameworkConstants.RequestParams.FLOW_STATUS);
-            if (attribute != null) {
-                if (attribute == AuthenticatorFlowStatus.INCOMPLETE) {
-
-                    if (responseWrapper.isRedirect()) {
-                        return Response.status(HttpServletResponse.SC_FOUND)
-                                .location(AuthzUtil.buildURI(responseWrapper.getRedirectURL())).build();
-                    } else {
-                        return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(responseWrapper.getContent())
-                                .build();
-                    }
-                } else {
-                    try {
-                        String serviceProviderId = AuthzUtil.getServiceProvider(oAuthMessage.getRequest()
-                                .getParameter(OAuthConstants.OAuth20Params.CLIENT_ID)).getApplicationResourceId();
-                        requestWrapper.setParameter(Constants.SERVICE_PROVIDER_ID, serviceProviderId);
-                    } catch (Exception e) {
-                        // The value is set to be used for branding purposes. Therefore, if an error occurs,
-                        // the process should continue without breaking.
-                        log.error("Error occurred while getting service provider id.");
-                    }
-                    return handleInitialAuthzChallengeRequest(requestWrapper, oAuthMessage.getResponse(), true);
-                }
-            } else {
-                requestWrapper
-                        .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
-                return handleInitialAuthzChallengeRequest(requestWrapper, oAuthMessage.getResponse(), true);
-            }
-        } catch (AuthServiceException e) {
-            return AuthzUtil.handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
-        } catch (IOException | URLBuilderException | IdentityOAuth2Exception e) {
-            return AuthzUtil.handleAuthenticationFrameworkError(oAuthMessage, e);
-        }
-    }
-
-    public static Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
-
-        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
-        if (authServiceResponse.getErrorInfo().isPresent()) {
-            AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
-            String errorCode = errorInfo.getErrorCode();
-            Pair<String, String> errorMapping = AuthzUtil.mapFrameworkError(errorCode.split("-")[1]);
-            String error = errorMapping.getLeft();
-            String errorDescription = errorMapping.getRight();
-
-            if (errorDescription == null) {
-                errorDescription = errorInfo.getErrorDescription();
-            }
-
-            response.setError(error);
-            response.setErrorDescription(errorDescription);
-        } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Error info is not present in the authentication service response. " +
-                        "Setting default error details.");
-            }
-            response.setError(ApiAuthnUtils.getDefaultAuthenticationFailureError().message());
-            response.setErrorDescription(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
-        }
-        String jsonString = new Gson().toJson(response);
-        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
-    }
-
-    public static OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
+    private OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
         OAuth2AuthzChallengeReqDTO dto = new OAuth2AuthzChallengeReqDTO();
 
         dto.setClientId(request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
@@ -643,6 +450,16 @@ public class AuthzChallengeEndpoint {
                 }
             }
         }
+    }
+
+    private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonNode = objectMapper.readTree(payload);
+
+        ObjectNode objectNode = (ObjectNode) jsonNode;
+        JsonNode authSessionValue = objectNode.remove(AUTH_SESSION);
+        objectNode.set(FLOW_ID, authSessionValue);
+        return objectMapper.writeValueAsString(objectNode);
     }
 }
 
