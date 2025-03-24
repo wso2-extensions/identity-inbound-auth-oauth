@@ -42,6 +42,7 @@
             <class name="org.wso2.carbon.identity.oidc.session.cache.OIDCSessionParticipantCacheTest"/>
             <class name="org.wso2.carbon.identity.oidc.session.cache.OIDCSessionDataCacheTest"/>
             <class name="org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfigurationTest" />
+            <class name="org.wso2.carbon.identity.oidc.session.backchannellogout.DefaultLogoutTokenBuilderTest"/>
         </classes>
     </test>
 </suite>

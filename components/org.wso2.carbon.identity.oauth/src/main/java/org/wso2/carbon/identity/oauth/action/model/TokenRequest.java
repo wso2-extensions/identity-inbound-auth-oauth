@@ -18,9 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.action.model;
 
-import org.wso2.carbon.identity.action.execution.model.Header;
-import org.wso2.carbon.identity.action.execution.model.Param;
-import org.wso2.carbon.identity.action.execution.model.Request;
+import org.wso2.carbon.identity.action.execution.api.model.Header;
+import org.wso2.carbon.identity.action.execution.api.model.Param;
+import org.wso2.carbon.identity.action.execution.api.model.Request;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * This class models the request at a pre issue access token trigger.
  * TokenRequest is the entity that represents the request that is sent to Action
- * over {@link org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest}.
+ * over {@link org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest}.
  */
 public class TokenRequest extends Request {
 

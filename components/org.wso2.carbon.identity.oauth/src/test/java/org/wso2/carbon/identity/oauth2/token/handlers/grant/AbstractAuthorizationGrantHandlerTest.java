@@ -29,10 +29,10 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.identity.action.execution.ActionExecutorService;
-import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
-import org.wso2.carbon.identity.action.execution.model.ActionType;
-import org.wso2.carbon.identity.action.execution.model.SuccessStatus;
+import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.api.model.ActionType;
+import org.wso2.carbon.identity.action.execution.api.model.SuccessStatus;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutorService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
@@ -80,7 +80,6 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -128,7 +127,7 @@ public class AbstractAuthorizationGrantHandlerTest {
 
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(mockActionExecutionService);
         MockitoAnnotations.initMocks(this);
-        when(mockActionExecutionService.execute(any(ActionType.class), anyMap(), any())).thenReturn(
+        when(mockActionExecutionService.execute(any(ActionType.class), any(), any())).thenReturn(
                 new SuccessStatus.Builder().build());
 
         authenticatedUser.setUserName("randomUser");

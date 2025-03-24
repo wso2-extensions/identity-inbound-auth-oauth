@@ -320,7 +320,14 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 log.debug("No claims cached against the authorization_code for user: " + requestMsgCtx.
                         getAuthorizedUser() + ". Retrieving claims cached against the access_token.");
             }
-            userAttributes = getUserAttributesCachedAgainstToken(getAccessToken(requestMsgCtx));
+            OauthTokenIssuer tokenIssuer = getTokenIssuer(requestMsgCtx);
+            String accessToken = getAccessToken(requestMsgCtx);
+            String accessTokenHash = accessToken;
+            if (tokenIssuer != null && accessToken != null) {
+                // For the JWT tokens the hash is the JTI.
+                accessTokenHash = tokenIssuer.getAccessTokenHash(accessToken);
+            }
+            userAttributes = getUserAttributesCachedAgainstToken(accessTokenHash);
             if (log.isDebugEnabled()) {
                 log.debug("Retrieving claims cached against access_token for user: " +
                         requestMsgCtx.getAuthorizedUser());
@@ -350,21 +357,6 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
                 log.debug("No claims found in user in user attributes for user : " + requestMsgCtx.getAuthorizedUser());
             }
 
-            /*
-            The purpose of this segment is retrieving the user attributes at the refresh grant while the caches
-            are disabled. The code/token acts as the key in cache layer while access token hash acts as the key for
-            entries in the persistence layer(SessionStore).
-            At this point, the token indicated by RefreshGrantHandler.PREV_ACCESS_TOKEN is no longer
-            present in the caches or the persistence layer because a new access token has already been generated
-            and added to the cache with new token references. However, RefreshGrantHandler.PREV_ACCESS_TOKEN cannot
-            yet be replaced with the new access token since the refresh token has not been generated, and
-            the new token is not yet considered "previous" by definition.
-             */
-            String latestAccessTokenHash = getLatestAccessTokenHash(requestMsgCtx);
-            if (StringUtils.isNotBlank(latestAccessTokenHash)) {
-                userAttributes = getUserAttributesCachedAgainstToken(latestAccessTokenHash);
-            }
-
             Object previousAccessTokenObject = requestMsgCtx.getProperty(RefreshGrantHandler.PREV_ACCESS_TOKEN);
 
             if (previousAccessTokenObject != null) {
@@ -387,44 +379,28 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     }
 
     /**
-     * The access token hash acts as the key for entries in the SessionStore.
-     * This method retrieves the access token hash for OAuthConstants.ACCESS_TOKEN from the properties
-     * of OAuthTokenReqMessageContext treating it as the latest access token. It determines the type
-     * of access token (opaque or JWT) via the OAuth token issuer and obtains the access token hash accordingly.
-     * This method is useful for retrieving access tokens when the cache is disabled and
-     * SessionStore persistence is employed.
+     * Retrieves the token issuer for the given OAuth token request message context.
      *
      * @param oAuthTokenReqMessageContext The context of the OAuth token request containing necessary properties.
-     * @return The hash of the latest access token if available and valid, otherwise null.
+     * @return The token issuer for the OAuth application.
      * @throws IdentityOAuth2Exception If an error occurs while selecting the OAuth2 token issuer.
-     * @throws OAuthSystemException    If there is an error while generating the access token hash.
      */
-    private String getLatestAccessTokenHash(OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
-            throws IdentityOAuth2Exception, OAuthSystemException {
+    private OauthTokenIssuer getTokenIssuer(OAuthTokenReqMessageContext oAuthTokenReqMessageContext)
+            throws IdentityOAuth2Exception {
 
-        // The OAuthConstants.ACCESS_TOKEN is considered as the latest access token.
-        Object latestAccessTokenObj = getAccessToken(oAuthTokenReqMessageContext);
-        if (latestAccessTokenObj != null && StringUtils.isNotBlank(latestAccessTokenObj.toString())) {
+        Object oAuthAppDOObj = oAuthTokenReqMessageContext.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
+        if (oAuthAppDOObj != null) {
+            try {
+                OAuthAppDO oAuthAppDO = (OAuthAppDO) oAuthAppDOObj;
+                return OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
+            } catch (ClassCastException e) {
+                log.error("Error occurred while retrieving the token issuer", e);
 
-            Object oAuthAppDOObj = oAuthTokenReqMessageContext.getProperty(AccessTokenIssuer.OAUTH_APP_DO);
-
-            if (oAuthAppDOObj != null) {
-                try {
-                    OAuthAppDO oAuthAppDO = (OAuthAppDO) oAuthAppDOObj;
-                    OauthTokenIssuer tokenIssuer = OAuth2Util.getOAuthTokenIssuerForOAuthApp(oAuthAppDO);
-                    if (tokenIssuer != null) {
-                        String latestAccessToken = latestAccessTokenObj.toString();
-                        return tokenIssuer.getAccessTokenHash(latestAccessToken);
-                    }
-                } catch (ClassCastException e) {
-                    log.error("Error occurred while generating the access token hash at user attribute " +
-                            "retrieval", e);
-
-                }
             }
         }
         return null;
     }
+
     private Map<String, Object> retrieveClaimsForLocalUser(OAuthTokenReqMessageContext requestMsgCtx)
             throws IdentityOAuth2Exception {
 

@@ -24,11 +24,12 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
-import org.wso2.carbon.identity.action.execution.exception.ActionExecutionException;
-import org.wso2.carbon.identity.action.execution.model.ActionExecutionStatus;
-import org.wso2.carbon.identity.action.execution.model.ActionType;
-import org.wso2.carbon.identity.action.execution.model.Error;
-import org.wso2.carbon.identity.action.execution.model.Failure;
+import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionException;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionStatus;
+import org.wso2.carbon.identity.action.execution.api.model.ActionType;
+import org.wso2.carbon.identity.action.execution.api.model.Error;
+import org.wso2.carbon.identity.action.execution.api.model.Failure;
+import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.inbound.FrameworkClientException;
@@ -77,12 +78,9 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -843,14 +841,11 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
 
             setCustomizedAccessTokenAttributesToMessageContext(refreshTokenValidationDataDO, tokenReqMessageContext);
 
-            Map<String, Object> additionalProperties = new HashMap<>();
-            Consumer<Map<String, Object>> mapInitializer =
-                    map -> map.put("tokenMessageContext", tokenReqMessageContext);
-            mapInitializer.accept(additionalProperties);
+            FlowContext flowContext = FlowContext.create().add("tokenMessageContext", tokenReqMessageContext);
 
             try {
                 executionStatus = OAuthComponentServiceHolder.getInstance().getActionExecutorService()
-                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, additionalProperties,
+                        .execute(ActionType.PRE_ISSUE_ACCESS_TOKEN, flowContext,
                                 IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId()));
                 if (log.isDebugEnabled()) {
                     log.debug(String.format(

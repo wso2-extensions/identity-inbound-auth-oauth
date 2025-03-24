@@ -21,18 +21,20 @@ package org.wso2.carbon.identity.oauth.action.execution;
 import com.nimbusds.jwt.JWTClaimsSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.action.execution.ActionExecutionRequestBuilder;
-import org.wso2.carbon.identity.action.execution.exception.ActionExecutionRequestBuilderException;
-import org.wso2.carbon.identity.action.execution.model.ActionExecutionRequest;
-import org.wso2.carbon.identity.action.execution.model.ActionType;
-import org.wso2.carbon.identity.action.execution.model.AllowedOperation;
-import org.wso2.carbon.identity.action.execution.model.Event;
-import org.wso2.carbon.identity.action.execution.model.Operation;
-import org.wso2.carbon.identity.action.execution.model.Organization;
-import org.wso2.carbon.identity.action.execution.model.Request;
-import org.wso2.carbon.identity.action.execution.model.Tenant;
-import org.wso2.carbon.identity.action.execution.model.User;
-import org.wso2.carbon.identity.action.execution.model.UserStore;
+import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
+import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequestContext;
+import org.wso2.carbon.identity.action.execution.api.model.ActionType;
+import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
+import org.wso2.carbon.identity.action.execution.api.model.Event;
+import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
+import org.wso2.carbon.identity.action.execution.api.model.Operation;
+import org.wso2.carbon.identity.action.execution.api.model.Organization;
+import org.wso2.carbon.identity.action.execution.api.model.Request;
+import org.wso2.carbon.identity.action.execution.api.model.Tenant;
+import org.wso2.carbon.identity.action.execution.api.model.User;
+import org.wso2.carbon.identity.action.execution.api.model.UserStore;
+import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -80,11 +82,12 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     @Override
-    public ActionExecutionRequest buildActionExecutionRequest(Map<String, Object> eventContext)
+    public ActionExecutionRequest buildActionExecutionRequest(FlowContext flowContext,
+                                                              ActionExecutionRequestContext actionExecutionContext)
             throws ActionExecutionRequestBuilderException {
 
         OAuthTokenReqMessageContext tokenMessageContext =
-                (OAuthTokenReqMessageContext) eventContext.get("tokenMessageContext");
+                flowContext.getValue("tokenMessageContext", OAuthTokenReqMessageContext.class);
 
         Map<String, Object> additionalClaimsToAddToToken = getAdditionalClaimsToAddToToken(tokenMessageContext);
 

@@ -18,8 +18,10 @@
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.user.UserInfoAccessTokenValidator;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
@@ -96,9 +98,16 @@ public class UserInfoISAccessTokenValidator implements UserInfoAccessTokenValida
         }
 
         try {
-            if (accessTokenDO != null && request != null &&
-                    OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey()).
-                    isTokenBindingValidationEnabled() && !isValidTokenBinding(response.getTokenBinding(), request)) {
+            OAuthAppDO appDO;
+            String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+            if (StringUtils.isNotEmpty(appResidentTenantDomain)) {
+                appDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(),
+                        appResidentTenantDomain);
+            } else {
+                appDO = OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey());
+            }
+            if (accessTokenDO != null && request != null && appDO.isTokenBindingValidationEnabled() &&
+                    !isValidTokenBinding(response.getTokenBinding(), request)) {
                     throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST,
                             "Valid token binding value not present in the request.");
             }

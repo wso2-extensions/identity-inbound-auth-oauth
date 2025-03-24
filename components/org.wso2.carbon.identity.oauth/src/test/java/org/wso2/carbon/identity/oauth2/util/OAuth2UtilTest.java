@@ -95,6 +95,7 @@ import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.UserStoreException;
@@ -2986,5 +2987,37 @@ public class OAuth2UtilTest {
         modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
 
         field.set(null, value);
+    }
+
+    @DataProvider(name = "appResidentOrganizationIdProvider")
+    public Object[][] appResidentOrganizationIdProvider() {
+
+        return new Object[][]{
+                {"application-resident-org-id", "application-resident-tenant-domain"},
+                {null, null}
+        };
+    }
+
+    @Test(dataProvider = "appResidentOrganizationIdProvider")
+    public void testGetAppResidentTenantDomain(String appResidentOrgId, String expected) throws Exception {
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId())
+                .thenReturn(appResidentOrgId);
+        lenient().when(organizationManagerMock.resolveTenantDomain(appResidentOrgId)).thenReturn(expected);
+        assertEquals(OAuth2Util.getAppResidentTenantDomain(), expected);
+    }
+
+    @Test(expectedExceptions = IdentityOAuth2Exception.class,
+            expectedExceptionsMessageRegExp = "Error occurred while resolving the tenant domain for the " +
+                    "organization id.")
+    public void testGetAppResidentTenantDomainWithException() throws Exception {
+
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getApplicationResidentOrganizationId())
+                .thenReturn("application-resident-org-id");
+        lenient().when(organizationManagerMock.resolveTenantDomain("application-resident-org-id")).
+                thenThrow(OrganizationManagementException.class);
+        OAuth2Util.getAppResidentTenantDomain();
     }
 }
