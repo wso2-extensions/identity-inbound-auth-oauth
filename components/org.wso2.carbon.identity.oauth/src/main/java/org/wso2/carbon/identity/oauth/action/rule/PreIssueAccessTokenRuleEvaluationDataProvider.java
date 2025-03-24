@@ -33,7 +33,9 @@ import org.wso2.carbon.identity.rule.evaluation.api.model.ValueType;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Rule evaluation data provider for pre issue access token flow.
@@ -85,17 +87,22 @@ public class PreIssueAccessTokenRuleEvaluationDataProvider implements RuleEvalua
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
         List<FieldValue> fieldValueList = new ArrayList<>();
+        Set<String> evaluatedFieldName = new HashSet<>();
 
         for (Field field : ruleEvaluationContext.getFields()) {
-            switch (RuleField.valueOfFieldName(field.getName())) {
-                case APPLICATION:
-                    addApplicationFieldValue(fieldValueList, field, tokenReqDTO);
-                    break;
-                case GRANT_TYPE:
-                    fieldValueList.add(new FieldValue(field.getName(), tokenReqDTO.getGrantType(), ValueType.STRING));
-                    break;
-                default:
-                    throw new RuleEvaluationDataProviderException("Unsupported field: " + field.getName());
+            if (!evaluatedFieldName.contains(field.getName())) {
+                switch (RuleField.valueOfFieldName(field.getName())) {
+                    case APPLICATION:
+                        addApplicationFieldValue(fieldValueList, field, tokenReqDTO);
+                        break;
+                    case GRANT_TYPE:
+                        fieldValueList.add(
+                                new FieldValue(field.getName(), tokenReqDTO.getGrantType(), ValueType.STRING));
+                        break;
+                    default:
+                        throw new RuleEvaluationDataProviderException("Unsupported field: " + field.getName());
+                }
+                evaluatedFieldName.add(field.getName());
             }
         }
 
