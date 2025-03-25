@@ -4501,6 +4501,9 @@ public class AuthzUtil {
 
     public static boolean isApiBasedAuthenticationFlow(OAuthMessage oAuthMessage) {
 
+        if (isAuthzChallenge(oAuthMessage.getRequest())) {
+            return true;
+        }
         OAuth2Parameters oAuth2Parameters = getOauth2Params(oAuthMessage);
         if (oAuth2Parameters != null) {
             return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
