@@ -95,6 +95,7 @@ public class ApiAuthnHandler {
     }
 
     public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) {
+
         AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
         response.setAuthSession(authResponse.getFlowId());
         response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
@@ -106,6 +107,7 @@ public class ApiAuthnHandler {
     }
 
     public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) {
+
         AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
         response.setAuthSession(authResponse.getFlowId());
         response.setError(AuthzChallengeConstants.Error.REDIRECT_TO_WEB.value());

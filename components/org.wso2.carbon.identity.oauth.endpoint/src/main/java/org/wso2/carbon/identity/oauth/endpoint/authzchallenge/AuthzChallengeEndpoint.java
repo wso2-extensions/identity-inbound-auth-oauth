@@ -22,33 +22,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationService;
-import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
-import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthRequestWrapper;
-import org.wso2.carbon.identity.application.authentication.framework.model.CommonAuthResponseWrapper;
-import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
-import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
-import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
-import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
-import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
@@ -59,7 +48,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
-import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
@@ -73,10 +61,7 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
-import org.wso2.carbon.identity.openidconnect.model.Constants;
-import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -85,7 +70,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
@@ -202,8 +186,8 @@ public class AuthzChallengeEndpoint {
     private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request,
                                                            @Context HttpServletResponse response, String payload)
             throws AuthServiceException, InvalidRequestParentException, URISyntaxException {
-        try {
 
+        try {
             payload = renameAuthSessionToFlowId(payload);
             request.setAttribute(ATTR_AUTHZ_CHALLENGE, true);
             AuthRequest authRequest = ApiAuthnUtils.buildAuthRequest(payload);
@@ -245,8 +229,8 @@ public class AuthzChallengeEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces({"text/html", "application/json"})
     public Response authorizeChallengeInitialPost(@Context HttpServletRequest request,
-                                           @Context HttpServletResponse response,
-                                           MultivaluedMap paramMap) {
+                                           @Context HttpServletResponse response, MultivaluedMap paramMap) {
+
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
@@ -289,6 +273,7 @@ public class AuthzChallengeEndpoint {
     @Produces("application/json")
     public Response authorizeChallengeSubsequentPost(@Context HttpServletRequest request,
                                                      @Context HttpServletResponse response, String payload) {
+
         try {
             if (payload != null && payload.contains(AUTH_SESSION)) {
                 return handleSubsequentAuthzChallengeRequest(request, response, payload);
@@ -309,6 +294,7 @@ public class AuthzChallengeEndpoint {
     }
 
     private OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
+
         OAuth2AuthzChallengeReqDTO dto = new OAuth2AuthzChallengeReqDTO();
 
         dto.setClientId(request.getParameter(OAuthConstants.OAuth20Params.CLIENT_ID));
@@ -317,9 +303,7 @@ public class AuthzChallengeEndpoint {
         dto.setState(request.getParameter(OAuthConstants.OAuth20Params.STATE));
         dto.setScope(request.getParameter(OAuthConstants.OAuth20Params.SCOPE));
         dto.setAuthSession(request.getParameter(AUTH_SESSION));
-
         dto.setHttpRequestHeaders(extractHeaders(request));
-
         dto.setHttpServletRequestWrapper(new HttpServletRequestWrapper(request));
 
         return dto;
@@ -332,6 +316,7 @@ public class AuthzChallengeEndpoint {
      * @return An array of HttpRequestHeader objects containing the header name and values
      */
     private static HttpRequestHeader[] extractHeaders(HttpServletRequest request) {
+
         Enumeration<String> headerNames = request.getHeaderNames();
 
         if (headerNames == null || !headerNames.hasMoreElements()) {
@@ -369,6 +354,7 @@ public class AuthzChallengeEndpoint {
      */
     private void processDPoPHeader(HttpServletRequest request, OAuthMessage oAuthMessage)
             throws IdentityOAuth2Exception {
+
         AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance()
                 .getAuthzChallengeInterceptorHandlerProxy();
 
@@ -453,12 +439,11 @@ public class AuthzChallengeEndpoint {
     }
 
     private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode jsonNode = objectMapper.readTree(payload);
 
-        ObjectNode objectNode = (ObjectNode) jsonNode;
-        JsonNode authSessionValue = objectNode.remove(AUTH_SESSION);
-        objectNode.set(FLOW_ID, authSessionValue);
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectNode objectNode = (ObjectNode) objectMapper.readTree(payload);
+
+        objectNode.set(FLOW_ID, objectNode.remove(AUTH_SESSION));
         return objectMapper.writeValueAsString(objectNode);
     }
 }

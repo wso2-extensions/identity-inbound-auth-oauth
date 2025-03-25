@@ -16,16 +16,18 @@ public class AuthzChallengeConstants {
         private final String value;
 
         Error(String value) {
-            this.value = value;
 
+            this.value = value;
         }
 
         public String value() {
+
             return value;
         }
 
         @Override
         public String toString() {
+
             return value;
         }
     }

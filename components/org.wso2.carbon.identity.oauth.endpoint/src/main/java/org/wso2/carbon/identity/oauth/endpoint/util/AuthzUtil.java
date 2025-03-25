@@ -993,8 +993,10 @@ public class AuthzUtil {
         }
     }
 
-    private static void handleDeniedConsent(OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO,
-                                     ResponseModeProvider responseModeProvider) throws OAuthSystemException {
+    private static void handleDeniedConsent(
+            OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO,
+            ResponseModeProvider responseModeProvider)
+            throws OAuthSystemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
@@ -1569,7 +1571,8 @@ public class AuthzUtil {
         return false;
     }
 
-    private static String buildOIDCResponseWithURIFragment(OAuthResponse oauthResponse, OAuth2AuthorizeRespDTO authzRespDTO) {
+    private static String buildOIDCResponseWithURIFragment(OAuthResponse oauthResponse,
+                                                           OAuth2AuthorizeRespDTO authzRespDTO) {
 
         if (authzRespDTO.getCallbackURI().contains("?")) {
             return authzRespDTO.getCallbackURI() + "#" + StringUtils.substring(oauthResponse.getLocationUri()
@@ -1619,7 +1622,8 @@ public class AuthzUtil {
         }
     }
 
-    private static boolean isFormPostModeAndResponseBodyExists(OAuth2Parameters oauth2Params, OAuthResponse oauthResponse) {
+    private static boolean isFormPostModeAndResponseBodyExists(OAuth2Parameters oauth2Params,
+                                                               OAuthResponse oauthResponse) {
 
         return (OAuthConstants.ResponseModes.FORM_POST.equals(oauth2Params.getResponseMode()) ||
                 OAuthConstants.ResponseModes.FORM_POST_JWT.equals(oauth2Params.getResponseMode()))
@@ -3598,9 +3602,8 @@ public class AuthzUtil {
         }
     }
 
-    private static String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                                              OAuth2Parameters oauth2Params, AuthorizationResponseDTO
-                                                                      authorizationResponseDTO)
+    private static String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState
+            sessionState, OAuth2Parameters oauth2Params, AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
@@ -3792,7 +3795,8 @@ public class AuthzUtil {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
             AuthzUtil.invokeCommonauthFlow(oAuthMessage, responseWrapper);
             return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
-        } catch (ServletException | IOException | URLBuilderException | AuthServiceException | IdentityOAuth2Exception e) {
+        } catch (ServletException | IOException | URLBuilderException | AuthServiceException |
+                 IdentityOAuth2Exception e) {
             log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -3820,7 +3824,8 @@ public class AuthzUtil {
         oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
                 .UNKNOWN);
         if (isAuthzChallenge(oAuthMessage.getRequest())) {
-            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(), oAuthMessage.getResponse(), true);
+            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(),
+                    oAuthMessage.getResponse(), true);
         }
         return oAuth2AuthzEndpoint.authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
     }
@@ -4942,6 +4947,7 @@ public class AuthzUtil {
      * @return Response object with HTTP 400 (Bad Request)
      */
     public static Response buildAuthzChallengeResponseForClientError(AuthServiceClientException exception, Log log) {
+
         if (log.isDebugEnabled()) {
             log.debug("Client error while handling authentication request.", exception);
         }
@@ -4968,6 +4974,7 @@ public class AuthzUtil {
      * @return Error code and error description.
      */
     public static Pair<String, String> mapFrameworkError(String frameworkErrorCode) {
+
         switch (frameworkErrorCode) {
             case "60002":
             case "60011":

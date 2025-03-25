@@ -370,11 +370,13 @@ public class ApiAuthnUtils {
 
     public static Response handleFailIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse
             authServiceResponse) throws AuthServiceException {
+
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(request, authResponse);
     }
 
-    public static Response handleFailCompletedAuthResponse(HttpServletRequest request, AuthServiceResponse authServiceResponse) {
+    public static Response handleFailCompletedAuthResponse(HttpServletRequest request,
+                                                           AuthServiceResponse authServiceResponse) {
 
         String jsonString;
         if (AuthzUtil.isAuthzChallenge(request)) {
@@ -432,13 +434,5 @@ public class ApiAuthnUtils {
     public static AuthServiceConstants.ErrorMessage getDefaultAuthenticationFailureError() {
 
         return AuthServiceConstants.ErrorMessage.ERROR_AUTHENTICATION_FAILURE;
-    }
-
-    public static OAuthRequestWrapper createInternalRequest(HttpServletRequest request, String callerSessionDataKey) {
-        Map<String, List<String>> internalParamsList = new HashMap<>();
-        internalParamsList.put(OAuthConstants.SESSION_DATA_KEY, Collections.singletonList(callerSessionDataKey));
-        OAuthRequestWrapper internalRequest = new OAuthRequestWrapper(request, internalParamsList);
-        internalRequest.setInternalRequest(true);
-        return internalRequest;
     }
 }
