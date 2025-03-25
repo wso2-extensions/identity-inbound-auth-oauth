@@ -60,12 +60,12 @@ public class PreIssueAccessTokenResponseProcessorTest {
     private AccessToken.Builder requestAccessTokenBuilder;
     private MockedStatic<LoggerUtils> loggerUtils;
 
-    String original_iss = "https://localhost:9443/oauth2/token";
-    String original_sub = "3da43e1c-4087-46e2-ad46-08ccc76bf616";
-    String original_aud = "k58gg864hKaeLet9v7HkrFbhqsa";
-    String original_expire_in = "1742553132";
-    String original_clientId = "7k58gg864hKaeLet9v7HkrFbhqsa";
-    String original_applicationUser = "APPLICATION_USER";
+    static final String ORIGINAL_ISS = "https://localhost:9443/oauth2/token";
+    static final String ORIGINAL_SUB = "3da43e1c-4087-46e2-ad46-08ccc76bf616";
+    static final String ORIGINAL_AUD = "k58gg864hKaeLet9v7HkrFbhqsa";
+    static final String ORIGINAL_EXPIRE_IN = "1742553132";
+    static final String ORIGINAL_CLIENT_ID = "7k58gg864hKaeLet9v7HkrFbhqsa";
+    static final String ORIGINAL_APPLICATION_USER = "APPLICATION_USER";
 
     @BeforeClass
     public void init() {
@@ -75,13 +75,13 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         requestAccessTokenBuilder = new AccessToken.Builder()
                 .tokenType("JWT")
-                .addClaim(AccessToken.ClaimNames.ISS.getName(), original_iss)
-                .addClaim(AccessToken.ClaimNames.SUB.getName(), original_sub)
+                .addClaim(AccessToken.ClaimNames.ISS.getName(), ORIGINAL_ISS)
+                .addClaim(AccessToken.ClaimNames.SUB.getName(), ORIGINAL_SUB)
                 .addClaim(AccessToken.ClaimNames.AUD.getName(),
-                        List.of(original_aud))
-                .addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(), original_expire_in)
-                .addClaim(AccessToken.ClaimNames.CLIENT_ID.getName(), original_clientId)
-                .addClaim(AccessToken.ClaimNames.AUTHORIZED_USER_TYPE.getName(), original_applicationUser)
+                        List.of(ORIGINAL_AUD))
+                .addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(), ORIGINAL_EXPIRE_IN)
+                .addClaim(AccessToken.ClaimNames.CLIENT_ID.getName(), ORIGINAL_CLIENT_ID)
+                .addClaim(AccessToken.ClaimNames.AUTHORIZED_USER_TYPE.getName(), ORIGINAL_APPLICATION_USER)
                 .addScope("openid")
                 .addScope("email")
                 .addScope("profile");
@@ -139,20 +139,20 @@ public class PreIssueAccessTokenResponseProcessorTest {
 
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("aud"));
         assertEquals(oAuthTokenReqMessageContext.getAudiences().size(), 2);
-        assertTrue(oAuthTokenReqMessageContext.getAudiences().contains(String.valueOf(original_aud)));
+        assertTrue(oAuthTokenReqMessageContext.getAudiences().contains(ORIGINAL_AUD));
         assertTrue(oAuthTokenReqMessageContext.getAudiences().contains(String.valueOf(addOpAud.getValue())));
     }
 
     @Test
     void testProcessSuccessResponse_WithInvalidAudObj() throws ActionExecutionResponseProcessorException {
 
-        List<String> new_aud = Arrays.asList("https://example1.com/resource", "https://example2.com/resource");
+        List<String> newlyAddedAUD = Arrays.asList("https://example1.com/resource", "https://example2.com/resource");
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         PerformableOperation addOpInvalidAudObj = new PerformableOperation();
         addOpInvalidAudObj.setOp(Operation.ADD);
         addOpInvalidAudObj.setPath(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-");
-        addOpInvalidAudObj.setValue(new_aud);
+        addOpInvalidAudObj.setValue(newlyAddedAUD);
         operationsToPerform.add(addOpInvalidAudObj);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
@@ -162,7 +162,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
         assertFalse(oAuthTokenReqMessageContext.getAudiences().contains(addOpInvalidAudObj));
 
         assertEquals(oAuthTokenReqMessageContext.getAudiences().size(), 1);
-        assertTrue(oAuthTokenReqMessageContext.getAudiences().contains(original_aud));
+        assertTrue(oAuthTokenReqMessageContext.getAudiences().contains(ORIGINAL_AUD));
     }
 
     @Test
