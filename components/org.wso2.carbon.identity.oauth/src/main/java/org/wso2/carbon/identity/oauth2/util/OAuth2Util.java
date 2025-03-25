@@ -370,6 +370,8 @@ public class OAuth2Util {
     private static final String SHA256_WITH_PS = "SHA256withPS";
     private static final String PS256 = "PS256";
     private static final String ES256 = "ES256";
+    private static final String RS384 = "RS384";
+    private static final String ES384 = "ES384";
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
@@ -2776,7 +2778,7 @@ public class OAuth2Util {
             return new JWSAlgorithm(JWSAlgorithm.NONE.getName());
         } else if (SHA256_WITH_RSA.equals(signatureAlgorithm)) {
             return JWSAlgorithm.RS256;
-        } else if (SHA384_WITH_RSA.equals(signatureAlgorithm)) {
+        } else if (SHA384_WITH_RSA.equals(signatureAlgorithm) || RS384.equals(signatureAlgorithm)) {
             return JWSAlgorithm.RS384;
         } else if (SHA512_WITH_RSA.equals(signatureAlgorithm)) {
             return JWSAlgorithm.RS512;
@@ -2788,7 +2790,7 @@ public class OAuth2Util {
             return JWSAlgorithm.HS512;
         } else if (SHA256_WITH_EC.equals(signatureAlgorithm) || ES256.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES256;
-        } else if (SHA384_WITH_EC.equals(signatureAlgorithm)) {
+        } else if (SHA384_WITH_EC.equals(signatureAlgorithm) || ES384.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES384;
         } else if (SHA512_WITH_EC.equals(signatureAlgorithm)) {
             return JWSAlgorithm.ES512;
