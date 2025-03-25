@@ -314,6 +314,7 @@ public class OAuthServerConfiguration {
     // By default, this is true because OIDC claims are not required for client credential grant type
     // and CC grant doesn't involve a user.
     private boolean skipOIDCClaimsForClientCredentialGrant = true;
+    private boolean showAuthFailureReasonForPasswordGrant = false;
 
     private String tokenValueGeneratorClassName;
     //property to define hashing algorithm when enabling hashing of tokens and authorization codes.
@@ -488,6 +489,8 @@ public class OAuthServerConfiguration {
 
         parseSkipOIDCClaimsForClientCredentialGrantConfig(oauthElem);
 
+        parseShowAuthFailureReasonForPasswordGrant(oauthElem);
+
         // parse OAuth 2.0 token generator
         parseOAuthTokenGeneratorConfig(oauthElem);
 
@@ -645,6 +648,17 @@ public class OAuthServerConfiguration {
         if (skipOIDCClaimsForClientCredentialGrantElement != null) {
             skipOIDCClaimsForClientCredentialGrant = Boolean.parseBoolean(
                     skipOIDCClaimsForClientCredentialGrantElement.getText().trim());
+        }
+    }
+
+    private void parseShowAuthFailureReasonForPasswordGrant(OMElement oauthElem) {
+
+        OMElement showAuthFailureReasonForPasswordGrantElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements
+                        .SHOW_AUTH_FAILURE_REASON_FOR_PASSWORD_GRANT));
+        if (showAuthFailureReasonForPasswordGrantElement != null) {
+            showAuthFailureReasonForPasswordGrant = Boolean.parseBoolean(
+                    showAuthFailureReasonForPasswordGrantElement.getText().trim());
         }
     }
 
@@ -897,6 +911,12 @@ public class OAuthServerConfiguration {
 
         return skipOIDCClaimsForClientCredentialGrant;
     }
+
+    public boolean isShowAuthFailureReasonForPasswordGrant() {
+
+        return showAuthFailureReasonForPasswordGrant;
+    }
+
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
@@ -4402,6 +4422,8 @@ public class OAuthServerConfiguration {
 
         private static final String SKIP_OIDC_CLAIMS_FOR_CLIENT_CREDENTIAL_GRANT =
                 "SkipOIDCClaimsForClientCredentialGrant";
+        private static final String SHOW_AUTH_FAILURE_REASON_FOR_PASSWORD_GRANT =
+                "ShowAuthFailureReasonForPasswordGrant";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
         private static final String USE_LEGACY_SCOPES_AS_ALIAS_FOR_NEW_SCOPES = "UseLegacyScopesAsAliasForNewScopes";
