@@ -22,6 +22,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.mockito.MockedStatic;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionResponseProcessorException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionResponseContext;
@@ -66,6 +67,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
     static final String ORIGINAL_EXPIRE_IN = "1742553132";
     static final String ORIGINAL_CLIENT_ID = "7k58gg864hKaeLet9v7HkrFbhqsa";
     static final String ORIGINAL_APPLICATION_USER = "APPLICATION_USER";
+    static final String[] ORIGINAL_SCOPES = new String[]{"openid", "email", "profile"};
 
     @BeforeClass
     public void init() {
@@ -82,43 +84,50 @@ public class PreIssueAccessTokenResponseProcessorTest {
                 .addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(), ORIGINAL_EXPIRE_IN)
                 .addClaim(AccessToken.ClaimNames.CLIENT_ID.getName(), ORIGINAL_CLIENT_ID)
                 .addClaim(AccessToken.ClaimNames.AUTHORIZED_USER_TYPE.getName(), ORIGINAL_APPLICATION_USER)
-                .addScope("openid")
-                .addScope("email")
-                .addScope("profile");
+                .addClaim("CustomClaimName", "CustomClaim")
+                .addScope(ORIGINAL_SCOPES[0])
+                .addScope(ORIGINAL_SCOPES[1])
+                .addScope(ORIGINAL_SCOPES[2]);
     }
 
     @Test
-    void testProcessSuccessResponse_WithInvalidScopePath() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponse_AddScope_InvalidPath() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         List<String> customScopes = Arrays.asList("abc", "def");
+        PerformableOperation addOpScopeAsClaims =
+                createPerformableOperation(Operation.ADD, CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                        new AccessToken.Claim("scope", customScopes));
 
-        PerformableOperation addOpScopeAsClaims = new PerformableOperation();
-        addOpScopeAsClaims.setOp(Operation.ADD);
-        addOpScopeAsClaims.setPath(CLAIMS_PATH_PREFIX + TAIL_CHARACTER);
-        addOpScopeAsClaims.setValue(new AccessToken.Claim("scope", customScopes));
         operationsToPerform.add(addOpScopeAsClaims);
 
         OAuthTokenReqMessageContext updatedAuthTokenReqMessageContext =
                 executeProcessSuccessResponse(operationsToPerform);
         assertFalse(
                 CollectionUtils.containsAny(Arrays.asList(updatedAuthTokenReqMessageContext.getScope()), customScopes));
-        assertEquals(updatedAuthTokenReqMessageContext.getScope(), new String[]{"openid", "email", "profile"});
+        assertEquals(updatedAuthTokenReqMessageContext.getScope(), ORIGINAL_SCOPES);
         assertNull(updatedAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("scope"));
     }
 
+    private PerformableOperation createPerformableOperation(Operation op, String path, Object value) {
+
+        PerformableOperation performableOperation = new PerformableOperation();
+        performableOperation.setOp(op);
+        performableOperation.setPath(path);
+        performableOperation.setValue(value);
+        return performableOperation;
+    }
+
     @Test
-    void testProcessSuccessResponse_WithValidScopePath() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponse_AddScope_ValidPath() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        PerformableOperation addOpAScope = new PerformableOperation();
-        addOpAScope.setOp(Operation.ADD);
-        addOpAScope.setPath(SCOPES_PATH_PREFIX + TAIL_CHARACTER);
-        addOpAScope.setValue("internal_user_mgt_update");
+        PerformableOperation addOpAScope =
+                createPerformableOperation(Operation.ADD, SCOPES_PATH_PREFIX + TAIL_CHARACTER,
+                        "internal_user_mgt_update");
         operationsToPerform.add(addOpAScope);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
-
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("scope"));
         assertTrue(
                 Arrays.asList(oAuthTokenReqMessageContext.getScope()).contains(String.valueOf(addOpAScope.getValue())));
@@ -126,13 +135,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_WithValidAudPath() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponse_AddAud_InvalidPath() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        PerformableOperation addOpAud = new PerformableOperation();
-        addOpAud.setOp(Operation.ADD);
-        addOpAud.setPath(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-");
-        addOpAud.setValue("https://example.com/resource");
+        PerformableOperation addOpAud = createPerformableOperation(Operation.ADD,
+                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", "https://example.com/resource");
         operationsToPerform.add(addOpAud);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
@@ -144,15 +151,13 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_WithInvalidAudObj() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponse_AddAud_InvalidObj() throws ActionExecutionResponseProcessorException {
 
         List<String> newlyAddedAUD = Arrays.asList("https://example1.com/resource", "https://example2.com/resource");
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        PerformableOperation addOpInvalidAudObj = new PerformableOperation();
-        addOpInvalidAudObj.setOp(Operation.ADD);
-        addOpInvalidAudObj.setPath(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-");
-        addOpInvalidAudObj.setValue(newlyAddedAUD);
+        PerformableOperation addOpInvalidAudObj = createPerformableOperation(Operation.ADD,
+                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", newlyAddedAUD);
         operationsToPerform.add(addOpInvalidAudObj);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
@@ -166,33 +171,170 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_WithValidClaim() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponse_AddClaim_Valid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        PerformableOperation addOpClaim = new PerformableOperation();
-        addOpClaim.setOp(Operation.ADD);
-        addOpClaim.setPath(CLAIMS_PATH_PREFIX + TAIL_CHARACTER);
-        addOpClaim.setValue(new AccessToken.Claim("isPermanent", true));
+        PerformableOperation addOpClaim = createPerformableOperation(Operation.ADD,
+                CLAIMS_PATH_PREFIX + TAIL_CHARACTER, new AccessToken.Claim("isPermanent", true));
         operationsToPerform.add(addOpClaim);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
-
         assertNotNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
     }
 
     @Test
-    void testProcessSuccessResponse_WithInvalidClaim() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponse_AddClaim_Invalid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
-        PerformableOperation addOpClaim = new PerformableOperation();
-        addOpClaim.setOp(Operation.ADD);
-        addOpClaim.setPath(CLAIMS_PATH_PREFIX);
-        addOpClaim.setValue(new AccessToken.Claim("isPermanent", true));
-        operationsToPerform.add(addOpClaim);
+        operationsToPerform.add(createPerformableOperation(Operation.ADD,
+                CLAIMS_PATH_PREFIX, new AccessToken.Claim("isPermanent", true)));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
 
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("isPermanent"));
+    }
+
+    @DataProvider(name = "scopeRemovalTestData")
+    public Object[][] scopeRemovalTestData() {
+
+        return new Object[][]{
+                {new String[]{SCOPES_PATH_PREFIX + TAIL_CHARACTER}, 2,
+                        new String[]{ORIGINAL_SCOPES[0], ORIGINAL_SCOPES[1]}, new String[]{ORIGINAL_SCOPES[2]}},
+                {new String[]{SCOPES_PATH_PREFIX + "1"}, 2, new String[]{ORIGINAL_SCOPES[0], ORIGINAL_SCOPES[2]},
+                        new String[]{ORIGINAL_SCOPES[1]}},
+                {new String[]{SCOPES_PATH_PREFIX + "2", SCOPES_PATH_PREFIX + "1"}, 1, new String[]{ORIGINAL_SCOPES[0]},
+                        new String[]{ORIGINAL_SCOPES[1], ORIGINAL_SCOPES[2]}}
+        };
+    }
+
+    @Test(dataProvider = "scopeRemovalTestData")
+    void testProcessSuccessResponse_RemoveScope_Valid(String[] paths, int expectedSize, String[] expectedScopes,
+                                                      String[] removedScopes)
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        for (String path : paths) {
+            operationsToPerform.add(createPerformableOperation(Operation.REMOVE, path, null));
+        }
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("scope"));
+        List<String> resultedScopes = Arrays.asList(oAuthTokenReqMessageContext.getScope());
+        assertEquals(resultedScopes.size(), expectedSize);
+        for (String scope : expectedScopes) {
+            assertTrue(resultedScopes.contains(scope));
+        }
+        for (String scope : removedScopes) {
+            assertFalse(resultedScopes.contains(scope));
+        }
+    }
+
+    @Test
+    void testProcessSuccessResponse_RemoveScope_Invalid() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE, SCOPES_PATH_PREFIX + TAIL_CHARACTER,
+                Arrays.asList(ORIGINAL_SCOPES[1], ORIGINAL_SCOPES[2])));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+
+        assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("scope"));
+
+        List<String> resultedScopes = Arrays.asList(oAuthTokenReqMessageContext.getScope());
+        assertNotEquals(resultedScopes.size(), 1);
+        assertTrue(resultedScopes.contains(ORIGINAL_SCOPES[0]));
+        assertTrue(resultedScopes.contains(ORIGINAL_SCOPES[1]));
+        assertFalse(resultedScopes.contains(ORIGINAL_SCOPES[2]));
+        assertEquals(resultedScopes.size(), 2);
+    }
+
+    /*
+    Since removing standard claims other than allowed operations are handled at the framework level, that unit
+    test is not included here.
+     */
+
+    @Test
+    void testProcessSuccessResponse_RemoveAud_Valid() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
+                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/0", null));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        List<String> resultedAudiences = oAuthTokenReqMessageContext.getAudiences();
+        assertNotNull(resultedAudiences);
+        assertTrue(resultedAudiences.isEmpty());
+    }
+
+    @Test
+    void testProcessSuccessResponse_RemoveAud_Invalid() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
+                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/", null));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        List<String> resultedAudiences = oAuthTokenReqMessageContext.getAudiences();
+        assertFalse(CollectionUtils.isEmpty(resultedAudiences));
+    }
+
+    @Test
+    void testProcessSuccessResponse_RemoveCustomClaim_Valid() throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
+                CLAIMS_PATH_PREFIX + "CustomClaimName/", null));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("CustomClaimName"));
+    }
+
+    @DataProvider(name = "replaceAudiencesTestData")
+    public Object[][] replaceAudiencesTestData() {
+
+        return new Object[][]{
+                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/0", "abcdefgh12345678",
+                        "abcdefgh12345678"},
+                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", "abcdefgh12345678",
+                        "abcdefgh12345678"},
+                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/", "abcdefgh12345678", ORIGINAL_AUD}
+        };
+    }
+
+    @Test(dataProvider = "replaceAudiencesTestData")
+    void testProcessSuccessResponse_ReplaceAud(String path, String replaceableAudience, String expectedAudience)
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REPLACE, path, replaceableAudience));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        List<String> resultedAudiences = oAuthTokenReqMessageContext.getAudiences();
+        assertNotNull(resultedAudiences);
+        assertEquals(resultedAudiences.get(0), expectedAudience);
+    }
+
+    @DataProvider(name = "replaceExpireInTestData")
+    public Object[][] replaceExpireInTestData() {
+
+        return new Object[][]{
+                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName(), 1000, 1000000},
+                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName() + "/", 1000, 1000000}
+        };
+    }
+
+    @Test(dataProvider = "replaceExpireInTestData")
+    void testProcessSuccessResponse_ReplaceExpireIn_Valid(String path, long replaceableExpireIn, long expectedExpireIn)
+            throws ActionExecutionResponseProcessorException {
+
+        List<PerformableOperation> operationsToPerform = new ArrayList<>();
+        operationsToPerform.add(createPerformableOperation(Operation.REPLACE,
+                path, replaceableExpireIn));
+
+        OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
+        // Get the validity period in milliseconds
+        long validityPeriod = oAuthTokenReqMessageContext.getValidityPeriod();
+        assertEquals(validityPeriod, expectedExpireIn);
     }
 
     private OAuthTokenReqMessageContext executeProcessSuccessResponse(List<PerformableOperation> operationsToPerform)
