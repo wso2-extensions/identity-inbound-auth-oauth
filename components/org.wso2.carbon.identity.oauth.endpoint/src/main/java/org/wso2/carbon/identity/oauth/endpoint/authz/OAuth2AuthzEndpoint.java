@@ -3897,7 +3897,7 @@ public class OAuth2AuthzEndpoint {
         if (authResultCacheEntry != null) {
             authResult = authResultCacheEntry.getResult();
         } else {
-            log.error("Cannot find AuthenticationResult from the cache");
+            log.warn("Cannot find AuthenticationResult from the cache");
         }
         return authResult;
     }
