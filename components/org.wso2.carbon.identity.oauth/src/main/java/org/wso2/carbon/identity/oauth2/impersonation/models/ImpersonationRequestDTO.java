@@ -22,10 +22,12 @@ package org.wso2.carbon.identity.oauth2.impersonation.models;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
+import java.io.Serializable;
+
 /**
  * Request DTO class for Impersonation validation.
  */
-public class ImpersonationRequestDTO {
+public class ImpersonationRequestDTO implements Serializable {
 
     private String subject;
     private AuthenticatedUser impersonator;
