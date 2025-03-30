@@ -212,6 +212,7 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_CTX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
@@ -1292,7 +1293,7 @@ public class OAuth2AuthzEndpoint {
             String sessionContextKey = DigestUtils.sha256Hex(commonAuthIdCookieValue);
             SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey,
                     tenantDomain);
-            if (sessionContext.getProperty(IMPERSONATED_SUBJECT) != null
+            if (sessionContext != null && sessionContext.getProperty(IMPERSONATED_SUBJECT) != null
                 && sessionContext.getProperty(IMPERSONATOR) != null) {
 
                 try {
@@ -1759,6 +1760,13 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
+        /* Set impersonation details to the authorization request context. To handle implicit and hybrid flows. */
+        ImpersonationContext impersonationContext = (ImpersonationContext) oAuthMessage.getProperty(IMPERSONATION_CTX);
+        if (impersonationContext != null && impersonationContext.isValidated()) {
+            oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR,
+                    impersonationContext.getImpersonationRequestDTO().getImpersonator());
+            oAuthAuthzReqMessageContext.setImpersonationRequest(true);
+        }
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
         if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
