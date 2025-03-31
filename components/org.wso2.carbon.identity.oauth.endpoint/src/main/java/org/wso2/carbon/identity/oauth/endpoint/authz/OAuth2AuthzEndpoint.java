@@ -2010,7 +2010,7 @@ public class OAuth2AuthzEndpoint {
                     authorizationResponseDTO);
         }
         if (Constants.RESPONSE_TYPE_DEVICE.equalsIgnoreCase(responseType)) {
-            cacheUserAttributesByDeviceCode(oAuthMessage.getSessionDataCacheEntry());
+            cacheUserAttributesByDeviceCode(oAuthMessage);
         }
         if (isResponseTypeNotIdTokenOrNone(responseType, authzRespDTO)) {
             setAccessToken(authzRespDTO, builder, authorizationResponseDTO);
@@ -4691,9 +4691,10 @@ public class OAuth2AuthzEndpoint {
         return OAuthConstants.Prompt.SELECT_ACCOUNT.equals(oauth2Params.getPrompt());
     }
 
-    private void cacheUserAttributesByDeviceCode(SessionDataCacheEntry sessionDataCacheEntry)
+    private void cacheUserAttributesByDeviceCode(OAuthMessage oAuthMessage)
             throws OAuthSystemException {
 
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         String userCode = null;
         Optional<String> deviceCodeOptional = Optional.empty();
         String[] userCodeArray = sessionDataCacheEntry.getParamMap().get(Constants.USER_CODE);
@@ -4703,9 +4704,7 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotBlank(userCode)) {
             deviceCodeOptional = getDeviceCodeByUserCode(userCode);
         }
-        if (deviceCodeOptional.isPresent()) {
-            addUserAttributesToCache(sessionDataCacheEntry, deviceCodeOptional.get());
-        }
+        deviceCodeOptional.ifPresent(s -> addUserAttributesToCache(oAuthMessage, s));
     }
 
     private Optional<String> getDeviceCodeByUserCode(String userCode) throws OAuthSystemException {
@@ -4717,14 +4716,20 @@ public class OAuth2AuthzEndpoint {
         }
     }
 
-    private void addUserAttributesToCache(SessionDataCacheEntry sessionDataCacheEntry, String deviceCode) {
+    private void addUserAttributesToCache(OAuthMessage oAuthMessage, String deviceCode) {
 
+        SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
         DeviceAuthorizationGrantCacheKey cacheKey = new DeviceAuthorizationGrantCacheKey(deviceCode);
         DeviceAuthorizationGrantCacheEntry cacheEntry =
                 new DeviceAuthorizationGrantCacheEntry(sessionDataCacheEntry.getLoggedInUser().getUserAttributes());
         if (sessionDataCacheEntry.getMappedRemoteClaims() != null) {
             cacheEntry.setMappedRemoteClaims(sessionDataCacheEntry
                     .getMappedRemoteClaims());
+        }
+        // Add impersonation to the session data cache entry.
+        if (oAuthMessage.getProperty(IMPERSONATION_CTX) != null) {
+            cacheEntry.setImpersonationContext(
+                    (ImpersonationContext) oAuthMessage.getProperty(IMPERSONATION_CTX));
         }
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }

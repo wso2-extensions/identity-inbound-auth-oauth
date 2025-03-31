@@ -122,6 +122,7 @@ import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
@@ -195,6 +196,7 @@ public class AccessTokenIssuer {
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
         boolean isCodeRequest = GrantType.AUTHORIZATION_CODE.toString().equals(grantType);
+        boolean isDeviceCodeRequest = DEVICE_FLOW_GRANT_TYPE.equals(grantType);
 
         if (isCodeRequest) {
 
@@ -211,14 +213,13 @@ public class AccessTokenIssuer {
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                         authorizationGrantCacheEntry.getAccessTokenExtensionDO());
             }
-            // Set impersonation details into the token context before triggeringPreListeners.
-            if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonationContext() != null
-                    && authorizationGrantCacheEntry.getImpersonationContext().isValidated()
-                    && authorizationGrantCacheEntry.getImpersonationContext().getImpersonationRequestDTO() != null) {
-                tokReqMsgCtx.setImpersonationRequest(true);
-                tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, authorizationGrantCacheEntry
-                        .getImpersonationContext().getImpersonationRequestDTO().getImpersonator());
-            }
+            setImpersonationDetailsIntoTokenCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
+        }
+
+        if (isDeviceCodeRequest) {
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    getAuthzGrantCacheEntryFromDeviceCode(tokenReqDTO);
+            setImpersonationDetailsIntoTokenCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -398,6 +399,31 @@ public class AccessTokenIssuer {
         synchronized (syncLockString.intern()) {
             return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
+        }
+    }
+
+    private AuthorizationGrantCacheEntry getAuthzGrantCacheEntryFromDeviceCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
+        if (deviceCodeOptional.isPresent()) {
+            String deviceCode = deviceCodeOptional.get();
+            Optional<AuthorizationGrantCacheEntry> authorizationGrantCacheEntryOptional
+                    = getAuthzGrantCacheEntryFromDeviceCode(deviceCode);
+            return authorizationGrantCacheEntryOptional.orElse(null);
+        }
+        return null;
+    }
+
+    private void setImpersonationDetailsIntoTokenCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        // Set impersonation details into the token context before triggeringPreListeners.
+        if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonationContext() != null
+                && authorizationGrantCacheEntry.getImpersonationContext().isValidated()
+                && authorizationGrantCacheEntry.getImpersonationContext().getImpersonationRequestDTO() != null) {
+            tokReqMsgCtx.setImpersonationRequest(true);
+            tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, authorizationGrantCacheEntry
+                    .getImpersonationContext().getImpersonationRequestDTO().getImpersonator());
         }
     }
 
@@ -728,6 +754,9 @@ public class AccessTokenIssuer {
             if (cacheEntry.getMappedRemoteClaims() != null) {
                 authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
                         .getMappedRemoteClaims());
+            }
+            if (cacheEntry.getImpersonationContext() != null) {
+                authorizationGrantCacheEntry.setImpersonationContext(cacheEntry.getImpersonationContext());
             }
             return Optional.of(authorizationGrantCacheEntry);
         }
