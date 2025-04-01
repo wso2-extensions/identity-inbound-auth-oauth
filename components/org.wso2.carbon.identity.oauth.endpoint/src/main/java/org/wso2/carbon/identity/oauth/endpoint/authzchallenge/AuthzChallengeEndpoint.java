@@ -309,12 +309,7 @@ public class AuthzChallengeEndpoint {
         return dto;
     }
 
-    /**
-     * Extracts HTTP headers from the request and converts them into an array of HttpRequestHeader objects.
-     *
-     * @param request The HTTP servlet request from which to extract headers
-     * @return An array of HttpRequestHeader objects containing the header name and values
-     */
+    // Extracts HTTP headers from the request and converts them into an array of HttpRequestHeader objects.
     private static HttpRequestHeader[] extractHeaders(HttpServletRequest request) {
 
         Enumeration<String> headerNames = request.getHeaderNames();
@@ -345,13 +340,8 @@ public class AuthzChallengeEndpoint {
         return request.getHeader(DPOP) != null;
     }
 
-    /**
-     * Process the DPoP header and extract thumbprint if available. The extracted thumbprint is then stored in the
-     * OAuthMessage to be persisted in the session data cache for later validation in subsequent requests.
-     *
-     * @param request The HTTP servlet request containing the DPoP header
-     * @param oAuthMessage The OAuth message to update with the thumbprint
-     */
+    // Process the DPoP header and extract thumbprint if available. The extracted thumbprint is then stored in the
+    // OAuthMessage to be persisted in the session data cache for later validation in subsequent requests.
     private void processDPoPHeader(HttpServletRequest request, OAuthMessage oAuthMessage)
             throws IdentityOAuth2Exception {
 
@@ -375,14 +365,7 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    /**
-     * Validates that the DPoP thumbprint in the current request matches the one stored in the session cache.
-     *
-     * @param request The HTTP servlet request containing the DPoP header
-     * @param sessionDataCacheKey Optional containing the session data cache key
-     * @throws AuthServiceException If validation fails or any error occurs during validation
-     * @throws IdentityOAuth2Exception If any OAuth2 related error occurs
-     */
+    // Validates that the DPoP thumbprint in the current request matches the one stored in the session cache.
     private void validateDPoPThumbprint(HttpServletRequest request, Optional<String> sessionDataCacheKey)
             throws AuthServiceException, IdentityOAuth2Exception {
 

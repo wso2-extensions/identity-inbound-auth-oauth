@@ -4597,7 +4597,7 @@ public class AuthzUtil {
                             String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                             // Keeping the app native flow as it is.
-                            if (Boolean.TRUE.equals(oAuthMessage.getRequest().getAttribute("isAuthzChallenge"))) {
+                            if (isAuthzChallenge(oAuthMessage.getRequest())) {
                                 if (attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED) {
                                     AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse =
                                             new AuthzChallengeCompletedResponse(queryParams);
@@ -4619,7 +4619,6 @@ public class AuthzUtil {
                             }
                             throw new AuthServiceClientException(
                                     AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(), errorMsg);
-
                         }
                     }
                 }
@@ -4634,9 +4633,9 @@ public class AuthzUtil {
 
     public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e) {
 
+        request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
         if (isAuthzChallenge(request)) {
             if (e instanceof AuthServiceClientException) {
-                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
             } else {
                 request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
@@ -4644,10 +4643,8 @@ public class AuthzUtil {
             }
         } else {
             if (e instanceof AuthServiceClientException) {
-                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
             } else {
-                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
                 return ApiAuthnUtils.buildResponseForServerError(e, log);
             }
         }
@@ -4915,12 +4912,26 @@ public class AuthzUtil {
                 .entity(jsonString).build();
     }
 
+    /**
+     * Handles Identity OAuth2 exceptions by creating an appropriate error response.
+     *
+     * @param exception The IdentityOAuth2Exception
+     * @return A Response object with HTTP status code 400 (Bad Request)
+     */
+
     public static Response handleIdentityOAuth2Exception(IdentityOAuth2Exception exception) {
 
-        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
-        String error = exception.getErrorCode();
+        String error;
+        String errorDescription;
 
-        String errorDescription = exception.getMessage();
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        error = exception.getErrorCode() != null ?
+                exception.getErrorCode() :
+                AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code();
+
+        errorDescription = exception.getMessage() != null ?
+                exception.getMessage() :
+                AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.description();
 
         authzChallengeFailResponse.setError(error);
         authzChallengeFailResponse.setErrorDescription(errorDescription);

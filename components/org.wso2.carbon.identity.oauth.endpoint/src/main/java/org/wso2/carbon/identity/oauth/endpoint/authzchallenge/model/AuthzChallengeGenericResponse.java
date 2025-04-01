@@ -1,27 +1,27 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 
 public class AuthzChallengeGenericResponse {
-    private String authSession;
+    private String auth_session;
     private String error;
-    private String errorDescription;
+    private String error_description;
 
     public AuthzChallengeGenericResponse() {
 
     }
 
     public AuthzChallengeGenericResponse(String authSession, String error, String errorDescription) {
-        this.authSession = authSession;
+        this.auth_session = authSession;
         this.error = error;
-        this.errorDescription = errorDescription;
+        this.error_description = errorDescription;
 
     }
 
     public String getAuthSession() {
-        return authSession;
+        return auth_session;
     }
 
     public void setAuthSession(String authSession) {
-        this.authSession = authSession;
+        this.auth_session = authSession;
     }
 
     public String getError() {
@@ -33,10 +33,10 @@ public class AuthzChallengeGenericResponse {
     }
 
     public String getErrorDescription() {
-        return errorDescription;
+        return error_description;
     }
 
     public void setErrorDescription(String errorDescription) {
-        this.errorDescription = errorDescription;
+        this.error_description = errorDescription;
     }
 }

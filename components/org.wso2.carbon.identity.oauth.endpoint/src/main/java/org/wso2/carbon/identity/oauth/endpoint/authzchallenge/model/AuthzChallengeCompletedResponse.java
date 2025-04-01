@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AuthzChallengeCompletedResponse {
-    private Map<String, String> authData = new HashMap<>();
+    private Map<String, String> auth_data = new HashMap<>();
 
     public AuthzChallengeCompletedResponse() {
 
@@ -12,16 +12,16 @@ public class AuthzChallengeCompletedResponse {
 
     public AuthzChallengeCompletedResponse(Map<String, String> authData) {
 
-        this.authData = authData;
+        this.auth_data = authData;
     }
 
     public Map<String, String> getAuthData() {
 
-        return authData;
+        return auth_data;
     }
 
     public void setAuthData(Map<String, String> authData) {
 
-        this.authData = authData;
+        this.auth_data = authData;
     }
 }
