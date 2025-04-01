@@ -52,7 +52,6 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.LocalAndOutboundAuthenticationConfig;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
-import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -66,7 +65,6 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
@@ -86,7 +84,6 @@ import org.wso2.carbon.identity.oauth.par.exceptions.ParClientException;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -111,8 +108,6 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
-import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
@@ -772,47 +767,6 @@ public class EndpointUtil {
         }
 
         return consentPageUrl;
-    }
-
-    /**
-     * Get Authenticated user using user id and tenant domain.
-     *
-     * @param userId       User id of the user.
-     * @param tenantDomain Tenant domain of the user.
-     * @return An Authenticated user object.
-     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
-     */
-    public static AuthenticatedUser getAuthenticatedUser(String userId, String tenantDomain)
-            throws IdentityOAuth2Exception {
-
-        try {
-            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
-
-            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
-            User user = OAuthUtil.getUserFromTenant(userId, tenantId);
-            if (user == null) {
-                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid User Id provided for the request. Unable to find the user for given " +
-                                "user id : " + userId + " tenant Domain : " + tenantDomain);
-            }
-            return getAuthenticatedUser(userId, tenantDomain, user);
-        } catch (UserStoreException | IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Use mapped local subject is mandatory but a local user couldn't be found");
-        }
-    }
-
-    private static AuthenticatedUser getAuthenticatedUser(String userId, String tenantDomain, User user) {
-
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-        authenticatedUser.setUserId(userId);
-        // Todo: Check the relevant config and set.
-        // Todo: Check account lock, disabled status.
-        authenticatedUser.setAuthenticatedSubjectIdentifier(userId + "@" + tenantDomain);
-        authenticatedUser.setUserName(user.getUserName());
-        authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
-        authenticatedUser.setTenantDomain(tenantDomain);
-        return authenticatedUser;
     }
 
     private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
