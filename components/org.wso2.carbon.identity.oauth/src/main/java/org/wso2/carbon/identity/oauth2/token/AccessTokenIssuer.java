@@ -116,7 +116,9 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TO
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.MAY_ACT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUB;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
@@ -213,13 +215,13 @@ public class AccessTokenIssuer {
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                         authorizationGrantCacheEntry.getAccessTokenExtensionDO());
             }
-            setImpersonationDetailsIntoTokenCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
+            persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }
 
         if (isDeviceCodeRequest) {
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     getAuthzGrantCacheEntryFromDeviceCode(tokenReqDTO);
-            setImpersonationDetailsIntoTokenCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
+            persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -414,7 +416,7 @@ public class AccessTokenIssuer {
         return null;
     }
 
-    private void setImpersonationDetailsIntoTokenCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+    private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
                                                      OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // Set impersonation details into the token context before triggeringPreListeners.
@@ -422,6 +424,7 @@ public class AccessTokenIssuer {
                 && authorizationGrantCacheEntry.getImpersonationContext().isValidated()
                 && authorizationGrantCacheEntry.getImpersonationContext().getImpersonationRequestDTO() != null) {
             tokReqMsgCtx.setImpersonationRequest(true);
+            // Mandatory when getting additional claims (may_act & sub).
             tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, authorizationGrantCacheEntry
                     .getImpersonationContext().getImpersonationRequestDTO().getImpersonator());
         }
@@ -703,15 +706,15 @@ public class AccessTokenIssuer {
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
 
-        // Set impersonated session details only during impersonated token exchange flow.
-        if (TOKEN_EXCHANGE.equals(grantType) && tokReqMsgCtx.isImpersonationRequest()) {
-            setImpersonatedSession(tokenReqDTO, tenantDomainOfApp);
+        // Write impersonation details to into the session context.
+        if (!tokenRespDTO.isError() && TOKEN_EXCHANGE.equals(grantType) && tokReqMsgCtx.isImpersonationRequest()) {
+            persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp);
         }
 
         return tokenRespDTO;
     }
 
-    private void setImpersonatedSession(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomainOfApp)
+    private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomainOfApp)
             throws IdentityOAuth2Exception {
 
         RequestParameter[] params = tokenReqDTO.getRequestParameters();
@@ -721,12 +724,12 @@ public class AccessTokenIssuer {
         JWTClaimsSet claimsSetActorToken = OAuth2TokenUtil.getJWTClaimSet(requestParams.get(ACTOR_TOKEN));
 
         if (claimsSetSubjectToken != null && claimsSetActorToken != null) {
-            if (claimsSetSubjectToken.getClaim("may_act") == null) {
+            if (claimsSetSubjectToken.getClaim(MAY_ACT) == null) {
                 throw new IdentityOAuth2Exception("may_act claim is not found in the subject token.");
             }
 
             String sub = claimsSetSubjectToken.getSubject();
-            String mayAct = ((JSONObject) claimsSetSubjectToken.getClaim("may_act")).get("sub").toString();
+            String mayAct = ((JSONObject) claimsSetSubjectToken.getClaim(MAY_ACT)).get(SUB).toString();
             String iskClaim = (String) claimsSetActorToken.getClaim(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
 
             // Set session context data.

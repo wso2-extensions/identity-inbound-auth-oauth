@@ -1217,8 +1217,8 @@ public class OAuth2AuthzEndpoint {
 
         if (isAuthnResultFound(authnResult)) {
             removeAuthenticationResult(oAuthMessage, sessionDataKeyFromLogin);
-            handleSessionImpersonation(oAuthMessage, tenantDomain, oauth2Params, authnResult);
             if (authnResult.isAuthenticated()) {
+                handleSessionImpersonation(oAuthMessage, tenantDomain, oauth2Params, authnResult);
                 String userIdentifier = null;
                 if (authnResult.getSubject() != null) {
                     try {
@@ -1320,8 +1320,8 @@ public class OAuth2AuthzEndpoint {
                             authnResult.addProperty(IMPERSONATOR, authnResult.getSubject());
                             // Set impersonator as the authenticated user.
                             String impersonatedUserId = (String) authnResult.getProperty(IMPERSONATED_SUBJECT);
-                            AuthenticatedUser impersonatedUser = EndpointUtil.getAuthenticatedUser(impersonatedUserId,
-                                    tenantDomain);
+                            AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedUserId,
+                                    authnResult.getSubject());
                             authnResult.setSubject(impersonatedUser);
 
                             oAuthMessage.setProperty(IMPERSONATION_CTX, impersonationContext);
@@ -1763,9 +1763,10 @@ public class OAuth2AuthzEndpoint {
         /* Set impersonation details to the authorization request context. To handle implicit and hybrid flows. */
         ImpersonationContext impersonationContext = (ImpersonationContext) oAuthMessage.getProperty(IMPERSONATION_CTX);
         if (impersonationContext != null && impersonationContext.isValidated()) {
+            oAuthAuthzReqMessageContext.setImpersonationRequest(true);
+            // Mandatory when getting additional claims (may_act & sub).
             oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR,
                     impersonationContext.getImpersonationRequestDTO().getImpersonator());
-            oAuthAuthzReqMessageContext.setImpersonationRequest(true);
         }
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
