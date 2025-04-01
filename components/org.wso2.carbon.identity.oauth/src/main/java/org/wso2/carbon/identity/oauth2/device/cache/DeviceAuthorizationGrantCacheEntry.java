@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth2.device.cache;
 
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 
 import java.util.Map;
 
@@ -32,6 +33,7 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
 
     private Map<ClaimMapping, String> userAttributes;
     private Map<ClaimMapping, String> mappedRemoteClaims;
+    private ImpersonationContext impersonationContext;
 
     public DeviceAuthorizationGrantCacheEntry(Map<ClaimMapping, String> userAttributes) {
 
@@ -67,5 +69,16 @@ public class DeviceAuthorizationGrantCacheEntry extends CacheEntry {
             Map<ClaimMapping, String> mappedRemoteClaims) {
 
         this.mappedRemoteClaims = mappedRemoteClaims;
+    }
+
+    public ImpersonationContext getImpersonationContext() {
+
+        return impersonationContext;
+    }
+
+    public void setImpersonationContext(
+            ImpersonationContext impersonationContext) {
+
+        this.impersonationContext = impersonationContext;
     }
 }

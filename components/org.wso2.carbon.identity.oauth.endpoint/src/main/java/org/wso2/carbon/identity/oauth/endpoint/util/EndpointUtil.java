@@ -769,7 +769,6 @@ public class EndpointUtil {
         return consentPageUrl;
     }
 
-
     private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
 
         ServiceProvider sp = null;
