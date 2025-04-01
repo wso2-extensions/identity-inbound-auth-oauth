@@ -4638,8 +4638,7 @@ public class AuthzUtil {
             if (e instanceof AuthServiceClientException) {
                 return buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
             } else {
-                request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                return ApiAuthnUtils.buildResponseForServerError(e, log);
+                return buildAuthzChallengeResponseForServerError(e, log);
             }
         } else {
             if (e instanceof AuthServiceClientException) {
@@ -4976,6 +4975,61 @@ public class AuthzUtil {
         authzChallengeFailResponse.setErrorDescription(errorDescription);
         String jsonString = new Gson().toJson(authzChallengeFailResponse);
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    /**
+     * Builds an HTTP response for server errors that occur during authorize-challenge flow.
+     *
+     * @param exception The server exception containing error details
+     * @param log Logger instance
+     * @return Response object with HTTP 500 (Internal Server Error)
+     */
+    public static Response buildAuthzChallengeResponseForServerError(AuthServiceException exception, Log log) {
+
+        int httpStatusCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+        boolean isUnSupportedAuthenticatorError = StringUtils.equals(exception.getErrorCode(),
+                AuthServiceConstants.ErrorMessage.ERROR_AUTHENTICATOR_NOT_SUPPORTED.code());
+
+        if (isUnSupportedAuthenticatorError) {
+        /* Unsupported authenticator error can be triggered by the client if an unsupported authenticator is configured
+        in the server. Therefore, we log this error as a debug log. */
+            if (log.isDebugEnabled()) {
+                log.debug("Unsupported authenticator error while handling authentication request.", exception);
+            }
+        } else {
+            log.error("Error while handling authentication request.", exception);
+        }
+
+        if (isUnSupportedAuthenticatorError) {
+            httpStatusCode = HttpServletResponse.SC_NOT_IMPLEMENTED;
+        }
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+
+        // Mapping the error code to the appropriate error message
+        Optional<AuthServiceConstants.ErrorMessage> error =
+                AuthServiceConstants.ErrorMessage.fromCode(exception.getErrorCode());
+
+        if (error.isPresent()) {
+            authzChallengeFailResponse.setError(error.get().code());
+            authzChallengeFailResponse.setErrorDescription(error.get().description());
+
+            // If the exception is sent with a known error code, the error message will contain additional information.
+            String errorDescription = error.get().description();
+            if (StringUtils.isNotBlank(errorDescription)) {
+                errorDescription = exception.getMessage();
+            }
+            authzChallengeFailResponse.setErrorDescription(errorDescription);
+        } else {
+            String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() :
+                    AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code();
+            authzChallengeFailResponse.setError(errorCode);
+            authzChallengeFailResponse.setErrorDescription(AuthServiceConstants.ErrorMessage
+                    .ERROR_UNABLE_TO_PROCEED.description());
+        }
+
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+        return Response.status(httpStatusCode).entity(jsonString).build();
     }
 
     /**

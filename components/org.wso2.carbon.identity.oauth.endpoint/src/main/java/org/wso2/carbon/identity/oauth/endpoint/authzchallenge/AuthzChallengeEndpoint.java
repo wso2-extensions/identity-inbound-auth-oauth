@@ -215,7 +215,7 @@ public class AuthzChallengeEndpoint {
         } catch (AuthServiceClientException e) {
             return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
-            return ApiAuthnUtils.buildResponseForServerError(e, LOG);
+            return AuthzUtil.buildAuthzChallengeResponseForServerError(e, LOG);
         } catch (IdentityOAuth2Exception e) {
             return AuthzUtil.handleIdentityOAuth2Exception(e);
         } catch (JsonProcessingException e) {
