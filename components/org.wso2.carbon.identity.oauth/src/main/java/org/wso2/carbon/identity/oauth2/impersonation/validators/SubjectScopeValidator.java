@@ -22,21 +22,14 @@ package org.wso2.carbon.identity.oauth2.impersonation.validators;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.model.User;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
-import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.service.RealmService;
 
 import java.util.List;
-
-import static org.wso2.carbon.identity.oauth.OAuthUtil.getUserFromTenant;
 
 /**
  * The {@code SubjectScopeValidator} class implements the {@link ImpersonationValidator} interface
@@ -81,7 +74,7 @@ public class SubjectScopeValidator implements ImpersonationValidator {
 
         // Switching end-user as authenticated user to validate scopes.
         AuthenticatedUser impersonator = impersonationRequestDTO.getImpersonator();
-        AuthenticatedUser subjectUser = getAuthenticatedSubjectUser(subjectUserId, tenantDomain);
+        AuthenticatedUser subjectUser = OAuth2Util.getImpersonatingUser(subjectUserId, impersonator);
         authzReqMessageContext.getAuthorizationReqDTO().setUser(subjectUser);
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
         authzReqMessageContext.setApprovedScope(authorizedScopes.toArray(new String[0]));
@@ -90,31 +83,5 @@ public class SubjectScopeValidator implements ImpersonationValidator {
 
         impersonationContext.setValidated(true);
         return impersonationContext;
-    }
-
-    private AuthenticatedUser getAuthenticatedSubjectUser(String subjectUserId, String tenantDomain)
-            throws IdentityOAuth2Exception {
-
-        try {
-            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-
-            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
-            User user = getUserFromTenant(subjectUserId, tenantId);
-            if (user == null) {
-                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid User Id provided for Impersonation request. Unable to find the user for given " +
-                                "user id : " + subjectUserId + " tenant Domain : " + tenantDomain);
-            }
-            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-            authenticatedUser.setUserId(subjectUserId);
-            authenticatedUser.setAuthenticatedSubjectIdentifier(subjectUserId);
-            authenticatedUser.setUserName(user.getUserName());
-            authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
-            authenticatedUser.setTenantDomain(tenantDomain);
-            return authenticatedUser;
-        } catch (UserStoreException | IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Use mapped local subject is mandatory but a local user couldn't be found");
-        }
     }
 }

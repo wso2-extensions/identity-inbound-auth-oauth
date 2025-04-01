@@ -76,6 +76,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -96,6 +97,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -193,6 +195,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -3834,6 +3837,76 @@ public class OAuth2Util {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
+    }
+
+    /**
+     * Get Authenticated user using user id and tenant domain.
+     *
+     * @param userId       User id of the impersonated user.
+     * @param impersonator Impersonator user.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getImpersonatingUser(String userId, AuthenticatedUser impersonator)
+            throws IdentityOAuth2Exception {
+
+        try {
+            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
+
+            int tenantId = realmService.getTenantManager().getTenantId(impersonator.getTenantDomain());
+
+            if (impersonator.isFederatedUser() && Objects.equals(impersonator.getFederatedIdPName(), "SSO")
+                    && impersonator.getAccessingOrganization() != null) {
+                tenantId = resolveTenantIdByOrganizationId(impersonator.getAccessingOrganization());
+            }
+
+            User impersonatingUser = OAuthUtil.getUserFromTenant(userId, tenantId);
+            if (impersonatingUser == null) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid User Id provided for the request. Unable to find the user for given " +
+                                "user id : " + userId + " tenant id : " + tenantId);
+            }
+            return getImpersonatingUser(userId, impersonatingUser, impersonator);
+        } catch (UserStoreException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Use mapped local subject is mandatory but a local user couldn't be found");
+        }
+    }
+
+    private static AuthenticatedUser getImpersonatingUser(String userId, User impersonatingUser,
+                                                          AuthenticatedUser impersonator) {
+
+        AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
+        authenticatedImpersonatingUser.setUserId(userId);
+        // Todo: Check if authenticatedSubjectIdentifier is set at app level.
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(userId + "@"
+                + impersonatingUser.getTenantDomain());
+        authenticatedImpersonatingUser.setUserName(impersonatingUser.getUserName());
+        authenticatedImpersonatingUser.setUserStoreDomain(impersonatingUser.getUserStoreDomain());
+        authenticatedImpersonatingUser.setTenantDomain(impersonatingUser.getTenantDomain());
+
+        if (impersonator.isFederatedUser() && Objects.equals(impersonator.getFederatedIdPName(), "SSO")) {
+            authenticatedImpersonatingUser.setFederatedUser(impersonator.isFederatedUser());
+            authenticatedImpersonatingUser.setUserResidentOrganization(impersonator.getAccessingOrganization());
+            authenticatedImpersonatingUser.setAccessingOrganization(impersonator.getAccessingOrganization());
+            authenticatedImpersonatingUser.setFederatedIdPName(impersonator.getFederatedIdPName());
+        }
+
+        return authenticatedImpersonatingUser;
+    }
+
+    private static int resolveTenantIdByOrganizationId(String organizationId) throws IdentityOAuth2Exception {
+
+        try {
+            String tenantDomain =  OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+
+            return IdentityTenantUtil.getTenantId(tenantDomain);
+
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while resolving tenant domain for organization id: "
+                    + organizationId, e);
+        }
     }
 
     /**

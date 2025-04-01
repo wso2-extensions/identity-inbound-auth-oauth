@@ -1320,8 +1320,8 @@ public class OAuth2AuthzEndpoint {
                             authnResult.addProperty(IMPERSONATOR, authnResult.getSubject());
                             // Set impersonator as the authenticated user.
                             String impersonatedUserId = (String) authnResult.getProperty(IMPERSONATED_SUBJECT);
-                            AuthenticatedUser impersonatedUser = EndpointUtil.getAuthenticatedUser(impersonatedUserId,
-                                    tenantDomain);
+                            AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedUserId,
+                                    authnResult.getSubject());
                             authnResult.setSubject(impersonatedUser);
 
                             oAuthMessage.setProperty(IMPERSONATION_CTX, impersonationContext);
