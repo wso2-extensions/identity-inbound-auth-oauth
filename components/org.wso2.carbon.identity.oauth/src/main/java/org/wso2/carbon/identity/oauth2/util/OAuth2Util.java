@@ -3852,7 +3852,7 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         try {
-            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
             int tenantId = realmService.getTenantManager().getTenantId(impersonator.getTenantDomain());
 
             User impersonatingUser = OAuthUtil.getUserFromTenant(userId, tenantId);
