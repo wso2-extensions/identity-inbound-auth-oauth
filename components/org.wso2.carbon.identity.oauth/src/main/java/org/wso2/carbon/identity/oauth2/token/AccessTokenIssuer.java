@@ -72,6 +72,9 @@ import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCach
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationNotificationRequestDTO;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtService;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
@@ -707,11 +710,31 @@ public class AccessTokenIssuer {
         }
 
         // Write impersonation details to into the session context.
-        if (!tokenRespDTO.isError() && TOKEN_EXCHANGE.equals(grantType) && tokReqMsgCtx.isImpersonationRequest()) {
-            persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp);
+        if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest()) {
+            if (TOKEN_EXCHANGE.equals(grantType)) {
+                persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp);
+            } else {
+                // With token exchange we are sending email for grant handler.
+                notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
+            }
         }
 
         return tokenRespDTO;
+    }
+
+    private void notifyImpersonation(OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                         OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        ImpersonationNotificationRequestDTO impersonationNotificationRequestDTO
+                = new ImpersonationNotificationRequestDTO();
+        impersonationNotificationRequestDTO.setTokenReqMessageContext(tokReqMsgCtx);
+        impersonationNotificationRequestDTO.setImpersonator((String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR));
+        impersonationNotificationRequestDTO.setSubject((String) tokReqMsgCtx.getProperty(IMPERSONATED_SUBJECT));
+        impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
+        ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
+        notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
+
     }
 
     private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomainOfApp)
