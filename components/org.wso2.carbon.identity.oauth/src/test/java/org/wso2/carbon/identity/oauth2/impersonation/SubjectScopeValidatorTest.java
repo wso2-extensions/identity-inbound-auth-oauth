@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -72,6 +73,8 @@ public class SubjectScopeValidatorTest {
     @Mock
     private OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
     @Mock
+    private OAuthServerConfiguration mockOAuthServerConfiguration;
+    @Mock
     private RealmService mockRealmService;
     @Mock
     private TenantManager mockTenantManager;
@@ -80,10 +83,13 @@ public class SubjectScopeValidatorTest {
     private MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder;
     private MockedStatic<OAuthUtil> oAuthUtil;
     private MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder;
+    private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
 
     @BeforeMethod
     public void setUp() throws Exception {
 
+        oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
+        oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         oAuthComponentServiceHolder = mockStatic(OAuthComponentServiceHolder.class);
         oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
                 .thenReturn(mockOAuthComponentServiceHolder);
@@ -101,11 +107,13 @@ public class SubjectScopeValidatorTest {
         lenient().when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(impersonator);
         lenient().when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn("dummyConsumerKey");
         lenient().when(oAuth2AuthorizeReqDTO.getScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
-        when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn("carbon.super");
+        lenient().when(oAuth2AuthorizeReqDTO.getTenantDomain()).thenReturn("carbon.super");
         when(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
         when(oAuthAuthzReqMessageContext.getRequestedScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
         impersonationRequestDTO = new ImpersonationRequestDTO();
         impersonationRequestDTO.setoAuthAuthzReqMessageContext(oAuthAuthzReqMessageContext);
+        impersonationRequestDTO.setImpersonator(impersonator);
+        when(impersonator.getTenantDomain()).thenReturn("carbon.super");
 
         oAuthUtil.when(() -> OAuthUtil.getUserFromTenant("dummySubjectId", -1234))
                 .thenReturn(getDummyUser());
@@ -125,6 +133,7 @@ public class SubjectScopeValidatorTest {
         oAuthUtil.close();
         oAuth2ServiceComponentHolder.close();
         oAuthComponentServiceHolder.close();;
+        oAuthServerConfiguration.close();
     }
 
     @Test
