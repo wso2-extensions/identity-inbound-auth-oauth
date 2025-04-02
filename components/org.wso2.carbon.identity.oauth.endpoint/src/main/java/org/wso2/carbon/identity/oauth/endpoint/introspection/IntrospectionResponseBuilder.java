@@ -316,4 +316,30 @@ public class IntrospectionResponseBuilder {
         }
         return this;
     }
+
+    /**
+     * Set acr to the introspection response.
+     *
+     * @param acr Selected acr value
+     * @return IntrospectionResponseBuilder
+     */
+    public IntrospectionResponseBuilder setAcr(String acr) {
+        if (StringUtils.isNotBlank(acr)) {
+            parameters.put(IntrospectionResponse.ACR, acr);
+        }
+        return this;
+    }
+
+    /**
+     * Set authTime to the introspection response.
+     *
+     * @param authTime Current authentication time
+     * @return IntrospectionResponseBuilder
+     */
+    public IntrospectionResponseBuilder setAuthTime(long authTime) {
+        if (authTime != 0) {
+            parameters.put(IntrospectionResponse.AUTH_TIME, authTime);
+        }
+        return this;
+    }
 }

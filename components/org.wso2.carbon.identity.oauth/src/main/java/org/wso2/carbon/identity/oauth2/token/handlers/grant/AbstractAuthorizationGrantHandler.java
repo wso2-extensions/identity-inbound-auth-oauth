@@ -41,6 +41,9 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -83,6 +86,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.AUTH_TIME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenStates.TOKEN_STATE_ACTIVE;
@@ -104,6 +108,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     protected static final int SECONDS_TO_MILISECONDS_FACTOR = 1000;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
     protected AuthorizationDetailsService authorizationDetailsService;
+    private static final String AUTHORIZATION_CODE = "AuthorizationCode";
 
     @Override
     public void init() throws IdentityOAuth2Exception {
@@ -587,6 +592,9 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         validateGrantTypeParam(tokenReq);
 
+        AuthorizationGrantCacheEntry authzGrantCacheEntry =
+                getAuthorizationGrantCacheEntryFromCode(getAuthorizationCode(tokReqMsgCtx));
+
         AccessTokenDO newTokenBean = new AccessTokenDO();
         newTokenBean.setTokenState(TOKEN_STATE_ACTIVE);
         newTokenBean.setConsumerKey(tokenReq.getClientId());
@@ -604,9 +612,44 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setValidityPeriod(tokReqMsgCtx.getValidityPeriod() / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
         newTokenBean.setAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes());
+        newTokenBean.setAcr(authzGrantCacheEntry.getSelectedAcrValue());
+        newTokenBean.setAuthTime(authzGrantCacheEntry.getAuthTime() / 1000);
+        newTokenBean.setAmrValues(authzGrantCacheEntry.getAmrList());
         setRefreshTokenDetails(tokReqMsgCtx, existingTokenBean, newTokenBean, oauthTokenIssuer);
 
         return newTokenBean;
+    }
+
+    private String getAuthorizationCode(OAuthTokenReqMessageContext tokenReqMsgCtxt) {
+
+        return (String) tokenReqMsgCtxt.getProperty(AUTHORIZATION_CODE);
+    }
+
+    private AuthorizationGrantCacheEntry getAuthorizationGrantCacheEntryFromCode(String authorizationCode) {
+
+        AuthorizationGrantCacheKey authorizationGrantCacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+        return AuthorizationGrantCache.getInstance().getValueFromCacheByCode(authorizationGrantCacheKey);
+    }
+
+    public boolean isAuthTimeRequired(AuthorizationGrantCacheEntry authzGrantCacheEntry) {
+
+        return isMaxAgePresentInAuthzRequest(authzGrantCacheEntry) || isEssentialClaim(authzGrantCacheEntry, AUTH_TIME);
+    }
+
+    private boolean isMaxAgePresentInAuthzRequest(AuthorizationGrantCacheEntry authorizationGrantCacheEntry) {
+
+        return authorizationGrantCacheEntry.getMaxAge() != 0;
+    }
+
+    private boolean isEssentialClaim(AuthorizationGrantCacheEntry authorizationGrantCacheEntry, String oidcClaimUri) {
+
+        return isEssentialClaim(authorizationGrantCacheEntry.getEssentialClaims(), oidcClaimUri);
+    }
+
+    private boolean isEssentialClaim(String essentialClaims, String oidcClaimUri) {
+
+        return StringUtils.isNotBlank(essentialClaims) &&
+                OAuth2Util.getEssentialClaims(essentialClaims, OAuthConstants.ID_TOKEN).contains(oidcClaimUri);
     }
 
     private void updateMessageContextToCreateNewToken(OAuthTokenReqMessageContext tokReqMsgCtx, String consumerKey,
