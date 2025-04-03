@@ -213,7 +213,6 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_CTX;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -1287,7 +1286,7 @@ public class OAuth2AuthzEndpoint {
                                             OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
             throws OAuthProblemException {
 
-        boolean isImpersonationInitRequest = !StringUtils.contains(oauth2Params.getResponseType(),
+        boolean isImpersonationInitRequest = StringUtils.contains(oauth2Params.getResponseType(),
                 OAuthConstants.SUBJECT_TOKEN);
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
         if (sessionContext != null) {
@@ -1296,20 +1295,20 @@ public class OAuth2AuthzEndpoint {
                 String impersonatedSubject = sessionContext.getImpersonatedUser();
                 /* To verify this is not an initiating impersonation request. Otherwise, we do not have to set
                 authenticated user. */
-                if (isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
+                if (!isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
                     // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
                     OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
                             oauth2Params, sessionContext, authnResult);
                     ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
                     if (impersonationContext.isValidated()) {
+                        /* Used in two places.
+                            1. When preparing authorization grant cache entry for code & device code.
+                            2. When generating additional claims for implicit & hybrid flows. */
+                        oAuthMessage.setProperty(IMPERSONATING_ACTOR, authnResult.getSubject().getUserId());
                         // Set authnResult authenticated user as impersonatee.
                         AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
                                 authnResult.getSubject());
                         authnResult.setSubject(impersonatedUser);
-                        /* Used in two places.
-                            1. When preparing authorization grant cache entry for code & device code.
-                            2. When generating additional claims for implicit & hybrid flows. */
-                        oAuthMessage.setProperty(IMPERSONATION_CTX, impersonationContext);
                     }
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException | UserIdNotFoundException e) {
@@ -1773,12 +1772,11 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         /* Set impersonation details to the authorization request context. To handle implicit and hybrid flows. */
-        ImpersonationContext impersonationContext = (ImpersonationContext) oAuthMessage.getProperty(IMPERSONATION_CTX);
-        if (impersonationContext != null && impersonationContext.isValidated()) {
+        String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
+        if (impersonator != null) {
             oAuthAuthzReqMessageContext.setImpersonationRequest(true);
             // Mandatory when getting additional claims (may_act & sub).
-            oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR,
-                    impersonationContext.getImpersonationRequestDTO().getImpersonator());
+            oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR, impersonator);
         }
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
@@ -2320,9 +2318,8 @@ public class OAuth2AuthzEndpoint {
         if (mappedRemoteClaims != null) {
             authorizationGrantCacheEntry.setMappedRemoteClaims(mappedRemoteClaims);
         }
-        if (oAuthMessage.getProperty(IMPERSONATION_CTX) != null) {
-            authorizationGrantCacheEntry.setImpersonationContext(
-                    (ImpersonationContext) oAuthMessage.getProperty(IMPERSONATION_CTX));
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+            authorizationGrantCacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
@@ -4740,9 +4737,8 @@ public class OAuth2AuthzEndpoint {
                     .getMappedRemoteClaims());
         }
         // Add impersonation to the session data cache entry.
-        if (oAuthMessage.getProperty(IMPERSONATION_CTX) != null) {
-            cacheEntry.setImpersonationContext(
-                    (ImpersonationContext) oAuthMessage.getProperty(IMPERSONATION_CTX));
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+            cacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);
     }
