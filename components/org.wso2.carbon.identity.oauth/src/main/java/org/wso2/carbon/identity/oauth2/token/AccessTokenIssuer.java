@@ -760,7 +760,7 @@ public class AccessTokenIssuer {
                 SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim,
                         tenantDomainOfApp);
                 sessionContext.addProperty(IMPERSONATED_SUBJECT, sub);
-                sessionContext.addProperty(IMPERSONATOR, mayAct);
+                sessionContext.addProperty(IMPERSONATING_ACTOR, mayAct);
                 FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext,
                         tenantDomainOfApp, tenantDomainOfApp);
             }
