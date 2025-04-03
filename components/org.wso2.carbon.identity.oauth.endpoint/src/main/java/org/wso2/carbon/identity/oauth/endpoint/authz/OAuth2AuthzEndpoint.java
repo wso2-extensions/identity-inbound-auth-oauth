@@ -211,7 +211,6 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
@@ -1291,7 +1290,7 @@ public class OAuth2AuthzEndpoint {
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
         if (sessionContext != null) {
             try {
-                String impersonatingActor = authnResult.getSubject().getUserId();
+                String impersonatingActor = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
                 String impersonatedSubject = sessionContext.getImpersonatedUser();
                 /* To verify this is not an initiating impersonation request. Otherwise, we do not have to set
                 authenticated user. */
@@ -1304,7 +1303,9 @@ public class OAuth2AuthzEndpoint {
                         /* Used in two places.
                             1. When preparing authorization grant cache entry for code & device code.
                             2. When generating additional claims for implicit & hybrid flows. */
-                        oAuthMessage.setProperty(IMPERSONATING_ACTOR, authnResult.getSubject().getUserId());
+                        // String impersonator = authnResult.getSubject().getUserId().split("@")[0];
+                        String impersonator = authnResult.getSubject().getUserId();
+                        oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
                         // Set authnResult authenticated user as impersonatee.
                         AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
                                 authnResult.getSubject());
@@ -1330,7 +1331,7 @@ public class OAuth2AuthzEndpoint {
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(),
                         httpRequestHeaderHandler, oAuthMessage.getRequest());
         authzReqDTO.setUser(authenticationResult.getSubject());
-        authzReqDTO.setRequestedSubjectId(sessionContext.getProperty(IMPERSONATED_SUBJECT).toString());
+        authzReqDTO.setRequestedSubjectId(sessionContext.getImpersonatedUser());
         return getOAuthAuthzReqMessageContext(authzReqDTO);
     }
 
@@ -1772,8 +1773,8 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         /* Set impersonation details to the authorization request context. To handle implicit and hybrid flows. */
-        String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
-        if (impersonator != null) {
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+            String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
             oAuthAuthzReqMessageContext.setImpersonationRequest(true);
             // Mandatory when getting additional claims (may_act & sub).
             oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR, impersonator);
@@ -2152,6 +2153,15 @@ public class OAuth2AuthzEndpoint {
         }
         addUserAttributesToOAuthMessage(oAuthMessage, authorizationCode, authzRespDTO.getCodeId(),
                 tokenBindingValue, tokenExtendedAttributes);
+        setImpersonationDetailsToAuthGrantCache(oAuthMessage);
+    }
+
+    private void setImpersonationDetailsToAuthGrantCache(OAuthMessage oAuthMessage) {
+
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry = oAuthMessage.getAuthorizationGrantCacheEntry();
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+            authorizationGrantCacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
+        }
     }
 
     private AccessTokenExtendedAttributes getExtendedTokenAttributes(OAuthMessage oAuthMessage,
@@ -2317,9 +2327,6 @@ public class OAuth2AuthzEndpoint {
         Map<ClaimMapping, String> mappedRemoteClaims =  sessionDataCacheEntry.getMappedRemoteClaims();
         if (mappedRemoteClaims != null) {
             authorizationGrantCacheEntry.setMappedRemoteClaims(mappedRemoteClaims);
-        }
-        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
-            authorizationGrantCacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
         oAuthMessage.setAuthorizationGrantCacheEntry(authorizationGrantCacheEntry);
     }
