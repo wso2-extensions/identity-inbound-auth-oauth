@@ -214,7 +214,6 @@ import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CL
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_CTX;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -1288,44 +1287,29 @@ public class OAuth2AuthzEndpoint {
                                             OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
             throws OAuthProblemException {
 
-        String commonAuthIdCookieValue = getCommonAuthCookieString(oAuthMessage.getRequest());
-        if (StringUtils.isNotBlank(commonAuthIdCookieValue)) {
-            String sessionContextKey = DigestUtils.sha256Hex(commonAuthIdCookieValue);
-            SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(sessionContextKey,
-                    tenantDomain);
-            if (sessionContext != null && sessionContext.getProperty(IMPERSONATED_SUBJECT) != null
-                && sessionContext.getProperty(IMPERSONATOR) != null) {
-
+        boolean isImpersonationInitRequest = !StringUtils.contains(oauth2Params.getResponseType(),
+                OAuthConstants.SUBJECT_TOKEN);
+        SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
+        if (sessionContext != null) {
+            String impersonatingActor = (String) sessionContext.getProperty(IMPERSONATING_ACTOR);
+            String impersonatedSubject = (String) sessionContext.getProperty(IMPERSONATED_SUBJECT);
+            /* To verify this is not an initiating impersonation request. Otherwise, we do not have to set
+            authenticated user. */
+            if (isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
                 try {
-                    String responseType = oauth2Params.getResponseType();
-                    /* To verify this is not an actual impersonation request. Then we do not have to set
-                    authenticated user. */
-                    if (!StringUtils.contains(responseType, OAuthConstants.SUBJECT_TOKEN)) {
-                        // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
-                        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage
-                                .getRequest());
-                        OAuth2AuthorizeReqDTO authzReqDTO =
-                                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(),
-                                        httpRequestHeaderHandler, oAuthMessage.getRequest());
-                        authzReqDTO.setUser(authnResult.getSubject());
-                        authzReqDTO.setRequestedSubjectId(sessionContext.getProperty(IMPERSONATED_SUBJECT).toString());
-                        OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(authzReqDTO);
-
-                        ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
-                        if (impersonationContext.isValidated()) {
-                            // Impersonation details to the AuthenticationResult for token generation.
-                            authnResult.addProperty(IMPERSONATED_SUBJECT,
-                                    sessionContext.getProperty(IMPERSONATED_SUBJECT));
-                            // Set impersonator as a property in the authentication result.
-                            authnResult.addProperty(IMPERSONATOR, authnResult.getSubject());
-                            // Set impersonator as the authenticated user.
-                            String impersonatedUserId = (String) authnResult.getProperty(IMPERSONATED_SUBJECT);
-                            AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedUserId,
-                                    authnResult.getSubject());
-                            authnResult.setSubject(impersonatedUser);
-
-                            oAuthMessage.setProperty(IMPERSONATION_CTX, impersonationContext);
-                        }
+                    // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
+                    OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
+                            oauth2Params, sessionContext, authnResult);
+                    ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
+                    if (impersonationContext.isValidated()) {
+                        // Set authnResult authenticated user as impersonatee.
+                        AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
+                                authnResult.getSubject());
+                        authnResult.setSubject(impersonatedUser);
+                        /* Used in two places.
+                            1. When preparing authorization grant cache entry for code & device code.
+                            2. When generating additional claims for implicit & hybrid flows. */
+                        oAuthMessage.setProperty(IMPERSONATION_CTX, impersonationContext);
                     }
                 } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                     throw OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR, "Error while " +
@@ -1333,6 +1317,34 @@ public class OAuth2AuthzEndpoint {
                 }
             }
         }
+    }
+
+    private OAuthAuthzReqMessageContext getOAuthAuthzReqMessageContext(OAuthMessage oAuthMessage,
+                                                                       OAuth2Parameters oauth2Params,
+                                                                       SessionContext sessionContext,
+                                                                       AuthenticationResult authenticationResult)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
+
+        HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage
+                .getRequest());
+        OAuth2AuthorizeReqDTO authzReqDTO =
+                buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(),
+                        httpRequestHeaderHandler, oAuthMessage.getRequest());
+        authzReqDTO.setUser(authenticationResult.getSubject());
+        authzReqDTO.setRequestedSubjectId(sessionContext.getProperty(IMPERSONATED_SUBJECT).toString());
+        return getOAuthAuthzReqMessageContext(authzReqDTO);
+    }
+
+    private SessionContext getSessionContextFromCache(OAuthMessage oAuthMessage, String tenantDomain) {
+
+        HttpServletRequest request = oAuthMessage.getRequest();
+        String commonAuthIdCookieValue = getCommonAuthCookieString(request);
+        if (StringUtils.isNotBlank(commonAuthIdCookieValue)) {
+            String sessionContextKey = DigestUtils.sha256Hex(commonAuthIdCookieValue);
+            return FrameworkUtils.getSessionContextFromCache(sessionContextKey,
+                    tenantDomain);
+        }
+        return null;
     }
 
     private ImpersonationContext validateImpersonation(OAuthAuthzReqMessageContext authzReqMsgCtx)
