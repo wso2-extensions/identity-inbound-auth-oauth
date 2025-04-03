@@ -752,15 +752,13 @@ public class AccessTokenIssuer {
             }
 
             String sub = claimsSetSubjectToken.getSubject();
-            String mayAct = ((JSONObject) claimsSetSubjectToken.getClaim(MAY_ACT)).get(SUB).toString();
             String iskClaim = (String) claimsSetActorToken.getClaim(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
 
             // Set session context data.
-            if (sub != null && mayAct != null && iskClaim != null) {
+            if (sub != null && iskClaim != null) {
                 SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim,
                         tenantDomainOfApp);
-                sessionContext.addProperty(IMPERSONATED_SUBJECT, sub);
-                sessionContext.addProperty(IMPERSONATING_ACTOR, mayAct);
+                sessionContext.setImpersonatedUser(sub);
                 FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext,
                         tenantDomainOfApp, tenantDomainOfApp);
             }

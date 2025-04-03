@@ -1291,12 +1291,12 @@ public class OAuth2AuthzEndpoint {
                 OAuthConstants.SUBJECT_TOKEN);
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
         if (sessionContext != null) {
-            String impersonatingActor = (String) sessionContext.getProperty(IMPERSONATING_ACTOR);
-            String impersonatedSubject = (String) sessionContext.getProperty(IMPERSONATED_SUBJECT);
-            /* To verify this is not an initiating impersonation request. Otherwise, we do not have to set
-            authenticated user. */
-            if (isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
-                try {
+            try {
+                String impersonatingActor = authnResult.getSubject().getUserId();
+                String impersonatedSubject = sessionContext.getImpersonatedUser();
+                /* To verify this is not an initiating impersonation request. Otherwise, we do not have to set
+                authenticated user. */
+                if (isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
                     // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
                     OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
                             oauth2Params, sessionContext, authnResult);
@@ -1311,10 +1311,10 @@ public class OAuth2AuthzEndpoint {
                             2. When generating additional claims for implicit & hybrid flows. */
                         oAuthMessage.setProperty(IMPERSONATION_CTX, impersonationContext);
                     }
-                } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-                    throw OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR, "Error while " +
-                            "handling impersonation request.");
                 }
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException | UserIdNotFoundException e) {
+                throw OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR, "Error while " +
+                        "handling impersonation request.");
             }
         }
     }
