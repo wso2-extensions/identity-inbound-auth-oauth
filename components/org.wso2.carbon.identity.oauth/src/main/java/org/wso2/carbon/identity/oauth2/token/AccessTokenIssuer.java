@@ -19,7 +19,6 @@
 package org.wso2.carbon.identity.oauth2.token;
 
 import com.nimbusds.jwt.JWTClaimsSet;
-import net.minidev.json.JSONObject;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -121,7 +120,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.MAY_ACT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUB;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
@@ -423,13 +421,10 @@ public class AccessTokenIssuer {
                                                      OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         // Set impersonation details into the token context before triggeringPreListeners.
-        if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonationContext() != null
-                && authorizationGrantCacheEntry.getImpersonationContext().isValidated()
-                && authorizationGrantCacheEntry.getImpersonationContext().getImpersonationRequestDTO() != null) {
+        if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
             tokReqMsgCtx.setImpersonationRequest(true);
             // Mandatory when getting additional claims (may_act & sub).
-            tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, authorizationGrantCacheEntry
-                    .getImpersonationContext().getImpersonationRequestDTO().getImpersonator());
+            tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, authorizationGrantCacheEntry.getImpersonator());
         }
     }
 
@@ -711,11 +706,9 @@ public class AccessTokenIssuer {
 
         // Write impersonation details to into the session context.
         if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest()) {
+            notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
             if (TOKEN_EXCHANGE.equals(grantType)) {
                 persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp);
-            } else {
-                // With token exchange we are sending email for grant handler.
-                notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
             }
         }
 
@@ -779,8 +772,8 @@ public class AccessTokenIssuer {
                 authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
                         .getMappedRemoteClaims());
             }
-            if (cacheEntry.getImpersonationContext() != null) {
-                authorizationGrantCacheEntry.setImpersonationContext(cacheEntry.getImpersonationContext());
+            if (cacheEntry.getImpersonator() != null) {
+                authorizationGrantCacheEntry.setImpersonator(cacheEntry.getImpersonator());
             }
             return Optional.of(authorizationGrantCacheEntry);
         }
