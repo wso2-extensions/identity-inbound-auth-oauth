@@ -76,6 +76,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -96,6 +97,7 @@ import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -3836,6 +3838,75 @@ public class OAuth2Util {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
+    }
+
+    /**
+     * Get Authenticated user using user id and tenant domain.
+     *
+     * @param userId       User id of the impersonated user.
+     * @param impersonator Impersonator user.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getImpersonatingUser(String userId, AuthenticatedUser impersonator)
+            throws IdentityOAuth2Exception {
+
+        try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(impersonator.getTenantDomain());
+
+            User impersonatingUser = OAuthUtil.getUserFromTenant(userId, tenantId);
+            if (impersonatingUser == null) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid User Id provided for the request. Unable to find the user for given " +
+                                "user id : " + userId + " tenant id : " + tenantId);
+            }
+            return getImpersonatingUser(userId, impersonatingUser, impersonator);
+        } catch (UserStoreException | IdentityOAuth2Exception | UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Use mapped local subject is mandatory but a local user couldn't be found");
+        }
+    }
+
+    private static AuthenticatedUser getImpersonatingUser(String impersonateeUserId, User impersonatingUser,
+                                                          AuthenticatedUser impersonator)
+            throws UserIdNotFoundException {
+
+        AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
+        authenticatedImpersonatingUser.setUserId(impersonateeUserId);
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(
+                getAuthenticatedSubjectIdentifier(impersonator.getAuthenticatedSubjectIdentifier(), impersonateeUserId,
+                        impersonator.getTenantDomain(), impersonator.getUserStoreDomain()));
+        authenticatedImpersonatingUser.setUserName(impersonatingUser.getUserName());
+        authenticatedImpersonatingUser.setUserStoreDomain(impersonatingUser.getUserStoreDomain());
+        authenticatedImpersonatingUser.setTenantDomain(impersonatingUser.getTenantDomain());
+        return authenticatedImpersonatingUser;
+    }
+
+    public static String getUserIdFromAuthenticatedSubjectIdentifier(String authenticatedSubjectIdentifier) {
+
+        if (authenticatedSubjectIdentifier.contains("@")) {
+            authenticatedSubjectIdentifier = authenticatedSubjectIdentifier.split("@")[0];
+        }
+        if (authenticatedSubjectIdentifier.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            authenticatedSubjectIdentifier = UserCoreUtil.removeDomainFromName(authenticatedSubjectIdentifier);
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    private static String getAuthenticatedSubjectIdentifier(String impersonatorId, String impersonateeId,
+                                                            String tenantDomain, String userStoreDomain) {
+
+        String authenticatedSubjectIdentifier = impersonateeId;
+        if (impersonatorId.contains("@")) {
+            authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
+                    tenantDomain);
+        }
+        if (impersonatorId.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            authenticatedSubjectIdentifier = UserCoreUtil.addDomainToName(authenticatedSubjectIdentifier,
+                    userStoreDomain);
+        }
+        return authenticatedSubjectIdentifier;
     }
 
     /**

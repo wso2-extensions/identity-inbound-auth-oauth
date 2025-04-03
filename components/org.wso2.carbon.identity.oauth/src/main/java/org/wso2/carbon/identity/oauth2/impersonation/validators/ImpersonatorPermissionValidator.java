@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequest
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 
@@ -71,16 +72,18 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
-        if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+        if ((authorizedScopes.contains(IMPERSONATION_SCOPE_NAME) || Objects.equals(clientId, "MY_ACCOUNT"))
+                && !Objects.equals(clientId, "CONSOLE")
+        ) {
             impersonationContext.setValidated(true);
         } else {
             impersonationContext.setValidated(false);
-            impersonationContext.setValidationFailureErrorMessage("Authenticated user : " + authzReqMessageContext
-                    .getAuthorizationReqDTO().getUser().getLoggableMaskedUserId() + " doesn't have impersonation " +
-                    "permission for client : " + clientId +  " in the tenant : " + tenantDomain);
-            LOG.error("Authenticated user : " + authzReqMessageContext
-                    .getAuthorizationReqDTO().getUser().getLoggableMaskedUserId() + "doesn't have impersonation " +
-                    "permission for client : " + clientId +  " in the tenant : " + tenantDomain);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(String.format("Authenticated user : %s doesn't have impersonation permission for " +
+                        "client :%s in the tenant %s",
+                        authzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableMaskedUserId(),
+                        clientId, tenantDomain));
+            }
         }
         return impersonationContext;
     }
