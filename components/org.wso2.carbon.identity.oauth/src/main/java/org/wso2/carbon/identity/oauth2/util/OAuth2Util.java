@@ -3862,24 +3862,51 @@ public class OAuth2Util {
                                 "user id : " + userId + " tenant id : " + tenantId);
             }
             return getImpersonatingUser(userId, impersonatingUser, impersonator);
-        } catch (UserStoreException | IdentityOAuth2Exception e) {
+        } catch (UserStoreException | IdentityOAuth2Exception | UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Use mapped local subject is mandatory but a local user couldn't be found");
         }
     }
 
-    private static AuthenticatedUser getImpersonatingUser(String userId, User impersonatingUser,
-                                                          AuthenticatedUser impersonator) {
+    private static AuthenticatedUser getImpersonatingUser(String impersonateeUserId, User impersonatingUser,
+                                                          AuthenticatedUser impersonator)
+            throws UserIdNotFoundException {
 
         AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
-        authenticatedImpersonatingUser.setUserId(userId);
-        // Todo: Check if authenticatedSubjectIdentifier is set at app level.
-        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(userId + "@"
-                + impersonatingUser.getTenantDomain());
+        authenticatedImpersonatingUser.setUserId(impersonateeUserId);
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(
+                getAuthenticatedSubjectIdentifier(impersonator.getAuthenticatedSubjectIdentifier(), impersonateeUserId,
+                        impersonator.getTenantDomain(), impersonator.getUserStoreDomain()));
         authenticatedImpersonatingUser.setUserName(impersonatingUser.getUserName());
         authenticatedImpersonatingUser.setUserStoreDomain(impersonatingUser.getUserStoreDomain());
         authenticatedImpersonatingUser.setTenantDomain(impersonatingUser.getTenantDomain());
         return authenticatedImpersonatingUser;
+    }
+
+    public static String getUserIdFromAuthenticatedSubjectIdentifier(String authenticatedSubjectIdentifier) {
+
+        if (authenticatedSubjectIdentifier.contains("@")) {
+            authenticatedSubjectIdentifier = authenticatedSubjectIdentifier.split("@")[0];
+        }
+        if (authenticatedSubjectIdentifier.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            authenticatedSubjectIdentifier = UserCoreUtil.removeDomainFromName(authenticatedSubjectIdentifier);
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    private static String getAuthenticatedSubjectIdentifier(String impersonatorId, String impersonateeId,
+                                                            String tenantDomain, String userStoreDomain) {
+
+        String authenticatedSubjectIdentifier = impersonateeId;
+        if (impersonatorId.contains("@")) {
+            authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
+                    tenantDomain);
+        }
+        if (impersonatorId.contains(UserCoreConstants.DOMAIN_SEPARATOR)) {
+            authenticatedSubjectIdentifier = UserCoreUtil.addDomainToName(authenticatedSubjectIdentifier,
+                    userStoreDomain);
+        }
+        return authenticatedSubjectIdentifier;
     }
 
     /**

@@ -115,7 +115,6 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.MAY_ACT;
@@ -708,7 +707,8 @@ public class AccessTokenIssuer {
         if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest()) {
             notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
             if (TOKEN_EXCHANGE.equals(grantType)) {
-                persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp);
+                persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp,
+                        tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
             }
         }
 
@@ -722,15 +722,22 @@ public class AccessTokenIssuer {
         ImpersonationNotificationRequestDTO impersonationNotificationRequestDTO
                 = new ImpersonationNotificationRequestDTO();
         impersonationNotificationRequestDTO.setTokenReqMessageContext(tokReqMsgCtx);
-        impersonationNotificationRequestDTO.setImpersonator((String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR));
-        impersonationNotificationRequestDTO.setSubject((String) tokReqMsgCtx.getProperty(IMPERSONATED_SUBJECT));
+        String impersonatorUserId = (String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR);
+        impersonationNotificationRequestDTO.setImpersonator(
+                OAuth2Util.getUserIdFromAuthenticatedSubjectIdentifier(impersonatorUserId));
+        try {
+            String impersonatedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            impersonationNotificationRequestDTO.setSubject(impersonatedUserId);
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User ID not found in the token request context.", e);
+        }
         impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
         ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
         notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
-
     }
 
-    private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomainOfApp)
+    private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomain,
+                                                          String loginTenantDomain)
             throws IdentityOAuth2Exception {
 
         RequestParameter[] params = tokenReqDTO.getRequestParameters();
@@ -744,16 +751,14 @@ public class AccessTokenIssuer {
                 throw new IdentityOAuth2Exception("may_act claim is not found in the subject token.");
             }
 
-            String sub = claimsSetSubjectToken.getSubject();
+            String sub = OAuth2Util.getUserIdFromAuthenticatedSubjectIdentifier(claimsSetSubjectToken.getSubject());
             String iskClaim = (String) claimsSetActorToken.getClaim(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
 
             // Set session context data.
             if (sub != null && iskClaim != null) {
-                SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim,
-                        tenantDomainOfApp);
+                SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, loginTenantDomain);
                 sessionContext.setImpersonatedUser(sub);
-                FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext,
-                        tenantDomainOfApp, tenantDomainOfApp);
+                FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext, tenantDomain, loginTenantDomain);
             }
         }
     }
