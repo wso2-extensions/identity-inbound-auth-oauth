@@ -1,10 +1,14 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class AuthzChallengeCompletedResponse {
-    private Map<String, String> auth_data = new HashMap<>();
+
+    @JsonProperty("authData")
+    private Map<String, String> authData = new HashMap<>();
 
     public AuthzChallengeCompletedResponse() {
 
@@ -12,16 +16,16 @@ public class AuthzChallengeCompletedResponse {
 
     public AuthzChallengeCompletedResponse(Map<String, String> authData) {
 
-        this.auth_data = authData;
+        this.authData = authData;
     }
 
     public Map<String, String> getAuthData() {
 
-        return auth_data;
+        return authData;
     }
 
     public void setAuthData(Map<String, String> authData) {
 
-        this.auth_data = authData;
+        this.authData = authData;
     }
 }

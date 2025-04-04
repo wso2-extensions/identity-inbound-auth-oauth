@@ -1,9 +1,13 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 
 public class AuthzChallengeIncompleteResponse  extends AuthzChallengeGenericResponse {
-    private NextStep next_step;
+
+    @JsonProperty("next_step")
+    private NextStep nextStep;
 
     public AuthzChallengeIncompleteResponse() {
 
@@ -11,16 +15,20 @@ public class AuthzChallengeIncompleteResponse  extends AuthzChallengeGenericResp
 
     public AuthzChallengeIncompleteResponse(String authSession, String error, String errorDescription,
                                             NextStep nextStep) {
+
         super(authSession, error, errorDescription);
-        this.next_step = nextStep;
+        this.nextStep = nextStep;
     }
 
+    @JsonIgnore
     public NextStep getNextStep() {
-        return next_step;
+
+        return nextStep;
     }
 
     public void setNextStep(NextStep nextStep) {
-        this.next_step = nextStep;
+
+        this.nextStep = nextStep;
     }
 
 }

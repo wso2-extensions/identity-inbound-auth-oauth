@@ -18,8 +18,9 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang.StringUtils;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.auth.
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -61,8 +63,8 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.RequestUtil;
+import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -102,7 +104,7 @@ public class AuthzChallengeEndpoint {
 
     public Response handleInitialAuthzChallengeRequest(@Context HttpServletRequest request,
                                                        @Context HttpServletResponse response, boolean isInternalRequest)
-            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
+            throws URISyntaxException, InvalidRequestParentException, IdentityOAuth2Exception {
 
         OAuthMessage oAuthMessage;
 
@@ -236,33 +238,28 @@ public class AuthzChallengeEndpoint {
 
             if (parameterMap.containsKey(OAuthConstants.OAuth20Params.CLIENT_ID) &&
                     parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE) &&
-            parameterMap.containsKey(OAuthConstants.OAuth20Params.REDIRECT_URI)) {
+                    parameterMap.containsKey(OAuthConstants.OAuth20Params.REDIRECT_URI)) {
 
                 if (!EndpointUtil.validateParams(request, paramMap)) {
-                    return Response.status(HttpServletResponse.SC_BAD_REQUEST)
-                            .location(new URI(EndpointUtil.getErrorPageURL(request,
-                                    OAuth2ErrorCodes.INVALID_REQUEST,
-                                    OAuth2ErrorCodes.OAuth2SubErrorCodes.INVALID_AUTHORIZATION_REQUEST,
-                                    "Invalid authorization request with repeated parameters", null)))
-                            .build();
+                    throw new AuthServiceClientException(
+                            OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid authorization challenge request with repeated parameters");
                 }
                 HttpServletRequestWrapper httpRequest = new OAuthRequestWrapper(request, paramMap);
                 return handleInitialAuthzChallengeRequest(httpRequest, response, false);
             } else {
-                return AuthzUtil.buildAuthzChallengeResponseForClientError(
-                        new AuthServiceClientException(AuthServiceConstants.ErrorMessage
-                                .ERROR_INVALID_AUTH_REQUEST.code(),
-                                "Invalid or missing request parameters."), LOG);
+                   throw new AuthServiceClientException(AuthServiceConstants.ErrorMessage
+                        .ERROR_INVALID_AUTH_REQUEST.code(),
+                        "Invalid or missing request parameters.");
             }
 
         } catch (AuthServiceClientException e) {
-            log.error("Client error while handling authentication request.", e);
-            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+            return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error occurred while handling authorize challenge request.", e);
+            log.error("Error occurred while handling authorization challenge request.", e);
             return AuthzUtil.handleIdentityOAuth2Exception(e);
-        } catch (AuthServiceException | URISyntaxException | InvalidRequestParentException e) {
-            log.error("Error occurred while handling authorize challenge request.", e);
+        } catch (URISyntaxException | InvalidRequestParentException e) {
+            log.error("Error occurred while handling authorization challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -276,19 +273,22 @@ public class AuthzChallengeEndpoint {
 
         try {
             if (payload != null && payload.contains(AUTH_SESSION)) {
+                if (!validateJsonPayload(payload)) {
+                    throw new AuthServiceClientException(
+                            OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid authorization challenge request with repeated parameters");
+                }
                 return handleSubsequentAuthzChallengeRequest(request, response, payload);
             } else {
-                return AuthzUtil.buildAuthzChallengeResponseForClientError(
-                        new AuthServiceClientException(AuthServiceConstants.ErrorMessage
-                                .ERROR_INVALID_AUTH_REQUEST.code(),
-                                "Invalid or missing request parameters."), LOG);
+                throw new AuthServiceClientException(AuthServiceConstants.ErrorMessage
+                        .ERROR_INVALID_AUTH_REQUEST.code(),
+                        "Invalid or missing request parameters.");
             }
 
         } catch (AuthServiceClientException e) {
-            log.error("Client error while handling authentication request.", e);
-            return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
+            return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (AuthServiceException | InvalidRequestParentException | URISyntaxException e) {
-            log.error("Error occurred while handling authorize challenge request.", e);
+            log.error("Error occurred while handling authorization challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -421,13 +421,56 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException {
+    private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException,
+            AuthServiceClientException {
 
         ObjectMapper objectMapper = new ObjectMapper();
         ObjectNode objectNode = (ObjectNode) objectMapper.readTree(payload);
 
+        if (!objectNode.has(AUTH_SESSION) || objectNode.get(AUTH_SESSION).isNull() ||
+                StringUtils.isBlank(objectNode.get(AUTH_SESSION).asText())) {
+            throw new AuthServiceClientException(
+                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                    "Missing or empty auth_session parameter.");
+        }
+
         objectNode.set(FLOW_ID, objectNode.remove(AUTH_SESSION));
         return objectMapper.writeValueAsString(objectNode);
     }
+
+    public static boolean validateJsonPayload(String payload) {
+
+        DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = null;
+
+        if (LoggerUtils.isDiagnosticLogsEnabled()) {
+            diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
+                    OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                    OAuthConstants.LogConstants.ActionIDs.VALIDATE_INPUT_PARAMS);
+            diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                    .resultStatus(DiagnosticLog.ResultStatus.FAILED);
+        }
+
+        try {
+            JsonFactory factory = new JsonFactory();
+            factory.enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+
+            ObjectMapper objectMapper = new ObjectMapper(factory);
+            objectMapper.readTree(payload); // Will throw if duplicates exist
+
+            return true;
+
+        } catch (JsonProcessingException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("Duplicate or invalid key in JSON payload", e);
+            }
+            if (diagnosticLogBuilder != null) {
+                diagnosticLogBuilder.inputParam("payload", payload)
+                        .resultMessage("JSON validation failed due to duplicate keys or invalid structure.");
+                LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+            }
+            return false;
+        }
+    }
+
 }
 

@@ -4565,7 +4565,7 @@ public class AuthzUtil {
 
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-                String jsonString = null;
+                String jsonString;
                 try {
                     jsonString = objectMapper.writeValueAsString(authResponse);
                 } catch (JsonProcessingException e) {
@@ -5006,21 +5006,15 @@ public class AuthzUtil {
 
         AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
 
-        // Mapping the error code to the appropriate error message
-        Optional<AuthServiceConstants.ErrorMessage> error =
-                AuthServiceConstants.ErrorMessage.fromCode(exception.getErrorCode());
+        Pair<String, String> errorMapping = mapFrameworkError(exception.getErrorCode());
+        String error = errorMapping.getLeft();
+        String errorDescription = errorMapping.getRight();
 
-        if (error.isPresent()) {
-            authzChallengeFailResponse.setError(error.get().code());
-            authzChallengeFailResponse.setErrorDescription(error.get().description());
+        if (errorDescription == null) {
+            errorDescription = exception.getMessage();
+        }
 
-            // If the exception is sent with a known error code, the error message will contain additional information.
-            String errorDescription = error.get().description();
-            if (StringUtils.isNotBlank(errorDescription)) {
-                errorDescription = exception.getMessage();
-            }
-            authzChallengeFailResponse.setErrorDescription(errorDescription);
-        } else {
+        if (error.isEmpty()) {
             String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() :
                     AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code();
             authzChallengeFailResponse.setError(errorCode);
@@ -5028,6 +5022,8 @@ public class AuthzUtil {
                     .ERROR_UNABLE_TO_PROCEED.description());
         }
 
+        authzChallengeFailResponse.setError(error);
+        authzChallengeFailResponse.setErrorDescription(errorDescription);
         String jsonString = new Gson().toJson(authzChallengeFailResponse);
         return Response.status(httpStatusCode).entity(jsonString).build();
     }

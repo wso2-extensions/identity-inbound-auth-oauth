@@ -1,9 +1,18 @@
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
-    private String error_uri;
-    private String request_uri;
-    private String expires_in;
+
+    @JsonProperty("error_uri")
+    private String errorUri;
+
+    @JsonProperty("request_uri")
+    private String requestUri;
+
+    @JsonProperty("expires_in")
+    private String expiresIn;
 
     public AuthzChallengeFailResponse() {
 
@@ -11,33 +20,43 @@ public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
 
     public AuthzChallengeFailResponse(String authSession, String error, String errorDescription, String errorUri,
                                       String requestUri, String expiresIn) {
+
         super(authSession, error, errorDescription);
-        this.error_uri = errorUri;
-        this.request_uri = requestUri;
-        this.expires_in = expiresIn;
+        this.errorUri = errorUri;
+        this.requestUri = requestUri;
+        this.expiresIn = expiresIn;
     }
 
+    @JsonIgnore
     public String getErrorUri() {
-        return error_uri;
+
+        return errorUri;
     }
 
     public void setErrorUri(String errorUri) {
-        this.error_uri = errorUri;
+
+        this.errorUri = errorUri;
     }
 
+    @JsonIgnore
     public String getRequestUri() {
-        return request_uri;
+
+        return requestUri;
     }
 
     public void setRequestUri(String request_uri) {
-        this.request_uri = request_uri;
+
+        this.requestUri = request_uri;
     }
 
+    @JsonIgnore
     public String getExpiresIn() {
-        return expires_in;
+
+        return expiresIn;
     }
 
     public void setExpiresIn(String expiresIn) {
-        this.expires_in = expiresIn;
+
+        this.expiresIn = expiresIn;
     }
 }
