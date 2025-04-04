@@ -25,6 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
+import org.json.JSONObject;
 import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -36,6 +37,10 @@ import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServiceImpl;
+import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
+import org.wso2.carbon.identity.claim.metadata.mgt.model.LocalClaim;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -68,6 +73,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.collections.MapUtils.isEmpty;
@@ -767,11 +773,42 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
     private JWTClaimsSet setClaimsToJwtClaimSet(JWTClaimsSet.Builder jwtClaimsSetBuilder, Map<String, Object>
             userClaimsInOIDCDialect) {
 
+        ClaimMetadataManagementServiceImpl claimMetadataService = new ClaimMetadataManagementServiceImpl();
+        List<ExternalClaim> oidcClaimMappings;
+        try {
+            oidcClaimMappings = claimMetadataService.getExternalClaims("http://wso2.org/oidc/claim",
+                    "carbon.super");
+        } catch (ClaimMetadataException e) {
+            throw new RuntimeException(e);
+        }
+
         JWTClaimsSet jwtClaimsSet = jwtClaimsSetBuilder.build();
         String multiAttributeSeparator = FrameworkUtils.getMultiAttributeSeparator();
         for (Map.Entry<String, Object> claimEntry : userClaimsInOIDCDialect.entrySet()) {
             String claimValue = claimEntry.getValue().toString();
             String claimKey = claimEntry.getKey();
+
+            // Find oidcClaimMappings with the claimKey set as the getClaimURI()
+            Optional<ExternalClaim> externalClaim = oidcClaimMappings.stream()
+                    .filter(claim -> claim.getClaimURI().equals(claimKey))
+                    .findFirst();
+            if (externalClaim.isPresent()) {
+                String localClaimURI = externalClaim.get().getMappedLocalClaim();
+                try {
+                    Optional<LocalClaim> localClaim = claimMetadataService.getLocalClaim(localClaimURI, "carbon.super");
+                    if (localClaim.isPresent()) {
+                        String dataType = localClaim.get().getClaimProperty("dataType");
+                        if ("complex".equals(dataType)) {
+                            JSONObject jsonObject = new JSONObject(claimValue);
+                            jwtClaimsSetBuilder.claim(claimEntry.getKey(), jsonObject.toMap());
+                            continue;
+                        }
+                    }
+                } catch (ClaimMetadataException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
             if (isMultiValuedAttribute(claimKey, claimValue, multiAttributeSeparator)) {
                 JSONArray claimValues = new JSONArray();
                 String[] attributeValues = claimValue.split(Pattern.quote(multiAttributeSeparator));
