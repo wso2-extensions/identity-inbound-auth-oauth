@@ -678,8 +678,15 @@ public class OAuth2Service extends AbstractAdmin {
 
                 } else if (accessTokenDO != null) {
                     if (revokeRequestDTO.getConsumerKey().equals(accessTokenDO.getConsumerKey())) {
+                        // Resolve the application tenant domain.
+                        String tenantDomain;
+                        if (StringUtils.isBlank(PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                .getApplicationResidentOrganizationId())) {
+                            tenantDomain = IdentityTenantUtil.getTenantDomain(IdentityTenantUtil.getLoginTenantId());
+                        } else {
+                            tenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                        }
                         // Extracting the application details with consumer key and tenant domain.
-                        String tenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
                         if ((OAuth2Util.getAppInformationByClientId(accessTokenDO.getConsumerKey(), tenantDomain).
                                 isTokenBindingValidationEnabled()) && (!isValidTokenBinding(accessTokenDO.
                                 getTokenBinding(), revokeRequestDTO.getRequest()))) {
