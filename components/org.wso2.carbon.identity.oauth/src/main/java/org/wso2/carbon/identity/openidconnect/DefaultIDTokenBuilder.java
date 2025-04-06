@@ -601,8 +601,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
     /**
      * This method map signature algorithm define in identity.xml to nimbus
      * signature algorithm
-     * format, Strings are defined inline hence there are not being used any
-     * where
+     * format, Strings are defined inline hence there are not being used anywhere
      *
      * @param signatureAlgorithm signature algorithm
      * @return mapped JWSAlgorithm
@@ -749,7 +748,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * +     * @return a list of amr values to be sent via ID token. May be empty, but not null.
      * +
      */
-    private List<String> translateAmrToResponse(List<String> internalList) {
+    public List<String> translateAmrToResponse(List<String> internalList) {
         Set<String> result = new LinkedHashSet<>();
         for (String internalValue : internalList) {
             List<String> translatedToResponse = translateToResponse(internalValue);
@@ -824,7 +823,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      * @return                          IDP Session Key.
      * @throws IdentityOAuth2Exception  Error if IDP Session Key is not available.
      */
-    private String getIdpSessionKey(AuthorizationGrantCacheEntry authzGrantCacheEntry) throws IdentityOAuth2Exception {
+    public String getIdpSessionKey(AuthorizationGrantCacheEntry authzGrantCacheEntry) throws IdentityOAuth2Exception {
 
         String idpSessionKey = authzGrantCacheEntry.getSessionContextIdentifier();
         if (idpSessionKey == null) {

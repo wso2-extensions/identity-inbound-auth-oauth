@@ -122,6 +122,10 @@ public class OAuth2IntrospectionResponseDTO {
      */
     private AuthenticatedUser authorizedUser;
 
+    private String acr;
+
+    private long authTime;
+
     /*
      * this is used for extensions.
      */
@@ -327,5 +331,21 @@ public class OAuth2IntrospectionResponseDTO {
     public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
 
         this.authorizedUser = authorizedUser;
+    }
+
+    public String getAcr() {
+        return acr;
+    }
+
+    public void setAcr(String acr) {
+        this.acr = acr;
+    }
+
+    public long getAuthTime() {
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+        this.authTime = authTime;
     }
 }
