@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -1171,7 +1172,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                 dataDO.setScope((String[]) ArrayUtils.addAll(dataDO.getScope(),
                         scopes.toArray(new String[scopes.size()])));
             }
-
+            getAccessTokenExtendedAttributes(accessTokenIdentifier, dataDO);
         } catch (SQLException e) {
             throw new IdentityOAuth2Exception("Error when retrieving Access Token" + e);
         } finally {
@@ -1179,6 +1180,33 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
 
         return dataDO;
+    }
+
+    private void getAccessTokenExtendedAttributes(String accessTokenIdentifier, AccessTokenDO dataDO) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving extended attributes for access token: " + accessTokenIdentifier);
+        }
+        if (dataDO == null) {
+            return;
+        }
+        Map<String, String> parameters = new HashMap<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
+                     .GET_ACCESS_TOKEN_EXTENDED_ATTRIBUTES)) {
+            prepStmt.setString(1, accessTokenIdentifier);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    String key = resultSet.getString("KEY");
+                    String value = resultSet.getString("VALUE");
+                    parameters.put(key, value);
+                }
+            }
+            dataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(parameters));
+        } catch (SQLException e) {
+            log.error("Error occurred while retrieving extended attributes for access token: " +
+                    accessTokenIdentifier, e);
+        }
     }
 
     private void setTokenBindingToAccessTokenDO(AccessTokenDO dataDO, Connection connection, String tokenId)

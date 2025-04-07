@@ -73,7 +73,7 @@ public class AccessTokenDO extends CacheEntry {
 
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
-    private Properties properties = new Properties();
+    private final Properties properties = new Properties();
 
     private String authorizedOrganizationId;
 
@@ -146,6 +146,7 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setTokenBinding(tokenDO.getTokenBinding());
         newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
         newTokenDO.setAppResidentTenantId(tokenDO.getAppResidentTenantId());
+        newTokenDO.setAccessTokenExtendedAttributes(tokenDO.getAccessTokenExtendedAttributes());
 
         return newTokenDO;
     }
