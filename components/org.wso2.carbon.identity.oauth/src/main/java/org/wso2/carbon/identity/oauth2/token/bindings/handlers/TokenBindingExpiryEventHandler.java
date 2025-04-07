@@ -327,16 +327,20 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                         isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
                     }
 
+                    boolean isImpersonatingActorInitiatedRevocation = validateImpersonatingActorInitiatedRevocation(
+                            accessTokenDO, userId);
+
                     if (isFederatedRoleBasedAuthzEnabled
                             && StringUtils.equalsIgnoreCase(
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
-                            && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                            && (isImpersonatingActorInitiatedRevocation
+                            || StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName()))) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (
                             StringUtils.equalsIgnoreCase(tokenBindingType,
                                     OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER)
+                                    || isImpersonatingActorInitiatedRevocation
                                     || StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())
-                                    || isImpersonatingActorInitiatedRevocation(accessTokenDO, userId)
                     ) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
@@ -350,7 +354,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         }
     }
 
-    private boolean isImpersonatingActorInitiatedRevocation(AccessTokenDO accessTokenDO, String userId) {
+    private boolean validateImpersonatingActorInitiatedRevocation(AccessTokenDO accessTokenDO, String userId) {
 
         boolean isImpersonationRequest = accessTokenDO.getAccessTokenExtendedAttributes() != null &&
                 accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null &&
