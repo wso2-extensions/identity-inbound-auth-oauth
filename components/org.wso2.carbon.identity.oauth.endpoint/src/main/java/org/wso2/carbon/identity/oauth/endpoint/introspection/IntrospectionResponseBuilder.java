@@ -69,6 +69,19 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
+     * @param impersonator Impersonator id if exists.
+     * @return IntrospectionResponseBuilder.
+     */
+    public IntrospectionResponseBuilder setAct(String impersonator) {
+
+        if (StringUtils.isNotBlank(impersonator)) {
+            parameters.put(IntrospectionResponse.ACT, new HashMap<>(
+                    Collections.singletonMap(IntrospectionResponse.SUB, impersonator)));
+        }
+        return this;
+    }
+
+    /**
      * @param issuedAt token issued time
      * @return IntrospectionResponseBuilder
      */

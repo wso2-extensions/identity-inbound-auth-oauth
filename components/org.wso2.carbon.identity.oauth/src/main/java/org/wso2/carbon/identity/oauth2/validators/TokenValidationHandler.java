@@ -59,6 +59,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.IS_FRAGMENT_APP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.isParsableJWT;
 
 /**
@@ -481,6 +482,18 @@ public class TokenValidationHandler {
             diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.FAILED);
         }
+        // set act claim.
+        if (messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO) != null) {
+            accessTokenDO = (AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO);
+            if (accessTokenDO.getAccessTokenExtendedAttributes() != null
+                    && accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null
+                    && accessTokenDO.getAccessTokenExtendedAttributes().getParameters()
+                        .containsKey(IMPERSONATING_ACTOR)) {
+                String impersonatingActor = accessTokenDO.getAccessTokenExtendedAttributes().getParameters().get(
+                        IMPERSONATING_ACTOR);
+                introResp.getProperties().put(IMPERSONATING_ACTOR, impersonatingActor);
+            }
+        }
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
             // this can be a self-issued JWT or any access token issued by a trusted OAuth authorization server.
@@ -506,7 +519,6 @@ public class TokenValidationHandler {
             if (messageContext.getProperty(OAuth2Util.CLIENT_ID) != null) {
                 introResp.setClientId((String) messageContext.getProperty(OAuth2Util.CLIENT_ID));
             }
-
         } else {
             try {
                 String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
