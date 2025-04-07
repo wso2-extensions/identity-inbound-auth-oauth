@@ -105,6 +105,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -705,10 +706,9 @@ public class AccessTokenIssuer {
 
         // Write impersonation details to into the session context.
         if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest()) {
-            notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
             if (TOKEN_EXCHANGE.equals(grantType)) {
                 persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp,
-                        tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
+                        tokReqMsgCtx.getAuthorizedUser().getTenantDomain(), tokenRespDTO, tokReqMsgCtx);
             }
         }
 
@@ -737,7 +737,9 @@ public class AccessTokenIssuer {
     }
 
     private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomain,
-                                                          String loginTenantDomain)
+                                                          String loginTenantDomain,
+                                                          OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                          OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
         RequestParameter[] params = tokenReqDTO.getRequestParameters();
@@ -757,6 +759,10 @@ public class AccessTokenIssuer {
             // Set session context data.
             if (sub != null && iskClaim != null) {
                 SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, loginTenantDomain);
+                if (sessionContext.getImpersonatedUser() != null
+                        && !Objects.equals(sessionContext.getImpersonatedUser(), sub)) {
+                    notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
+                }
                 sessionContext.setImpersonatedUser(sub);
                 FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext, tenantDomain, loginTenantDomain);
             }
