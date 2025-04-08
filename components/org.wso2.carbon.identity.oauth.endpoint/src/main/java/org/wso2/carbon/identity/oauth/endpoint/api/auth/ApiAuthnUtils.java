@@ -392,6 +392,7 @@ public class ApiAuthnUtils {
                     errorDescription = errorInfo.getErrorDescription();
                 }
 
+                response.setCode(errorCode);
                 response.setError(error);
                 response.setErrorDescription(errorDescription);
             } else {
@@ -399,10 +400,19 @@ public class ApiAuthnUtils {
                     LOG.debug("Error info is not present in the authentication service response. " +
                             "Setting default error details.");
                 }
+                response.setCode(getDefaultAuthenticationFailureError().code());
                 response.setError(ApiAuthnUtils.getDefaultAuthenticationFailureError().message());
                 response.setErrorDescription(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
             }
-            jsonString = new Gson().toJson(response);
+            response.setTraceId(ApiAuthnUtils.getCorrelationId());
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+            try {
+                jsonString = objectMapper.writeValueAsString(response);
+            } catch (JsonProcessingException e) {
+                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                        .entity("Internal Server Error: " + e.getMessage()).build();
+            }
         } else {
             APIError apiError = new APIError();
             if (authServiceResponse.getErrorInfo().isPresent()) {

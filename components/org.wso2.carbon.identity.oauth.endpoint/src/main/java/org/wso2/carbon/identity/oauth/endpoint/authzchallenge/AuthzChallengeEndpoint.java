@@ -122,7 +122,6 @@ public class AuthzChallengeEndpoint {
             return AuthzUtil.handleIdentityException(request, e);
         }
 
-        // Perform request authentication
         if (!isInternalRequest) {
             if (hasDPoPHeader(request)) {
                 processDPoPHeader(request, oAuthMessage);
@@ -213,16 +212,12 @@ public class AuthzChallengeEndpoint {
                             String.format(AuthServiceConstants.ErrorMessage.ERROR_UNKNOWN_AUTH_FLOW_STATUS
                                     .description(), authServiceResponse.getFlowStatus()));
             }
-
         } catch (AuthServiceClientException e) {
             return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (AuthServiceException e) {
             return AuthzUtil.buildAuthzChallengeResponseForServerError(e, LOG);
         } catch (IdentityOAuth2Exception e) {
             return AuthzUtil.handleIdentityOAuth2Exception(e);
-        } catch (JsonProcessingException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
-                    "Error while building JSON response.", e);
         }
     }
 
@@ -236,10 +231,7 @@ public class AuthzChallengeEndpoint {
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
-            if (parameterMap.containsKey(OAuthConstants.OAuth20Params.CLIENT_ID) &&
-                    parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE) &&
-                    parameterMap.containsKey(OAuthConstants.OAuth20Params.REDIRECT_URI)) {
-
+            if (hasRequiredAuthorizationParameters(parameterMap)) {
                 if (!EndpointUtil.validateParams(request, paramMap)) {
                     throw new AuthServiceClientException(
                             OAuth2ErrorCodes.INVALID_REQUEST,
@@ -252,7 +244,6 @@ public class AuthzChallengeEndpoint {
                         .ERROR_INVALID_AUTH_REQUEST.code(),
                         "Invalid or missing request parameters.");
             }
-
         } catch (AuthServiceClientException e) {
             return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (IdentityOAuth2Exception e) {
@@ -284,13 +275,19 @@ public class AuthzChallengeEndpoint {
                         .ERROR_INVALID_AUTH_REQUEST.code(),
                         "Invalid or missing request parameters.");
             }
-
         } catch (AuthServiceClientException e) {
             return AuthzUtil.buildAuthzChallengeResponseForClientError(e, LOG);
         } catch (AuthServiceException | InvalidRequestParentException | URISyntaxException e) {
             log.error("Error occurred while handling authorization challenge request.", e);
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    private boolean hasRequiredAuthorizationParameters(Map<String, String[]> parameterMap) {
+
+        return parameterMap.containsKey(OAuthConstants.OAuth20Params.CLIENT_ID) &&
+                parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE) &&
+                parameterMap.containsKey(OAuthConstants.OAuth20Params.REDIRECT_URI);
     }
 
     private OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
@@ -340,8 +337,8 @@ public class AuthzChallengeEndpoint {
         return request.getHeader(DPOP) != null;
     }
 
-    // Process the DPoP header and extract thumbprint if available. The extracted thumbprint is then stored in the
-    // OAuthMessage to be persisted in the session data cache for later validation in subsequent requests.
+    /* Process the DPoP header and extract thumbprint if available. The extracted thumbprint is then stored in the
+    OAuthMessage to be persisted in the session data cache for later validation in subsequent requests. */
     private void processDPoPHeader(HttpServletRequest request, OAuthMessage oAuthMessage)
             throws IdentityOAuth2Exception {
 
@@ -371,11 +368,11 @@ public class AuthzChallengeEndpoint {
 
         if (!sessionDataCacheKey.isPresent()) {
             if (log.isDebugEnabled()) {
-                log.debug("No session data cache key found in the request. Skipping DPoP thumbprint validation.");
+                log.debug("No session data cache entry found. Cannot proceed DPoP thumbprint validation.");
             }
-            throw new AuthServiceException(
-                    AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Invalid session data cache key."
+            throw new AuthServiceClientException(
+                    AuthServiceConstants.ErrorMessage.ERROR_AUTHENTICATION_CONTEXT_NULL.code(),
+                    "Invalid session ID."
             );
         }
         SessionDataCacheKey key = new SessionDataCacheKey(sessionDataCacheKey.orElse(""));
@@ -421,21 +418,26 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    private String renameAuthSessionToFlowId(String payload) throws JsonProcessingException,
-            AuthServiceClientException {
+    private String renameAuthSessionToFlowId(String payload) throws AuthServiceException {
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        ObjectNode objectNode = (ObjectNode) objectMapper.readTree(payload);
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            ObjectNode objectNode = (ObjectNode) objectMapper.readTree(payload);
 
-        if (!objectNode.has(AUTH_SESSION) || objectNode.get(AUTH_SESSION).isNull() ||
-                StringUtils.isBlank(objectNode.get(AUTH_SESSION).asText())) {
-            throw new AuthServiceClientException(
+            if (!objectNode.has(AUTH_SESSION) || objectNode.get(AUTH_SESSION).isNull() ||
+                    StringUtils.isBlank(objectNode.get(AUTH_SESSION).asText())) {
+                throw new AuthServiceClientException(
+                        AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                        "Missing or empty auth_session parameter.");
+            }
+
+            objectNode.set(FLOW_ID, objectNode.remove(AUTH_SESSION));
+            return objectMapper.writeValueAsString(objectNode);
+        } catch (JsonProcessingException e) {
+            throw new AuthServiceException(
                     AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                    "Missing or empty auth_session parameter.");
+                    "Error while building JSON response", e);
         }
-
-        objectNode.set(FLOW_ID, objectNode.remove(AUTH_SESSION));
-        return objectMapper.writeValueAsString(objectNode);
     }
 
     public static boolean validateJsonPayload(String payload) {
@@ -455,7 +457,7 @@ public class AuthzChallengeEndpoint {
             factory.enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
 
             ObjectMapper objectMapper = new ObjectMapper(factory);
-            objectMapper.readTree(payload); // Will throw if duplicates exist
+            objectMapper.readTree(payload);
 
             return true;
 

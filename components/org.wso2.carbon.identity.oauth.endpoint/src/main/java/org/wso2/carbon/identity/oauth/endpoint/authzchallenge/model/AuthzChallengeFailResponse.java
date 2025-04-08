@@ -5,6 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
 
+    private String code;
+
+    @JsonProperty("trace_id")
+    private String traceId;
+
     @JsonProperty("error_uri")
     private String errorUri;
 
@@ -18,13 +23,36 @@ public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
 
     }
 
-    public AuthzChallengeFailResponse(String authSession, String error, String errorDescription, String errorUri,
+    public AuthzChallengeFailResponse(String authSession, String error, String errorDescription, String code, String traceId, String errorUri,
                                       String requestUri, String expiresIn) {
 
         super(authSession, error, errorDescription);
+        this.code = code;
+        this.traceId = traceId;
         this.errorUri = errorUri;
         this.requestUri = requestUri;
         this.expiresIn = expiresIn;
+    }
+
+    public String getCode() {
+
+        return code;
+    }
+
+    public void setCode(String code) {
+
+        this.code = code;
+    }
+
+    @JsonIgnore
+    public String getTraceId() {
+
+        return traceId;
+    }
+
+    public void setTraceId(String traceId) {
+
+        this.traceId = traceId;
     }
 
     @JsonIgnore

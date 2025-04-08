@@ -4962,7 +4962,7 @@ public class AuthzUtil {
             log.debug("Client error while handling authentication request.", exception);
         }
 
-        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
         Pair<String, String> errorMapping = mapFrameworkError(exception.getErrorCode());
         String error = errorMapping.getLeft();
         String errorDescription = errorMapping.getRight();
@@ -4971,9 +4971,23 @@ public class AuthzUtil {
             errorDescription = exception.getMessage();
         }
 
-        authzChallengeFailResponse.setError(error);
-        authzChallengeFailResponse.setErrorDescription(errorDescription);
-        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+        String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() :
+                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code();
+
+        response.setCode(errorCode);
+        response.setError(error);
+        response.setErrorDescription(errorDescription);
+        response.setTraceId(ApiAuthnUtils.getCorrelationId());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        String jsonString;
+        try {
+            jsonString = objectMapper.writeValueAsString(response);
+        } catch (JsonProcessingException e) {
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                    .entity("Internal Server Error: " + e.getMessage()).build();
+        }
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
     }
 
@@ -5004,7 +5018,7 @@ public class AuthzUtil {
             httpStatusCode = HttpServletResponse.SC_NOT_IMPLEMENTED;
         }
 
-        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
 
         Pair<String, String> errorMapping = mapFrameworkError(exception.getErrorCode());
         String error = errorMapping.getLeft();
@@ -5017,14 +5031,26 @@ public class AuthzUtil {
         if (error.isEmpty()) {
             String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() :
                     AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code();
-            authzChallengeFailResponse.setError(errorCode);
-            authzChallengeFailResponse.setErrorDescription(AuthServiceConstants.ErrorMessage
+            response.setCode(errorCode);
+            response.setError(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.message());
+            response.setErrorDescription(AuthServiceConstants.ErrorMessage
                     .ERROR_UNABLE_TO_PROCEED.description());
+        } else {
+            response.setCode(exception.getErrorCode());
+            response.setError(error);
+            response.setErrorDescription(errorDescription);
         }
 
-        authzChallengeFailResponse.setError(error);
-        authzChallengeFailResponse.setErrorDescription(errorDescription);
-        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+        response.setTraceId(ApiAuthnUtils.getCorrelationId());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        String jsonString;
+        try {
+            jsonString = objectMapper.writeValueAsString(response);
+        } catch (JsonProcessingException e) {
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                    .entity("Internal Server Error: " + e.getMessage()).build();
+        }
         return Response.status(httpStatusCode).entity(jsonString).build();
     }
 

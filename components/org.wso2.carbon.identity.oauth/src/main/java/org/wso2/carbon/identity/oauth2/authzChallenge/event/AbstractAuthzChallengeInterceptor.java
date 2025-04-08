@@ -11,7 +11,7 @@ public class AbstractAuthzChallengeInterceptor extends AbstractIdentityHandler i
     @Override
     public String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
 
-        return "";
+        return null;
     }
 
     public boolean isEnabled() {
