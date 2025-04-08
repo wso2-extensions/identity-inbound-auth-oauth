@@ -301,7 +301,6 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
 
     private KeyStore clientKeyStore;
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
-    private String carbonHome;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -310,7 +309,6 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
         );
-        carbonHome = System.getProperty(CarbonBaseConstants.CARBON_HOME);
         oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
         authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
@@ -1037,7 +1035,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
     public void setupKeystore() throws Exception {
 
         clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon",
-                carbonHome);
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
     }
 
     @DataProvider(name = "provideHandleRequestObjectData")
