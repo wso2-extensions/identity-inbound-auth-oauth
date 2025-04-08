@@ -723,8 +723,7 @@ public class AccessTokenIssuer {
                 = new ImpersonationNotificationRequestDTO();
         impersonationNotificationRequestDTO.setTokenReqMessageContext(tokReqMsgCtx);
         String impersonatorUserId = (String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR);
-        impersonationNotificationRequestDTO.setImpersonator(
-                OAuth2Util.getUserIdFromAuthenticatedSubjectIdentifier(impersonatorUserId));
+        impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
         try {
             String impersonatedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
             impersonationNotificationRequestDTO.setSubject(impersonatedUserId);
@@ -753,17 +752,17 @@ public class AccessTokenIssuer {
                 throw new IdentityOAuth2Exception("may_act claim is not found in the subject token.");
             }
 
-            String sub = OAuth2Util.getUserIdFromAuthenticatedSubjectIdentifier(claimsSetSubjectToken.getSubject());
+            String subClaim = claimsSetSubjectToken.getSubject();
             String iskClaim = (String) claimsSetActorToken.getClaim(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
 
             // Set session context data.
-            if (sub != null && iskClaim != null) {
+            if (subClaim != null && iskClaim != null) {
                 SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, loginTenantDomain);
                 if (sessionContext.getImpersonatedUser() != null
-                        && !Objects.equals(sessionContext.getImpersonatedUser(), sub)) {
+                        && !Objects.equals(sessionContext.getImpersonatedUser(), subClaim)) {
                     notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
                 }
-                sessionContext.setImpersonatedUser(sub);
+                sessionContext.setImpersonatedUser(subClaim);
                 FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext, tenantDomain, loginTenantDomain);
             }
         }

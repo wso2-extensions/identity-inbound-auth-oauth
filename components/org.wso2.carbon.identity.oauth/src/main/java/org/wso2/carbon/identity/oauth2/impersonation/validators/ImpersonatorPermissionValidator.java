@@ -72,9 +72,7 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
-        if ((authorizedScopes.contains(IMPERSONATION_SCOPE_NAME) || Objects.equals(clientId, "MY_ACCOUNT"))
-                && !Objects.equals(clientId, "CONSOLE")
-        ) {
+        if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
             impersonationContext.setValidated(true);
         } else {
             impersonationContext.setValidated(false);

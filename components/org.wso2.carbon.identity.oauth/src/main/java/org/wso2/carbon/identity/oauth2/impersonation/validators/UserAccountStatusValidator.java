@@ -63,7 +63,8 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
 
         String subjectUserId = impersonationContext.getImpersonationRequestDTO().getSubject();
         AuthenticatedUser subjectUser = OAuth2Util.getImpersonatingUser(subjectUserId,
-                impersonationContext.getImpersonationRequestDTO().getImpersonator());
+                impersonationContext.getImpersonationRequestDTO().getImpersonator(),
+                impersonationContext.getImpersonationRequestDTO().getClientId());
         String subjectUserName = subjectUser.getUserName();
         String tenantDomain = impersonationContext.getImpersonationRequestDTO().getTenantDomain();
         String domainName = subjectUser.getUserStoreDomain();

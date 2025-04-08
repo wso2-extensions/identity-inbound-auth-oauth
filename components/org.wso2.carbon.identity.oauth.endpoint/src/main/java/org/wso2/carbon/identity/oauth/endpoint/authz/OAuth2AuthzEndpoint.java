@@ -1308,7 +1308,8 @@ public class OAuth2AuthzEndpoint {
                         oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
                         // Set authnResult authenticated user as impersonatee.
                         AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
-                                authnResult.getSubject());
+                                authnResult.getSubject(),
+                                impersonationContext.getImpersonationRequestDTO().getClientId());
                         authnResult.setSubject(impersonatedUser);
                     }
                 }
@@ -1353,10 +1354,8 @@ public class OAuth2AuthzEndpoint {
         // Validate impersonation request.
         ImpersonationMgtService impersonationMgtService = OAuth2ServiceComponentHolder.getInstance()
                 .getImpersonationMgtService();
-        ImpersonationContext impersonationContext = impersonationMgtService.validateImpersonationRequest(
+        return impersonationMgtService.validateImpersonationRequest(
                 buildImpersonationRequestDTO(authzReqMsgCtx));
-
-        return impersonationContext;
     }
 
     private OAuthAuthzReqMessageContext getOAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authzReqDTO)
