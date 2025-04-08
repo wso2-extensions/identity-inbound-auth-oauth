@@ -29,9 +29,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -44,7 +45,6 @@ import org.wso2.carbon.identity.oidc.session.internal.OIDCSessionManagementCompo
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -460,19 +460,10 @@ public class DefaultLogoutTokenBuilder implements LogoutTokenBuilder {
         if (StringUtils.isEmpty(tenantDomain)) {
             return false;
         }
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        RSAPublicKey publicKey;
 
         try {
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
+            RSAPublicKey publicKey = (RSAPublicKey) IdentityKeyStoreResolver.getInstance().getCertificate(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH).getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
