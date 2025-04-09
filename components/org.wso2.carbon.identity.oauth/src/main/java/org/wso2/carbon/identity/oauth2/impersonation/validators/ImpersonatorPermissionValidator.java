@@ -76,12 +76,10 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
             impersonationContext.setValidated(true);
         } else {
             impersonationContext.setValidated(false);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("Authenticated user : %s doesn't have impersonation permission for " +
-                        "client :%s in the tenant %s",
-                        authzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableMaskedUserId(),
-                        clientId, tenantDomain));
-            }
+            LOG.error(String.format("Authenticated user : %s doesn't have impersonation permission for " +
+                            "client :%s in the tenant %s.",
+                    authzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableMaskedUserId(),
+                    clientId, tenantDomain));
         }
         return impersonationContext;
     }

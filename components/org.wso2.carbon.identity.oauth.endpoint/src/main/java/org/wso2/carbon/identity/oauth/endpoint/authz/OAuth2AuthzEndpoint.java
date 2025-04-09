@@ -179,6 +179,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -215,6 +216,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUESTED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
@@ -1292,8 +1294,16 @@ public class OAuth2AuthzEndpoint {
             try {
                 String impersonatingActor = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
                 String impersonatedSubject = sessionContext.getImpersonatedUser();
-                /* To verify this is not an initiating impersonation request. Otherwise, we do not have to set
-                authenticated user. */
+                // Block performing impersonation for an impersonated session.
+                if (isImpersonationInitRequest && StringUtils.isNotBlank(impersonatedSubject)
+                        && oAuthMessage.getRequest().getParameterMap() != null) {
+                    String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
+                    if (!Objects.equals(requestedSubject, impersonatedSubject)) {
+                        throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                                "Cannot perform impersonation on more than one user in the same session.");
+                    }
+                }
+                /* Change authenticated user as the impersonated user only during SSO. */
                 if (!isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
                     // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
                     OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,

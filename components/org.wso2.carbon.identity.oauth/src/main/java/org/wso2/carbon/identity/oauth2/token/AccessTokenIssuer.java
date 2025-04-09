@@ -758,8 +758,7 @@ public class AccessTokenIssuer {
             // Set session context data.
             if (subClaim != null && iskClaim != null) {
                 SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, loginTenantDomain);
-                if (sessionContext.getImpersonatedUser() != null
-                        && !Objects.equals(sessionContext.getImpersonatedUser(), subClaim)) {
+                if (sessionContext.getImpersonatedUser() != null) {
                     notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
                 }
                 sessionContext.setImpersonatedUser(subClaim);
