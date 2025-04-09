@@ -1294,38 +1294,58 @@ public class OAuth2AuthzEndpoint {
             try {
                 String impersonatingActor = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
                 String impersonatedSubject = sessionContext.getImpersonatedUser();
-                // Block performing impersonation for an impersonated session.
-                if (isImpersonationInitRequest && StringUtils.isNotBlank(impersonatedSubject)
-                        && oAuthMessage.getRequest().getParameterMap() != null) {
-                    String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
-                    if (!Objects.equals(requestedSubject, impersonatedSubject)) {
-                        throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
-                                "Cannot perform impersonation on more than one user in the same session.");
-                    }
+                if (isImpersonationInitRequest) {
+                    handleInitImpersonationRequest(impersonatedSubject, oAuthMessage);
+                } else {
+                    handleSSOImpersonationRequest(impersonatingActor, impersonatedSubject, oAuthMessage, oauth2Params,
+                            sessionContext, authnResult);
                 }
-                /* Change authenticated user as the impersonated user only during SSO. */
-                if (!isImpersonationInitRequest && impersonatingActor != null && impersonatedSubject != null) {
-                    // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
-                    OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
-                            oauth2Params, sessionContext, authnResult);
-                    ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
-                    if (impersonationContext.isValidated()) {
-                        /* Used in two places.
-                            1. When preparing authorization grant cache entry for code & device code.
-                            2. When generating additional claims for implicit & hybrid flows. */
-                        // String impersonator = authnResult.getSubject().getUserId().split("@")[0];
-                        String impersonator = authnResult.getSubject().getUserId();
-                        oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
-                        // Set authnResult authenticated user as impersonatee.
-                        AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
-                                authnResult.getSubject(),
-                                impersonationContext.getImpersonationRequestDTO().getClientId());
-                        authnResult.setSubject(impersonatedUser);
-                    }
-                }
-            } catch (IdentityOAuth2Exception | InvalidOAuthClientException | UserIdNotFoundException e) {
+            } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
                 throw OAuthProblemException.error(OAuth2ErrorCodes.SERVER_ERROR, "Error while " +
                         "handling impersonation request.");
+            } catch (UserIdNotFoundException e) {
+                throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Error while retrieving user.");
+            }
+        }
+    }
+
+    private void handleSSOImpersonationRequest(String impersonatingActor, String impersonatedSubject,
+                                               OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
+                                               SessionContext sessionContext, AuthenticationResult authnResult)
+            throws IdentityOAuth2Exception, InvalidOAuthClientException, UserIdNotFoundException {
+
+        /* Change authenticated user as the impersonated user only during SSO. */
+        if (impersonatingActor != null && impersonatedSubject != null) {
+            // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
+            OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
+                    oauth2Params, sessionContext, authnResult);
+            ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
+            if (impersonationContext.isValidated()) {
+                /* Used in two places.
+                    1. When preparing authorization grant cache entry for code & device code.
+                    2. When generating additional claims for implicit & hybrid flows. */
+                String impersonator = authnResult.getSubject().getUserId();
+                oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
+                // Set AuthenticationResult authenticated user as impersonatee.
+                AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
+                        authnResult.getSubject(),
+                        impersonationContext.getImpersonationRequestDTO().getClientId());
+                authnResult.setSubject(impersonatedUser);
+            }
+        }
+    }
+
+    private void handleInitImpersonationRequest(String impersonatedSubject, OAuthMessage oAuthMessage)
+            throws OAuthProblemException {
+
+        // Block performing impersonation for an impersonated session.
+        if (StringUtils.isNotBlank(impersonatedSubject)
+                && oAuthMessage.getRequest().getParameterMap() != null) {
+            String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
+            if (!Objects.equals(requestedSubject, impersonatedSubject)) {
+                throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Cannot perform impersonation on more than one user in the same session.");
             }
         }
     }

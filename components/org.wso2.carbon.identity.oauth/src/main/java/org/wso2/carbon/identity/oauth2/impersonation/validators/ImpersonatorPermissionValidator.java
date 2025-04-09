@@ -28,7 +28,6 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequest
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
-import java.util.Objects;
 
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 
