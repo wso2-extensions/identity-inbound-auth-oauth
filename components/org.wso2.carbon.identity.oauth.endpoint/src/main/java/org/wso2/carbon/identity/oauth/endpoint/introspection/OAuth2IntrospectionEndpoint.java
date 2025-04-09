@@ -1,12 +1,12 @@
 /*
- * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016-2025, WSO2 LLC. (http://www.wso2.com).
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth.endpoint.introspection;
 
 import org.apache.commons.lang.StringUtils;
@@ -32,6 +33,8 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.List;
@@ -56,10 +59,9 @@ public class OAuth2IntrospectionEndpoint {
 
     private static final Log log = LogFactory.getLog(OAuth2IntrospectionEndpoint.class);
     private static final String DEFAULT_TOKEN_TYPE_HINT = "bearer";
-    private static final String DEFAULT_TOKEN_TYPE = "Bearer";
     private static final String JWT_TOKEN_TYPE = "JWT";
     private static final String INVALID_INPUT = "Invalid input";
-
+    private static final String SYSTEM_ERROR = "System error occurred.";
     private static final String ACCESS_TOKEN_HINT = "access_token";
 
     /**
@@ -68,7 +70,7 @@ public class OAuth2IntrospectionEndpoint {
      * @param token          access token or refresh token
      * @param tokenTypeHint  hint for the type of the token submitted for introspection
      * @param requiredClaims comma separated list of claims to be returned in JWT
-     * @return
+     * @return Token introspection response.
      */
     @POST
     public Response introspect(@FormParam("token") String token, @FormParam("token_type_hint") String tokenTypeHint,
@@ -103,7 +105,7 @@ public class OAuth2IntrospectionEndpoint {
         String[] claimsUris = null;
         if (StringUtils.isNotEmpty(requiredClaims)) {
             claimsUris = requiredClaims.split(",");
-        } else if (requiredClaims != null && requiredClaims.length() == 0) {
+        } else if (requiredClaims != null && requiredClaims.isEmpty()) {
             claimsUris = new String[0];
         }
 
@@ -143,10 +145,35 @@ public class OAuth2IntrospectionEndpoint {
                 .setIssuedAt(introspectionResponse.getIat())
                 .setExpiration(introspectionResponse.getExp())
                 .setAuthorizedUserType(introspectionResponse.getAut())
-                .setAudience(introspectionResponse.getAud());;
+                .setAudience(introspectionResponse.getAud());
 
         if (introspectionResponse.getAuthorizedUser() != null) {
-            respBuilder.setOrgId(introspectionResponse.getAuthorizedUser().getAccessingOrganization());
+            String accessingOrganizationId = introspectionResponse.getAuthorizedUser().getAccessingOrganization();
+            respBuilder.setOrgId(accessingOrganizationId);
+            try {
+                String organizationName = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .getOrganizationNameById(accessingOrganizationId);
+                String organizationHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                        .resolveTenantDomain(accessingOrganizationId);
+                respBuilder.setOrgName(organizationName);
+                respBuilder.setOrgHandle(organizationHandle);
+            } catch (OrganizationManagementException e) {
+                if (LoggerUtils.isDiagnosticLogsEnabled()) {
+                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
+                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                            OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
+                            .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
+                            .resultMessage(SYSTEM_ERROR)
+                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
+                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
+                }
+                log.error("Error occurred while obtaining organization token introspection data.", e);
+
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity("{\"error\": \"Error occurred while building the introspection " +
+                                "response.\"}")
+                        .build();
+            }
         }
 
         if (StringUtils.equalsIgnoreCase(introspectionResponse.getTokenType(), JWT_TOKEN_TYPE)) {
@@ -201,7 +228,7 @@ public class OAuth2IntrospectionEndpoint {
                                 OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                                 OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
                                 .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
-                                .resultMessage("System error occurred.")
+                                .resultMessage(SYSTEM_ERROR)
                                 .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                                 .resultStatus(DiagnosticLog.ResultStatus.FAILED));
                     }
@@ -223,7 +250,7 @@ public class OAuth2IntrospectionEndpoint {
                         OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                         OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
                         .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
-                        .resultMessage("System error occurred.")
+                        .resultMessage(SYSTEM_ERROR)
                         .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                         .resultStatus(DiagnosticLog.ResultStatus.FAILED));
             }
