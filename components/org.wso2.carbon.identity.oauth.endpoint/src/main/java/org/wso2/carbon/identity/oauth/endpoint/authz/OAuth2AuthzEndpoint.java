@@ -1345,7 +1345,7 @@ public class OAuth2AuthzEndpoint {
         if (StringUtils.isNotBlank(impersonatedSubject)
                 && oAuthMessage.getRequest().getParameterMap() != null) {
             String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
-            if (!Objects.equals(requestedSubject, impersonatedSubject)) {
+            if (requestedSubject != null && !Objects.equals(requestedSubject, impersonatedSubject)) {
                 log.error("Cannot perform impersonation on more than one user in the same session.");
                 throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Cannot perform impersonation on more than one user in the same session.");
@@ -1406,8 +1406,6 @@ public class OAuth2AuthzEndpoint {
 
         // load requested scopes
         authorizeRequestMessageContext.setRequestedScopes(authzReqDTO.getScopes());
-
-        authorizeRequestMessageContext.addProperty("IMPERSONATE_SSO_VALIDATION", true);
 
         return authorizeRequestMessageContext;
     }
