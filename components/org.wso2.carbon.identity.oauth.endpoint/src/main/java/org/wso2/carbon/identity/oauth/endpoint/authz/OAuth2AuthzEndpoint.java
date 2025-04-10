@@ -213,6 +213,7 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_SSO_REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -1320,6 +1321,7 @@ public class OAuth2AuthzEndpoint {
             // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
             OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
                     oauth2Params, sessionContext, authnResult);
+            authzReqMsgCtx.addProperty(IMPERSONATION_SSO_REQUEST, true);
             ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
             if (impersonationContext.isValidated()) {
                 /* Used in two places.
@@ -1344,6 +1346,7 @@ public class OAuth2AuthzEndpoint {
                 && oAuthMessage.getRequest().getParameterMap() != null) {
             String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
             if (!Objects.equals(requestedSubject, impersonatedSubject)) {
+                log.error("Cannot perform impersonation on more than one user in the same session.");
                 throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Cannot perform impersonation on more than one user in the same session.");
             }
@@ -1384,6 +1387,7 @@ public class OAuth2AuthzEndpoint {
         // Validate impersonation request.
         ImpersonationMgtService impersonationMgtService = OAuth2ServiceComponentHolder.getInstance()
                 .getImpersonationMgtService();
+
         return impersonationMgtService.validateImpersonationRequest(
                 buildImpersonationRequestDTO(authzReqMsgCtx));
     }
@@ -1402,6 +1406,8 @@ public class OAuth2AuthzEndpoint {
 
         // load requested scopes
         authorizeRequestMessageContext.setRequestedScopes(authzReqDTO.getScopes());
+
+        authorizeRequestMessageContext.addProperty("IMPERSONATE_SSO_VALIDATION", true);
 
         return authorizeRequestMessageContext;
     }
