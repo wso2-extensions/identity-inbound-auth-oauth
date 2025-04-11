@@ -29,8 +29,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.MDC;
-import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.cache.AuthenticationRequestCacheEntry;
@@ -45,8 +43,10 @@ import org.wso2.carbon.identity.application.authentication.framework.util.auth.s
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -71,7 +71,6 @@ import org.wso2.carbon.identity.oidc.session.model.APIError;
 import org.wso2.carbon.identity.oidc.session.model.LogoutContext;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -430,19 +429,10 @@ public class OIDCLogoutServlet extends HttpServlet {
         if (StringUtils.isEmpty(tenantDomain)) {
             return false;
         }
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        RSAPublicKey publicKey;
 
         try {
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
+            RSAPublicKey publicKey = (RSAPublicKey) IdentityKeyStoreResolver.getInstance().getCertificate(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH).getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
 

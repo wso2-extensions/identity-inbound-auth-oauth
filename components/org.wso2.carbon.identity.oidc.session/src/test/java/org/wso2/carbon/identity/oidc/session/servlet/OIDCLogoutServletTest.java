@@ -30,16 +30,18 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticatorFlowStatus;
 import org.wso2.carbon.identity.application.authentication.framework.CommonAuthenticationHandler;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -55,6 +57,7 @@ import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import java.lang.reflect.Method;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
@@ -104,9 +107,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     OAuthServerConfiguration mockOAuthServerConfiguration;
 
     @Mock
-    KeyStoreManager mockKeyStoreManager;
-
-    @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
     @Mock
@@ -143,7 +143,7 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
     private MockedStatic<IdentityConfigParser> identityConfigParser;
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
-    private MockedStatic<KeyStoreManager> keyStoreManager;
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
     private MockedStatic<OAuth2Util> oAuth2Util;
 
 
@@ -156,12 +156,14 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         createOAuthApp(CLIENT_ID_WITH_REGEX_CALLBACK, SECRET, USERNAME, APP_NAME, "ACTIVE",
                 REGEX_CALLBACK_URL);
         createOAuthApp(CLIENT_ID_FOR_REALM_TEST, SECRET, USERNAME, APP_NAME, "ACTIVE", CALLBACK_URL);
+        mockKeystores();
     }
 
     @AfterClass
     public void tearDownAfterClass() throws Exception {
 
         identityDatabaseUtil.close();
+        identityKeyStoreResolverMockedStatic.close();
         super.cleanData();
     }
 
@@ -173,7 +175,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         identityConfigParser = mockStatic(IdentityConfigParser.class);
         oAuthServerConfiguration = mockStatic(OAuthServerConfiguration.class);
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-        keyStoreManager = mockStatic(KeyStoreManager.class);
 
         // When the OAuth2Util is mocked, OAuthServerConfiguration should have an instance
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
@@ -188,7 +189,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         identityConfigParser.close();
         oAuthServerConfiguration.close();
         identityTenantUtil.close();
-        keyStoreManager.close();
         oAuth2Util.close();
     }
 
@@ -451,11 +451,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
             lenient().when(mockOAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(isJWTSignedWithSPKey);
 
-            keyStoreManager.when(() -> KeyStoreManager.getInstance(TENANT_ID)).thenReturn(mockKeyStoreManager);
-            lenient().when(mockKeyStoreManager.getDefaultPublicKey())
-                    .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                            .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
-
             oidcSessionManagementComponentServiceHolder.when(
                             OIDCSessionManagementComponentServiceHolder::getApplicationMgtService)
                     .thenReturn(mockedApplicationManagementService);
@@ -472,9 +467,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
             oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("wso2.com");
             oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(any(oAuthAppDO.getClass())))
                     .thenReturn("wso2.com");
-            lenient().when(mockKeyStoreManager.getKeyStore(anyString()))
-                    .thenReturn(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                            .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
 
             mockServiceURLBuilder(OIDCSessionConstants.OIDCEndpoints.OIDC_LOGOUT_ENDPOINT, serviceURLBuilder);
 
@@ -595,13 +587,6 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
 
             identityConfigParser.when(IdentityConfigParser::getInstance).thenReturn(mockIdentityConfigParser);
 
-            keyStoreManager.when(() -> KeyStoreManager.getInstance(TENANT_ID)).thenReturn(mockKeyStoreManager);
-            lenient().when(mockKeyStoreManager.getDefaultPublicKey())
-                    .thenReturn(TestUtil.getPublicKey(TestUtil.loadKeyStoreFromFileSystem(TestUtil
-                            .getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"), "wso2carbon"));
-            lenient().when(mockKeyStoreManager.getKeyStore(anyString())).thenReturn(
-                    TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
-
             when(request.getParameter("id_token_hint")).thenReturn(idTokenHint);
             when(request.getParameter("client_id")).thenReturn(clientId);
             when(request.getParameter("post_logout_redirect_uri")).thenReturn(postLogoutUrl);
@@ -664,5 +649,21 @@ public class OIDCLogoutServletTest extends TestOIDCSessionBase {
         Method method = object.getClass().getDeclaredMethod(methodName, paramTypes);
         method.setAccessible(true);
         return method.invoke(object, params);
+    }
+
+    private void mockKeystores() throws IdentityKeyStoreResolverException, KeyStoreException {
+
+        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS")
+                        .getCertificate("wso2carbon"));
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                TestUtil.loadKeyStoreFromFileSystem(TestUtil.getFilePath("wso2carbon.jks"), "wso2carbon", "JKS"));
+
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 }

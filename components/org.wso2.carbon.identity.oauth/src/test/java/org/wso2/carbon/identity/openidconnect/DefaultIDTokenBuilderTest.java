@@ -23,11 +23,14 @@ import com.nimbusds.jwt.EncryptedJWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.json.JSONObject;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
+import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.internal.impl.AuthenticationMethodNameTranslatorImpl;
@@ -43,7 +46,9 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.persistence.JDBCPersistenceManager;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
@@ -70,7 +75,6 @@ import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.saml.SAML2BearerGrantHandlerTest;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -84,9 +88,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.Key;
 import java.security.KeyStore;
-import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -95,7 +97,6 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.http.HttpServletRequestWrapper;
 
@@ -104,6 +105,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.PHONE_NUMBER_VERIFIED;
 import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
@@ -128,6 +130,8 @@ public class DefaultIDTokenBuilderTest {
     private OAuthTokenReqMessageContext messageContext;
     private OAuth2AccessTokenRespDTO tokenRespDTO;
     private AuthenticatedUser user;
+
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
 
     public DefaultIDTokenBuilderTest() {
 
@@ -247,15 +251,6 @@ public class DefaultIDTokenBuilderTest {
                     .addUser(TestConstants.USER_NAME, TestConstants.PASSWORD, new String[0], claims,
                              TestConstants.DEFAULT_PROFILE);
 
-        Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
-        publicCerts.put(SUPER_TENANT_ID, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                                                                .getCertificate("wso2carbon"));
-        setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
-        Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
-        privateKeys.put(SUPER_TENANT_ID, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                                                                .getKey("wso2carbon", "wso2carbon".toCharArray()));
-        setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
-
         OpenIDConnectServiceComponentHolder.getInstance()
                 .getOpenIDConnectClaimFilters().add(new OpenIDConnectClaimFilterImpl());
 
@@ -275,6 +270,13 @@ public class DefaultIDTokenBuilderTest {
         claimProviders.add(claimProvider);
         setPrivateField(OpenIDConnectServiceComponentHolder.getInstance(), "claimProviders", claimProviders);
         invokePrivateMethod(JDBCPersistenceManager.getInstance(), "initDataSource");
+        mockKeystores();
+    }
+
+    @AfterClass
+    public void tearDown() throws Exception {
+
+        identityKeyStoreResolverMockedStatic.close();
     }
 
     @Test
@@ -583,5 +585,20 @@ public class DefaultIDTokenBuilderTest {
         Method method = object.getClass().getDeclaredMethod(methodName);
         method.setAccessible(true);
         return method.invoke(object);
+    }
+
+    private void mockKeystores() throws Exception {
+
+        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        when(identityKeyStoreResolver.getPrivateKey(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                ReadCertStoreSampleUtil.createKeyStore(getClass()).getKey("wso2carbon", "wso2carbon".toCharArray()));
+        when(identityKeyStoreResolver.getCertificate(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                ReadCertStoreSampleUtil.createKeyStore(getClass()).getCertificate("wso2carbon"));
+
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 }
