@@ -22,10 +22,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.wso2.carbon.base.MultitenantConstants;
@@ -33,15 +34,19 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.util.OIDCSessionManagementUtil;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -52,12 +57,56 @@ import javax.servlet.http.HttpServletRequest;
 public class LogoutRequestSender {
 
     private static final Log LOG = LogFactory.getLog(LogoutRequestSender.class);
-    private static ExecutorService threadPool = Executors.newFixedThreadPool(2);
+    private static ExecutorService threadPool = null;
+    private boolean hostNameVerificationEnabled = true;
+    private static int httpConnectTimeout = 0;
+    private static int httpSocketTimeout = 0;
+
     private static LogoutRequestSender instance = new LogoutRequestSender();
     private static final String LOGOUT_TOKEN = "logout_token";
 
     private LogoutRequestSender() {
 
+        String poolSize = IdentityUtil.getProperty(OIDCSessionConstants.OIDCLogoutRequestConstants.POOL_SIZE);
+        String keepAliveTime = IdentityUtil.getProperty(
+                OIDCSessionConstants.OIDCLogoutRequestConstants.KEEP_ALIVE_TIME);
+        String httpConnectTimeoutProperty = IdentityUtil.getProperty(
+                OIDCSessionConstants.OIDCLogoutRequestConstants.HTTP_CONNECT_TIMEOUT);
+        String httpSocketTimeoutProperty = IdentityUtil.getProperty(
+                OIDCSessionConstants.OIDCLogoutRequestConstants.HTTP_SOCKET_TIMEOUT);
+        String hostNameVerificationEnabledProperty = IdentityUtil.getProperty(
+                IdentityConstants.ServerConfig.SLO_HOST_NAME_VERIFICATION_ENABLED);
+
+        if (poolSize == null) {
+            poolSize = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_POOL_SIZE;
+        }
+        if (keepAliveTime == null) {
+            keepAliveTime = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_KEEP_ALIVE_TIME;
+        }
+        if (httpConnectTimeoutProperty == null) {
+            httpConnectTimeoutProperty = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_HTTP_CONNECT_TIMEOUT;
+        }
+        if (httpSocketTimeoutProperty == null) {
+            httpSocketTimeoutProperty = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_HTTP_SOCKET_TIMEOUT;
+        }
+
+        int poolSizeInt = Integer.parseInt(poolSize);
+        int keepAliveTimeLong = Integer.parseInt(keepAliveTime);
+        threadPool = new ThreadPoolExecutor(poolSizeInt, poolSizeInt, keepAliveTimeLong,
+                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+
+        httpConnectTimeout = Integer.parseInt(httpConnectTimeoutProperty);
+        httpSocketTimeout = Integer.parseInt(httpSocketTimeoutProperty);
+        if ("false".equalsIgnoreCase(hostNameVerificationEnabledProperty)) {
+            hostNameVerificationEnabled = false;
+        }
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("LogoutRequestSender thread pool initialized with pool size: " + poolSizeInt +
+                    ", keep alive time: " + keepAliveTimeLong + ". Request parameters: httpConnectTimeout: " +
+                    httpConnectTimeout + ", httpSocketTimeout: " + httpSocketTimeout +
+                    ", hostNameVerificationEnabled: " + hostNameVerificationEnabled);
+        }
     }
 
     /**
@@ -118,7 +167,7 @@ public class LogoutRequestSender {
             for (Map.Entry<String, String> logoutTokenMap : logoutTokenList.entrySet()) {
                 String logoutToken = logoutTokenMap.getKey();
                 String bcLogoutUrl = logoutTokenMap.getValue();
-                LOG.debug("A logoutReqSenderTask will be assigned to the thread pool");
+                LOG.info("A LogoutReqSenderTask will be assigned to the thread pool.");
                 threadPool.submit(new LogoutReqSenderTask(logoutToken, bcLogoutUrl));
             }
         }
@@ -171,15 +220,9 @@ public class LogoutRequestSender {
             }
 
             List<NameValuePair> logoutReqParams = new ArrayList<NameValuePair>();
-            String hostNameVerificationEnabledProperty =
-                    IdentityUtil.getProperty(IdentityConstants.ServerConfig.SLO_HOST_NAME_VERIFICATION_ENABLED);
-            boolean isHostNameVerificationEnabled = true;
-            if ("false".equalsIgnoreCase(hostNameVerificationEnabledProperty)) {
-                isHostNameVerificationEnabled = false;
-            }
+            CloseableHttpClient httpClient = null;
             try {
-                HttpClient httpClient;
-                if (!isHostNameVerificationEnabled) {
+                if (!hostNameVerificationEnabled) {
                     httpClient = HttpClients.custom()
                             .setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
                             .build();
@@ -187,19 +230,36 @@ public class LogoutRequestSender {
                     httpClient = HttpClients.createDefault();
                 }
                 logoutReqParams.add(new BasicNameValuePair(LOGOUT_TOKEN, logoutToken));
+
                 HttpPost httpPost = new HttpPost(backChannelLogouturl);
                 try {
                     httpPost.setEntity(new UrlEncodedFormEntity(logoutReqParams));
                 } catch (UnsupportedEncodingException e) {
-                    LOG.error("Error while sending logout token", e);
+                    LOG.error("Error while encoding logout request parameters.", e);
                 }
+                RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(httpConnectTimeout)
+                        .setSocketTimeout(httpSocketTimeout).build();
+                httpPost.setConfig(requestConfig);
+
                 HttpResponse response = httpClient.execute(httpPost);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Backchannel logout response: " + response.getStatusLine());
+                } else {
+                    LOG.info("Backchannel logout response received. Status code: " +
+                            response.getStatusLine().getStatusCode());
                 }
-
+            } catch (SocketTimeoutException e) {
+                LOG.error("Timeout occurred while sending logout requests to: " + backChannelLogouturl);
             } catch (IOException e) {
                 LOG.error("Error sending logout requests to: " + backChannelLogouturl, e);
+            } finally {
+                if (httpClient != null) {
+                    try {
+                        httpClient.close();
+                    } catch (IOException e) {
+                        LOG.error("Error closing http client.", e);
+                    }
+                }
             }
         }
     }
