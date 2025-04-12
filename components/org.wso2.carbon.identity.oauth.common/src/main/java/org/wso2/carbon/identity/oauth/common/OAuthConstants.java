@@ -192,6 +192,7 @@ public final class OAuthConstants {
     public static final String CODE_IDTOKEN_TOKEN = "code id_token token";
     public static final String SUBJECT_TOKEN = "subject_token";
     public static final String ID_TOKEN_SUBJECT_TOKEN = "id_token subject_token";
+    public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
     public static final String IMPERSONATION_SSO_REQUEST = "IMPERSONATION_SSO_REQUEST";
     public static final String IDTOKEN_TOKEN = "id_token token";
