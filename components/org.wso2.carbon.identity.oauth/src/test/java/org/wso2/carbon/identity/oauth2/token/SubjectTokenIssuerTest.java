@@ -47,6 +47,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_SSO_REQUEST;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
 
 /**
@@ -108,6 +109,7 @@ public class SubjectTokenIssuerTest {
 
         when(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
         when(oAuthAuthzReqMessageContext.getProperty(OAUTH_APP_DO)).thenReturn(new OAuthAppDO());
+        when(oAuthAuthzReqMessageContext.getProperty(IMPERSONATION_SSO_REQUEST)).thenReturn(false);
         OAuth2ServiceComponentHolder.getInstance().addImpersonationValidator(
                 new DummyImpersonationValidator());
 

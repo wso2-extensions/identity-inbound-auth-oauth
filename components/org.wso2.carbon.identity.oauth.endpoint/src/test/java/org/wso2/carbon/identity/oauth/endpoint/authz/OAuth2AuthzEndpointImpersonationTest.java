@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
-import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.testng.annotations.DataProvider;
@@ -39,9 +38,6 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
-import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonatorPermissionValidator;
-import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
-import org.wso2.carbon.identity.oauth2.impersonation.validators.UserAccountStatusValidator;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -64,7 +60,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUESTED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
