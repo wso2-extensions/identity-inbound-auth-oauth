@@ -71,11 +71,13 @@ public class OIDCSessionConstants {
     public static class OIDCLogoutRequestConstants {
 
         public static final String POOL_SIZE = "OAuth.OpenIDConnect.LogoutRequestSender.PoolSize";
+        public static final String WORK_QUEUE_SIZE = "OAuth.OpenIDConnect.LogoutRequestSender.WorkQueueSize";
         public static final String KEEP_ALIVE_TIME = "OAuth.OpenIDConnect.LogoutRequestSender.KeepAliveTime";
         public static final String HTTP_CONNECT_TIMEOUT = "OAuth.OpenIDConnect.LogoutRequestSender.HttpConnectTimeout";
         public static final String HTTP_SOCKET_TIMEOUT = "OAuth.OpenIDConnect.LogoutRequestSender.HttpSocketTimeout";
 
-        public static final String DEFAULT_POOL_SIZE = "2";
+        public static final String DEFAULT_POOL_SIZE = "20";
+        public static final String DEFAULT_WORK_QUEUE_SIZE = "1000";
         public static final String DEFAULT_KEEP_ALIVE_TIME = "60000";
         public static final String DEFAULT_HTTP_CONNECT_TIMEOUT = "10000";
         public static final String DEFAULT_HTTP_SOCKET_TIMEOUT = "20000";

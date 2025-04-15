@@ -43,6 +43,8 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -68,6 +70,8 @@ public class LogoutRequestSender {
     private LogoutRequestSender() {
 
         String poolSize = IdentityUtil.getProperty(OIDCSessionConstants.OIDCLogoutRequestConstants.POOL_SIZE);
+        String workQueueSize = IdentityUtil.getProperty(
+                OIDCSessionConstants.OIDCLogoutRequestConstants.WORK_QUEUE_SIZE);
         String keepAliveTime = IdentityUtil.getProperty(
                 OIDCSessionConstants.OIDCLogoutRequestConstants.KEEP_ALIVE_TIME);
         String httpConnectTimeoutProperty = IdentityUtil.getProperty(
@@ -80,6 +84,9 @@ public class LogoutRequestSender {
         if (poolSize == null) {
             poolSize = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_POOL_SIZE;
         }
+        if (workQueueSize == null) {
+            workQueueSize = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_WORK_QUEUE_SIZE;
+        }
         if (keepAliveTime == null) {
             keepAliveTime = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_KEEP_ALIVE_TIME;
         }
@@ -91,9 +98,27 @@ public class LogoutRequestSender {
         }
 
         int poolSizeInt = Integer.parseInt(poolSize);
+        int workQueueSizeInt = Integer.parseInt(workQueueSize);
         int keepAliveTimeLong = Integer.parseInt(keepAliveTime);
+
+        if (poolSizeInt <= 0) {
+            poolSizeInt = Integer.parseInt(OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_POOL_SIZE);
+        }
+
+        BlockingQueue<Runnable> workQueue = null;
+        if (workQueueSizeInt > 0) {
+            workQueue = new ArrayBlockingQueue<Runnable>(workQueueSizeInt);
+        } else if (workQueueSizeInt == -1) {
+            LOG.warn("Work queue size is set to -1. Using unbounded work queue.");
+            workQueue = new LinkedBlockingQueue<Runnable>();
+        } else {
+            workQueueSizeInt = Integer.parseInt(
+                    OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_WORK_QUEUE_SIZE);
+            workQueue = new ArrayBlockingQueue<Runnable>(workQueueSizeInt);
+        }
+
         threadPool = new ThreadPoolExecutor(poolSizeInt, poolSizeInt, keepAliveTimeLong,
-                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+                TimeUnit.MILLISECONDS, workQueue);
 
         httpConnectTimeout = Integer.parseInt(httpConnectTimeoutProperty);
         httpSocketTimeout = Integer.parseInt(httpSocketTimeoutProperty);
@@ -103,8 +128,9 @@ public class LogoutRequestSender {
 
         if (LOG.isDebugEnabled()) {
             LOG.debug("LogoutRequestSender thread pool initialized with pool size: " + poolSizeInt +
-                    ", keep alive time: " + keepAliveTimeLong + ". Request parameters: httpConnectTimeout: " +
-                    httpConnectTimeout + ", httpSocketTimeout: " + httpSocketTimeout +
+                    ", work queue size: " + workQueueSizeInt + ", keep alive time: " + keepAliveTimeLong +
+                    ". Request parameters: httpConnectTimeout: " + httpConnectTimeout +
+                    ", httpSocketTimeout: " + httpSocketTimeout +
                     ", hostNameVerificationEnabled: " + hostNameVerificationEnabled);
         }
     }
@@ -167,7 +193,7 @@ public class LogoutRequestSender {
             for (Map.Entry<String, String> logoutTokenMap : logoutTokenList.entrySet()) {
                 String logoutToken = logoutTokenMap.getKey();
                 String bcLogoutUrl = logoutTokenMap.getValue();
-                LOG.info("A LogoutReqSenderTask will be assigned to the thread pool.");
+                LOG.debug("A LogoutReqSenderTask will be assigned to the thread pool.");
                 threadPool.submit(new LogoutReqSenderTask(logoutToken, bcLogoutUrl));
             }
         }
@@ -244,9 +270,6 @@ public class LogoutRequestSender {
                 HttpResponse response = httpClient.execute(httpPost);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Backchannel logout response: " + response.getStatusLine());
-                } else {
-                    LOG.info("Backchannel logout response received. Status code: " +
-                            response.getStatusLine().getStatusCode());
                 }
             } catch (SocketTimeoutException e) {
                 LOG.error("Timeout occurred while sending logout requests to: " + backChannelLogouturl);
