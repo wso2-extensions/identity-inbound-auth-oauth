@@ -143,6 +143,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE_IDTOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.HTTP_REQ_HEADER_AUTH_METHOD_BASIC;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ResponseModes.JWT;
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory.getOAuthAdminService;
@@ -751,6 +752,7 @@ public class EndpointUtil {
                         entry.setRemoveOnConsume(true);
                     }
                     entry.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
+                    persistImpersonationInfoToSessionDataCache(entry, oAuthMessage);
                     sessionDataCache.addToCache(new SessionDataCacheKey(sessionDataKeyConsent), entry);
                 } else {
                     if (log.isDebugEnabled()) {
@@ -767,6 +769,20 @@ public class EndpointUtil {
         }
 
         return consentPageUrl;
+    }
+
+    private static void persistImpersonationInfoToSessionDataCache(SessionDataCacheEntry entry,
+                                                                   OAuthMessage oAuthMessage) {
+
+        String impersonatingActor = null;
+        if (oAuthMessage.getProperties().get(IMPERSONATING_ACTOR) != null) {
+            impersonatingActor = oAuthMessage.getProperties().get(
+                    IMPERSONATING_ACTOR).toString();
+        }
+        if (impersonatingActor != null) {
+            entry.getAuthzReqMsgCtx().addProperty(IMPERSONATING_ACTOR, impersonatingActor);
+            entry.getAuthzReqMsgCtx().setImpersonationRequest(true);
+        }
     }
 
     private static ServiceProvider getServiceProvider(OAuth2Parameters params) throws IdentityOAuth2Exception {
