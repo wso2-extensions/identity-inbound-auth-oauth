@@ -1654,7 +1654,6 @@ public class OAuth2ServiceComponent {
         log.debug("AccountLockService unset in OAuth2ServiceComponent bundle.");
     }
 
-
     @Reference(
             name = "org.wso2.carbon.identity.handler.event.account.lock.service.AccountDisableService",
             service = AccountDisableService.class,
