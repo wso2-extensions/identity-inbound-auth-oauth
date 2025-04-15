@@ -18,6 +18,7 @@
 package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
@@ -59,12 +60,12 @@ import javax.servlet.http.HttpServletRequest;
 public class LogoutRequestSender {
 
     private static final Log LOG = LogFactory.getLog(LogoutRequestSender.class);
+    private static LogoutRequestSender instance = null;
+
     private static ExecutorService threadPool = null;
     private boolean hostNameVerificationEnabled = true;
     private static int httpConnectTimeout = 0;
     private static int httpSocketTimeout = 0;
-
-    private static LogoutRequestSender instance = new LogoutRequestSender();
     private static final String LOGOUT_TOKEN = "logout_token";
 
     private LogoutRequestSender() {
@@ -81,19 +82,19 @@ public class LogoutRequestSender {
         String hostNameVerificationEnabledProperty = IdentityUtil.getProperty(
                 IdentityConstants.ServerConfig.SLO_HOST_NAME_VERIFICATION_ENABLED);
 
-        if (poolSize == null) {
+        if (StringUtils.isBlank(poolSize)) {
             poolSize = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_POOL_SIZE;
         }
-        if (workQueueSize == null) {
+        if (StringUtils.isBlank(workQueueSize)) {
             workQueueSize = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_WORK_QUEUE_SIZE;
         }
-        if (keepAliveTime == null) {
+        if (StringUtils.isBlank(keepAliveTime)) {
             keepAliveTime = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_KEEP_ALIVE_TIME;
         }
-        if (httpConnectTimeoutProperty == null) {
+        if (StringUtils.isBlank(httpConnectTimeoutProperty)) {
             httpConnectTimeoutProperty = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_HTTP_CONNECT_TIMEOUT;
         }
-        if (httpSocketTimeoutProperty == null) {
+        if (StringUtils.isBlank(httpSocketTimeoutProperty)) {
             httpSocketTimeoutProperty = OIDCSessionConstants.OIDCLogoutRequestConstants.DEFAULT_HTTP_SOCKET_TIMEOUT;
         }
 
@@ -141,6 +142,14 @@ public class LogoutRequestSender {
      * @return LogoutRequestSender instance
      */
     public static LogoutRequestSender getInstance() {
+
+        if (instance == null) {
+            synchronized (LogoutRequestSender.class) {
+                if (instance == null) {
+                    instance = new LogoutRequestSender();
+                }
+            }
+        }
 
         return instance;
     }
