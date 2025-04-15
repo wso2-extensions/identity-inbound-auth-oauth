@@ -62,11 +62,10 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
             throws IdentityOAuth2Exception {
 
         String subjectUserId = impersonationContext.getImpersonationRequestDTO().getSubject();
-        AuthenticatedUser subjectUser = OAuth2Util.getImpersonatingUser(subjectUserId,
-                impersonationContext.getImpersonationRequestDTO().getImpersonator(),
-                impersonationContext.getImpersonationRequestDTO().getClientId());
-        String subjectUserName = subjectUser.getUserName();
         String tenantDomain = impersonationContext.getImpersonationRequestDTO().getTenantDomain();
+        AuthenticatedUser subjectUser = OAuth2Util.getImpersonatingUser(
+                subjectUserId, tenantDomain, impersonationContext.getImpersonationRequestDTO().getClientId());
+        String subjectUserName = subjectUser.getUserName();
         String domainName = subjectUser.getUserStoreDomain();
 
         if (isUserAccountLocked(subjectUserName, tenantDomain)

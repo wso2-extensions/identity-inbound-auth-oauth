@@ -148,7 +148,8 @@ public class UserAccountStatusValidatorTest {
             try (MockedStatic<OAuth2Util> mockedOAuth2Util = mockStatic(OAuth2Util.class);) {
                 // Invoke impersonation validation.
                 mockedOAuth2Util.when(() -> OAuth2Util.getImpersonatingUser(
-                        "dummySubjectId", impersonator, "dummyConsumerKey")).thenReturn(impersonatedUser);
+                        "dummySubjectId", "carbon.super",
+                        "dummyConsumerKey")).thenReturn(impersonatedUser);
                 ImpersonationContext impersonationContext = new ImpersonationContext();
                 impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
                 UserAccountStatusValidator userAccountStatusValidator = new UserAccountStatusValidator();

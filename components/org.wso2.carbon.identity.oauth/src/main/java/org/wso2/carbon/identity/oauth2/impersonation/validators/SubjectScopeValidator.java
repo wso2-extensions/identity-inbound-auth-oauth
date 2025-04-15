@@ -73,7 +73,7 @@ public class SubjectScopeValidator implements ImpersonationValidator {
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
 
         // Switching end-user as authenticated user to validate scopes.
-        AuthenticatedUser subjectUser = OAuth2Util.getImpersonatingUser(subjectUserId, impersonator,
+        AuthenticatedUser subjectUser = OAuth2Util.getImpersonatingUser(subjectUserId, impersonator.getTenantDomain(),
                 impersonationRequestDTO.getClientId());
         authzReqMessageContext.getAuthorizationReqDTO().setUser(subjectUser);
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);

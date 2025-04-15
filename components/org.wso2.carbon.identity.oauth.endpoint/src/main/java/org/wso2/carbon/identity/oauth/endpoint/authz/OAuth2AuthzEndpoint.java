@@ -1327,11 +1327,11 @@ public class OAuth2AuthzEndpoint {
                 /* Used in two places.
                     1. When preparing authorization grant cache entry for code & device code.
                     2. When generating additional claims for implicit & hybrid flows. */
-                String impersonator = authnResult.getSubject().getUserId();
+                String impersonator = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
                 oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
                 // Set AuthenticationResult authenticated user as impersonatee.
                 AuthenticatedUser impersonatedUser = OAuth2Util.getImpersonatingUser(impersonatedSubject,
-                        authnResult.getSubject(),
+                        impersonationContext.getImpersonationRequestDTO().getTenantDomain(),
                         impersonationContext.getImpersonationRequestDTO().getClientId());
                 authnResult.setSubject(impersonatedUser);
             }

@@ -115,9 +115,10 @@ public class SubjectScopeValidatorTest {
         impersonationRequestDTO.setImpersonator(impersonator);
         impersonationRequestDTO.setSubject("dummySubjectId");
         lenient().when(impersonator.getTenantDomain()).thenReturn("carbon.super");
+        lenient().when(impersonator.getUserStoreDomain()).thenReturn("PRIMARY");
 
         mockedOAuth2Util.when(() -> OAuth2Util.getImpersonatingUser(
-                "dummySubjectId", impersonator, "dummyConsumerKey"))
+                "dummySubjectId", impersonator.getTenantDomain(), "dummyConsumerKey"))
                 .thenReturn(getDummyAuthenticatedUserUser());
     }
 

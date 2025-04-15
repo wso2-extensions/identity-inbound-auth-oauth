@@ -140,6 +140,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             when(impersonator.getUserName()).thenReturn("impersonatingActor");
             when(impersonator.getUserId()).thenReturn("impersonatingActorId");
             when(impersonator.getTenantDomain()).thenReturn("carbon.super");
+            when(impersonator.getUserStoreDomain()).thenReturn("PRIMARY");
             when(impersonator.getAuthenticatedSubjectIdentifier()).thenReturn("impersonatingActor");
             // Set impersonating user.as AuthenticationResult subject.
             authenticationResult.setSubject(impersonator);
@@ -175,7 +176,8 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
                 // Invoke impersonation validation.
                 when(impersonatedUser.getUserId()).thenReturn(impersonatedUserIdInReq);
                 mockedOAuth2Util.when(() -> OAuth2Util.getImpersonatingUser(
-                        impersonatedUserIdInReq, impersonator, dummyClientId)).thenReturn(impersonatedUser);
+                        impersonatedUserIdInReq, impersonator.getTenantDomain(),
+                        dummyClientId)).thenReturn(impersonatedUser);
 
                 // Invoke handleSessionImpersonation method.
                 Class<?> clazz = OAuth2AuthzEndpoint.class;

@@ -3844,18 +3844,18 @@ public class OAuth2Util {
     /**
      * Get Authenticated user using user id and tenant domain.
      *
-     * @param userId       User id of the impersonated user.
-     * @param impersonator Impersonator user.
-     * @param clientId     Client id of the application.
+     * @param userId          User id of the impersonated user.
+     * @param tenantDomain    Tenant domain of the impersonated user.
+     * @param clientId        Client id of the application.
      * @return An Authenticated user object.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
-    public static AuthenticatedUser getImpersonatingUser(String userId, AuthenticatedUser impersonator, String clientId)
+    public static AuthenticatedUser getImpersonatingUser(String userId, String tenantDomain, String clientId)
             throws IdentityOAuth2Exception {
 
         try {
             RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-            int tenantId = realmService.getTenantManager().getTenantId(impersonator.getTenantDomain());
+            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
 
             User impersonatingUser = OAuthUtil.getUserFromTenant(userId, tenantId);
             if (impersonatingUser == null) {
@@ -3863,7 +3863,8 @@ public class OAuth2Util {
                         "Invalid User Id provided for the request. Unable to find the user for given " +
                                 "user id : " + userId + " tenant id : " + tenantId);
             }
-            return getImpersonatingUser(userId, impersonatingUser, impersonator, clientId);
+            return getImpersonatingUser(userId, impersonatingUser, tenantDomain, impersonatingUser.getUserStoreDomain(),
+                    clientId);
         } catch (UserStoreException | IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Use mapped local subject is mandatory but a local user couldn't be found");
@@ -3871,13 +3872,13 @@ public class OAuth2Util {
     }
 
     private static AuthenticatedUser getImpersonatingUser(String impersonateeUserId, User impersonatingUser,
-                                                          AuthenticatedUser impersonator, String clientId)
+                                                          String tenantDomain, String userStoreDomain, String clientId)
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
         authenticatedImpersonatingUser.setUserId(impersonateeUserId);
         authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(getAuthenticatedSubjectIdentifier(
-                impersonatingUser.getUserName(), impersonator.getTenantDomain(), impersonator.getUserStoreDomain(),
+                impersonatingUser.getUserName(), tenantDomain, userStoreDomain,
                 clientId, false));
         authenticatedImpersonatingUser.setUserName(impersonatingUser.getUserName());
         authenticatedImpersonatingUser.setUserStoreDomain(impersonatingUser.getUserStoreDomain());
