@@ -1288,6 +1288,11 @@ public class OAuth2AuthzEndpoint {
                                             OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
             throws OAuthProblemException {
 
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
         boolean isImpersonationInitRequest = StringUtils.contains(oauth2Params.getResponseType(),
                 OAuthConstants.SUBJECT_TOKEN);
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
@@ -1806,12 +1811,7 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         /* Set impersonation details to the authorization request context. To handle implicit and hybrid flows. */
-        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
-            String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
-            oAuthAuthzReqMessageContext.setImpersonationRequest(true);
-            // Mandatory when getting additional claims (may_act & sub).
-            oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR, impersonator);
-        }
+        setImpersonationDetailsToAuthzRequestContext(oAuthMessage, oAuthAuthzReqMessageContext);
         // authorizing the request
         OAuth2AuthorizeRespDTO authzRespDTO = authorize(oAuthAuthzReqMessageContext);
         if (authzRespDTO != null && authzRespDTO.getCallbackURI() != null) {
@@ -1844,6 +1844,22 @@ public class OAuth2AuthzEndpoint {
                 return appendAuthenticatedIDPs(oAuthMessage.getSessionDataCacheEntry(), oauthResponse.getLocationUri(),
                         authorizationResponseDTO);
             }
+        }
+    }
+
+    private void setImpersonationDetailsToAuthzRequestContext(OAuthMessage oAuthMessage,
+                                                              OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
+
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+            String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
+            oAuthAuthzReqMessageContext.setImpersonationRequest(true);
+            // Mandatory when getting additional claims (may_act & sub).
+            oAuthAuthzReqMessageContext.addProperty(IMPERSONATING_ACTOR, impersonator);
         }
     }
 
@@ -2191,6 +2207,11 @@ public class OAuth2AuthzEndpoint {
 
     private void setImpersonationDetailsToAuthGrantCache(OAuthMessage oAuthMessage) {
 
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = oAuthMessage.getAuthorizationGrantCacheEntry();
         if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             authorizationGrantCacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
@@ -4776,8 +4797,10 @@ public class OAuth2AuthzEndpoint {
             cacheEntry.setMappedRemoteClaims(sessionDataCacheEntry
                     .getMappedRemoteClaims());
         }
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
         // Add impersonation to the session data cache entry.
-        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+        if (isUserSessionImpersonationEnabled && oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             cacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
         DeviceAuthorizationGrantCache.getInstance().addToCache(cacheKey, cacheEntry);

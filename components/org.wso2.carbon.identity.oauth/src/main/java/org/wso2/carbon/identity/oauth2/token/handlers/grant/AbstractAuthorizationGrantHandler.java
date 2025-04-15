@@ -618,6 +618,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             AccessTokenExtendedAttributes accessTokenExtendedAttributes,
             OAuthTokenReqMessageContext tokReqMsgCtx) {
 
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return accessTokenExtendedAttributes;
+        }
+
         if (tokReqMsgCtx.isImpersonationRequest() && tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR) != null) {
             if (accessTokenExtendedAttributes == null) {
                 accessTokenExtendedAttributes = new AccessTokenExtendedAttributes();

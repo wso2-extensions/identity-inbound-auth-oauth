@@ -78,6 +78,7 @@ public class TokenValidationHandler {
     private static final String BEARER_TOKEN_TYPE_JWT = "jwt";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
     private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
+    private boolean isUserSessionImpersonationEnabled = false;
 
     private TokenValidationHandler() {
 
@@ -132,6 +133,8 @@ public class TokenValidationHandler {
             }
         }
         tokenValidationProcessor = OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
+        isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
     }
 
     public static TokenValidationHandler getInstance() {
@@ -482,18 +485,8 @@ public class TokenValidationHandler {
             diagnosticLogBuilder.logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
                     .resultStatus(DiagnosticLog.ResultStatus.FAILED);
         }
-        // set act claim.
-        if (messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO) != null) {
-            accessTokenDO = (AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO);
-            if (accessTokenDO.getAccessTokenExtendedAttributes() != null
-                    && accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null
-                    && accessTokenDO.getAccessTokenExtendedAttributes().getParameters()
-                        .containsKey(IMPERSONATING_ACTOR)) {
-                String impersonatingActor = accessTokenDO.getAccessTokenExtendedAttributes().getParameters().get(
-                        IMPERSONATING_ACTOR);
-                introResp.getProperties().put(IMPERSONATING_ACTOR, impersonatingActor);
-            }
-        }
+        // Set act claim.
+        setIntrospectResponseActClaim(messageContext, introResp);
         if (messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN) != null
                 && "true".equalsIgnoreCase((String) messageContext.getProperty(OAuth2Util.REMOTE_ACCESS_TOKEN))) {
             // this can be a self-issued JWT or any access token issued by a trusted OAuth authorization server.
@@ -714,6 +707,25 @@ public class TokenValidationHandler {
         // All set. mark the token active.
         introResp.setActive(true);
         return introResp;
+    }
+
+    private void setIntrospectResponseActClaim(OAuth2TokenValidationMessageContext messageContext,
+                                               OAuth2IntrospectionResponseDTO introResp) {
+
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
+        if (messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO) != null) {
+            AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO);
+            if (accessTokenDO.getAccessTokenExtendedAttributes() != null
+                    && accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null
+                    && accessTokenDO.getAccessTokenExtendedAttributes().getParameters()
+                    .containsKey(IMPERSONATING_ACTOR)) {
+                String impersonatingActor = accessTokenDO.getAccessTokenExtendedAttributes().getParameters().get(
+                        IMPERSONATING_ACTOR);
+                introResp.getProperties().put(IMPERSONATING_ACTOR, impersonatingActor);
+            }
+        }
     }
 
     private boolean isFragmentApp(ServiceProviderProperty[] serviceProviderProperties) {

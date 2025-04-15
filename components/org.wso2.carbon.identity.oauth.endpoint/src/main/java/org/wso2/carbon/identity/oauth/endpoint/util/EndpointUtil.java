@@ -771,11 +771,17 @@ public class EndpointUtil {
         return consentPageUrl;
     }
 
-    private static void persistImpersonationInfoToSessionDataCache(SessionDataCacheEntry entry,
+    protected static void persistImpersonationInfoToSessionDataCache(SessionDataCacheEntry entry,
                                                                    OAuthMessage oAuthMessage) {
 
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
         String impersonatingActor = null;
-        if (oAuthMessage.getProperties().get(IMPERSONATING_ACTOR) != null) {
+        if (oAuthMessage != null && oAuthMessage.getProperties() != null &&
+                oAuthMessage.getProperties().get(IMPERSONATING_ACTOR) != null) {
             impersonatingActor = oAuthMessage.getProperties().get(
                     IMPERSONATING_ACTOR).toString();
         }

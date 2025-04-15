@@ -419,6 +419,11 @@ public class AccessTokenIssuer {
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
                                                      OAuthTokenReqMessageContext tokReqMsgCtx) {
 
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
             tokReqMsgCtx.setImpersonationRequest(true);
@@ -704,18 +709,15 @@ public class AccessTokenIssuer {
         }
 
         // Write impersonation details to into the session context.
-        if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest()) {
-            if (TOKEN_EXCHANGE.equals(grantType)) {
-                persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp,
-                        tokReqMsgCtx.getAuthorizedUser().getTenantDomain(), tokenRespDTO, tokReqMsgCtx);
-            }
+        if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest() && TOKEN_EXCHANGE.equals(grantType)) {
+            persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp,
+                    tokReqMsgCtx.getAuthorizedUser().getTenantDomain(), tokenRespDTO, tokReqMsgCtx);
         }
 
         return tokenRespDTO;
     }
 
-    private void notifyImpersonation(OAuth2AccessTokenRespDTO tokenRespDTO,
-                                                         OAuthTokenReqMessageContext tokReqMsgCtx)
+    private void notifyImpersonation(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
         ImpersonationNotificationRequestDTO impersonationNotificationRequestDTO
@@ -740,6 +742,12 @@ public class AccessTokenIssuer {
                                                           OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            notifyImpersonation(tokReqMsgCtx);
+            return;
+        }
         RequestParameter[] params = tokenReqDTO.getRequestParameters();
         Map<String, String> requestParams = Arrays.stream(params).collect(Collectors.toMap(RequestParameter::getKey,
                 requestParam -> requestParam.getValue()[0]));
@@ -757,8 +765,9 @@ public class AccessTokenIssuer {
             // Set session context data.
             if (subClaim != null && iskClaim != null) {
                 SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, loginTenantDomain);
-                if (sessionContext.getImpersonatedUser() != null) {
-                    notifyImpersonation(tokenRespDTO, tokReqMsgCtx);
+                // Send notification only on session impersonation initiation.
+                if (sessionContext.getImpersonatedUser() == null) {
+                    notifyImpersonation(tokReqMsgCtx);
                 }
                 sessionContext.setImpersonatedUser(subClaim);
                 FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext, tenantDomain, loginTenantDomain);
@@ -780,12 +789,24 @@ public class AccessTokenIssuer {
                 authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
                         .getMappedRemoteClaims());
             }
-            if (cacheEntry.getImpersonator() != null) {
-                authorizationGrantCacheEntry.setImpersonator(cacheEntry.getImpersonator());
-            }
+            persistImpersonationInfoToAuthzGrantCacheEntry(cacheEntry, authorizationGrantCacheEntry);
             return Optional.of(authorizationGrantCacheEntry);
         }
         return Optional.empty();
+    }
+
+    private void persistImpersonationInfoToAuthzGrantCacheEntry(DeviceAuthorizationGrantCacheEntry cacheEntry,
+                                                                AuthorizationGrantCacheEntry
+                                                                        authorizationGrantCacheEntry) {
+
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
+        if (cacheEntry.getImpersonator() != null) {
+            authorizationGrantCacheEntry.setImpersonator(cacheEntry.getImpersonator());
+        }
     }
 
     private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromAuthzCode(OAuth2AccessTokenReqDTO
