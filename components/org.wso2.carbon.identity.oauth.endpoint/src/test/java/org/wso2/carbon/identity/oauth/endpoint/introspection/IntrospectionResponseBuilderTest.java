@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth.endpoint.introspection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,6 +55,10 @@ public class IntrospectionResponseBuilderTest {
     private IntrospectionResponseBuilder introspectionResponseBuilder1;
 
     private IntrospectionResponseBuilder introspectionResponseBuilder2;
+
+    private static final String orgID = "10084a8d-113f-4211-a0d5-efe36b082211";
+    private static final String orgName = "ABC builders";
+    private static final String orgHandle = "abcbuilders";
 
     @Mock
     OAuthServerConfiguration mockOAuthServerConfiguration;
@@ -133,6 +138,9 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setErrorDescription("error_discription");
         introspectionResponseBuilder1.setAuthorizedUserType(OAuthConstants.UserType.APPLICATION_USER);
         introspectionResponseBuilder1.setCnfBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+        introspectionResponseBuilder1.setOrgId(orgID);
+        introspectionResponseBuilder1.setOrgName(orgName);
+        introspectionResponseBuilder1.setOrgHandle(orgHandle);
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
@@ -164,6 +172,9 @@ public class IntrospectionResponseBuilderTest {
                 .readValue(jsonObject.get(IntrospectionResponse.CNF).toString(), HashMap.class);
         assertEquals(cnf.get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9",
                 "CNF value is not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.ORG_ID), orgID);
+        assertEquals(jsonObject.get(IntrospectionResponse.ORG_NAME), orgName);
+        assertEquals(jsonObject.get(IntrospectionResponse.ORG_HANDLE), orgHandle);
     }
 
     /**
@@ -188,6 +199,9 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder2.setErrorDescription("");
         introspectionResponseBuilder2.setAuthorizedUserType("");
         introspectionResponseBuilder2.setCnfBindingValue("");
+        introspectionResponseBuilder1.setOrgId("");
+        introspectionResponseBuilder1.setOrgName("");
+        introspectionResponseBuilder1.setOrgHandle("");
 
         JSONObject jsonObject2 = new JSONObject(introspectionResponseBuilder2.build());
         assertFalse(jsonObject2.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
@@ -210,6 +224,9 @@ public class IntrospectionResponseBuilderTest {
                 "ERROR_DESCRIPTION already exists in the response builder");
         assertFalse(jsonObject2.has(IntrospectionResponse.AUT), "AUT already exists in the response builder");
         assertFalse(jsonObject2.has(IntrospectionResponse.CNF), "CNF value exists in the response builder");
+        assertFalse(jsonObject2.has(IntrospectionResponse.ORG_ID));
+        assertFalse(jsonObject2.has(IntrospectionResponse.ORG_NAME));
+        assertFalse(jsonObject2.has(IntrospectionResponse.ORG_HANDLE));
     }
 
     @Test(dependsOnMethods = "testResposeBuilderWithVal")
