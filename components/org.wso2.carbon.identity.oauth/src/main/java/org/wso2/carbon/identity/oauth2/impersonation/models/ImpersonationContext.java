@@ -19,12 +19,14 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.models;
 
- /**
+import java.io.Serializable;
+
+/**
  * The object which will contain context information which are passed through Impersonation validation process.
  * The {@code ImpersonationContext} class represents the context for impersonation requests, including
  * information about the request, validation status, and any validation failure details.
  */
-public class ImpersonationContext {
+public class ImpersonationContext implements Serializable {
 
     private ImpersonationRequestDTO impersonationRequestDTO;
     private boolean isValidated;

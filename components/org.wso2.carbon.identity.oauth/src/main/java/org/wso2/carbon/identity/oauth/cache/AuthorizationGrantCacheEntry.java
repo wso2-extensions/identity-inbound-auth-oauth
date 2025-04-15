@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth.cache;
 
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
+import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.model.FederatedTokenDO;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
@@ -83,6 +84,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private boolean isRequestObjectFlow;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
     private boolean isApiBasedAuthRequest;
+    private ImpersonationContext impersonationContext;
 
     private List<FederatedTokenDO> federatedTokens;
 
@@ -361,6 +363,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setApiBasedAuthRequest(boolean apiBasedAuthRequest) {
 
         isApiBasedAuthRequest = apiBasedAuthRequest;
+    }
+
+    public ImpersonationContext getImpersonationContext() {
+
+        return impersonationContext;
+    }
+
+    public void setImpersonationContext(ImpersonationContext impersonationContext) {
+
+        this.impersonationContext = impersonationContext;
     }
 
     public List<String> getAudiences() {

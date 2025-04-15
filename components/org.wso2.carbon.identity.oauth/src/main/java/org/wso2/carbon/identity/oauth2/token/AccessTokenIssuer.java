@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.token;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import net.minidev.json.JSONObject;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
@@ -27,8 +29,10 @@ import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
 import org.wso2.carbon.identity.application.common.model.ClaimMapping;
@@ -69,6 +73,7 @@ import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
@@ -77,6 +82,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
+import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
@@ -100,17 +106,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACTOR_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.MAX_ALLOWED_LENGTH;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.CONSOLE_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.INTERNAL_SCOPE_PREFIX;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
@@ -184,6 +196,7 @@ public class AccessTokenIssuer {
         OAuthTokenReqMessageContext tokReqMsgCtx = new OAuthTokenReqMessageContext(tokenReqDTO);
         boolean isRefreshRequest = GrantType.REFRESH_TOKEN.toString().equals(grantType);
         boolean isCodeRequest = GrantType.AUTHORIZATION_CODE.toString().equals(grantType);
+        boolean isDeviceCodeRequest = DEVICE_FLOW_GRANT_TYPE.equals(grantType);
 
         if (isCodeRequest) {
 
@@ -200,6 +213,13 @@ public class AccessTokenIssuer {
                 tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                         authorizationGrantCacheEntry.getAccessTokenExtensionDO());
             }
+            setImpersonationDetailsIntoTokenCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
+        }
+
+        if (isDeviceCodeRequest) {
+            AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                    getAuthzGrantCacheEntryFromDeviceCode(tokenReqDTO);
+            setImpersonationDetailsIntoTokenCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }
 
         triggerPreListeners(tokenReqDTO, tokReqMsgCtx, isRefreshRequest);
@@ -379,6 +399,31 @@ public class AccessTokenIssuer {
         synchronized (syncLockString.intern()) {
             return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
+        }
+    }
+
+    private AuthorizationGrantCacheEntry getAuthzGrantCacheEntryFromDeviceCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
+
+        Optional<String> deviceCodeOptional = getDeviceCode(tokenReqDTO);
+        if (deviceCodeOptional.isPresent()) {
+            String deviceCode = deviceCodeOptional.get();
+            Optional<AuthorizationGrantCacheEntry> authorizationGrantCacheEntryOptional
+                    = getAuthzGrantCacheEntryFromDeviceCode(deviceCode);
+            return authorizationGrantCacheEntryOptional.orElse(null);
+        }
+        return null;
+    }
+
+    private void setImpersonationDetailsIntoTokenCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
+                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        // Set impersonation details into the token context before triggeringPreListeners.
+        if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonationContext() != null
+                && authorizationGrantCacheEntry.getImpersonationContext().isValidated()
+                && authorizationGrantCacheEntry.getImpersonationContext().getImpersonationRequestDTO() != null) {
+            tokReqMsgCtx.setImpersonationRequest(true);
+            tokReqMsgCtx.addProperty(IMPERSONATING_ACTOR, authorizationGrantCacheEntry
+                    .getImpersonationContext().getImpersonationRequestDTO().getImpersonator());
         }
     }
 
@@ -658,7 +703,42 @@ public class AccessTokenIssuer {
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
 
+        // Set impersonated session details only during impersonated token exchange flow.
+        if (TOKEN_EXCHANGE.equals(grantType) && tokReqMsgCtx.isImpersonationRequest()) {
+            setImpersonatedSession(tokenReqDTO, tenantDomainOfApp);
+        }
+
         return tokenRespDTO;
+    }
+
+    private void setImpersonatedSession(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomainOfApp)
+            throws IdentityOAuth2Exception {
+
+        RequestParameter[] params = tokenReqDTO.getRequestParameters();
+        Map<String, String> requestParams = Arrays.stream(params).collect(Collectors.toMap(RequestParameter::getKey,
+                requestParam -> requestParam.getValue()[0]));
+        JWTClaimsSet claimsSetSubjectToken = OAuth2TokenUtil.getJWTClaimSet(requestParams.get(SUBJECT_TOKEN));
+        JWTClaimsSet claimsSetActorToken = OAuth2TokenUtil.getJWTClaimSet(requestParams.get(ACTOR_TOKEN));
+
+        if (claimsSetSubjectToken != null && claimsSetActorToken != null) {
+            if (claimsSetSubjectToken.getClaim("may_act") == null) {
+                throw new IdentityOAuth2Exception("may_act claim is not found in the subject token.");
+            }
+
+            String sub = claimsSetSubjectToken.getSubject();
+            String mayAct = ((JSONObject) claimsSetSubjectToken.getClaim("may_act")).get("sub").toString();
+            String iskClaim = (String) claimsSetActorToken.getClaim(OAuthConstants.OIDCClaims.IDP_SESSION_KEY);
+
+            // Set session context data.
+            if (sub != null && mayAct != null && iskClaim != null) {
+                SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim,
+                        tenantDomainOfApp);
+                sessionContext.addProperty(IMPERSONATED_SUBJECT, sub);
+                sessionContext.addProperty(IMPERSONATOR, mayAct);
+                FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext,
+                        tenantDomainOfApp, tenantDomainOfApp);
+            }
+        }
     }
 
     private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {
@@ -674,6 +754,9 @@ public class AccessTokenIssuer {
             if (cacheEntry.getMappedRemoteClaims() != null) {
                 authorizationGrantCacheEntry.setMappedRemoteClaims(cacheEntry
                         .getMappedRemoteClaims());
+            }
+            if (cacheEntry.getImpersonationContext() != null) {
+                authorizationGrantCacheEntry.setImpersonationContext(cacheEntry.getImpersonationContext());
             }
             return Optional.of(authorizationGrantCacheEntry);
         }
