@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
@@ -72,31 +73,41 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
         return new Object[][]{
                 // response type, existingImpersonatedUserId, impersonatedUserIdInReq,
                 // rejectImpersonation, ssoImpersonation, validImpersonation
-                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", false, false, true},
-                {SUBJECT_TOKEN, null, "impersonatedUserId", false, false, true},
-                {SUBJECT_TOKEN, "impersonatedUserId", "otherImpersonatedUserId", true, false, false},
+                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", false, false, true, true},
+                {SUBJECT_TOKEN, null, "impersonatedUserId", false, false, true, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", "otherImpersonatedUserId", true, false, false, true},
                 // Invalid impersonation request
-                {SUBJECT_TOKEN, "impersonatedUserId", null, false, false, false},
-                {SUBJECT_TOKEN, null, null, false, false, false},
-
+                {SUBJECT_TOKEN, "impersonatedUserId", null, false, false, false, true},
+                {SUBJECT_TOKEN, null, null, false, false, false, true},
                 // SSO cases.
-                {CODE, "impersonatedUserId", "impersonatedUserId", false, true, true},
-                {CODE, "impersonatedUserId", "OtherImpersonatedUserId", false, true, false},
+                {CODE, "impersonatedUserId", "impersonatedUserId", false, true, true, true},
+                {CODE, "impersonatedUserId", "OtherImpersonatedUserId", false, true, false, true},
+                // Disabled.
+                {CODE, "impersonatedUserId", "impersonatedUserId", false, true, false, false},
         };
     }
 
     @Test(dataProvider = "getHandleSessionImpersonationData")
     public void testHandleSessionImpersonation(String responseType, String existingImpersonatedUserId,
                                      String impersonatedUserIdInReq, boolean rejectImpersonation,
-                                     boolean ssoImpersonation, boolean validImpersonation) throws Exception {
+                                     boolean ssoImpersonation, boolean validImpersonation,
+                                               boolean isUserSessionImpersonationEnabled) throws Exception {
 
         String dummyClientId = "dummyClientId";
 
         try (MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
             MockedStatic<AppInfoCache> appInfoCache = mockStatic(AppInfoCache.class);
+            MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                    OAuthServerConfiguration.class);
             MockedStatic<OAuth2ServiceComponentHolder> oAuth2ServiceComponentHolder =
                      mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS)) {
+
+            OAuthServerConfiguration mockedOAuthServerConfiguration =  mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockedOAuthServerConfiguration);
+            when(mockedOAuthServerConfiguration.isUserSessionImpersonationEnabled()).thenReturn(
+                    isUserSessionImpersonationEnabled);
 
             Cookie authCookie = mock(Cookie.class);
             SessionContext sessionContext = mock(SessionContext.class);
@@ -109,6 +120,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             AuthenticatedUser impersonator = mock(AuthenticatedUser.class);
             ImpersonationRequestDTO impersonationRequestDTO = mock(ImpersonationRequestDTO.class);
             when(impersonationRequestDTO.getClientId()).thenReturn(dummyClientId);
+            when(impersonationRequestDTO.getTenantDomain()).thenReturn("carbon.super");
 
             // Mark whether the request is a valid token initiation.
             Map<String, String[]> requestParameterMap = new HashMap<>();
@@ -187,15 +199,23 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
                                 OAuth2Parameters.class, AuthenticationResult.class);
                 handleSessionImpersonation.setAccessible(true);
 
+                if (!isUserSessionImpersonationEnabled) {
+                    handleSessionImpersonation.invoke(authzEndpointObj,
+                            oAuthMessage, "", oAuth2Parameters, authenticationResult);
+                    assertEquals("Impersonation should not be allowed when impersonation is disabled.",
+                            authenticationResult.getSubject().getUserId(), impersonator.getUserId());
+                    return;
+                }
+
                 if (rejectImpersonation) {
                     assertThrows(Exception.class, () -> {
                         handleSessionImpersonation.invoke(authzEndpointObj,
-                                oAuthMessage, "", oAuth2Parameters, authenticationResult);
+                                oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
                     });
                 } else {
                     if (ssoImpersonation) {
                         handleSessionImpersonation.invoke(authzEndpointObj,
-                                oAuthMessage, "", oAuth2Parameters, authenticationResult);
+                                oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
                         assertEquals(Objects.equals(authenticationResult.getSubject().getUserId(),
                                 impersonatedUser.getUserId()), validImpersonation);
                     }
