@@ -92,7 +92,9 @@ public class AccessToken {
 
         TOKEN_BINDING_REF("binding_ref"),
         TOKEN_BINDING_TYPE("binding_type"),
-        SUBJECT_TYPE("subject_type");
+        SUBJECT_TYPE("subject_type"),
+        ACR("acr"),
+        AUTH_TIME("auth_time");
 
         private final String name;
 
