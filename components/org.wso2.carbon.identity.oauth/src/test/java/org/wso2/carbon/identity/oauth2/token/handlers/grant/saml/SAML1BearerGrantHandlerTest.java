@@ -21,23 +21,18 @@ package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.joda.time.DateTime;
-import org.mockito.MockedStatic;
 import org.opensaml.saml.security.impl.SAMLSignatureProfileValidator;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.core.internal.CarbonCoreDataHolder;
+import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.common.testng.WithAxisConfiguration;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
-import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
-import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
-import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.TestConstants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
@@ -51,19 +46,18 @@ import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Field;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertTrue;
 import static org.testng.AssertJUnit.assertEquals;
-import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @WithCarbonHome
 @WithH2Database(files = {"dbScripts/identity.sql", "dbScripts/insert_local_idp2.sql"})
@@ -79,15 +73,15 @@ public class SAML1BearerGrantHandlerTest {
 
     private static final String CERTIFICATE =
             "MIICNTCCAZ6gAwIBAgIES343gjANBgkqhkiG9w0BAQUFADBVMQswCQYDVQQGEwJVUzELMAkGA1UE\n" +
-            "CAwCQ0ExFjAUBgNVBAcMDU1vdW50YWluIFZpZXcxDTALBgNVBAoMBFdTTzIxEjAQBgNVBAMMCWxv\n" +
-            "Y2FsaG9zdDAeFw0xMDAyMTkwNzAyMjZaFw0zNTAyMTMwNzAyMjZaMFUxCzAJBgNVBAYTAlVTMQsw\n" +
-            "CQYDVQQIDAJDQTEWMBQGA1UEBwwNTW91bnRhaW4gVmlldzENMAsGA1UECgwEV1NPMjESMBAGA1UE\n" +
-            "AwwJbG9jYWxob3N0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCUp/oV1vWc8/TkQSiAvTou\n" +
-            "sMzOM4asB2iltr2QKozni5aVFu818MpOLZIr8LMnTzWllJvvaA5RAAdpbECb+48FjbBe0hseUdN5\n" +
-            "HpwvnH/DW8ZccGvk53I6Orq7hLCv1ZHtuOCokghz/ATrhyPq+QktMfXnRS4HrKGJTzxaCcU7OQID\n" +
-            "AQABoxIwEDAOBgNVHQ8BAf8EBAMCBPAwDQYJKoZIhvcNAQEFBQADgYEAW5wPR7cr1LAdq+IrR44i\n" +
-            "QlRG5ITCZXY9hI0PygLP2rHANh+PYfTmxbuOnykNGyhM6FjFLbW2uZHQTY1jMrPprjOrmyK5sjJR\n" +
-            "O4d1DeGHT/YnIjs9JogRKv4XHECwLtIVdAbIdWHEtVZJyMSktcyysFcvuhPQK8Qc/E/Wq8uHSCo=";
+                    "CAwCQ0ExFjAUBgNVBAcMDU1vdW50YWluIFZpZXcxDTALBgNVBAoMBFdTTzIxEjAQBgNVBAMMCWxv\n" +
+                    "Y2FsaG9zdDAeFw0xMDAyMTkwNzAyMjZaFw0zNTAyMTMwNzAyMjZaMFUxCzAJBgNVBAYTAlVTMQsw\n" +
+                    "CQYDVQQIDAJDQTEWMBQGA1UEBwwNTW91bnRhaW4gVmlldzENMAsGA1UECgwEV1NPMjESMBAGA1UE\n" +
+                    "AwwJbG9jYWxob3N0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCUp/oV1vWc8/TkQSiAvTou\n" +
+                    "sMzOM4asB2iltr2QKozni5aVFu818MpOLZIr8LMnTzWllJvvaA5RAAdpbECb+48FjbBe0hseUdN5\n" +
+                    "HpwvnH/DW8ZccGvk53I6Orq7hLCv1ZHtuOCokghz/ATrhyPq+QktMfXnRS4HrKGJTzxaCcU7OQID\n" +
+                    "AQABoxIwEDAOBgNVHQ8BAf8EBAMCBPAwDQYJKoZIhvcNAQEFBQADgYEAW5wPR7cr1LAdq+IrR44i\n" +
+                    "QlRG5ITCZXY9hI0PygLP2rHANh+PYfTmxbuOnykNGyhM6FjFLbW2uZHQTY1jMrPprjOrmyK5sjJR\n" +
+                    "O4d1DeGHT/YnIjs9JogRKv4XHECwLtIVdAbIdWHEtVZJyMSktcyysFcvuhPQK8Qc/E/Wq8uHSCo=";
 
     private static String assertion =
             "  <saml:Assertion\n" +
@@ -149,20 +143,6 @@ public class SAML1BearerGrantHandlerTest {
                     "    </ds:Signature>" +
                     "  </saml:Assertion>";
 
-    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
-
-    @BeforeClass
-    public void setup() throws Exception {
-
-        mockKeystores();
-    }
-
-    @AfterClass
-    public void tearDown() throws Exception {
-
-        identityKeyStoreResolverMockedStatic.close();
-    }
-
     @BeforeMethod
     public void setUp() throws Exception {
         saml1BearerGrantHandler = new SAML1BearerGrantHandler();
@@ -214,6 +194,13 @@ public class SAML1BearerGrantHandlerTest {
         when(tenantManager.getTenantId(TestConstants.CARBON_TENANT_DOMAIN)).thenReturn(MultitenantConstants.
                 SUPER_TENANT_ID);
         IdpMgtServiceComponentHolder.getInstance().setRealmService(realmService);
+        KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
+        ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
+        mtKeyStoreManagers.put("-1234", keyStoreManager);
+        setPrivateStaticField(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
+        X509Certificate cert = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(
+                new ByteArrayInputStream(Base64.decodeBase64(CERTIFICATE)));
+        when(keyStoreManager.getDefaultPrimaryCertificate()).thenReturn(cert);
         Map<String, Object> configuration = new HashMap<>();
         configuration.put("SSOService.EntityId", "LOCAL");
         configuration.put("SSOService.SAMLECPEndpoint", "https://localhost:9443/samlecp");
@@ -222,6 +209,7 @@ public class SAML1BearerGrantHandlerTest {
         setPrivateStaticField(IdentityUtil.class, "configuration", configuration);
         saml1BearerGrantHandler.profileValidator = new SAMLSignatureProfileValidator();
         assertEquals(saml1BearerGrantHandler.validateGrant(oAuthTokenReqMessageContext), expectedResult);
+        setPrivateStaticField(KeyStoreManager.class, "mtKeyStoreManagers", new ConcurrentHashMap());
         setPrivateStaticField(IdentityUtil.class, "configuration", new HashMap<>());
     }
 
@@ -261,18 +249,4 @@ public class SAML1BearerGrantHandlerTest {
         field.setAccessible(true);
         field.set(null, newValue);
     }
-
-    private void mockKeystores() throws IdentityKeyStoreResolverException, CertificateException {
-
-        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
-        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
-                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
-                CertificateFactory.getInstance("X.509")
-                        .generateCertificate(new ByteArrayInputStream(Base64.decodeBase64(CERTIFICATE))));
-
-        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
-        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
-                .thenReturn(identityKeyStoreResolver);
-    }
 }
-
