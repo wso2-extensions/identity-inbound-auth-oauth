@@ -3925,6 +3925,10 @@ public class AuthzUtil {
                         return Response.status(HttpServletResponse.SC_FOUND)
                                 .location(AuthzUtil.buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
+                        if (isAuthzChallenge(oAuthMessage.getRequest())) {
+                            return Response.status(HttpServletResponse.SC_FORBIDDEN)
+                                    .entity(responseWrapper.getContent()).build();
+                        }
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
                     }
                 } else {
@@ -4573,11 +4577,7 @@ public class AuthzUtil {
                             "Error while building JSON response.", e);
                 }
                 oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                if (isAuthzChallenge(oAuthMessage.getRequest())) {
-                    return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonString).build();
-                } else {
-                    return Response.ok().entity(jsonString).build();
-                }
+                return Response.status(oauthResponse.getStatus()).entity(jsonString).build();
             } else {
                 List<Object> locationHeader = oauthResponse.getMetadata().get("Location");
                 if (CollectionUtils.isNotEmpty(locationHeader)) {
@@ -4985,7 +4985,7 @@ public class AuthzUtil {
         try {
             jsonString = objectMapper.writeValueAsString(response);
         } catch (JsonProcessingException e) {
-            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST)
                     .entity("Internal Server Error: " + e.getMessage()).build();
         }
         return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();

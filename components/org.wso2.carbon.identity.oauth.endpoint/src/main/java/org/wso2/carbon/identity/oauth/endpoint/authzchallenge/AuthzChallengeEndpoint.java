@@ -93,6 +93,7 @@ import javax.ws.rs.core.Response;
 public class AuthzChallengeEndpoint {
 
     private static final String AUTH_SESSION = "auth_session";
+    private static final String SELECTED_AUTHENTICATOR = "selectedAuthenticator";
     private static final String FLOW_ID = "flowId";
     private static final String DPOP = "DPoP";
     private static final String ATTR_AUTHZ_CHALLENGE = "isAuthzChallenge";
@@ -184,7 +185,7 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    private Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request,
+    public Response handleSubsequentAuthzChallengeRequest(@Context HttpServletRequest request,
                                                            @Context HttpServletResponse response, String payload)
             throws AuthServiceException, InvalidRequestParentException, URISyntaxException {
 
@@ -231,7 +232,7 @@ public class AuthzChallengeEndpoint {
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
 
-            if (hasRequiredAuthorizationParameters(parameterMap)) {
+            if (hasValidInitialAuthorizationParameters(parameterMap)) {
                 if (!EndpointUtil.validateParams(request, paramMap)) {
                     throw new AuthServiceClientException(
                             OAuth2ErrorCodes.INVALID_REQUEST,
@@ -263,7 +264,7 @@ public class AuthzChallengeEndpoint {
                                                      @Context HttpServletResponse response, String payload) {
 
         try {
-            if (payload != null && payload.contains(AUTH_SESSION)) {
+            if (hasValidAuthzChallengeSubsequentPayload(payload)) {
                 if (!validateJsonPayload(payload)) {
                     throw new AuthServiceClientException(
                             OAuth2ErrorCodes.INVALID_REQUEST,
@@ -283,14 +284,18 @@ public class AuthzChallengeEndpoint {
         }
     }
 
-    private boolean hasRequiredAuthorizationParameters(Map<String, String[]> parameterMap) {
+    private boolean hasValidInitialAuthorizationParameters(Map<String, String[]> parameterMap) {
 
         return parameterMap.containsKey(OAuthConstants.OAuth20Params.CLIENT_ID) &&
                 parameterMap.containsKey(OAuthConstants.OAuth20Params.RESPONSE_TYPE) &&
                 parameterMap.containsKey(OAuthConstants.OAuth20Params.REDIRECT_URI);
     }
 
-    private OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
+    private boolean hasValidAuthzChallengeSubsequentPayload(String payload) {
+        return payload != null && payload.contains(AUTH_SESSION) && payload.contains(SELECTED_AUTHENTICATOR);
+    }
+
+    public OAuth2AuthzChallengeReqDTO buildAuthzChallengeReqDTO(HttpServletRequest request) {
 
         OAuth2AuthzChallengeReqDTO dto = new OAuth2AuthzChallengeReqDTO();
 
