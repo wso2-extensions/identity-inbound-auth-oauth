@@ -15,9 +15,13 @@
  */
 package org.wso2.carbon.identity.oauth2.authcontext;
 
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import com.nimbusds.jwt.SignedJWT;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -59,10 +63,12 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.Random;
 
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
 
 @WithCarbonHome
@@ -229,6 +235,31 @@ public class JWTTokenGeneratorTest {
         Assert.assertNotNull(signatureAlgorithm);
         Assert.assertNotNull(signatureAlgorithm.getName());
         Assert.assertEquals(signatureAlgorithm.getName(), "none");
+    }
+
+    @Test(description = "This will test the `signJWTWithRSA` method.")
+    public void testSignJWTWithRSA() throws Exception {
+
+        jwtTokenGenerator = new JWTTokenGenerator();
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .subject("testUser")
+                .issuer("https://example.com")
+                .expirationTime(new Date(new Date().getTime() + 60 * 1000))
+                .build();
+        SignedJWT signedJWT = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT).build(),
+                claimsSet
+        );
+        signedJWT = jwtTokenGenerator.signJWTWithRSA(signedJWT, null, SUPER_TENANT_DOMAIN_NAME, SUPER_TENANT_ID);
+        assertNotNull(signedJWT.getSignature());
+
+        // Verify the signature generation when the tenant domain is null.
+        signedJWT = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT).build(),
+                claimsSet
+        );
+        signedJWT = jwtTokenGenerator.signJWTWithRSA(signedJWT, null, null, 0);
+        assertNotNull(signedJWT.getSignature());
     }
 
     private void addSampleOauth2Application() throws IdentityOAuthAdminException {

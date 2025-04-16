@@ -25,8 +25,6 @@ import com.nimbusds.jwt.JWT;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,8 +59,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.security.Key;
-import java.security.MessageDigest;
-import java.security.cert.Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -390,41 +386,6 @@ public class JWTTokenGenerator implements AuthorizationContextTokenGenerator {
                 ttl = 15L;
             }
             return ttl;
-        }
-    }
-
-    /**
-     * Helper method to add public certificate to JWT_HEADER to signature verification.
-     *
-     * @param tenantDomain
-     * @param tenantId
-     * @throws IdentityOAuth2Exception
-     */
-    private String getThumbPrint(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
-
-        try {
-            if (tenantDomain == null) {
-                tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
-            }
-            Certificate certificate = IdentityKeyStoreResolver.getInstance().getCertificate(tenantDomain,
-                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
-
-            // TODO: maintain a hashmap with tenants' pubkey thumbprints after first initialization
-
-            //generate the SHA-1 thumbprint of the certificate
-            MessageDigest digestValue = MessageDigest.getInstance("SHA-1");
-            byte[] der = certificate.getEncoded();
-            digestValue.update(der);
-            byte[] digestInBytes = digestValue.digest();
-
-            String publicCertThumbprint = hexify(digestInBytes);
-            String base64EncodedThumbPrint = new String(new Base64(0, null, true).encode(publicCertThumbprint
-                    .getBytes(Charsets.UTF_8)), Charsets.UTF_8);
-            return base64EncodedThumbPrint;
-
-        } catch (Exception e) {
-            String error = "Error in obtaining certificate for tenant " + tenantDomain;
-            throw new IdentityOAuth2Exception(error, e);
         }
     }
 
