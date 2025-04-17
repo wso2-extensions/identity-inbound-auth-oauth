@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_SSO_REQUEST;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 
 /**
@@ -42,6 +43,7 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
     private static final String NAME = "ImpersonatorPermissionValidator";
     private static final Log LOG = LogFactory.getLog(ImpersonatorPermissionValidator.class);
     private DefaultOAuth2ScopeValidator scopeValidator;
+    private static final String CONSOLE_APPLICATION = "CONSOLE";
 
     public ImpersonatorPermissionValidator() {
 
@@ -71,14 +73,31 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
+
+        // Block impersonation on console application.
+        if (clientId.equals(CONSOLE_APPLICATION)) {
+            String errorMessage = "Impersonation is not allowed for CONSOLE Application.";
+            impersonationContext.setValidated(false);
+            impersonationContext.setValidationFailureErrorMessage(errorMessage);
+            LOG.debug(errorMessage);
+            return impersonationContext;
+        }
+        // Skip impersonation scope check for sso.
+        if (Boolean.TRUE.equals(authzReqMessageContext.getProperty(IMPERSONATION_SSO_REQUEST))) {
+            impersonationContext.setValidated(true);
+            return impersonationContext;
+        }
+
         if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
             impersonationContext.setValidated(true);
         } else {
-            impersonationContext.setValidated(false);
-            LOG.error(String.format("Authenticated user : %s doesn't have impersonation permission for " +
+            String errorMessage = String.format("Authenticated user : %s doesn't have impersonation permission for " +
                             "client :%s in the tenant %s.",
                     authzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableMaskedUserId(),
-                    clientId, tenantDomain));
+                    clientId, tenantDomain);
+            impersonationContext.setValidated(false);
+            impersonationContext.setValidationFailureErrorMessage(errorMessage);
+            LOG.debug(errorMessage);
         }
         return impersonationContext;
     }

@@ -23,12 +23,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
-import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonatorPermissionValidator;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.util.List;
-
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_SSO_REQUEST;
 
 /**
  * The {@code ImpersonationMgtServiceImpl} class implements the {@link ImpersonationMgtService} interface
@@ -50,14 +47,7 @@ public class ImpersonationMgtServiceImpl implements ImpersonationMgtService {
         impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
 
         for (ImpersonationValidator impersonationValidator: impersonationValidators) {
-            if (impersonationRequestDTO.getoAuthAuthzReqMessageContext() != null &&
-                    impersonationRequestDTO.getoAuthAuthzReqMessageContext().getProperty(
-                            IMPERSONATION_SSO_REQUEST) != null &&
-                    impersonationValidator.getClass().equals(ImpersonatorPermissionValidator.class)) {
-                continue;
-            }
             impersonationContext = impersonationValidator.validateImpersonation(impersonationContext);
-
             if (!impersonationContext.isValidated()) {
                 return impersonationContext;
             }
