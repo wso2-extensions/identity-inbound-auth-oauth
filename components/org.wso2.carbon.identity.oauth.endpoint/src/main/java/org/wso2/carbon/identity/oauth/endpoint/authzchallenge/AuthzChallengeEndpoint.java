@@ -83,7 +83,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-
 /**
  * Class containing the REST API for API based authentication.
  */
@@ -292,6 +291,7 @@ public class AuthzChallengeEndpoint {
     }
 
     private boolean hasValidAuthzChallengeSubsequentPayload(String payload) {
+
         return payload != null && payload.contains(AUTH_SESSION) && payload.contains(SELECTED_AUTHENTICATOR);
     }
 
@@ -339,6 +339,7 @@ public class AuthzChallengeEndpoint {
     }
 
     private boolean hasDPoPHeader(HttpServletRequest request) {
+
         return request.getHeader(DPOP) != null;
     }
 
@@ -348,7 +349,7 @@ public class AuthzChallengeEndpoint {
             throws IdentityOAuth2Exception {
 
         AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance()
-                .getAuthzChallengeInterceptorHandlerProxy();
+                .getAuthzChallengeInterceptor();
 
         if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
             OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
@@ -397,7 +398,7 @@ public class AuthzChallengeEndpoint {
 
         if (!StringUtils.isBlank(cachedThumbprint)) {
             AuthzChallengeInterceptor authzChallengeInterceptor =
-                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptorHandlerProxy();
+                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptor();
 
             if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
                 OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);

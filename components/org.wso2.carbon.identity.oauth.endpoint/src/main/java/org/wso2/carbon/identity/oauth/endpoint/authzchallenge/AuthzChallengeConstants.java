@@ -20,7 +20,6 @@ package org.wso2.carbon.identity.oauth.endpoint.authzchallenge;
 
 public class AuthzChallengeConstants {
 
-
     public enum Error {
 
         INVALID_REQUEST("invalid_request"),

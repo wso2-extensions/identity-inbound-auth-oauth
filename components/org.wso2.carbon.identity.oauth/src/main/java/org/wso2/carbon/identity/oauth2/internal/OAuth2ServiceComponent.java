@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -55,7 +55,6 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
@@ -1778,38 +1777,34 @@ public class OAuth2ServiceComponent {
         OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(null);
     }
 
+    /**
+     * Registers the {@link AuthzChallengeInterceptor} service.
+     *
+     * @param authzChallengeInterceptor The {@code AuthzChallengeInterceptor} instance.
+     */
     @Reference(
-            name = "org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeEventInterceptor",
+            name = "org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeInterceptor",
             service = AuthzChallengeInterceptor.class,
             cardinality = ReferenceCardinality.MULTIPLE,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetAuthzChallengeInterceptor"
+            unbind = "unregisterAuthzChallengeInterceptor"
     )
-    protected void setAuthzChallengeInterceptorProxy(AuthzChallengeInterceptor authzChallengeInterceptor) {
-        if (authzChallengeInterceptor == null) {
-            log.warn("Null authorize challenge interceptor received, hence not registering");
-        } else if (!"AuthzChallengeDPoPInterceptorHandlerProxy".equalsIgnoreCase(authzChallengeInterceptor.getName())) {
-            log.debug("Non proxy authorize challenge interceptor received, hence not registering");
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Setting authorize challenge interceptor proxy :" + authzChallengeInterceptor.getClass().getName());
-            }
-
-            OAuth2ServiceComponentHolder.getInstance().addAuthzChallengeInterceptorHandlerProxy(authzChallengeInterceptor);
+    protected void registerAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthzChallengeInterceptor service.");
         }
+        OAuth2ServiceComponentHolder.getInstance().setAuthzChallengeInterceptor(authzChallengeInterceptor);
     }
 
-    protected void unsetAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
-        if (authzChallengeInterceptor == null) {
-            log.warn("Null authorize challenge interceptor received, hence not registering");
-        } else if (!"AuthzChallengeDPoPInterceptorHandlerProxy".equalsIgnoreCase(authzChallengeInterceptor.getName())) {
-            log.debug("Non proxy authorize challenge interceptor received, hence not un-setting");
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Un-setting authorize challenge interceptor proxy :" + authzChallengeInterceptor.getClass().getName());
-            }
-
-            OAuth2ServiceComponentHolder.getInstance().addAuthzChallengeInterceptorHandlerProxy(null);
+    /**
+     * Unregisters the {@link AuthzChallengeInterceptor} service.
+     *
+     * @param authzChallengeInterceptor The {@code AuthzChallengeInterceptor} instance.
+     */
+    protected void unregisterAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthzChallengeInterceptor service.");
         }
+        OAuth2ServiceComponentHolder.getInstance().setAuthzChallengeInterceptor(null);
     }
 }

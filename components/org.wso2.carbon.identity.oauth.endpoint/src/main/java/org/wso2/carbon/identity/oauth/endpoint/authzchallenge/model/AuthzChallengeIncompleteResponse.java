@@ -48,5 +48,4 @@ public class AuthzChallengeIncompleteResponse  extends AuthzChallengeGenericResp
 
         this.nextStep = nextStep;
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2014-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -34,7 +34,6 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-import org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailsSchemaValidator;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultOAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultRefreshTokenGrantProcessor;
@@ -44,6 +43,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authzChallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
@@ -138,7 +138,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
 
-    private AuthzChallengeInterceptor authzChallengeInterceptorHandlerProxy;
+    private AuthzChallengeInterceptor authzChallengeInterceptor;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1032,12 +1032,12 @@ public class OAuth2ServiceComponentHolder {
         this.authorizationDetailsSchemaValidator = schemaValidator;
     }
 
-    public void addAuthzChallengeInterceptorHandlerProxy(AuthzChallengeInterceptor authzChallengeInterceptorHandlerProxy) {
+    public void setAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
 
-        this.authzChallengeInterceptorHandlerProxy = authzChallengeInterceptorHandlerProxy;
+        this.authzChallengeInterceptor = authzChallengeInterceptor;
     }
 
-    public AuthzChallengeInterceptor getAuthzChallengeInterceptorHandlerProxy() {
-        return this.authzChallengeInterceptorHandlerProxy;
+    public AuthzChallengeInterceptor getAuthzChallengeInterceptor() {
+        return this.authzChallengeInterceptor;
     }
 }

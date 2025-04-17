@@ -22,11 +22,18 @@ import org.wso2.carbon.identity.core.handler.IdentityHandler;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthzChallengeReqDTO;
 
-
+/**
+ * Authorize-challenge interceptor interface.
+ */
 public interface AuthzChallengeInterceptor extends IdentityHandler {
 
-    default String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
+    /**
+     * Called after receiving an authorization challenge request with a DPoP header to extract the thumbprint.
+     *
+     * @param requestDTO Authorization challenge request.
+     * @return extracted thumbprint
+     * @throws IdentityOAuth2Exception
+     */
+    String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception;
 
-        return null;
-    }
 }

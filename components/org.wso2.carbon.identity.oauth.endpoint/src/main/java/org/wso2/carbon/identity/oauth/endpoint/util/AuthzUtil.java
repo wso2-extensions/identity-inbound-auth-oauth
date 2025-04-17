@@ -4451,6 +4451,7 @@ public class AuthzUtil {
     private static Response forwardToOauthResponseJSP(OAuthMessage oAuthMessage, String params, String redirectURI,
                                                AuthorizationResponseDTO authorizationResponseDTO,
                                                AuthenticatedUser authenticatedUser) {
+
         try {
             HttpServletRequest request = oAuthMessage.getRequest();
             request.setAttribute(USER_TENANT_DOMAIN, authenticatedUser.getTenantDomain());
