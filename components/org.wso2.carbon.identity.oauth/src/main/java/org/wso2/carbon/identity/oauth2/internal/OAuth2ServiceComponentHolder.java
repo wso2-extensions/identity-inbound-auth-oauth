@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.consent.server.configs.mgt.services.ConsentServe
 import org.wso2.carbon.identity.core.SAMLSSOServiceProviderManager;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountDisableService;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
@@ -130,6 +131,7 @@ public class OAuth2ServiceComponentHolder {
     private List<ImpersonationValidator> impersonationValidators = new ArrayList<>();
     private ConfigurationManager configurationManager;
     private static AccountLockService accountLockService;
+    private static AccountDisableService accountDisableService;
     private ClaimMetadataManagementService claimMetadataManagementService;
 
     private AuthorizationDetailsService authorizationDetailsService;
@@ -921,6 +923,26 @@ public class OAuth2ServiceComponentHolder {
     public static AccountLockService getAccountLockService() {
 
         return OAuth2ServiceComponentHolder.accountLockService;
+    }
+
+    /**
+     * Set the account disable service to the OAuth2ServiceComponentHolder.
+     *
+     * @param accountDisableService Account disable service instance.
+     */
+    public static void setAccountDisableService(AccountDisableService accountDisableService) {
+
+        OAuth2ServiceComponentHolder.accountDisableService = accountDisableService;
+    }
+
+    /**
+     * Retrieve the account disable service.
+     *
+     * @return Account disable service instance.
+     */
+    public static AccountDisableService getAccountDisableService() {
+
+        return OAuth2ServiceComponentHolder.accountDisableService;
     }
 
     /**

@@ -347,6 +347,7 @@ public class OAuthServerConfiguration {
     private List<String> supportedTokenEndpointSigningAlgorithms = new ArrayList<>();
     private Boolean roleBasedScopeIssuerEnabledConfig = false;
     private String scopeMetadataExtensionImpl = null;
+    private boolean isUserSessionImpersonationEnabled = true;
     private static final List<String> HYBRID_RESPONSE_TYPES = Arrays.asList("code token",
             "code id_token", "code id_token token");
     private List<String> configuredHybridResponseTypes = new ArrayList<>();
@@ -572,6 +573,9 @@ public class OAuthServerConfiguration {
 
         // Read config for restricted query parameters in oauth requests
         parseRestrictedQueryParameters(oauthElem);
+
+        // Read config for user session impersonation feature.
+        parseUserSessionImpersonation(oauthElem);
     }
 
     /**
@@ -4099,6 +4103,15 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseUserSessionImpersonation(OMElement oauthConfigElem) {
+
+        OMElement userSessionImpersonationElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.USER_SESSION_IMPERSONATION));
+        if (userSessionImpersonationElem != null) {
+            isUserSessionImpersonationEnabled = Boolean.parseBoolean(userSessionImpersonationElem.getText());
+        }
+    }
+
     /**
      * Get scope metadata service extension impl class.
      *
@@ -4107,6 +4120,16 @@ public class OAuthServerConfiguration {
     public String getScopeMetadataExtensionImpl() {
 
         return scopeMetadataExtensionImpl;
+    }
+
+    /**
+     * Get user session impersonation feature enabled or not.
+     *
+     * @return true if user session impersonation is enabled.
+     */
+    public boolean isUserSessionImpersonationEnabled() {
+
+        return isUserSessionImpersonationEnabled;
     }
 
     /**
@@ -4409,6 +4432,7 @@ public class OAuthServerConfiguration {
                 "UseLegacyPermissionAccessForUserBasedAuth";
         private static final String SCOPE_METADATA_EXTENSION_IMPL = "ScopeMetadataService";
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
+        private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
     }
 
