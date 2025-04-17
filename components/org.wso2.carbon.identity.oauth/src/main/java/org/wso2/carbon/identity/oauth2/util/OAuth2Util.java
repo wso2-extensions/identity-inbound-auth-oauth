@@ -3878,7 +3878,7 @@ public class OAuth2Util {
         AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
         authenticatedImpersonatingUser.setUserId(impersonateeUserId);
         authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(getAuthenticatedSubjectIdentifier(
-                impersonatingUser.getUserName(), tenantDomain, userStoreDomain,
+                impersonateeUserId, impersonatingUser.getUserName(), tenantDomain, userStoreDomain,
                 clientId, false));
         authenticatedImpersonatingUser.setUserName(impersonatingUser.getUserName());
         authenticatedImpersonatingUser.setUserStoreDomain(impersonatingUser.getUserStoreDomain());
@@ -3897,11 +3897,12 @@ public class OAuth2Util {
      * @return Authenticated user subject identifier.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
-    public static String getAuthenticatedSubjectIdentifier(String userName, String tenantDomain, String userStoreDomain,
-                                                           String clientId, boolean isFederatedUser)
+    public static String getAuthenticatedSubjectIdentifier(String userId, String userName, String tenantDomain,
+                                                           String userStoreDomain, String clientId,
+                                                           boolean isFederatedUser)
             throws IdentityOAuth2Exception {
 
-        String authenticatedSubjectIdentifier = userName;
+        String authenticatedSubjectIdentifier = userId;
         try {
             ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
                     .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
