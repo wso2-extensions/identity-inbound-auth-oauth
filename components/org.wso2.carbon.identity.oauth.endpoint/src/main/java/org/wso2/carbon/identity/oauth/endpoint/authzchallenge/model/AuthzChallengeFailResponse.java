@@ -41,8 +41,8 @@ public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
 
     }
 
-    public AuthzChallengeFailResponse(String authSession, String error, String errorDescription, String code, String traceId, String errorUri,
-                                      String requestUri, String expiresIn) {
+    public AuthzChallengeFailResponse(String authSession, String error, String errorDescription, String code,
+                                      String traceId, String errorUri, String requestUri, String expiresIn) {
 
         super(authSession, error, errorDescription);
         this.code = code;

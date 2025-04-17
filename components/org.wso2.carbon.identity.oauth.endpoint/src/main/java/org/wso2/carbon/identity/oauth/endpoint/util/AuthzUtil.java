@@ -587,7 +587,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Method to check a successful form_post flow
+     * Method to check a successful form_post flow.
      * @param oAuthMessage OAuthMessage instance
      * @param authorizationResponseDTO AuthorizationResponseDTO instance
      * @return true if response mode is form_post without errors
@@ -601,7 +601,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Method to check form_post flow with error
+     * Method to check form_post flow with error.
      * @param authorizationResponseDTO AuthorizationResponseDTO instance
      * @param responseModeProvider ResponseModeProvider instance
      * @return true if response mode is form_post with errors
@@ -2190,7 +2190,7 @@ public class AuthzUtil {
      * Checks whether the given authentication flow requires {@code nonce} as a mandatory parameter.
      *
      * @param responseType Response type from the authentication request.
-     * @return {@true} {@code true} if parameter is mandatory, {@code false} if not.
+     * @return {@code true} if parameter is mandatory, {@code false} if not.
      */
     public static boolean isNonceMandatory(String responseType) {
 

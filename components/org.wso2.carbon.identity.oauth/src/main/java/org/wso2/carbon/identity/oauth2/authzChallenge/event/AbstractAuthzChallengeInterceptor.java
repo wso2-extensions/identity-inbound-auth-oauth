@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.authzChallenge.event;
 
+import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -26,10 +27,19 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthzChallengeReqDTO;
 
 public class AbstractAuthzChallengeInterceptor extends AbstractIdentityHandler implements AuthzChallengeInterceptor {
 
+    /**
+     * Handle the authorization challenge request and extract the DPoP thumbprint.
+     * This default implementation returns {@code StringUtils.EMPTY}, indicating no thumbprint was extracted.
+     * Implementations should override this method to provide specific extraction logic.
+     *
+     * @param requestDTO Authorization challenge request DTO containing necessary request context.
+     * @return Extracted thumbprint as a {@link String}, or {@code StringUtils.EMPTY} if not applicable.
+     * @throws IdentityOAuth2Exception
+     */
     @Override
     public String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception {
 
-        return null;
+        return StringUtils.EMPTY;
     }
 
     public boolean isEnabled() {

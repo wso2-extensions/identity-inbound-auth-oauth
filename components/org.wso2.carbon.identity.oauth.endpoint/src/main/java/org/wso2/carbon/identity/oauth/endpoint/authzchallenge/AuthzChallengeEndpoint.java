@@ -80,7 +80,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 /**
@@ -226,7 +225,7 @@ public class AuthzChallengeEndpoint {
     @Consumes("application/x-www-form-urlencoded")
     @Produces({"text/html", "application/json"})
     public Response authorizeChallengeInitialPost(@Context HttpServletRequest request,
-                                           @Context HttpServletResponse response, MultivaluedMap paramMap) {
+                                           @Context HttpServletResponse response, Map<String, List<String>> paramMap) {
 
         try {
             Map<String, String[]> parameterMap = request.getParameterMap();
