@@ -1351,7 +1351,7 @@ public class OAuth2AuthzEndpoint {
                 && oAuthMessage.getRequest().getParameterMap() != null) {
             String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
             if (requestedSubject != null && !Objects.equals(requestedSubject, impersonatedSubject)) {
-                log.error("Cannot perform impersonation on more than one user in the same session.");
+                log.debug("Cannot perform impersonation on more than one user in the same session.");
                 throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Cannot perform impersonation on more than one user in the same session.");
             }
@@ -1417,6 +1417,7 @@ public class OAuth2AuthzEndpoint {
 
     private OAuthAppDO getAppInformation(OAuth2AuthorizeReqDTO authzReqDTO) throws IdentityOAuth2Exception,
             InvalidOAuthClientException {
+
         OAuthAppDO oAuthAppDO = AppInfoCache.getInstance().getValueFromCache(authzReqDTO.getConsumerKey());
         if (oAuthAppDO != null) {
             return oAuthAppDO;

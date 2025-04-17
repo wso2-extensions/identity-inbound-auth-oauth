@@ -70,8 +70,10 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
 
         if (isUserAccountLocked(subjectUserName, tenantDomain)
                 || isUserAccountDisabled(subjectUserName, tenantDomain, domainName)) {
+            String errorMessage = String.format("Cannot impersonate an inactive user account: %s.", subjectUserName);
             impersonationContext.setValidated(false);
-            LOG.error("Cannot impersonate user account.");
+            impersonationContext.setValidationFailureErrorMessage(errorMessage);
+            LOG.debug(errorMessage);
         } else {
             impersonationContext.setValidated(true);
             LOG.debug("User account is not locked or disabled. Impersonation is allowed.");
