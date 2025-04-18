@@ -1790,6 +1790,7 @@ public class OAuth2ServiceComponent {
             unbind = "unregisterAuthzChallengeInterceptor"
     )
     protected void registerAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
         if (log.isDebugEnabled()) {
             log.debug("Registering the AuthzChallengeInterceptor service.");
         }
@@ -1802,6 +1803,7 @@ public class OAuth2ServiceComponent {
      * @param authzChallengeInterceptor The {@code AuthzChallengeInterceptor} instance.
      */
     protected void unregisterAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
         if (log.isDebugEnabled()) {
             log.debug("Unregistering the AuthzChallengeInterceptor service.");
         }

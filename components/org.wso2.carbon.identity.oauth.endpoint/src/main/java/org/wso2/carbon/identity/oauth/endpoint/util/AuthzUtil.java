@@ -828,7 +828,6 @@ public class AuthzUtil {
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
             }
-
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -866,7 +865,6 @@ public class AuthzUtil {
             throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
                     ": " + oauth2Params.getSessionDataKey(), e);
         }
-
     }
 
     private static ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
@@ -1133,7 +1131,6 @@ public class AuthzUtil {
                 }
                 return handleSuccessfulAuthentication(oAuthMessage, oauth2Params, authnResult,
                         authorizationResponseDTO, responseModeProvider);
-
             } else {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -1166,9 +1163,9 @@ public class AuthzUtil {
     }
 
     private static Response handleSuccessfulAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                                    AuthenticationResult authenticationResult, AuthorizationResponseDTO
-                                                            authorizationResponseDTO, ResponseModeProvider
-                                                            responseModeProvider)
+                                                           AuthenticationResult authenticationResult,
+                                                           AuthorizationResponseDTO authorizationResponseDTO,
+                                                           ResponseModeProvider responseModeProvider)
             throws OAuthSystemException, URISyntaxException, ConsentHandlingFailedException {
 
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
@@ -4936,7 +4933,6 @@ public class AuthzUtil {
      * @param exception The IdentityOAuth2Exception
      * @return A Response object with HTTP status code 400 (Bad Request)
      */
-
     public static Response handleIdentityOAuth2Exception(IdentityOAuth2Exception exception) {
 
         String error;

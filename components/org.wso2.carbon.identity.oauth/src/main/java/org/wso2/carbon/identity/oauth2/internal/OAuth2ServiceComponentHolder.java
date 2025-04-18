@@ -1032,12 +1032,23 @@ public class OAuth2ServiceComponentHolder {
         this.authorizationDetailsSchemaValidator = schemaValidator;
     }
 
+    /**
+     * Get an {@link AuthzChallengeInterceptor} instance.
+     *
+     * @return A {@link AuthzChallengeInterceptor} singleton instance.
+     */
+    public AuthzChallengeInterceptor getAuthzChallengeInterceptor() {
+
+        return this.authzChallengeInterceptor;
+    }
+
+    /**
+     * set an {@link AuthzChallengeInterceptor} instance.
+     *
+     * @param authzChallengeInterceptor An {@link AuthzChallengeInterceptor} instance.
+     */
     public void setAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
 
         this.authzChallengeInterceptor = authzChallengeInterceptor;
-    }
-
-    public AuthzChallengeInterceptor getAuthzChallengeInterceptor() {
-        return this.authzChallengeInterceptor;
     }
 }

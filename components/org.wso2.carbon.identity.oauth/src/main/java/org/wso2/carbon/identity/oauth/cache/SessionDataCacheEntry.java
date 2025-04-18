@@ -187,10 +187,12 @@ public class SessionDataCacheEntry extends CacheEntry {
     }
 
     public String getDPoPThumbprint() {
+
         return dPoPThumbprint;
     }
 
     public void setDPoPThumbprint(String dPoPThumbprint) {
+
         this.dPoPThumbprint = dPoPThumbprint;
     }
 }
