@@ -71,6 +71,7 @@ public class ClaimsUtil {
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
 
     public static boolean isInLocalDialect(Map<String, String> attributes) {
+
         return attributes.keySet().stream()
                 .anyMatch(key -> key.startsWith("http://wso2.org/claims/"));
     }

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
+import java.util.Set;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -121,7 +122,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     private static final Log log = LogFactory.getLog(SAML2BearerGrantHandler.class);
     private static final String SAMLSSO_AUTHENTICATOR = "samlsso";
     private static final String SAML2SSO_AUTHENTICATOR_NAME = "SAMLSSOAuthenticator";
-    private final String[] registeredClaimNames = new String[]{"iss", "sub", "aud", "exp", "nbf", "iat", "jti"};
+    private final Set<String> registeredClaimNames = Set.of("iss", "sub", "aud", "exp", "nbf", "iat", "jti");
 
     public static final String SECURITY_SAML_SIGN_KEY_STORE_LOCATION = "Security.SAMLSignKeyStore.Location";
     public static final String SECURITY_SAML_SIGN_KEY_STORE_TYPE = "Security.SAMLSignKeyStore.Type";
@@ -1310,7 +1311,7 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
     }
 
     /**
-     * To get the custom claims map using the custom claims of JWT
+     * To get the custom claims map using the custom claims of JWT.
      *
      * @param customClaims Relevant custom claims
      * @return custom claims.
@@ -1320,14 +1321,8 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
         Map<String, String> customClaimMap = new HashMap<>();
         for (Map.Entry<String, Object> entry : customClaims.entrySet()) {
             String entryKey = entry.getKey();
-            boolean isRegisteredClaim = false;
-            for (String registeredClaimName : registeredClaimNames) {
-                if (registeredClaimName.equals((entryKey))) {
-                    isRegisteredClaim = true;
-                    break;
-                }
-            }
-            if (!isRegisteredClaim) {
+
+            if (!registeredClaimNames.contains(entryKey)) {
                 Object value = entry.getValue();
                 String multiValueSeparator = FrameworkUtils.getMultiAttributeSeparator();
                 if (value instanceof Collection<?>) {
@@ -1344,7 +1339,6 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                 } else {
                     customClaimMap.put(entry.getKey(), value.toString());
                 }
-
             }
         }
         return customClaimMap;
