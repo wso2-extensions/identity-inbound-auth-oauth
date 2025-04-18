@@ -27,8 +27,10 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.IdentityProviderProperty;
+import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -233,9 +235,15 @@ public class JWTSignatureValidationUtils {
                                                               IdentityProvider idp) throws IdentityOAuth2Exception {
 
         X509Certificate x509Certificate = null;
+        String tenantDomain = getTenantDomain();
         try {
-            x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
-                    .decodeCertificate(idp.getCertificate());
+            if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
+                    idp.getIdentityProviderName())) {
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain);
+            } else {
+                x509Certificate =
+                        (X509Certificate) IdentityApplicationManagementUtil.decodeCertificate(idp.getCertificate());
+            }
         } catch (CertificateException e) {
             handleServerException("Error occurred while decoding public certificate of Identity Provider "
                     + idp.getIdentityProviderName());
@@ -267,5 +275,21 @@ public class JWTSignatureValidationUtils {
 
         log.error(errorMessage);
         throw new IdentityOAuth2ServerException(errorMessage);
+    }
+
+    /**
+     * Retrieves the tenant domain associated with the current execution context using CarbonContext.
+     * If the tenant domain is empty or not available, the super tenant domain name is returned as the default.
+     *
+     * @return The tenant domain associated with the current execution context, or the super tenant domain name
+     * if not available.
+     */
+    private static String getTenantDomain() {
+
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = IdentityUtil.getPrimaryDomainName();
+        }
+        return tenantDomain;
     }
 }
