@@ -85,20 +85,18 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
             String tenantDomain = OAuth2Util.getTenantDomainOfOauthApp(clientId);
             OAuth2Util.validateRequestTenantDomain(tenantDomain);
             if (log.isDebugEnabled()) {
-                log.debug("Client Origin : " + clientOrigin);
+                log.debug("Client Origin: {}", clientOrigin);
             }
             response.getWriter().print(getOPIFrame(clientOrigin));
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error while retrieving OAuth application information for the provided client id : " + clientId +
-                    ", " + e.getMessage());
+            log.error("Error retrieving OAuth application information for client ID: {}, {}", clientId, e.getMessage(), e);
             if (log.isDebugEnabled()) {
                 log.debug(e);
             }
             response.getWriter().print(ERROR_RESPONSE);
         } catch (InvalidOAuthClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error while retrieving OAuth application information for the provided client id : \" + " +
-                        "clientId : " + clientId + "," + e.getMessage());
+                log.debug("Error retrieving OAuth application information for client ID: {}, {}", clientId, e.getMessage());
             }
             response.getWriter().print(ERROR_RESPONSE);
         } catch (OIDCSessionManagerException e) {
@@ -115,7 +113,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
         OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
         String configuredCallbackURL = oAuthAppDO.getCallbackUrl();
         if (log.isDebugEnabled()) {
-            log.debug("Requested client_id : " + clientId + " Configured callbackUrl : " + configuredCallbackURL);
+            log.debug("Requested client_id: {}, Configured callbackUrl: {}", clientId, configuredCallbackURL);
         }
         if (StringUtils.isBlank(configuredCallbackURL)) {
             throw new OIDCSessionManagerException(
@@ -123,7 +121,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
         }
         if (configuredCallbackURL.startsWith(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX)) {
             if (log.isDebugEnabled()) {
-                log.debug("Regex value found for callback url in service provider.");
+                log.debug("Regex pattern found for callback URL in service provider configuration");
             }
             String rpIFrameReqCallbackURL = request.getParameter(OIDCSessionConstants.OIDC_REDIRECT_URI_PARAM);
             if (StringUtils.isBlank(rpIFrameReqCallbackURL)) {
@@ -133,13 +131,13 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                                 + "callback url in service provider configuration. client_id : " + clientId);
             } else {
                 if (log.isDebugEnabled()) {
-                    log.debug("Requested redirect_uri from rp IFrame : " + rpIFrameReqCallbackURL);
+                    log.debug("Requested redirect_uri from RP IFrame: {}", rpIFrameReqCallbackURL);
                 }
                 String regexp = configuredCallbackURL
                         .substring(OAuthConstants.CALLBACK_URL_REGEXP_PREFIX.length());
                 if (rpIFrameReqCallbackURL.matches(regexp)) {
                     if (log.isDebugEnabled()) {
-                        log.debug("Requested redirect_uri is matched with the regex in service provider.");
+                        log.debug("Requested redirect_uri matches the regex pattern in service provider configuration");
                     }
                     configuredCallbackURL = rpIFrameReqCallbackURL;
                 } else {
@@ -174,11 +172,11 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                     opIFrame.append((char) i);
                 }
             } catch (IOException e) {
-                log.error("Failed to load OP IFrame", e);
+                log.error("Failed to load OP IFrame from external path: {}", e.getMessage(), e);
             }
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("Failed to load OP IFrame from external directory path: " + opIframeHtmlPath);
+                log.debug("Failed to load OP IFrame from external directory path: {}", opIframeHtmlPath);
             }
             try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(OP_IFRAME_RESOURCE)) {
                 int i;
@@ -186,7 +184,7 @@ public class OIDCSessionIFrameServlet extends HttpServlet {
                     opIFrame.append((char) i);
                 }
             } catch (IOException e) {
-                log.error("Failed to load OP IFrame", e);
+                log.error("Failed to load OP IFrame from classpath resource: {}", e.getMessage(), e);
             }
         }
     }
