@@ -56,7 +56,6 @@ import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -72,11 +71,9 @@ public class ClaimsUtil {
     private static final String SP_DIALECT = "http://wso2.org/oidc/claim";
 
     public static boolean isInLocalDialect(Map<String, String> attributes) {
-        Iterator<String> iterator = attributes.keySet().iterator();
-        if (iterator.hasNext()) {
-            return iterator.next().startsWith("http://wso2.org/claims/");
-        }
-        return false;
+
+        return attributes.keySet().stream()
+                .anyMatch(key -> key.startsWith("http://wso2.org/claims/"));
     }
 
     public static Map<String, String> convertFederatedClaimsToLocalDialect(Map<String, String> remoteClaims,
