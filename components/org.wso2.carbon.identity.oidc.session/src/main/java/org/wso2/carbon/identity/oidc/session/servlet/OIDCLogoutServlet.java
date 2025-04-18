@@ -148,18 +148,18 @@ public class OIDCLogoutServlet extends HttpServlet {
             logoutContext.setAPIBasedLogout(isAPIBasedLogout);
             if (isAPIBasedLogout) {
                 if (log.isDebugEnabled()) {
-                    log.debug("The initiated logout flow is an API based logout flow.");
+                    log.debug("Initiated an API based logout flow.");
                 }
                 populateAPIBasedLogoutContext(request, logoutContext);
             }
         } catch (AuthServiceClientException e) {
             if (log.isDebugEnabled()) {
-                log.debug("Error while populating logout context for api based logout.", e);
+                log.debug("Error populating logout context for API based logout: {}", e.getMessage());
             }
             handleAPIBasedLogoutErrorResponse(e, response);
             return;
         } catch (AuthServiceException e) {
-            log.error("Error while populating logout context for api based logout.", e);
+            log.error("Error populating logout context for API based logout: {}", e.getMessage(), e);
             handleAPIBasedLogoutErrorResponse(e, response);
             return;
         }
@@ -174,9 +174,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 return;
             } else {
                 if (log.isDebugEnabled()) {
-                    msg = "HandleAlreadyLoggedOutSessionsGracefully configuration disabled. Missing session state is " +
-                            "handled by redirecting to error page instead of default logout page.";
-                    log.debug(msg);
+                    log.debug("HandleAlreadyLoggedOutSessionsGracefully disabled. Missing session state redirected to error page.");
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
@@ -195,9 +193,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 handleMissingSessionStateGracefully(request, response);
             } else {
                 if (log.isDebugEnabled()) {
-                    msg = "HandleAlreadyLoggedOutSessionsGracefully configuration enabled. No valid session found is " +
-                            "handled by redirecting to error page instead of default logout page.";
-                    log.debug(msg);
+                    log.debug("HandleAlreadyLoggedOutSessionsGracefully enabled. No valid session redirected to error page.");
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
@@ -235,7 +231,7 @@ public class OIDCLogoutServlet extends HttpServlet {
                 skipConsent = logoutContext.isAPIBasedLogout() || getOpenIDConnectSkipUserConsent(request);
             } catch (ParseException e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Error while getting clientId from the IdTokenHint.", e);
+                    log.debug("Error extracting clientId from IdTokenHint: {}", e.getMessage());
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED,
                         "ID token signature validation failed.");
@@ -243,14 +239,14 @@ public class OIDCLogoutServlet extends HttpServlet {
                 return;
             } catch (IdentityOAuth2ClientException e) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Error while getting service provider from the clientId.", e);
+                    log.debug("Error retrieving service provider for clientId: {}", e.getMessage());
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED,
                         "ID token signature validation failed.");
                 response.sendRedirect(getRedirectURL(redirectURL, request));
                 return;
             }  catch (IdentityOAuth2Exception e) {
-                log.error("Error occurred while getting oauth application information.", e);
+                log.error("Error retrieving OAuth application information: {}", e.getMessage(), e);
                 return;
             }
             if (skipConsent) {
@@ -453,7 +449,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             }
             return false;
         } catch (Exception e) {
-            log.error("Error occurred while validating id token signature.");
+            log.error("Error validating ID token signature");
             return false;
         }
     }
@@ -608,8 +604,7 @@ public class OIDCLogoutServlet extends HttpServlet {
 
         if (StringUtils.isBlank(clientId)) {
             clientId = SignedJWT.parse(idToken).getJWTClaimsSet().getAudience().get(0);
-            log.info("Provided ID Token does not contain azp claim with client ID. " +
-                    "Client ID is extracted from the aud claim in the ID Token.");
+            log.info("ID Token missing azp claim. Using client ID from aud claim: {}", clientId);
         }
 
         return clientId;
@@ -636,17 +631,17 @@ public class OIDCLogoutServlet extends HttpServlet {
         }
         if (StringUtils.isBlank(tenantDomain)) {
             if (log.isDebugEnabled()) {
-                log.debug("Failed to retrieve tenant domain from 'realm' claim. Hence falling back to 'sub' claim.");
+                log.debug("Failed to retrieve tenant domain from 'realm' claim. Falling back to 'sub' claim.");
             }
             //It is not sending tenant domain with the subject in id_token by default, So to work this as
             //expected, need to enable the option "Use tenant domain in local subject identifier" in SP config
             tenantDomain = MultitenantUtils.getTenantDomain(claimsSet.getSubject());
             if (log.isDebugEnabled()) {
-                log.debug("User tenant domain derived from 'sub' claim of JWT. Tenant domain : " + tenantDomain);
+                log.debug("User tenant domain derived from 'sub' claim of JWT: {}", tenantDomain);
             }
         } else {
             if (log.isDebugEnabled()) {
-                log.debug("User tenant domain found in 'realm' claim of JWT. Tenant domain : " + tenantDomain);
+                log.debug("User tenant domain found in 'realm' claim of JWT: {}", tenantDomain);
             }
         }
         return tenantDomain;
@@ -665,9 +660,9 @@ public class OIDCLogoutServlet extends HttpServlet {
         try {
             triggerLogoutHandlersForPreLogout(request, response);
         } catch (OIDCSessionManagementException e) {
-            log.error("Error executing logout handlers on pre logout.");
+            log.error("Error executing logout handlers during pre-logout");
             if (log.isDebugEnabled()) {
-                log.debug("Error executing logout handlers on pre logout.", e);
+                log.debug("Error executing logout handlers during pre-logout: {}", e.getMessage());
             }
             if (logoutContext.isAPIBasedLogout()) {
                 handleAPIBasedLogoutErrorResponse(new AuthServiceException(
@@ -1004,7 +999,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             } catch (ParseException e) {
                 String msg = "Error occurred while extracting data from id token.";
                 if (log.isDebugEnabled()) {
-                    log.debug("Error occurred while retrieving client id from id token.", e);
+                    log.debug("Error retrieving client ID from ID token: {}", e.getMessage());
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
@@ -1012,7 +1007,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             } catch (IdentityOAuth2Exception e) {
                 String msg = "Error occurred while decrypting the id token (JWE).";
                 if (log.isDebugEnabled()) {
-                    log.debug("Error occurred while decrypting the id token (JWE).", e);
+                    log.debug("Error decrypting the ID token (JWE): {}", e.getMessage());
                 }
                 redirectURL = OIDCSessionManagementUtil.getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
@@ -1021,7 +1016,7 @@ public class OIDCLogoutServlet extends HttpServlet {
             if (!validateIdToken(idTokenHint) && !OIDCSessionManagementUtil.isIDTokenEncrypted(idTokenHint)) {
                 String msg = "ID token signature validation failed.";
                 if (log.isDebugEnabled()) {
-                    log.debug(msg + " Client id from id token: " + clientId);
+                    log.debug("{} Client ID from ID token: {}", msg, clientId);
                 }
                 redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
                 response.sendRedirect(getRedirectURL(redirectURL, request));
@@ -1039,12 +1034,12 @@ public class OIDCLogoutServlet extends HttpServlet {
         } catch (InvalidOAuthClientException e) {
             String msg = "Error occurred while getting application information. Client id not found.";
             if (log.isDebugEnabled()) {
-                log.debug(msg + " Client id from id token: " + clientId, e);
+                log.debug("{} Client ID from ID token: {}", msg, clientId, e);
             }
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         } catch (IdentityOAuth2Exception e) {
             String msg = "Error occurred while getting application information. Client id not found.";
-            log.error(msg + " Client id from id token: " + clientId, e);
+            log.error("{} Client ID from ID token: {}", msg, clientId, e);
             redirectURL = getErrorPageURL(OAuth2ErrorCodes.ACCESS_DENIED, msg);
         }
         String state = request
