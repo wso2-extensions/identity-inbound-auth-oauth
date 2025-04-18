@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.oauth2.token.handlers.grant.saml;
 
-import java.util.Set;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -109,6 +108,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
