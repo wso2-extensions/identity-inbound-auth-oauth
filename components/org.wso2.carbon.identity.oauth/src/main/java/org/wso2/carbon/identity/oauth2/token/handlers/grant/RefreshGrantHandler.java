@@ -791,8 +791,7 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // Priority given to the validity period mentioned in the OAuthTokenReqMessageContext
         if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
                 && validityPeriodFromMsgContext > 0) {
-            refreshTokenValidityPeriod = validityPeriodFromMsgContext *
-                    SECONDS_TO_MILISECONDS_FACTOR;
+            refreshTokenValidityPeriod = validityPeriodFromMsgContext;
             if (log.isDebugEnabled()) {
                 log.debug("OAuth application id : " + oAuthAppDO.getOauthConsumerKey() + ", using refresh token " +
                         "validity period configured from OAuthTokenReqMessageContext: " +
