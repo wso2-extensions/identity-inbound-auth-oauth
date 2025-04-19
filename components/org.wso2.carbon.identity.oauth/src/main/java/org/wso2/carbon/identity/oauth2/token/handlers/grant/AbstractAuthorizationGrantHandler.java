@@ -798,7 +798,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         long validityPeriodFromMsgContext = tokReqMsgCtx.getRefreshTokenvalidityPeriod();
 
         if (validityPeriodFromMsgContext > 0) {
-            refreshTokenValidityPeriodInMillis = validityPeriodFromMsgContext * SECONDS_TO_MILISECONDS_FACTOR;
+            refreshTokenValidityPeriodInMillis = validityPeriodFromMsgContext;
             if (log.isDebugEnabled()) {
                 log.debug("OAuth application id : " + oAuthAppBean.getOauthConsumerKey() + ", using refresh token " +
                         "validity period configured from OAuthTokenReqMessageContext: " +
