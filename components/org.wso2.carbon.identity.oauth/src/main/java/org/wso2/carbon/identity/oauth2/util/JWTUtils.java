@@ -492,8 +492,13 @@ public class JWTUtils {
         X509Certificate x509Certificate;
         String tenantDomain = getTenantDomain();
         try {
-            x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
-                    .decodeCertificate(idp.getCertificate());
+            if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
+                    idp.getIdentityProviderName())) {
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain);
+            } else {
+                x509Certificate =
+                        (X509Certificate) IdentityApplicationManagementUtil.decodeCertificate(idp.getCertificate());
+            }
         } catch (CertificateException e) {
             throw new IdentityOAuth2Exception("Error occurred while decoding public certificate of Identity Provider "
                     + idp.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);

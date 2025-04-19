@@ -31,9 +31,11 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.central.log.mgt.internal.CentralLogMgtServiceComponentHolder;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
@@ -46,7 +48,6 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
-import java.lang.reflect.Field;
 import java.nio.file.Paths;
 import java.security.Key;
 import java.security.KeyStore;
@@ -55,7 +56,6 @@ import java.security.interfaces.RSAPrivateKey;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -68,7 +68,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getRequestObjects;
-import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
+import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @Listeners(MockitoTestNGListener.class)
 public class OIDCRequestObjectUtilTest {
@@ -81,20 +81,24 @@ public class OIDCRequestObjectUtilTest {
     private static final String REQUEST_PARAM_VALUE_BUILDER = "request_param_value_builder";
     private static final String REQUEST_URI_PARAM_VALUE_BUILDER = "request_uri_param_value_builder";
 
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
+
     @Mock
     private CentralLogMgtServiceComponentHolder centralLogMgtServiceComponentHolderMock;
 
     @BeforeClass
-    public void setUpMocks() {
+    public void setUpMocks() throws Exception {
 
         IdentityEventService identityEventService = mock(IdentityEventService.class);
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
+        mockKeystores();
     }
 
     @AfterClass
     public void tearDown() {
 
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
+        identityKeyStoreResolverMockedStatic.close();
     }
 
     @BeforeTest
@@ -225,13 +229,6 @@ public class OIDCRequestObjectUtilTest {
 
             doReturn(SOME_SERVER_URL.toString()).when(requestObjectValidator).getTokenEpURL(anyString());
 
-            KeyStoreManager keyStoreManager = mock(KeyStoreManager.class);
-            ConcurrentHashMap<String, KeyStoreManager> mtKeyStoreManagers = new ConcurrentHashMap();
-            mtKeyStoreManagers.put(String.valueOf(SUPER_TENANT_ID), keyStoreManager);
-            setPrivateStaticField(KeyStoreManager.class, "mtKeyStoreManagers", mtKeyStoreManagers);
-            when(keyStoreManager.getPrimaryKeyStore()).thenReturn(wso2KeyStore);
-            when(keyStoreManager.getKeyStore("wso2carbon.jks")).thenReturn(wso2KeyStore);
-
             RequestParamRequestObjectBuilder requestParamRequestObjectBuilder = new RequestParamRequestObjectBuilder();
             Map<String, RequestObjectBuilder> requestObjectBuilderMap = new HashMap<>();
             requestObjectBuilderMap.put(REQUEST_PARAM_VALUE_BUILDER, requestParamRequestObjectBuilder);
@@ -241,11 +238,13 @@ public class OIDCRequestObjectUtilTest {
         }
     }
 
-    private void setPrivateStaticField(Class<?> clazz, String fieldName, Object newValue)
-            throws NoSuchFieldException, IllegalAccessException {
+    private void mockKeystores() throws IdentityKeyStoreResolverException {
 
-        Field field = clazz.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(null, newValue);
+        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(wso2KeyStore);
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 }
