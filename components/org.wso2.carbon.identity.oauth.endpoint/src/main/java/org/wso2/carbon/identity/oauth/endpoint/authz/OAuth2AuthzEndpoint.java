@@ -1339,6 +1339,8 @@ public class OAuth2AuthzEndpoint {
                         impersonationContext.getImpersonationRequestDTO().getTenantDomain(),
                         impersonationContext.getImpersonationRequestDTO().getClientId());
                 authnResult.setSubject(impersonatedUser);
+            } else {
+                removeImpersonationScope(impersonationContext);
             }
         }
     }
@@ -1441,9 +1443,31 @@ public class OAuth2AuthzEndpoint {
         impersonationRequestDTO.setSubject(authzReqMsgCxt.getAuthorizationReqDTO().getRequestedSubjectId());
         impersonationRequestDTO.setImpersonator(authzReqMsgCxt.getAuthorizationReqDTO().getUser());
         impersonationRequestDTO.setClientId(authzReqMsgCxt.getAuthorizationReqDTO().getConsumerKey());
-        impersonationRequestDTO.setScopes(authzReqMsgCxt.getAuthorizationReqDTO().getScopes());
+        impersonationRequestDTO.setScopes(getScopesBeforeValidation(authzReqMsgCxt));
         impersonationRequestDTO.setTenantDomain(authzReqMsgCxt.getAuthorizationReqDTO().getTenantDomain());
         return impersonationRequestDTO;
+    }
+
+    private String[] getScopesBeforeValidation(OAuthAuthzReqMessageContext authzReqMessageContext) {
+
+        String[] initialRequestedScopes = authzReqMessageContext.getAuthorizationReqDTO().getScopes();
+        List<String> updatedRequestedScopes = new ArrayList<>(Arrays.asList(initialRequestedScopes));
+        if (!updatedRequestedScopes.contains(IMPERSONATION_SCOPE_NAME) &&
+                !updatedRequestedScopes.contains(SYSTEM_SCOPE)) {
+            updatedRequestedScopes.add(IMPERSONATION_SCOPE_NAME);
+        }
+        authzReqMessageContext.setRequestedScopes(updatedRequestedScopes.toArray(new String[0]));
+        return updatedRequestedScopes.toArray(new String[0]);
+    }
+
+    private void removeImpersonationScope(ImpersonationContext impersonationContext) {
+
+        OAuthAuthzReqMessageContext authzReqMessageContext = impersonationContext.getImpersonationRequestDTO()
+                .getoAuthAuthzReqMessageContext();
+        String[] initialRequestedScopes = authzReqMessageContext.getAuthorizationReqDTO().getScopes();
+        List<String> updatedRequestedScopes = new ArrayList<>(Arrays.asList(initialRequestedScopes));
+        updatedRequestedScopes.remove(IMPERSONATION_SCOPE_NAME);
+        authzReqMessageContext.setRequestedScopes(updatedRequestedScopes.toArray(new String[0]));
     }
 
     private boolean isAuthnResultFound(AuthenticationResult authnResult) {
