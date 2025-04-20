@@ -69,14 +69,13 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
-     * @param impersonator Impersonator id if exists.
+     * @param impersonator Impersonator sub claim value.
      * @return IntrospectionResponseBuilder.
      */
     public IntrospectionResponseBuilder setAct(String impersonator) {
 
         if (StringUtils.isNotBlank(impersonator)) {
-            parameters.put(IntrospectionResponse.ACT, new HashMap<>(
-                    Collections.singletonMap(IntrospectionResponse.SUB, impersonator)));
+            parameters.put(IntrospectionResponse.ACT, impersonator);
         }
         return this;
     }

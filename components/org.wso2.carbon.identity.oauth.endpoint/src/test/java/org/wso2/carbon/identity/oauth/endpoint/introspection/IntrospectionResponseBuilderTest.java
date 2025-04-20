@@ -165,11 +165,8 @@ public class IntrospectionResponseBuilderTest {
                 .get(IntrospectionResponse.CNF).toString(), HashMap.class);
         assertEquals(cnf.get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9",
                 "CNF value is not equal");
-
-        Map<String, Object> act = new ObjectMapper().readValue(jsonObject
-                .get(IntrospectionResponse.ACT).toString(), HashMap.class);
-        assertEquals(act.get(IntrospectionResponse.SUB), "dummyActor",
-                "ACT -> SUB values are not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.ACT), "dummyActor",
+                "ACT claim value is not equal");
     }
 
     /**
