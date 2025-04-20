@@ -663,6 +663,9 @@ public class AuthorizationHandlerManager {
         // load requested scopes
         authorizeRequestMessageContext.setRequestedScopes(authzReqDTO.getScopes());
 
+        // Set impersonation request details.
+        authorizeRequestMessageContext.setImpersonationRequest(authzReqDTO.isImpersonationRequest());
+
         return authorizeRequestMessageContext;
     }
 

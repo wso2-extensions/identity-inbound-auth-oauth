@@ -61,6 +61,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_SCOPE;
 
@@ -106,8 +107,16 @@ public class DefaultOAuth2ScopeValidator {
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
                         .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
+        handleImpersonationScope(authzReqMessageContext.isImpersonationRequest(), authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         return authorizedScopes;
+    }
+
+    private void handleImpersonationScope(boolean impersonationRequest, List<String> authorizedScopes) {
+
+        if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+            authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
+        }
     }
 
     /**
@@ -147,9 +156,11 @@ public class DefaultOAuth2ScopeValidator {
                 .getAuthorizedUser(), appId, grantType, userType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
+        handleImpersonationScope(tokenReqMessageContext.isImpersonationRequest(), authorizedScopes);
         if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
             authorizedScopes.remove(OPENID_SCOPE);
+            authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
         }
         return authorizedScopes;
     }

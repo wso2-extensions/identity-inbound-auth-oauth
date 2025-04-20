@@ -213,7 +213,6 @@ import static org.wso2.carbon.identity.application.authentication.endpoint.util.
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATION_SSO_REQUEST;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
@@ -233,7 +232,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthServerCo
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory.getRequestObjectService;
 import static org.wso2.carbon.identity.oauth.endpoint.util.factory.SSOConsentServiceFactory.getSSOConsentService;
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
+import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager.OAUTH_APP_PROPERTY;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -1326,7 +1327,6 @@ public class OAuth2AuthzEndpoint {
             // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
             OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
                     oauth2Params, sessionContext, authnResult);
-            authzReqMsgCtx.addProperty(IMPERSONATION_SSO_REQUEST, true);
             ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
             if (impersonationContext.isValidated()) {
                 /* Used in two places.
@@ -1368,9 +1368,10 @@ public class OAuth2AuthzEndpoint {
 
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage
                 .getRequest());
+        boolean isImpersonationRequest = oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null;
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(),
-                        httpRequestHeaderHandler, oAuthMessage.getRequest());
+                        httpRequestHeaderHandler, oAuthMessage.getRequest(), isImpersonationRequest);
         authzReqDTO.setUser(authenticationResult.getSubject());
         authzReqDTO.setRequestedSubjectId(sessionContext.getImpersonatedUser());
         return getOAuthAuthzReqMessageContext(authzReqDTO);
@@ -1824,9 +1825,10 @@ public class OAuth2AuthzEndpoint {
         OAuthResponse oauthResponse;
         String responseType = oauth2Params.getResponseType();
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        boolean isImpersonationRequest = oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null;
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler,
-                        oAuthMessage.getRequest());
+                        oAuthMessage.getRequest(), isImpersonationRequest);
         /* We have persisted the oAuthAuthzReqMessageContext before the consent after scope validation. Here we
         retrieve it from the cache and use it again because it contains  information that was set during the scope
         validation process. */
@@ -1835,6 +1837,7 @@ public class OAuth2AuthzEndpoint {
         oAuthAuthzReqMessageContext.setAuthorizationReqDTO(authzReqDTO);
         oAuthAuthzReqMessageContext.addProperty(OAuthConstants.IS_MTLS_REQUEST, oauth2Params.isMtlsRequest());
         oAuthAuthzReqMessageContext.setApprovedAuthorizationDetails(oauth2Params.getAuthorizationDetails());
+        oAuthAuthzReqMessageContext.setImpersonationRequest(isImpersonationRequest);
         /* Set impersonation details to the authorization request context. To handle implicit and hybrid flows. */
         setImpersonationDetailsToAuthzRequestContext(oAuthMessage, oAuthAuthzReqMessageContext);
         // authorizing the request
@@ -3229,9 +3232,10 @@ public class OAuth2AuthzEndpoint {
         /* Here we validate all scopes before user consent to prevent invalidate scopes prompt for consent in the
         consent page. */
         HttpRequestHeaderHandler httpRequestHeaderHandler = new HttpRequestHeaderHandler(oAuthMessage.getRequest());
+        boolean isImpersonationRequest = oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null;
         OAuth2AuthorizeReqDTO authzReqDTO =
                 buildAuthRequest(oauth2Params, oAuthMessage.getSessionDataCacheEntry(), httpRequestHeaderHandler,
-                        oAuthMessage.getRequest());
+                        oAuthMessage.getRequest(), isImpersonationRequest);
         try {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
@@ -4061,7 +4065,8 @@ public class OAuth2AuthzEndpoint {
     }
 
     private OAuth2AuthorizeReqDTO buildAuthRequest(OAuth2Parameters oauth2Params, SessionDataCacheEntry
-            sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler, HttpServletRequest request) {
+            sessionDataCacheEntry, HttpRequestHeaderHandler httpRequestHeaderHandler, HttpServletRequest request,
+                                                   boolean isImpersonationRequest) {
 
         OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
         authzReqDTO.setCallbackUrl(oauth2Params.getRedirectURI());
@@ -4086,6 +4091,7 @@ public class OAuth2AuthzEndpoint {
         authzReqDTO.setRequestedSubjectId(oauth2Params.getRequestedSubjectId());
         authzReqDTO.setMappedRemoteClaims(sessionDataCacheEntry.getMappedRemoteClaims());
         authzReqDTO.setAuthorizationDetails(oauth2Params.getAuthorizationDetails());
+        authzReqDTO.setImpersonationRequest(isImpersonationRequest);
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
