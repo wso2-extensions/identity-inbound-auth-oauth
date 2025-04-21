@@ -53,6 +53,8 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     private boolean isConsentedToken;
 
+    private boolean isImpersonationRequest;
+
     private boolean isSubjectTokenFlow;
 
     private Properties properties = new Properties();
@@ -206,6 +208,16 @@ public class OAuthAuthzReqMessageContext implements Serializable {
     public void setConsentedToken(boolean consentedToken) {
 
         isConsentedToken = consentedToken;
+    }
+
+    public boolean isImpersonationRequest() {
+
+        return isImpersonationRequest;
+    }
+
+    public void setImpersonationRequest(boolean impersonationRequest) {
+
+        isImpersonationRequest = impersonationRequest;
     }
 
     public boolean isSubjectTokenFlow() {
