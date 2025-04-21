@@ -35,6 +35,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
@@ -173,10 +175,17 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             appInfoCache.when(AppInfoCache::getInstance).thenReturn(mockAppInfoCache);
             when(mockAppInfoCache.getValueFromCache(anyString())).thenReturn(oAuthAppDO);
 
+            // Mock authorization context.
+            OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = mock(OAuth2AuthorizeReqDTO.class);
+            when(oAuth2AuthorizeReqDTO.getScopes()).thenReturn(new String[0]);
+            OAuthAuthzReqMessageContext authzReqMessageContext = mock(OAuthAuthzReqMessageContext.class);
+            when(authzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
+
             // Mock impersonation validators.
             ImpersonationContext resultContext = mock(ImpersonationContext.class);
             when(resultContext.getImpersonationRequestDTO()).thenReturn(impersonationRequestDTO);
             when(resultContext.isValidated()).thenReturn(validImpersonation);
+            when(impersonationRequestDTO.getoAuthAuthzReqMessageContext()).thenReturn(authzReqMessageContext);
 
             // Mock ImpersonationMgtService.
             ImpersonationMgtService impersonationMgtService = mock(ImpersonationMgtServiceImpl.class);
