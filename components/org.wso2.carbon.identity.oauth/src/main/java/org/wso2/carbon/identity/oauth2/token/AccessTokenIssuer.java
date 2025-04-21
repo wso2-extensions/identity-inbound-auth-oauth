@@ -68,6 +68,9 @@ import org.wso2.carbon.identity.oauth2.device.cache.DeviceAuthorizationGrantCach
 import org.wso2.carbon.identity.oauth2.device.constants.Constants;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
+import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationNotificationRequestDTO;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtService;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
@@ -104,6 +107,7 @@ import java.util.stream.Stream;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.TOKEN_EXCHANGE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.IMPERSONATOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppStates.APP_STATE_ACTIVE;
@@ -658,7 +662,31 @@ public class AccessTokenIssuer {
             clearCacheEntryAgainstAuthorizationCode(getAuthorizationCode(tokenReqDTO));
         }
 
+        // Write impersonation details to into the session context.
+        if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest() && TOKEN_EXCHANGE.equals(grantType)) {
+            notifyImpersonation(tokReqMsgCtx);
+        }
+
         return tokenRespDTO;
+    }
+
+    private void notifyImpersonation(OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        ImpersonationNotificationRequestDTO impersonationNotificationRequestDTO
+                = new ImpersonationNotificationRequestDTO();
+        impersonationNotificationRequestDTO.setTokenReqMessageContext(tokReqMsgCtx);
+        String impersonatorUserId = (String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR);
+        impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
+        try {
+            String impersonatedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            impersonationNotificationRequestDTO.setSubject(impersonatedUserId);
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("User ID not found in the token request context.", e);
+        }
+        impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
+        ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
+        notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
     }
 
     private Optional<AuthorizationGrantCacheEntry> getAuthzGrantCacheEntryFromDeviceCode(String deviceCode) {
@@ -699,7 +727,7 @@ public class AccessTokenIssuer {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
         String grantType = tokenReqDTO.getGrantType();
-        if (tokReqMsgCtx.isImpersonationRequest() && OAuthConstants.GrantTypes.TOKEN_EXCHANGE.equals(grantType)) {
+        if (tokReqMsgCtx.isImpersonationRequest() && TOKEN_EXCHANGE.equals(grantType)) {
             /*
              In the impersonation flow, we have already completed scope validation during the /authorize call and
              issued a subject token with the authorized scopes. During the token flow, if the scope body param presented
