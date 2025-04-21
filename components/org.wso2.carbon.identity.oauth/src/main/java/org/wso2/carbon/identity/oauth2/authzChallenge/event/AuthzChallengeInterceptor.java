@@ -18,7 +18,10 @@
 
 package org.wso2.carbon.identity.oauth2.authzChallenge.event;
 
+import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.handler.IdentityHandler;
+import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthzChallengeReqDTO;
 
@@ -32,8 +35,20 @@ public interface AuthzChallengeInterceptor extends IdentityHandler {
      *
      * @param requestDTO Authorization challenge request.
      * @return authentication data
-     * @throws IdentityOAuth2Exception
+     * @throws IdentityOAuth2Exception if an error occurs while processing the request.
      */
     String handleAuthzChallengeReq(OAuth2AuthzChallengeReqDTO requestDTO) throws IdentityOAuth2Exception;
 
+    /**
+     * Check if the interceptor is enabled or not.
+     *
+     * @return true if enabled, false otherwise.
+     */
+    default boolean isEnabled() {
+
+        IdentityEventListenerConfig identityEventListenerConfig = IdentityUtil
+                .readEventListenerProperty(AbstractIdentityHandler.class.getName(), this.getClass().getName());
+        return identityEventListenerConfig == null ? true :
+                Boolean.parseBoolean(identityEventListenerConfig.getEnable());
+    }
 }
