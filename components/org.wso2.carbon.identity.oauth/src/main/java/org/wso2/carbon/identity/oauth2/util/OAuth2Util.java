@@ -207,6 +207,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -3863,26 +3864,27 @@ public class OAuth2Util {
                         "Invalid User Id provided for the request. Unable to find the user for given " +
                                 "user id : " + userId + " tenant id : " + tenantId);
             }
-            return getImpersonatingUser(userId, impersonatingUser, tenantDomain, impersonatingUser.getUserStoreDomain(),
-                    clientId);
+            return getAuthenticatedUser(userId, impersonatingUser.getUserName(), tenantDomain,
+                    impersonatingUser.getUserStoreDomain(), clientId, null);
         } catch (UserStoreException | IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Use mapped local subject is mandatory but a local user couldn't be found");
         }
     }
 
-    private static AuthenticatedUser getImpersonatingUser(String impersonateeUserId, User impersonatingUser,
-                                                          String tenantDomain, String userStoreDomain, String clientId)
+    private static AuthenticatedUser getAuthenticatedUser(String impersonateeUserId, String userName,
+                                                          String tenantDomain, String userStoreDomain, String clientId,
+                                                          String subjectIdentifier)
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
         authenticatedImpersonatingUser.setUserId(impersonateeUserId);
-        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(getAuthenticatedSubjectIdentifier(
-                impersonateeUserId, impersonatingUser.getUserName(), tenantDomain, userStoreDomain,
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
+                getAuthenticatedSubjectIdentifier(impersonateeUserId, userName, tenantDomain, userStoreDomain,
                 clientId, false));
-        authenticatedImpersonatingUser.setUserName(impersonatingUser.getUserName());
-        authenticatedImpersonatingUser.setUserStoreDomain(impersonatingUser.getUserStoreDomain());
-        authenticatedImpersonatingUser.setTenantDomain(impersonatingUser.getTenantDomain());
+        authenticatedImpersonatingUser.setUserName(userName);
+        authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
+        authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
         return authenticatedImpersonatingUser;
     }
 
@@ -3943,6 +3945,35 @@ public class OAuth2Util {
         return authenticatedSubjectIdentifier;
     }
 
+    public static String getSubjectClaimFromSubjectIdentifier(String subjectIdentifier, String clientId,
+                                                           String tenantDomain, boolean isFederatedUser)
+            throws IdentityOAuth2Exception {
+
+        String subjectClaimValue = subjectIdentifier;
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            if (!isFederatedUser) {
+                boolean useUserStoreDomainInLocalSubjectIdentifier
+                        = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                        .isUseUserstoreDomainInLocalSubjectIdentifier();
+                boolean useTenantDomainInLocalSubjectIdentifier
+                        = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                        .isUseTenantDomainInLocalSubjectIdentifier();
+                if (useTenantDomainInLocalSubjectIdentifier) {
+                    subjectClaimValue = subjectClaimValue.split(UserCoreConstants.TENANT_DOMAIN_COMBINER)[0];
+                }
+                if (useUserStoreDomainInLocalSubjectIdentifier) {
+                    subjectClaimValue = UserCoreUtil.removeDomainFromName(subjectClaimValue);
+                }
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining subject claim from subject value: "
+                    + subjectIdentifier, e);
+        }
+        return subjectClaimValue;
+    }
+
     private static String getClaimValue(String username, org.wso2.carbon.user.api.UserStoreManager userStoreManager,
                                         String claimURI) throws IdentityOAuth2Exception {
 
@@ -3952,6 +3983,56 @@ public class OAuth2Util {
             return claimValues.get(claimURI);
         } catch (UserStoreException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving claim: " + claimURI, e);
+        }
+    }
+
+    /**
+     * Get authenticated user from subject identifier.
+     *
+     * @param claimValue    Subject identifier value.
+     * @param tenantDomain  Tenant domain.
+     * @param clientId      Client id of the application.
+     * @return Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUserFromSubjectIdentifier(String claimValue, String tenantDomain,
+                                                                              String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            String subjectClaimValue = getSubjectClaimFromSubjectIdentifier(claimValue, clientId, tenantDomain, false);
+            org.wso2.carbon.user.core.common.User user = getUserFromSubjectIdentifier(subjectClaimValue,
+                    subjectClaimUri != null ? subjectClaimUri : USER_ID_CLAIM, tenantDomain);
+
+            return getAuthenticatedUser(user.getUserID(), user.getUsername(), tenantDomain,
+                    user.getUserStoreDomain(), clientId, claimValue);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving application for client id: " + clientId);
+        }
+    }
+
+    private static org.wso2.carbon.user.core.common.User getUserFromSubjectIdentifier(String claimValue,
+                                                                                      String claimUri,
+                                                                                      String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            org.wso2.carbon.user.api.UserStoreManager userStoreManager = OAuth2ServiceComponentHolder.getInstance()
+                    .getRealmService().getTenantUserRealm(IdentityTenantUtil.getTenantId(tenantDomain))
+                    .getUserStoreManager();
+            List<org.wso2.carbon.user.core.common.User> userList = ((AbstractUserStoreManager) userStoreManager)
+                    .getUserListWithID(claimUri, claimValue, UserCoreConstants.DEFAULT_PROFILE);
+            if (userList != null && !userList.isEmpty()) {
+                return userList.get(0);
+            } else {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving claim: " + claimValue);
+            }
+        } catch (UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving claim: " + claimValue, e);
         }
     }
 
@@ -5794,7 +5875,7 @@ public class OAuth2Util {
         // Set authorized user tenant domain to the tenant domain of the application.
         authenticatedUser.setTenantDomain(appTenantDomain);
     }
-  
+
     public static boolean isPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));

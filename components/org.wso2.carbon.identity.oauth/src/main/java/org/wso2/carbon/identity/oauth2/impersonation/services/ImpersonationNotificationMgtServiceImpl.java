@@ -19,7 +19,6 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.services;
 
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationNotificationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.notifiers.ImpersonationEmailNotifier;
 
@@ -32,15 +31,15 @@ public class ImpersonationNotificationMgtServiceImpl implements ImpersonationNot
      * Notifies about an impersonation event using the details provided in the ImpersonationNotificationRequestDTO.
      *
      * @param impersonationNotificationRequestDTO The DTO containing details of the impersonation event.
-     * @throws IdentityOAuth2Exception If there is an error while processing the notification request.
      */
     @Override
-    public void notifyImpersonation(ImpersonationNotificationRequestDTO impersonationNotificationRequestDTO)
-            throws IdentityOAuth2Exception {
+    public void notifyImpersonation(ImpersonationNotificationRequestDTO impersonationNotificationRequestDTO) {
 
         ImpersonationEmailNotifier impersonationEmailNotifier = new ImpersonationEmailNotifier();
         impersonationEmailNotifier.triggerNotification(impersonationNotificationRequestDTO.getSubject(),
                 impersonationNotificationRequestDTO.getImpersonator(),
-                impersonationNotificationRequestDTO.getTenantDomain());
+                impersonationNotificationRequestDTO.getTenantDomain(),
+                impersonationNotificationRequestDTO.getTokenReqMessageContext()
+                        .getOauth2AccessTokenReqDTO().getClientId());
     }
 }

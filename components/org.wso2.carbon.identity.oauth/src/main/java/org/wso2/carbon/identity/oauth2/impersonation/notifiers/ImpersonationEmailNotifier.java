@@ -22,20 +22,14 @@ package org.wso2.carbon.identity.oauth2.impersonation.notifiers;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.event.IdentityEventConstants;
 import org.wso2.carbon.identity.event.event.Event;
-import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.exceptions.ImpersonationConfigMgtException;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationConfig;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.user.api.UserStoreException;
-import org.wso2.carbon.user.core.service.RealmService;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -60,47 +54,15 @@ public class ImpersonationEmailNotifier {
     private static final String TEMPLATE_TYPE = "TEMPLATE_TYPE";
 
     /**
-     * Retrieves the authenticated user details using the user ID and tenant domain.
-     *
-     * @param userId The ID of the user to be authenticated.
-     * @param tenantDomain The domain of the tenant to which the user belongs.
-     * @return An AuthenticatedUser object containing user details.
-     * @throws IdentityOAuth2Exception If there is an error resolving the username or user details.
-     */
-    private AuthenticatedUser getAuthenticatedUser(String userId, String tenantDomain) throws IdentityOAuth2Exception {
-
-        try {
-            RealmService realmService = OAuth2ServiceComponentHolder.getInstance().getRealmService();
-
-            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
-            User user = OAuthUtil.getUserFromTenant(userId, tenantId);
-            if (user == null) {
-                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Invalid User Id provided for Impersonation request. Unable to find the user for given " +
-                                "user id : " + userId + " tenant Domain : " + tenantDomain);
-            }
-            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
-            authenticatedUser.setUserId(userId);
-            authenticatedUser.setAuthenticatedSubjectIdentifier(userId);
-            authenticatedUser.setUserName(user.getUserName());
-            authenticatedUser.setUserStoreDomain(user.getUserStoreDomain());
-            authenticatedUser.setTenantDomain(tenantDomain);
-            return authenticatedUser;
-        } catch (UserStoreException | IdentityOAuth2Exception e) {
-            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
-                    "Use mapped local subject is mandatory but a local user couldn't be found");
-        }
-    }
-
-    /**
      * Triggers a notification event when an impersonation occurs. This method checks if email notifications are
      * enabled for the tenant domain and, if so, sends an email notification with the impersonation details.
      *
      * @param subjectId The ID of the user being impersonated.
      * @param impersonatorId The ID of the impersonator.
      * @param tenantDomain The domain of the tenant where the impersonation occurred.
+     * @param clientId The client id.
      */
-    public void triggerNotification(String subjectId, String impersonatorId, String tenantDomain) {
+    public void triggerNotification(String subjectId, String impersonatorId, String tenantDomain, String clientId) {
 
         try {
             boolean sendEmail = isSendEmail(tenantDomain);
@@ -115,8 +77,10 @@ public class ImpersonationEmailNotifier {
 
                 String formattedDateTime = nowUtc.format(formatter);
 
-                AuthenticatedUser subject = getAuthenticatedUser(subjectId, tenantDomain);
-                AuthenticatedUser impersonator = getAuthenticatedUser(impersonatorId, tenantDomain);
+                AuthenticatedUser subject = OAuth2Util.getImpersonatingUser(subjectId, tenantDomain, clientId);
+                AuthenticatedUser impersonator = OAuth2Util.getAuthenticatedUserFromSubjectIdentifier(impersonatorId,
+                        tenantDomain, clientId);
+
                 HashMap<String, Object> properties = new HashMap<>();
                 properties.put(USER_NAME, subject.getUserName());
                 properties.put(LOGIN_TIME, formattedDateTime);
