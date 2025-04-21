@@ -593,6 +593,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setTokenId(tokenId);
                     accessTokenDO.setGrantType(grantType);
                     accessTokenDO.setAppResidentTenantId(appTenantId);
+                    getAccessTokenExtendedAttributes(tokenId, accessTokenDO);
 
                     if (StringUtils.isNotEmpty(isConsentedToken)) {
                         accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
@@ -1157,6 +1158,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
                     dataDO.setAppResidentTenantId(appResideTenantId);
+                    getAccessTokenExtendedAttributes(tokenId, dataDO);
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
@@ -1202,7 +1204,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     parameters.put(key, value);
                 }
             }
-            dataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(parameters));
+            if (!parameters.isEmpty()) {
+                dataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(parameters));
+            }
         } catch (SQLException e) {
             log.error("Error occurred while retrieving extended attributes for access token: " +
                     accessTokenIdentifier, e);
@@ -3294,6 +3298,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             accessTokenDO.setValidityPeriod(validityPeriodInMillis);
                             accessTokenDO.setRefreshTokenValidityPeriod(refreshTokenValidityPeriodMillis);
                             accessTokenDO.setTokenType(tokenType);
+                            getAccessTokenExtendedAttributes(tokenId, accessTokenDO);
                             tokenMap.put(token, accessTokenDO);
                         }
                         return Collections.emptySet();
