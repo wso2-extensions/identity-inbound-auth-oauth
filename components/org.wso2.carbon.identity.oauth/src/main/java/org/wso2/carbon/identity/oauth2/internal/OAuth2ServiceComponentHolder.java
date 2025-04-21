@@ -138,7 +138,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
 
-    private AuthzChallengeInterceptor authzChallengeInterceptor;
+    private List<AuthzChallengeInterceptor> authzChallengeInterceptors = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1033,22 +1033,33 @@ public class OAuth2ServiceComponentHolder {
     }
 
     /**
-     * Get an {@link AuthzChallengeInterceptor} instance.
-     *
-     * @return A {@link AuthzChallengeInterceptor} singleton instance.
-     */
-    public AuthzChallengeInterceptor getAuthzChallengeInterceptor() {
-
-        return this.authzChallengeInterceptor;
-    }
-
-    /**
-     * set an {@link AuthzChallengeInterceptor} instance.
+     * Add an {@link AuthzChallengeInterceptor} instance.
      *
      * @param authzChallengeInterceptor An {@link AuthzChallengeInterceptor} instance.
      */
-    public void setAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+    public void addAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
 
-        this.authzChallengeInterceptor = authzChallengeInterceptor;
+        authzChallengeInterceptors.add(authzChallengeInterceptor);
+    }
+
+    /**
+     * Remove an {@link AuthzChallengeInterceptor} instance.
+     *
+     * @param authzChallengeInterceptor An {@link AuthzChallengeInterceptor} instance.
+     */
+    public void removeAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
+        authzChallengeInterceptors.removeIf(authzChallengeInterceptor1 -> authzChallengeInterceptor1.getClass().getName()
+                .equals(authzChallengeInterceptor.getClass().getName()));
+    }
+
+    /**
+     * Get the list of {@link AuthzChallengeInterceptor} instances.
+     *
+     * @return List of {@link AuthzChallengeInterceptor} instances.
+     */
+    public List<AuthzChallengeInterceptor> getAuthzChallengeInterceptors() {
+
+        return authzChallengeInterceptors;
     }
 }

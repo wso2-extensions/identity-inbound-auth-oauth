@@ -25,7 +25,8 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthzChallengeReqDTO;
 
-public class AbstractAuthzChallengeInterceptor extends AbstractIdentityHandler implements AuthzChallengeInterceptor {
+public abstract class AbstractAuthzChallengeInterceptor extends AbstractIdentityHandler
+        implements AuthzChallengeInterceptor {
 
     /**
      * Handle the authorization challenge request and extract the DPoP thumbprint.

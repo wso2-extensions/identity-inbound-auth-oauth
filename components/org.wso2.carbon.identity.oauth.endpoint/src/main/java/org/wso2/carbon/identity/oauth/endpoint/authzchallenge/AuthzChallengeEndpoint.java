@@ -348,22 +348,24 @@ public class AuthzChallengeEndpoint {
     private void processDPoPHeader(HttpServletRequest request, OAuthMessage oAuthMessage)
             throws IdentityOAuth2Exception {
 
-        AuthzChallengeInterceptor authzChallengeInterceptor = OAuth2ServiceComponentHolder.getInstance()
-                .getAuthzChallengeInterceptor();
+        List<AuthzChallengeInterceptor> authzChallengeInterceptors =
+                OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptors();
 
-        if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-            OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
-            String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
-            if (StringUtils.isNotBlank(thumbprint)) {
-                oAuthMessage.setDPoPThumbprint(thumbprint);
-                if (log.isDebugEnabled()) {
-                    log.debug("DPoP thumbprint successfully processed and set");
+        for (AuthzChallengeInterceptor authzChallengeInterceptor: authzChallengeInterceptors) {
+            if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+                OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+                String thumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+                if (StringUtils.isNotBlank(thumbprint)) {
+                    oAuthMessage.setDPoPThumbprint(thumbprint);
+                    if (log.isDebugEnabled()) {
+                        log.debug("DPoP thumbprint successfully processed and set");
+                    }
                 }
-            }
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("AuthzChallengeInterceptor is not available or not enabled. " +
-                        "Skipping DPoP thumbprint processing.");
+            } else {
+                if (log.isDebugEnabled()) {
+                    log.debug("AuthzChallengeInterceptor is not available or not enabled. " +
+                            "Skipping DPoP thumbprint processing.");
+                }
             }
         }
     }
@@ -397,28 +399,31 @@ public class AuthzChallengeEndpoint {
         String cachedThumbprint = entry.getDPoPThumbprint();
 
         if (!StringUtils.isBlank(cachedThumbprint)) {
-            AuthzChallengeInterceptor authzChallengeInterceptor =
-                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptor();
+            List<AuthzChallengeInterceptor> authzChallengeInterceptors =
+                    OAuth2ServiceComponentHolder.getInstance().getAuthzChallengeInterceptors();
 
-            if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
-                OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
-                String currentThumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
+            for (AuthzChallengeInterceptor authzChallengeInterceptor: authzChallengeInterceptors) {
+                if (authzChallengeInterceptor != null && authzChallengeInterceptor.isEnabled()) {
+                    OAuth2AuthzChallengeReqDTO requestDTO = buildAuthzChallengeReqDTO(request);
+                    String currentThumbprint = authzChallengeInterceptor.handleAuthzChallengeReq(requestDTO);
 
-                if (StringUtils.isBlank(currentThumbprint)) {
-                    throw new AuthServiceException(
-                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                            "DPoP thumbprint is missing in the current request."
-                    );
-                }
-
-                if (!cachedThumbprint.equals(currentThumbprint)) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("DPoP thumbprint validation failed. Cached and current thumbprints do not match.");
+                    if (StringUtils.isBlank(currentThumbprint)) {
+                        throw new AuthServiceException(
+                                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                                "DPoP thumbprint is missing in the current request."
+                        );
                     }
-                    throw new AuthServiceException(
-                            AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                            "Invalid DPoP thumbprint value."
-                    );
+
+                    if (!cachedThumbprint.equals(currentThumbprint)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(
+                                    "DPoP thumbprint validation failed. Cached and current thumbprints do not match.");
+                        }
+                        throw new AuthServiceException(
+                                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                                "Invalid DPoP thumbprint value."
+                        );
+                    }
                 }
             }
         }

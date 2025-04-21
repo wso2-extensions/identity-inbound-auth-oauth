@@ -33,10 +33,6 @@ public class OAuth2AuthzChallengeReqDTO {
     private HttpRequestHeader[] httpRequestHeaders;
     private HttpServletRequestWrapper httpServletRequestWrapper;
 
-    public OAuth2AuthzChallengeReqDTO() {
-
-    }
-
     // Getters and Setters
     public String getAuthSession() {
 

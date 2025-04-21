@@ -1794,7 +1794,7 @@ public class OAuth2ServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("Registering the AuthzChallengeInterceptor service.");
         }
-        OAuth2ServiceComponentHolder.getInstance().setAuthzChallengeInterceptor(authzChallengeInterceptor);
+        OAuth2ServiceComponentHolder.getInstance().addAuthzChallengeInterceptor(authzChallengeInterceptor);
     }
 
     /**
@@ -1807,6 +1807,6 @@ public class OAuth2ServiceComponent {
         if (log.isDebugEnabled()) {
             log.debug("Unregistering the AuthzChallengeInterceptor service.");
         }
-        OAuth2ServiceComponentHolder.getInstance().setAuthzChallengeInterceptor(null);
+        OAuth2ServiceComponentHolder.getInstance().removeAuthzChallengeInterceptor(authzChallengeInterceptor);
     }
 }
