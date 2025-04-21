@@ -116,6 +116,8 @@ public class DefaultOAuth2ScopeValidator {
 
         if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
             authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
+        } else {
+            authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
         }
     }
 
