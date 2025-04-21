@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -173,6 +173,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
@@ -3589,6 +3590,30 @@ public class OAuth2Util {
     public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
         return getCertificate(tenantDomain);
+    }
+
+    /**
+     * Retrieves the public certificate for a specified alias within the tenant domain.
+     * This can be used to fetch the trusted client public certificate from the primary, tenant, or
+     * OAuth custom keystore.
+     *
+     * @param tenantDomain Tenant domain of the certificate.
+     * @param alias        Alias of the certificate.
+     * @return Public certificate of the tenant domain.
+     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
+     */
+    public static Certificate getCertificate(String tenantDomain, String alias) throws IdentityOAuth2Exception {
+
+        try {
+            return IdentityKeyStoreResolver.getInstance()
+                    .getKeyStore(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)
+                    .getCertificate(alias);
+        } catch (IdentityKeyStoreResolverException | KeyStoreException e) {
+            String error =
+                    String.format("Error while obtaining public certificate for the alias %s in the tenant domain %s",
+                            alias, tenantDomain);
+            throw new IdentityOAuth2Exception(error, e);
+        }
     }
 
     /**

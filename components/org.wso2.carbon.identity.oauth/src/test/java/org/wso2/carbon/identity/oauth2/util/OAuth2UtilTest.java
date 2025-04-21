@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -58,8 +58,11 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -113,6 +116,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -257,6 +261,9 @@ public class OAuth2UtilTest {
     @Mock
     OAuthAdminServiceImpl oAuthAdminService;
 
+    @Mock
+    IdentityKeyStoreResolver identityKeyStoreResolver;
+
     private KeyStore wso2KeyStore;
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
@@ -268,6 +275,7 @@ public class OAuth2UtilTest {
     private MockedStatic<NetworkUtils> networkUtils;
     private MockedStatic<IdentityProviderManager> identityProviderManager;
     private MockedStatic<LoggerUtils> loggerUtils;
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -322,6 +330,9 @@ public class OAuth2UtilTest {
         identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 
     @AfterMethod
@@ -335,6 +346,7 @@ public class OAuth2UtilTest {
         networkUtils.close();
         identityProviderManager.close();
         loggerUtils.close();
+        identityKeyStoreResolverMockedStatic.close();
     }
 
     @Test
@@ -3064,5 +3076,28 @@ public class OAuth2UtilTest {
                                                          Object expectedNimbusdsAlgorithm) throws Exception {
         JWSAlgorithm actual = mapSignatureAlgorithmForJWSAlgorithm(signatureAlgo);
         Assert.assertEquals(actual, expectedNimbusdsAlgorithm);
+    }
+
+    @Test(description = "Test get certificate with alias")
+    public void testGetCertificateWithAlias() throws Exception {
+
+        // Verify the success case.
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(wso2KeyStore);
+        Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, "test-client-cert");
+        assertEquals(((X509Certificate) certificate).getIssuerDN().getName(), "CN=MyCert");
+
+        // Test when the IdentityKeyStoreResolverException is thrown.
+        when(identityKeyStoreResolver.getKeyStore("tenant-1",
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenThrow(
+                new IdentityKeyStoreResolverException("test-error-code", "test-error"));
+        try {
+            OAuth2Util.getCertificate("tenant-1", "test-client-cert");
+            Assert.fail("Expected IdentityOAuth2Exception to be thrown");
+        } catch (IdentityOAuth2Exception e) {
+            Assert.assertTrue(e.getMessage().contains(
+                    "Error while obtaining public certificate for the alias test-client-cert " +
+                            "in the tenant domain tenant-1"));
+        }
     }
 }
