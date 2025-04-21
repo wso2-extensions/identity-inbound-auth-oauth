@@ -48,7 +48,6 @@ public class ImpersonationMgtServiceImpl implements ImpersonationMgtService {
 
         for (ImpersonationValidator impersonationValidator: impersonationValidators) {
             impersonationContext = impersonationValidator.validateImpersonation(impersonationContext);
-
             if (!impersonationContext.isValidated()) {
                 return impersonationContext;
             }

@@ -66,6 +66,17 @@ public class OAuth2AuthorizeReqDTO {
     private String requestedSubjectId;
     private Map<ClaimMapping, String> mappedRemoteClaims;
     private AuthorizationDetails authorizationDetails;
+    private boolean isImpersonationRequest;
+
+    public boolean isImpersonationRequest() {
+
+        return isImpersonationRequest;
+    }
+
+    public void setImpersonationRequest(boolean impersonationRequest) {
+
+        isImpersonationRequest = impersonationRequest;
+    }
 
     public String getRequestedSubjectId() {
 
