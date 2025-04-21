@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -44,6 +45,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.triggerOnIntrospectionExceptionListeners;
 
 /**
@@ -144,6 +146,14 @@ public class OAuth2IntrospectionEndpoint {
                 .setExpiration(introspectionResponse.getExp())
                 .setAuthorizedUserType(introspectionResponse.getAut())
                 .setAudience(introspectionResponse.getAud());;
+
+
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (isUserSessionImpersonationEnabled && introspectionResponse.getProperties() != null
+                && introspectionResponse.getProperties().get(IMPERSONATING_ACTOR) != null) {
+            respBuilder.setAct(introspectionResponse.getProperties().get(IMPERSONATING_ACTOR).toString());
+        }
 
         if (introspectionResponse.getAuthorizedUser() != null) {
             respBuilder.setOrgId(introspectionResponse.getAuthorizedUser().getAccessingOrganization());
