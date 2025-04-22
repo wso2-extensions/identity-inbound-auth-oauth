@@ -3956,6 +3956,16 @@ public class OAuth2Util {
         return authenticatedSubjectIdentifier;
     }
 
+    /**
+     * Get subject claim from subject identifier.
+     *
+     * @param subjectIdentifier Subject identifier value.
+     * @param clientId          Client id of the application.
+     * @param tenantDomain      Tenant domain.
+     * @param isFederatedUser   True if the user is a federated user.
+     * @return Subject claim value.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the subject claim.
+     */
     public static String getSubjectClaimFromSubjectIdentifier(String subjectIdentifier, String clientId,
                                                            String tenantDomain, boolean isFederatedUser)
             throws IdentityOAuth2Exception {

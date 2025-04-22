@@ -57,10 +57,10 @@ public class ImpersonationEmailNotifier {
      * Triggers a notification event when an impersonation occurs. This method checks if email notifications are
      * enabled for the tenant domain and, if so, sends an email notification with the impersonation details.
      *
-     * @param subjectId The ID of the user being impersonated.
+     * @param subjectId      The ID of the user being impersonated.
      * @param impersonatorId The ID of the impersonator.
-     * @param tenantDomain The domain of the tenant where the impersonation occurred.
-     * @param clientId The client id.
+     * @param tenantDomain   The domain of the tenant where the impersonation occurred.
+     * @param clientId       The client id.
      */
     public void triggerNotification(String subjectId, String impersonatorId, String tenantDomain, String clientId) {
 
