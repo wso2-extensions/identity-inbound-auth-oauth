@@ -182,7 +182,7 @@ public class OAuthAppDAO {
                     if (ApplicationMgtUtil.isConsoleOrMyAccount(consumerAppDO.getApplicationName()) &&
                             isRootOrganization(spTenantId)) {
                         templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(
-                                templatedCallbackUrl);
+                                templatedCallbackUrl, consumerAppDO.getApplicationName());
                     }
 
                     String dbProductName = connection.getMetaData().getDatabaseProductName();
@@ -793,7 +793,8 @@ public class OAuthAppDAO {
         try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
             String templatedCallbackUrl = oauthAppDO.getCallbackUrl();
             if (ApplicationMgtUtil.isConsoleOrMyAccount(oauthAppDO.getApplicationName())) {
-                templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(templatedCallbackUrl);
+                templatedCallbackUrl = ApplicationMgtUtil.replaceUrlOriginWithPlaceholders(templatedCallbackUrl,
+                        oauthAppDO.getApplicationName());
             }
             String sqlQuery = getSqlQuery(isUserValidForOwnerUpdate);
             try (PreparedStatement prepStmt = connection.prepareStatement(sqlQuery)) {
