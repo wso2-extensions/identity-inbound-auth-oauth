@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,14 +19,15 @@
 package org.wso2.carbon.identity.oauth.action.execution;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.identity.action.execution.api.exception.ActionExecutionRequestBuilderException;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequest;
 import org.wso2.carbon.identity.action.execution.api.model.ActionExecutionRequestContext;
 import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
-import org.wso2.carbon.identity.action.execution.api.model.Event;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.api.model.Operation;
 import org.wso2.carbon.identity.action.execution.api.model.Request;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
+import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -61,6 +63,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -68,7 +71,8 @@ import java.util.stream.Collectors;
  */
 public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequestBuilder {
 
-    public static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
+    public static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
+    public static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     public static final String SCOPES_PATH_PREFIX = "/accessToken/scopes/";
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenRequestBuilder.class);
 
@@ -90,13 +94,17 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
 
         ActionExecutionRequest.Builder actionRequestBuilder = new ActionExecutionRequest.Builder();
         actionRequestBuilder.actionType(getSupportedActionType());
-        actionRequestBuilder.event(getEvent(tokenMessageContext, additionalClaimsToAddToToken));
-        actionRequestBuilder.allowedOperations(getAllowedOperations(additionalClaimsToAddToToken));
+
+        PreIssueAccessTokenEvent event = getEvent(tokenMessageContext, additionalClaimsToAddToToken);
+        actionRequestBuilder.event(event);
+        actionRequestBuilder.allowedOperations(
+                getAllowedOperations(additionalClaimsToAddToToken, event.getRefreshToken() != null));
 
         return actionRequestBuilder.build();
     }
 
-    private Event getEvent(OAuthTokenReqMessageContext tokenMessageContext, Map<String, Object> claimsToAdd)
+    private PreIssueAccessTokenEvent getEvent(OAuthTokenReqMessageContext tokenMessageContext,
+                                              Map<String, Object> claimsToAdd)
             throws ActionExecutionRequestBuilderException {
 
         OAuth2AccessTokenReqDTO tokenReqDTO = tokenMessageContext.getOauth2AccessTokenReqDTO();
@@ -112,10 +120,55 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
 
-        eventBuilder.accessToken(getAccessToken(tokenMessageContext, claimsToAdd));
+        // Retrieving app information here to reduce the perf overhead.
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = getAppInformation(tokenMessageContext);
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new ActionExecutionRequestBuilderException(
+                    "Failed to generate pre issue access token action request for application: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " grant type: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);
+        }
+
+        eventBuilder.accessToken(getAccessToken(tokenMessageContext, oAuthAppDO, claimsToAdd));
+
+        if (isRefreshTokenAllowed(oAuthAppDO)) {
+            eventBuilder.refreshToken(getRefreshToken(oAuthAppDO.getRefreshTokenExpiryTime(),
+                    tokenMessageContext.getRefreshTokenValidityPeriodInMillis()));
+        }
         eventBuilder.request(getRequest(tokenReqDTO));
 
         return eventBuilder.build();
+    }
+
+    private boolean isRefreshTokenAllowed(OAuthAppDO oAuthAppDO) {
+
+        if (OAuthServerConfiguration.getInstance().getSupportedGrantTypes().containsKey(
+                GrantType.REFRESH_TOKEN.toString()) && oAuthAppDO != null) {
+
+            String grantTypes = oAuthAppDO.getGrantTypes();
+            if (StringUtils.isNotEmpty(grantTypes)) {
+                List<String> supportedGrantTypes = Arrays.asList(grantTypes.split(" "));
+                return supportedGrantTypes.contains(OAuthConstants.GrantTypes.REFRESH_TOKEN);
+            }
+        }
+        return false;
+    }
+
+    private RefreshToken getRefreshToken(long refreshTokenExpiryInSecondsFromApp,
+                                         long refreshTokenValidityPeriodInMillisFromContext) {
+
+        long refreshTokenValidityPeriod = -1;
+        if (refreshTokenValidityPeriodInMillisFromContext > 0) {
+            // To honor the existing custom refresh grant handling.
+            refreshTokenValidityPeriod = TimeUnit.MICROSECONDS.toSeconds(refreshTokenValidityPeriodInMillisFromContext);
+        } else if (refreshTokenExpiryInSecondsFromApp > 0) {
+            refreshTokenValidityPeriod = refreshTokenExpiryInSecondsFromApp;
+        }
+        RefreshToken.Builder refreshTokenBuilder = new RefreshToken.Builder();
+        refreshTokenBuilder.addClaim(RefreshToken.ClaimNames.EXPIRES_IN.getName(), refreshTokenValidityPeriod);
+        return refreshTokenBuilder.build();
     }
 
     private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder, AuthenticatedUser user,
@@ -173,12 +226,11 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    private AccessToken getAccessToken(OAuthTokenReqMessageContext
-                                               tokenMessageContext, Map<String, Object> claimsToAdd)
+    private AccessToken getAccessToken(OAuthTokenReqMessageContext tokenMessageContext, OAuthAppDO oAuthAppDO,
+                                       Map<String, Object> claimsToAdd)
             throws ActionExecutionRequestBuilderException {
 
         try {
-            OAuthAppDO oAuthAppDO = getAppInformation(tokenMessageContext);
             String issuer = getIssuer(tokenMessageContext);
             List<String> audience = getAudience(tokenMessageContext, oAuthAppDO);
             String tokenType = oAuthAppDO.getTokenType();
@@ -190,7 +242,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             handleTokenBindingClaims(tokenMessageContext, accessTokenBuilder);
             claimsToAdd.forEach(accessTokenBuilder::addClaim);
             return accessTokenBuilder.build();
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new ActionExecutionRequestBuilderException(
                     "Failed to generate pre issue access token action request for application: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " grant type: " +
@@ -283,16 +335,20 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
     }
 
-    public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims) {
+    public List<AllowedOperation> getAllowedOperations(Map<String, Object> oidcClaims, boolean isRefreshTokenAllowed) {
 
         List<String> removeOrReplacePaths = getRemoveOrReplacePaths(oidcClaims);
 
         List<String> replacePaths = new ArrayList<>(removeOrReplacePaths);
-        replacePaths.add(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName());
+        replacePaths.add(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName());
+
+        if (isRefreshTokenAllowed) {
+            replacePaths.add(REFRESH_TOKEN_CLAIMS_PATH_PREFIX + RefreshToken.ClaimNames.EXPIRES_IN.getName());
+        }
 
         AllowedOperation addOperation =
-                createAllowedOperation(Operation.ADD, Arrays.asList(CLAIMS_PATH_PREFIX, SCOPES_PATH_PREFIX,
-                        CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/"));
+                createAllowedOperation(Operation.ADD, Arrays.asList(ACCESS_TOKEN_CLAIMS_PATH_PREFIX, SCOPES_PATH_PREFIX,
+                        ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/"));
         AllowedOperation removeOperation = createAllowedOperation(Operation.REMOVE, removeOrReplacePaths);
         AllowedOperation replaceOperation = createAllowedOperation(Operation.REPLACE, replacePaths);
 
@@ -309,13 +365,13 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                 .collect(Collectors.toList());
 
         removeOrReplacePaths.add(SCOPES_PATH_PREFIX);
-        removeOrReplacePaths.add(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/");
+        removeOrReplacePaths.add(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/");
         return removeOrReplacePaths;
     }
 
     private String generatePathForClaim(Map.Entry<String, Object> entry) {
 
-        String basePath = CLAIMS_PATH_PREFIX + entry.getKey();
+        String basePath = ACCESS_TOKEN_CLAIMS_PATH_PREFIX + entry.getKey();
         if (entry.getValue() instanceof List || entry.getValue() instanceof String[]) {
             basePath += "/";
         }

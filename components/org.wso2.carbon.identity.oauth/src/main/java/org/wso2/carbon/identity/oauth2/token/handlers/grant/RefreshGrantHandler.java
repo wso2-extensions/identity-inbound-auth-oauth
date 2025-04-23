@@ -789,7 +789,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // otherwise use existing refresh token's validity period
         long validityPeriodFromMsgContext = tokenReqMessageContext.getRefreshTokenvalidityPeriod();
         // Priority given to the validity period mentioned in the OAuthTokenReqMessageContext
-        if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
+        if (tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis() > 0) {
+            refreshTokenValidityPeriod = tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis();
+        } else if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
                 && validityPeriodFromMsgContext > 0) {
             refreshTokenValidityPeriod = validityPeriodFromMsgContext *
                     SECONDS_TO_MILISECONDS_FACTOR;
@@ -910,7 +912,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
             log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
                     " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
-
+            tokenRequestContext.setRefreshTokenValidityPeriodInMillis(
+                    TimeUnit.NANOSECONDS.toMillis(grantCacheEntry.getValidityPeriod()));
             AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
         }
     }
