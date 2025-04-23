@@ -919,7 +919,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
         };
     }
 
-    //@Test(dataProvider = "providePathExistsData")
+    @Test(dataProvider = "providePathExistsData")
     public void testGetFormPostRedirectPage(String carbonHome, boolean fileExists) throws Exception {
 
         try (MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class, Mockito.CALLS_REAL_METHODS);) {
