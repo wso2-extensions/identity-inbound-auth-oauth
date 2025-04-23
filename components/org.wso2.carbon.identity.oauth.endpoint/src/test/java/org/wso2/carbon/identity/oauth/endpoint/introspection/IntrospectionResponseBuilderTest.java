@@ -133,6 +133,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setErrorDescription("error_discription");
         introspectionResponseBuilder1.setAuthorizedUserType(OAuthConstants.UserType.APPLICATION_USER);
         introspectionResponseBuilder1.setCnfBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
+        introspectionResponseBuilder1.setAct("dummyActor");
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
@@ -164,6 +165,8 @@ public class IntrospectionResponseBuilderTest {
                 .readValue(jsonObject.get(IntrospectionResponse.CNF).toString(), HashMap.class);
         assertEquals(cnf.get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9",
                 "CNF value is not equal");
+        assertEquals(jsonObject.get(IntrospectionResponse.ACT), "dummyActor",
+                "ACT claim value is not equal");
     }
 
     /**
@@ -188,6 +191,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder2.setErrorDescription("");
         introspectionResponseBuilder2.setAuthorizedUserType("");
         introspectionResponseBuilder2.setCnfBindingValue("");
+        introspectionResponseBuilder2.setAct("");
 
         JSONObject jsonObject2 = new JSONObject(introspectionResponseBuilder2.build());
         assertFalse(jsonObject2.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
@@ -210,6 +214,7 @@ public class IntrospectionResponseBuilderTest {
                 "ERROR_DESCRIPTION already exists in the response builder");
         assertFalse(jsonObject2.has(IntrospectionResponse.AUT), "AUT already exists in the response builder");
         assertFalse(jsonObject2.has(IntrospectionResponse.CNF), "CNF value exists in the response builder");
+        assertFalse(jsonObject2.has(IntrospectionResponse.ACT), "ACT value exists in the response builder");
     }
 
     @Test(dependsOnMethods = "testResposeBuilderWithVal")
