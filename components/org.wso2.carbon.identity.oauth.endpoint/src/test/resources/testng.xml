@@ -25,6 +25,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointImpersonationTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.IntrospectionResponseBuilderTest" />
@@ -41,6 +42,7 @@
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.ClaimUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStoreTest" />
+            <class name="org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtilTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpointImpersonationTest" />
             <class name="org.wso2.carbon.identity.oauth.endpoint.introspection.OAuth2IntrospectionEndpointTest" />
