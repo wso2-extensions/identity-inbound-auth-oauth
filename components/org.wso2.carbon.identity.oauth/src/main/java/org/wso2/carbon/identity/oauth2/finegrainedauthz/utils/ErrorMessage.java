@@ -24,8 +24,8 @@ package org.wso2.carbon.identity.oauth2.finegrainedauthz.utils;
 public enum ErrorMessage {
 
     ERROR_CODE_INVALID_TENANT_DOMAIN("60004",
-                                             "Invalid input.",
-                                             "%s is not a valid tenant domain.");
+                             "Invalid input.",
+                            "%s is not a valid tenant domain.");
 
     /**
      * The error code.
