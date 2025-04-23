@@ -106,6 +106,7 @@ public class ImpersonatorPermissionValidatorTest {
 
         ImpersonationContext impersonationContext = new ImpersonationContext();
         impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
+        impersonationContext.setValidationFailureErrorMessage("Validation error message");
         ImpersonatorPermissionValidator impersonatorPermissionValidator = new ImpersonatorPermissionValidator();
         Field field = ImpersonatorPermissionValidator.class.getDeclaredField("scopeValidator");
         field.setAccessible(true);

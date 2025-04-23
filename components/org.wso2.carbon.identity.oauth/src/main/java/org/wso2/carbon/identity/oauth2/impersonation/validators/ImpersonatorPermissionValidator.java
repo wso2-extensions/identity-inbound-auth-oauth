@@ -74,13 +74,13 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
         if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
             impersonationContext.setValidated(true);
         } else {
+            String errorMessage = String.format("Authenticated user : %s doesn't have impersonation permission for " +
+                            "client :%s in the tenant %s.",
+                    authzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableMaskedUserId(),
+                    clientId, tenantDomain);
             impersonationContext.setValidated(false);
-            impersonationContext.setValidationFailureErrorMessage("Authenticated user : " + authzReqMessageContext
-                    .getAuthorizationReqDTO().getUser().getLoggableMaskedUserId() + " doesn't have impersonation " +
-                    "permission for client : " + clientId +  " in the tenant : " + tenantDomain);
-            LOG.error("Authenticated user : " + authzReqMessageContext
-                    .getAuthorizationReqDTO().getUser().getLoggableMaskedUserId() + "doesn't have impersonation " +
-                    "permission for client : " + clientId +  " in the tenant : " + tenantDomain);
+            impersonationContext.setValidationFailureErrorMessage(errorMessage);
+            LOG.debug(errorMessage);
         }
         return impersonationContext;
     }
