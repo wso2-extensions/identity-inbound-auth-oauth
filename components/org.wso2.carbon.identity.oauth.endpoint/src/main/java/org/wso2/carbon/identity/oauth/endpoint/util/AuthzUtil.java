@@ -1501,7 +1501,8 @@ public class AuthzUtil {
     }
 
     private static String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState,
-                                            OAuth2Parameters oauth2Params, AuthorizationResponseDTO authorizationResponseDTO)
+                                            OAuth2Parameters oauth2Params,
+                                            AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         storeUserConsent(oAuthMessage, consent);
@@ -1841,7 +1842,8 @@ public class AuthzUtil {
 
     private static OAuthResponse handleFormPostMode(OAuthMessage oAuthMessage,
                                                     OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                                    String redirectURL, AuthorizationResponseDTO authorizationResponseDTO)
+                                                    String redirectURL,
+                                                    AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         OAuthResponse oauthResponse;
@@ -1882,8 +1884,8 @@ public class AuthzUtil {
 
     private static void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
                                              OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                             String tokenBindingValue, OAuth2Parameters oauth2Params, AuthorizationResponseDTO
-                                                     authorizationResponseDTO)
+                                             String tokenBindingValue, OAuth2Parameters oauth2Params,
+                                             AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         String authorizationCode = authzRespDTO.getAuthorizationCode();
@@ -2877,7 +2879,8 @@ public class AuthzUtil {
      * @throws OAuthSystemException OAuthSystemException
      */
     private static String doUserAuthorization(OAuthMessage oAuthMessage, String sessionDataKeyFromLogin,
-                                              OIDCSessionState sessionState, AuthorizationResponseDTO authorizationResponseDTO)
+                                              OIDCSessionState sessionState,
+                                              AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
@@ -3033,8 +3036,8 @@ public class AuthzUtil {
 
     private static String handleConsent(OAuthMessage oAuthMessage, String sessionDataKey,
                                         OIDCSessionState sessionState, OAuth2Parameters oauth2Params,
-                                        AuthenticatedUser authenticatedUser, boolean hasUserApproved, AuthorizationResponseDTO
-                                                authorizationResponseDTO)
+                                        AuthenticatedUser authenticatedUser, boolean hasUserApproved,
+                                        AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException {
 
         if (isConsentSkipped(oauth2Params)) {
@@ -3061,7 +3064,8 @@ public class AuthzUtil {
 
     private static String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params,
                                                AuthenticatedUser user, boolean ignoreExistingConsents,
-                                               OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO)
+                                               OAuthMessage oAuthMessage,
+                                               AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         authorizationResponseDTO.setIsConsentRedirect(true);
@@ -3306,8 +3310,8 @@ public class AuthzUtil {
      * @throws ClaimMetadataException If an error occurred while getting claim mappings.
      */
     private static List<ClaimMetaData> removeConsentRequestedNullUserAttributes(List<ClaimMetaData> requestedClaims,
-                                                                                Map<ClaimMapping, String> userAttributes,
-                                                                                String spTenantDomain)
+                                                                             Map<ClaimMapping, String> userAttributes,
+                                                                             String spTenantDomain)
             throws ClaimMetadataException {
 
         List<String> localClaims = new ArrayList<>();
@@ -3575,10 +3579,8 @@ public class AuthzUtil {
         }
     }
 
-    private static String handleApprovedAlwaysWithoutPromptingForNewConsent(OAuthMessage oAuthMessage,
-                                                                            OIDCSessionState sessionState,
-                                                                            OAuth2Parameters oauth2Params,
-                                                                            AuthorizationResponseDTO authorizationResponseDTO)
+    private static String handleApprovedAlwaysWithoutPromptingForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState
+            sessionState, OAuth2Parameters oauth2Params, AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException, OAuthProblemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
@@ -3713,7 +3715,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Here we set the authenticated user to the session data
+     * Here we set the authenticated user to the session data.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
      * @return
@@ -3794,7 +3796,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Get authentication result from request
+     * Get authentication result from request.
      *
      * @param request Http servlet request
      * @return AuthenticationResult
@@ -4256,7 +4258,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State
+     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State.
      *
      * @param sessionState
      */
