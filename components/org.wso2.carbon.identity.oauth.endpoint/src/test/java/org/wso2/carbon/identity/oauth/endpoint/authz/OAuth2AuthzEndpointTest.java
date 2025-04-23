@@ -1175,7 +1175,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     /**
-     * Tests the scenario of authorization request from the client
+     * Tests the scenario of authorization request from the client.
      */
     @Test(dataProvider = "provideAuthzRequestData", groups = "testWithConnection")
     public void testHandleOAuthAuthorizationRequest(String clientId, String redirectUri, String pkceChallengeCode,
