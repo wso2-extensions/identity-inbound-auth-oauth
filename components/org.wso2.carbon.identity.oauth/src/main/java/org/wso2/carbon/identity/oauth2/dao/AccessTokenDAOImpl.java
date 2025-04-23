@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants.OAuthColumnName;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
@@ -592,7 +593,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     accessTokenDO.setTokenId(tokenId);
                     accessTokenDO.setGrantType(grantType);
                     accessTokenDO.setAppResidentTenantId(appTenantId);
-
+                    accessTokenDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(
+                                    getAccessTokenExtendedAttributeParameters(tokenId)));
                     if (StringUtils.isNotEmpty(isConsentedToken)) {
                         accessTokenDO.setIsConsentedToken(Boolean.parseBoolean(isConsentedToken));
                     }
@@ -1156,6 +1158,8 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setTenantID(tenantId);
                     dataDO.setIsConsentedToken(isConsentedToken);
                     dataDO.setAppResidentTenantId(appResideTenantId);
+                    dataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(
+                            getAccessTokenExtendedAttributeParameters(accessTokenIdentifier)));
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
@@ -1179,6 +1183,31 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
         }
 
         return dataDO;
+    }
+
+    private Map<String, String> getAccessTokenExtendedAttributeParameters(String accessTokenIdentifier)
+            throws IdentityOAuth2Exception {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieving extended attributes for access token: " + accessTokenIdentifier);
+        }
+        Map<String, String> parameters = new HashMap<>();
+        try (Connection connection = IdentityDatabaseUtil.getDBConnection(false);
+             PreparedStatement prepStmt = connection.prepareStatement(SQLQueries
+                     .GET_ACCESS_TOKEN_EXTENDED_ATTRIBUTES)) {
+            prepStmt.setString(1, accessTokenIdentifier);
+            try (ResultSet resultSet = prepStmt.executeQuery()) {
+                while (resultSet.next()) {
+                    String key = resultSet.getString("TOKEN_ATTR_NAME");
+                    String value = resultSet.getString("TOKEN_ATTR_VALUE");
+                    parameters.put(key, value);
+                }
+            }
+            return parameters;
+        } catch (SQLException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving extended attributes for access token: " +
+                    accessTokenIdentifier, e);
+        }
     }
 
     private void setTokenBindingToAccessTokenDO(AccessTokenDO dataDO, Connection connection, String tokenId)
@@ -3266,6 +3295,9 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                             accessTokenDO.setValidityPeriod(validityPeriodInMillis);
                             accessTokenDO.setRefreshTokenValidityPeriod(refreshTokenValidityPeriodMillis);
                             accessTokenDO.setTokenType(tokenType);
+                            accessTokenDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(
+                                    getAccessTokenExtendedAttributeParameters(tokenId)
+                            ));
                             tokenMap.put(token, accessTokenDO);
                         }
                         return Collections.emptySet();

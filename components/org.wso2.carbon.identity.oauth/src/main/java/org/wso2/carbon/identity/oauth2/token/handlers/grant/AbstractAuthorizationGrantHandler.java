@@ -60,6 +60,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -77,11 +78,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
@@ -603,10 +606,34 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setValidityPeriodInMillis(tokReqMsgCtx.getValidityPeriod());
         newTokenBean.setValidityPeriod(tokReqMsgCtx.getValidityPeriod() / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
-        newTokenBean.setAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes());
+        newTokenBean.setAccessTokenExtendedAttributes(
+                getAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes(), tokReqMsgCtx));
         setRefreshTokenDetails(tokReqMsgCtx, existingTokenBean, newTokenBean, oauthTokenIssuer);
 
         return newTokenBean;
+    }
+
+    private AccessTokenExtendedAttributes getAccessTokenExtendedAttributes(
+            AccessTokenExtendedAttributes accessTokenExtendedAttributes,
+            OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (tokReqMsgCtx.isImpersonationRequest()) {
+            addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
+                    accessTokenExtendedAttributes);
+        }
+        // Add any new extended attributes here using @addExtendedAttribute.
+        return accessTokenExtendedAttributes;
+    }
+
+    private void addExtendedAttribute(String key, String value, AccessTokenExtendedAttributes
+            accessTokenExtendedAttributes) {
+
+        if (accessTokenExtendedAttributes == null) {
+            accessTokenExtendedAttributes = new AccessTokenExtendedAttributes(new HashMap<>());
+        }
+        if (key != null && value != null) {
+            accessTokenExtendedAttributes.getParameters().put(key, value);
+        }
     }
 
     private void updateMessageContextToCreateNewToken(OAuthTokenReqMessageContext tokReqMsgCtx, String consumerKey,
