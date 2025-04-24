@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -42,10 +42,12 @@ import org.wso2.carbon.identity.action.execution.api.model.Success;
 import org.wso2.carbon.identity.action.execution.api.model.SuccessStatus;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionResponseProcessor;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.ClaimPathInfo;
 import org.wso2.carbon.identity.oauth.action.model.OperationExecutionResult;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
+import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.utils.DiagnosticLog;
@@ -56,6 +58,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,7 +70,8 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     private static final Log LOG = LogFactory.getLog(PreIssueAccessTokenResponseProcessor.class);
     private static final String SCOPE_PATH_PREFIX = "/accessToken/scopes/";
-    private static final String CLAIMS_PATH_PREFIX = "/accessToken/claims/";
+    private static final String ACCESS_TOKEN_CLAIMS_PATH_PREFIX = "/accessToken/claims/";
+    private static final String REFRESH_TOKEN_CLAIMS_PATH_PREFIX = "/refreshToken/claims/";
     private static final Pattern NQCHAR_PATTERN = Pattern.compile("^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$");
     private static final Pattern STRING_OR_URI_PATTERN =
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
@@ -95,6 +99,12 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         AccessToken requestAccessToken = preIssueAccessTokenEvent.getAccessToken();
         AccessToken.Builder responseAccessTokenBuilder = preIssueAccessTokenEvent.getAccessToken().copy();
+
+        Optional<RefreshToken> optionalRequestRefreshToken =
+                Optional.ofNullable(preIssueAccessTokenEvent.getRefreshToken());
+        Optional<RefreshToken.Builder> optionalResponseRefreshTokenBuilder =
+                optionalRequestRefreshToken.map(RefreshToken::copy);
+
         List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
 
         if (operationsToPerform != null) {
@@ -111,6 +121,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     case REPLACE:
                         operationExecutionResultList.add(
                                 handleReplaceOperation(operation, requestAccessToken, responseAccessTokenBuilder));
+                        optionalRequestRefreshToken.ifPresent(requestRT ->
+                                optionalResponseRefreshTokenBuilder.ifPresent(
+                                        responseRTBuilder -> operationExecutionResultList.add(
+                                                handleReplaceOperation(operation, requestRT, responseRTBuilder))));
                         break;
                     default:
                         break;
@@ -121,7 +135,12 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         logOperationExecutionResults(getSupportedActionType(), operationExecutionResultList);
 
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
-        updateTokenMessageContext(tokenMessageContext, responseAccessToken);
+
+        RefreshToken responseRefreshToken = optionalResponseRefreshTokenBuilder
+                .map(RefreshToken.Builder::build)
+                .orElse(null);
+
+        updateTokenMessageContext(tokenMessageContext, responseAccessToken, responseRefreshToken);
 
         return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();
     }
@@ -230,7 +249,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
     }
 
     private void updateTokenMessageContext(OAuthTokenReqMessageContext tokenMessageContext,
-                                           AccessToken responseAccessToken) {
+                                           AccessToken responseAccessToken, RefreshToken responseRefreshToken) {
 
         tokenMessageContext.setScope(responseAccessToken.getScopes().toArray(new String[0]));
 
@@ -240,6 +259,15 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                 .findFirst()
                 .map(claim -> Long.parseLong(claim.getValue().toString()) * 1000)
                 .ifPresent(tokenMessageContext::setValidityPeriod);
+
+        if (responseRefreshToken != null) {
+            String expiresInClaimNameRefreshToken = AbstractToken.ClaimNames.EXPIRES_IN.getName();
+            responseRefreshToken.getClaims().stream()
+                    .filter(claim -> expiresInClaimNameRefreshToken.equals(claim.getName()))
+                    .findFirst()
+                    .map(claim -> TimeUnit.SECONDS.toMillis(Long.parseLong(claim.getValue().toString())))
+                    .ifPresent(tokenMessageContext::setRefreshTokenValidityPeriodInMillis);
+        }
 
         Optional.ofNullable(responseAccessToken.getClaim(AccessToken.ClaimNames.AUD.getName()))
                 .map(AccessToken.Claim::getValue)
@@ -269,7 +297,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
             return addScope(operation, responseAccessToken);
-        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
+        } else if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX)) {
             return addClaim(operation, requestAccessToken, responseAccessToken);
         }
 
@@ -311,7 +339,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     "Claims not found.");
         }
 
-        if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
+        if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
             return addAudience(operation, requestAccessToken, responseAccessToken);
         } else {
             return addToOtherClaims(operation, requestAccessToken, responseAccessToken);
@@ -399,7 +427,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
             return removeScope(operation, requestAccessToken, responseAccessToken);
-        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
+        } else if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX)) {
             return removeClaim(operation, requestAccessToken, responseAccessToken);
         }
 
@@ -442,7 +470,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     "No claims to remove.");
         }
 
-        if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
+        if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
             return removeAudience(operation, requestAccessToken, responseAccessToken);
         } else {
             return removeOtherClaims(operation, requestAccessToken, responseAccessToken);
@@ -545,17 +573,20 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
     }
 
-    private OperationExecutionResult handleReplaceOperation(PerformableOperation operation,
-                                                            AccessToken requestAccessToken,
-                                                            AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult handleReplaceOperation(PerformableOperation operation, AbstractToken token,
+                                                            AbstractToken.AbstractBuilder<?> tokenBuilder) {
 
-        if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
-            return replaceScope(operation, requestAccessToken, responseAccessToken);
-        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX)) {
-            return replaceClaim(operation, requestAccessToken, responseAccessToken);
+        if (token instanceof AccessToken) {
+            if (operation.getPath().startsWith(SCOPE_PATH_PREFIX)) {
+                return replaceScope(operation, (AccessToken) token, (AccessToken.Builder) tokenBuilder);
+            } else if (operation.getPath().startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX)) {
+                return replaceClaim(operation, token, tokenBuilder);
+            }
+        } else if (token instanceof RefreshToken && operation.getPath().startsWith(REFRESH_TOKEN_CLAIMS_PATH_PREFIX)) {
+            return replaceClaim(operation, token, tokenBuilder);
         }
-        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
-                "Unknown path.");
+
+        return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE, "Unknown path.");
     }
 
     private OperationExecutionResult replaceScope(PerformableOperation operation, AccessToken requestAccessToken,
@@ -590,27 +621,32 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS, "Scope replaced.");
     }
 
-    private OperationExecutionResult replaceClaim(PerformableOperation operation, AccessToken requestAccessToken,
-                                                  AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult replaceClaim(PerformableOperation operation, AbstractToken token,
+                                                  AbstractToken.AbstractBuilder<?> tokenBuilder) {
 
-        List<AccessToken.Claim> claims = requestAccessToken.getClaims();
+        List<AccessToken.Claim> claims = token.getClaims();
 
         if (claims == null || claims.isEmpty()) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                     "No claims to replace.");
         }
 
-        if (operation.getPath().equals(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName())) {
-            return replaceExpiresIn(operation, responseAccessToken);
-        } else if (operation.getPath().startsWith(CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
-            return replaceAudience(operation, requestAccessToken, responseAccessToken);
+        if (operation.getPath()
+                .equals(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AbstractToken.ClaimNames.EXPIRES_IN.getName()) ||
+                operation.getPath()
+                        .equals(REFRESH_TOKEN_CLAIMS_PATH_PREFIX + AbstractToken.ClaimNames.EXPIRES_IN.getName())) {
+            return replaceExpiresIn(operation, tokenBuilder);
+        } else if (operation.getPath()
+                .startsWith(ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName())) {
+            return replaceAudience(operation, (AccessToken) token,
+                    (AccessToken.Builder) tokenBuilder);
         } else {
-            return replaceOtherClaims(operation, requestAccessToken, responseAccessToken);
+            return replaceOtherClaims(operation, token, tokenBuilder);
         }
     }
 
     private OperationExecutionResult replaceExpiresIn(PerformableOperation operation,
-                                                      AccessToken.Builder responseAccessToken) {
+                                                      AbstractToken.AbstractBuilder<?> tokenBuilder) {
 
         long expiresIn;
         try {
@@ -625,18 +661,18 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     "Invalid expiry time. Must be positive.");
         }
 
-        responseAccessToken.getClaims().removeIf(
-                claim -> claim.getName().equals(AccessToken.ClaimNames.EXPIRES_IN.getName()));
-        responseAccessToken.addClaim(AccessToken.ClaimNames.EXPIRES_IN.getName(), expiresIn);
+        tokenBuilder.getClaims().removeIf(
+                claim -> claim.getName().equals(AbstractToken.ClaimNames.EXPIRES_IN.getName()));
+        tokenBuilder.addClaim(AbstractToken.ClaimNames.EXPIRES_IN.getName(), expiresIn);
         return new OperationExecutionResult(operation, OperationExecutionResult.Status.SUCCESS,
                 "Expiry time updated.");
     }
 
-    private OperationExecutionResult replaceOtherClaims(PerformableOperation operation, AccessToken requestAccessToken,
-                                                        AccessToken.Builder responseAccessToken) {
+    private OperationExecutionResult replaceOtherClaims(PerformableOperation operation, AbstractToken token,
+                                                        AbstractToken.AbstractBuilder<?> tokenBuilder) {
 
         ClaimPathInfo claimPathInfo = parseOperationPath(operation.getPath());
-        AccessToken.Claim claim = requestAccessToken.getClaim(claimPathInfo.getClaimName());
+        AccessToken.Claim claim = token.getClaim(claimPathInfo.getClaimName());
 
         if (claim == null) {
             return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
@@ -644,16 +680,16 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         }
 
         if (claimPathInfo.getIndex() != -1) {
-            return replaceClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim, responseAccessToken);
+            return replaceClaimValueAtIndexFromArrayTypeClaim(operation, claimPathInfo, claim, tokenBuilder);
         } else {
-            return replacePrimitiveTypeClaim(operation, claimPathInfo, responseAccessToken);
+            return replacePrimitiveTypeClaim(operation, claimPathInfo, tokenBuilder);
         }
     }
 
     private OperationExecutionResult replaceClaimValueAtIndexFromArrayTypeClaim(PerformableOperation operation,
                                                                                 ClaimPathInfo claimPathInfo,
                                                                                 AccessToken.Claim claim,
-                                                                                AccessToken.Builder
+                                                                                AbstractToken.AbstractBuilder<?>
                                                                                         responseAccessToken) {
 
         if (!(claim.getValue() instanceof List)) {
@@ -688,7 +724,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
     private OperationExecutionResult replacePrimitiveTypeClaim(PerformableOperation operation,
                                                                ClaimPathInfo claimPathInfo,
-                                                               AccessToken.Builder responseAccessToken) {
+                                                               AbstractToken.AbstractBuilder<?> responseAccessToken) {
 
         boolean claimRemoved = responseAccessToken.getClaims()
                 .removeIf(claim -> claim.getName().equals(claimPathInfo.getClaimName()));

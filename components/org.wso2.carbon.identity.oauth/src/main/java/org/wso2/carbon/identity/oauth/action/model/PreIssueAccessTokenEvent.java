@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -33,10 +33,12 @@ import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 public class PreIssueAccessTokenEvent extends Event {
 
     private final AccessToken accessToken;
+    private final RefreshToken refreshToken;
 
     private PreIssueAccessTokenEvent(Builder builder) {
 
         this.accessToken = builder.accessToken;
+        this.refreshToken = builder.refreshToken;
         this.request = builder.request;
         this.organization = builder.organization;
         this.tenant = builder.tenant;
@@ -49,12 +51,18 @@ public class PreIssueAccessTokenEvent extends Event {
         return accessToken;
     }
 
+    public RefreshToken getRefreshToken() {
+
+        return refreshToken;
+    }
+
     /**
      * Builder for the PreIssueAccessTokenEvent.
      */
     public static class Builder {
 
         private AccessToken accessToken;
+        private RefreshToken refreshToken;
         private Request request;
         private Organization organization;
         private Tenant tenant;
@@ -65,6 +73,12 @@ public class PreIssueAccessTokenEvent extends Event {
         public Builder accessToken(AccessToken accessToken) {
 
             this.accessToken = accessToken;
+            return this;
+        }
+
+        public Builder refreshToken(RefreshToken refreshToken) {
+
+            this.refreshToken = refreshToken;
             return this;
         }
 

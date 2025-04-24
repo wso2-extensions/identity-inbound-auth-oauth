@@ -788,7 +788,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // If issuing new refresh token, use default refresh token validity Period
         // otherwise use existing refresh token's validity period
         long validityPeriodFromMsgContext = tokenReqMessageContext.getRefreshTokenvalidityPeriod();
-        // Priority given to the validity period mentioned in the OAuthTokenReqMessageContext
+        /*
+        Gives priority to the refresh token validity period specified in OAuthTokenReqMessageContext,
+         in the following order:
+         1. Set by a custom refresh grant handler.
+         2. Overridden by pre-issue access token action execution.
+         */
         if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
                 && validityPeriodFromMsgContext > 0) {
             refreshTokenValidityPeriod = validityPeriodFromMsgContext *
@@ -798,6 +803,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                         "validity period configured from OAuthTokenReqMessageContext: " +
                         refreshTokenValidityPeriod + " ms");
             }
+        } else if (tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis() > 0) {
+            refreshTokenValidityPeriod = tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis();
         } else if (refreshTokenValidityPeriod == 0) {
             if (oAuthAppDO.getRefreshTokenExpiryTime() != 0) {
                 refreshTokenValidityPeriod = oAuthAppDO.getRefreshTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
@@ -910,7 +917,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             tokenRequestContext.setAudiences(grantCacheEntry.getAudiences());
             log.debug("Updated OAuthTokenReqMessageContext with customized audience list and access token" +
                     " attributes in the AuthorizationGrantCache for token id: " + refreshTokenData.getTokenId());
-
+            tokenRequestContext.setRefreshTokenValidityPeriodInMillis(
+                    TimeUnit.NANOSECONDS.toMillis(grantCacheEntry.getValidityPeriod()));
             AuthorizationGrantCache.getInstance().clearCacheEntryByToken(grantCacheKey);
         }
     }

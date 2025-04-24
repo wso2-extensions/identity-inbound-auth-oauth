@@ -128,6 +128,43 @@ public class RefreshTokenExpiryTest {
         assertEquals(tokReqMsgCtx.getRefreshTokenvalidityPeriod(), refreshTokenExpiryInSecondsInDB * 1000);
     }
 
+    @Test
+    public void testRefreshTokenExpiryAtRefreshGrantPreIssueAccessTokenActionEnabled() throws Exception {
+
+        CarbonConstants.ENABLE_LEGACY_AUTHZ_RUNTIME = false;
+
+        OAuth2AccessTokenReqDTO tokenReq = mock(OAuth2AccessTokenReqDTO.class);
+        when(tokenReq.getClientId()).thenReturn("ca19a540f544777860e44e75f605d927");
+        when(tokenReq.getGrantType()).thenReturn(REFRESH_TOKEN);
+
+        AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
+        when(authenticatedUser.getTenantDomain()).thenReturn("carbon.super");
+        when(authenticatedUser.getUserId()).thenReturn("user-id");
+
+        OAuthTokenReqMessageContext tokReqMsgCtx = spy(new OAuthTokenReqMessageContext(tokenReq));
+        String[] scopeArray = new String[]{"openid", "profile"};
+        tokReqMsgCtx.setScope(scopeArray);
+        tokReqMsgCtx.setAuthorizedUser(authenticatedUser);
+
+        RefreshTokenValidationDataDO validationBean = new RefreshTokenValidationDataDO();
+        validationBean.setAccessTokenValidityInMillis(3600000L);
+        validationBean.setIssuedTime(Timestamp.from(Instant.now()));
+        validationBean.setAuthorizedUser(authenticatedUser);
+        validationBean.setGrantType(REFRESH_TOKEN);
+
+        tokReqMsgCtx.addProperty(PREV_ACCESS_TOKEN, validationBean);
+
+        ActionExecutorService actionExecutorService = mock(ActionExecutorService.class);
+        when(actionExecutorService.isExecutionEnabled(ActionType.PRE_ISSUE_ACCESS_TOKEN)).thenReturn(false);
+        OAuthComponentServiceHolder.getInstance().setActionExecutorService(actionExecutorService);
+
+        RefreshGrantHandler refreshGrantHandler = spy(new RefreshGrantHandler());
+        refreshGrantHandler.init();
+        OAuth2AccessTokenRespDTO refreshTokenDTO = refreshGrantHandler.issue(tokReqMsgCtx);
+        assertNotNull(refreshTokenDTO);
+        assertEquals(tokReqMsgCtx.getRefreshTokenvalidityPeriod(), refreshTokenExpiryInSecondsInDB * 1000);
+    }
+
     private static class MockAuthzGrantHandler extends AbstractAuthorizationGrantHandler {
 
     }
