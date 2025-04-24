@@ -61,6 +61,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.OPENID_SCOPE;
 
@@ -106,6 +108,7 @@ public class DefaultOAuth2ScopeValidator {
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
                         .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
+        handleImpersonationScope(authzReqMessageContext, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
         return authorizedScopes;
     }
@@ -147,11 +150,68 @@ public class DefaultOAuth2ScopeValidator {
                 .getAuthorizedUser(), appId, grantType, userType, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
+         handleImpersonationScope(tokenReqMessageContext, authorizedScopes);
         if (OAuthConstants.GrantTypes.CLIENT_CREDENTIALS.equals(grantType)) {
             authorizedScopes.remove(INTERNAL_LOGIN_SCOPE);
             authorizedScopes.remove(OPENID_SCOPE);
         }
         return authorizedScopes;
+    }
+
+    /**
+     * Handles the impersonation scope during scope validation.
+     * Below operations will be performed based on what flow the scope validation has got triggered.
+     * 1. Impersonation validation flow (validation in progress),
+     *    the impersonation scope is allowed if authorized.
+     * 2. Impersonation validated flow:
+     *    - Injects the impersonation scope if it is not already included.
+     *    - Removes the impersonation scope if it is not an impersonated request flow.
+     *
+     * @param authzReqMessageContext The OAuth authorization request message context.
+     * @param authorizedScopes       The list of authorized scopes.
+     */
+    private void handleImpersonationScope(OAuthAuthzReqMessageContext authzReqMessageContext,
+                                          List<String> authorizedScopes) {
+
+        boolean impersonationValidationRequest = false;
+        if (authzReqMessageContext.getProperty(IMPERSONATION_VALIDATION_REQUEST) != null) {
+            impersonationValidationRequest = (boolean)
+                    authzReqMessageContext.getProperty(IMPERSONATION_VALIDATION_REQUEST);
+        }
+        if (impersonationValidationRequest) {
+            return;
+        }
+
+        boolean impersonationRequest = authzReqMessageContext.isImpersonationRequest();
+        if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+            authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
+        } else {
+            authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
+        }
+    }
+
+    /**
+     * Handles the impersonation scope during scope validation.
+     * Below operations will be performed based on what flow the scope validation has got triggered.
+     * 1. Impersonation validation flow (validation in progress),
+     *    - Invalid use case.
+     *    - Impersonation cannot be initiated from the token endpoint. Therefore, this validation is skipped.
+     * 2. Impersonation validated flow:
+     *    - Injects the impersonation scope if it is not already included.
+     *    - Removes the impersonation scope if it is not an impersonated request flow.
+     *
+     * @param tokenReqMessageContext The OAuth token request message context.
+     * @param authorizedScopes       The list of authorized scopes.
+     */
+    private void handleImpersonationScope(OAuthTokenReqMessageContext tokenReqMessageContext,
+                                          List<String> authorizedScopes) {
+
+        boolean impersonationRequest = tokenReqMessageContext.isImpersonationRequest();
+        if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+            authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
+        } else {
+            authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
+        }
     }
 
     /**

@@ -235,6 +235,7 @@ import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CL
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager.OAUTH_APP_PROPERTY;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.DYNAMIC_TOKEN_DATA_FUNCTION;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.AUTH_TIME;
@@ -1328,6 +1329,7 @@ public class OAuth2AuthzEndpoint {
             // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
             OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
                     oauth2Params, sessionContext, authnResult);
+            authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, true);
             ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
             if (impersonationContext.isValidated()) {
                 /* Used in two places.
@@ -1335,6 +1337,7 @@ public class OAuth2AuthzEndpoint {
                     2. When generating additional claims for implicit & hybrid flows. */
                 String impersonator = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
                 oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
+                authzReqMsgCtx.setImpersonationRequest(true);
                 // Set AuthenticationResult authenticated user as impersonatee.
                 AuthenticatedUser impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject,
                         impersonationContext.getImpersonationRequestDTO().getTenantDomain(),
@@ -1342,21 +1345,22 @@ public class OAuth2AuthzEndpoint {
                 authnResult.setSubject(impersonatedUser);
             } else {
                 removeImpersonationScope(impersonationContext);
+                authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
             }
         }
     }
 
     private void handleInitImpersonationRequest(String impersonatedSubject, OAuthMessage oAuthMessage)
-            throws OAuthProblemException {
+            throws IdentityOAuth2Exception {
 
         // Block performing impersonation for an impersonated session.
         if (StringUtils.isNotBlank(impersonatedSubject)
                 && oAuthMessage.getRequest().getParameterMap() != null) {
             String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
             if (requestedSubject != null && !Objects.equals(requestedSubject, impersonatedSubject)) {
-                log.debug("Cannot perform impersonation on more than one user in the same session.");
-                throw OAuthProblemException.error(OAuth2ErrorCodes.INVALID_REQUEST,
-                        "Cannot perform impersonation on more than one user in the same session.");
+                String errorMsg = "Cannot perform impersonation on more than one user in the same session.";
+                log.debug(errorMsg);
+                throw new IdentityOAuth2Exception(errorMsg);
             }
         }
     }
@@ -1397,8 +1401,7 @@ public class OAuth2AuthzEndpoint {
         ImpersonationMgtService impersonationMgtService = OAuth2ServiceComponentHolder.getInstance()
                 .getImpersonationMgtService();
 
-        return impersonationMgtService.validateImpersonationRequest(
-                buildImpersonationRequestDTO(authzReqMsgCtx));
+        return impersonationMgtService.validateImpersonationRequest(buildImpersonationRequestDTO(authzReqMsgCtx));
     }
 
     private OAuthAuthzReqMessageContext getOAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authzReqDTO)
