@@ -791,12 +791,10 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         /*
         Gives priority to the refresh token validity period specified in OAuthTokenReqMessageContext,
          in the following order:
-         1. Overridden by pre-issue access token action execution.
-         2. Set by a custom refresh grant handler.
+         1. Set by a custom refresh grant handler.
+         2. Overridden by pre-issue access token action execution.
          */
-        if (tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis() > 0) {
-            refreshTokenValidityPeriod = tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis();
-        } else if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
+        if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD
                 && validityPeriodFromMsgContext > 0) {
             refreshTokenValidityPeriod = validityPeriodFromMsgContext *
                     SECONDS_TO_MILISECONDS_FACTOR;
@@ -805,6 +803,8 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
                         "validity period configured from OAuthTokenReqMessageContext: " +
                         refreshTokenValidityPeriod + " ms");
             }
+        } else if (tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis() > 0) {
+            refreshTokenValidityPeriod = tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis();
         } else if (refreshTokenValidityPeriod == 0) {
             if (oAuthAppDO.getRefreshTokenExpiryTime() != 0) {
                 refreshTokenValidityPeriod = oAuthAppDO.getRefreshTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
