@@ -22,6 +22,9 @@ import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 
 import javax.servlet.http.HttpServletRequestWrapper;
 
+/**
+ * OAuth2 authorize-challenge request DTO.
+ */
 public class OAuth2AuthzChallengeReqDTO {
 
     private String authSession;

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth2.authzChallenge.event;
+package org.wso2.carbon.identity.oauth2.authzchallenge.event;
 
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.handler.IdentityHandler;
