@@ -121,7 +121,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
 
-        // Retrieving app information here to reduce the perf overhead.
         OAuthAppDO oAuthAppDO = getAppInformation(tokenMessageContext);
 
         eventBuilder.accessToken(getAccessToken(tokenMessageContext, oAuthAppDO, claimsToAdd));
@@ -156,7 +155,6 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         RefreshToken.Builder refreshTokenBuilder = new RefreshToken.Builder()
                 .addClaim(RefreshToken.ClaimNames.EXPIRES_IN.getName(), refreshTokenValidityPeriod);
 
-        // Adding this claim to improve the user experience only when existing refresh token is reused.
         if (refreshTokenIssuedAt > -1) {
             refreshTokenBuilder.addClaim(AbstractToken.ClaimNames.IAT.getName(), refreshTokenIssuedAt);
         }
