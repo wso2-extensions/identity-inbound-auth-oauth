@@ -168,7 +168,6 @@ public class ApiAuthnHandler {
                     if (MapUtils.isNotEmpty(authenticatorData.getMessage().getContext())) {
                         message.setContext(buildMessageContext(authenticatorData.getMessage().getContext()));
                     }
-                    message.setContext(buildMessageContext(authenticatorData.getMessage().getContext()));
                     messages.add(message);
                 }
             }

@@ -82,6 +82,8 @@ import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeReq
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtService;
+import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonatorPermissionValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
@@ -413,6 +415,8 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ImpersonationValidator.class, new ImpersonatorPermissionValidator(), null);
             bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
+            bundleContext.registerService(ImpersonationNotificationMgtService.class,
+                    new ImpersonationNotificationMgtServiceImpl(), null);
 
             bundleContext.registerService(AccessTokenResponseHandler.class, new AccessTokenResponseRARHandler(), null);
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,

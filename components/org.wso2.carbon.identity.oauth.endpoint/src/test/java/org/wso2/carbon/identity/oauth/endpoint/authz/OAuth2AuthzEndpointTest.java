@@ -18,14 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.authz;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.crypto.bc.BouncyCastleProviderSingleton;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.PlainJWT;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.axis2.transport.http.HTTPConstants;
 import org.apache.commons.collections.CollectionUtils;
@@ -117,7 +110,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
-import org.wso2.carbon.identity.oauth2.RequestObjectException;
 import org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -140,16 +132,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.Key;
 import java.security.KeyStore;
-import java.security.interfaces.RSAPrivateKey;
 import java.sql.Connection;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -315,7 +303,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     private KeyStore clientKeyStore;
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
-    private String carbonHome;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -324,7 +311,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 CarbonBaseConstants.CARBON_HOME,
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
                           );
-        carbonHome = System.getProperty(CarbonBaseConstants.CARBON_HOME);
         oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
 
         initiateInMemoryH2();
@@ -1175,7 +1161,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     /**
-     * Tests the scenario of authorization request from the client
+     * Tests the scenario of authorization request from the client.
      */
     @Test(dataProvider = "provideAuthzRequestData", groups = "testWithConnection")
     public void testHandleOAuthAuthorizationRequest(String clientId, String redirectUri, String pkceChallengeCode,
@@ -1927,7 +1913,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     public void setupKeystore() throws Exception {
 
         clientKeyStore = getKeyStoreFromFile("testkeystore.jks", "wso2carbon",
-                carbonHome);
+                System.getProperty(CarbonBaseConstants.CARBON_HOME));
     }
 
     private static KeyStore getKeyStoreFromFile(String keystoreName, String password, String home) throws Exception {
@@ -1937,57 +1923,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
         keystore.load(file, password.toCharArray());
         return keystore;
-    }
-
-    private static String buildJWTWithExpiry(String issuer, String subject, String jti, String audience, String
-            algorithm, Key privateKey, long notBeforeMillis, Map<String, Object> claims, long lifetimeInMillis)
-            throws RequestObjectException {
-
-        JWTClaimsSet jwtClaimsSet = getJwtClaimsSet(issuer, subject, jti, audience, notBeforeMillis, claims,
-                lifetimeInMillis);
-        if (JWSAlgorithm.NONE.getName().equals(algorithm)) {
-            return new PlainJWT(jwtClaimsSet).serialize();
-        }
-
-        return signJWTWithRSA(jwtClaimsSet, privateKey, JWSAlgorithm.parse(algorithm));
-    }
-
-    private static String signJWTWithRSA(JWTClaimsSet jwtClaimsSet, Key privateKey, JWSAlgorithm jwsAlgorithm)
-            throws RequestObjectException {
-
-        try {
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
-            SignedJWT signedJWT = new SignedJWT(new JWSHeader(jwsAlgorithm), jwtClaimsSet);
-            signer.getJCAContext().setProvider(BouncyCastleProviderSingleton.getInstance());
-            signedJWT.sign(signer);
-            return signedJWT.serialize();
-        } catch (JOSEException e) {
-            throw new RequestObjectException("error_signing_jwt", "Error occurred while signing JWT.");
-        }
-    }
-
-    private static JWTClaimsSet getJwtClaimsSet(String issuer, String subject, String jti, String audience, long
-            notBeforeMillis, Map<String, Object> claims, long lifetimeInMillis) {
-
-        long curTimeInMillis = Calendar.getInstance().getTimeInMillis();
-        // Set claims to jwt token.
-        JWTClaimsSet.Builder jwtClaimsSetBuilder = new JWTClaimsSet.Builder();
-        jwtClaimsSetBuilder.issuer(issuer);
-        jwtClaimsSetBuilder.subject(subject);
-        jwtClaimsSetBuilder.audience(Arrays.asList(audience));
-        jwtClaimsSetBuilder.jwtID(jti);
-        jwtClaimsSetBuilder.expirationTime(new Date((curTimeInMillis + lifetimeInMillis)));
-        jwtClaimsSetBuilder.issueTime(new Date(curTimeInMillis));
-
-        if (notBeforeMillis > 0) {
-            jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis + notBeforeMillis));
-        }
-        if (claims != null && !claims.isEmpty()) {
-            for (Map.Entry entry : claims.entrySet()) {
-                jwtClaimsSetBuilder.claim(entry.getKey().toString(), entry.getValue());
-            }
-        }
-        return jwtClaimsSetBuilder.build();
     }
 
     private void mockHttpRequest(final Map<String, String[]> requestParams,
@@ -2199,7 +2134,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
                 .thenReturn(new ConsentClaimsData());
         when(mockedSSOConsentService
                 .getConsentRequiredClaimsWithoutExistingConsents(any(ServiceProvider.class),
-                any(AuthenticatedUser.class))).thenReturn(new ConsentClaimsData());
+                        any(AuthenticatedUser.class))).thenReturn(new ConsentClaimsData());
 
         when(mockedSSOConsentService.isSSOConsentManagementEnabled(any())).thenReturn(isConsentMgtEnabled);
     }

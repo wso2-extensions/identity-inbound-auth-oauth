@@ -73,6 +73,7 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
             Pattern.compile("^([a-zA-Z][a-zA-Z0-9+.-]*://[^\\s/$.?#].\\S*)|(^[a-zA-Z0-9.-]+$)");
     private static final String LAST_ELEMENT_CHARACTER = "-";
     private static final char PATH_SEPARATOR = '/';
+    private static final String SCOPE_PROPERTY_NAME = "scope";
 
     @Override
     public ActionType getSupportedActionType() {
@@ -369,7 +370,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         ObjectMapper objectMapper = new ObjectMapper();
         try {
             AccessToken.Claim claim = objectMapper.convertValue(claimToAdd, AccessToken.Claim.class);
-            if (requestAccessToken.getClaim(claim.getName()) != null) {
+            if (SCOPE_PROPERTY_NAME.equalsIgnoreCase(claim.getName())) {
+                return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
+                        "The operation path is invalid for the scope. Please use the path " + SCOPE_PATH_PREFIX);
+            } else if (requestAccessToken.getClaim(claim.getName()) != null) {
                 return new OperationExecutionResult(operation, OperationExecutionResult.Status.FAILURE,
                         "An access token claim already exists.");
             }

@@ -147,6 +147,7 @@ import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDC_DIALECT;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.getIdTokenIssuer;
+import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.mapSignatureAlgorithmForJWSAlgorithm;
 import static org.wso2.carbon.identity.openidconnect.util.TestUtils.getKeyStoreFromFile;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 import static org.wso2.carbon.utils.multitenancy.MultitenantConstants.SUPER_TENANT_ID;
@@ -172,6 +173,23 @@ public class OAuth2UtilTest {
     private Timestamp refreshTokenIssuedTime;
     private long validityPeriodInMillis;
     private long refreshTokenValidityPeriodInMillis;
+
+    // Signature algorithms.
+    private static final String NONE = "NONE";
+    private static final String SHA256_WITH_RSA = "SHA256withRSA";
+    private static final String SHA384_WITH_RSA = "SHA384withRSA";
+    private static final String SHA512_WITH_RSA = "SHA512withRSA";
+    private static final String SHA256_WITH_HMAC = "SHA256withHMAC";
+    private static final String SHA384_WITH_HMAC = "SHA384withHMAC";
+    private static final String SHA512_WITH_HMAC = "SHA512withHMAC";
+    private static final String SHA256_WITH_EC = "SHA256withEC";
+    private static final String SHA384_WITH_EC = "SHA384withEC";
+    private static final String SHA512_WITH_EC = "SHA512withEC";
+    private static final String SHA256_WITH_PS = "SHA256withPS";
+    private static final String RS384 = "RS384";
+    private static final String ES256 = "ES256";
+    private static final String PS256 = "PS256";
+    private static final String ES384 = "ES384";
 
     @Mock
     private OAuthServerConfiguration oauthServerConfigurationMock;
@@ -3019,5 +3037,32 @@ public class OAuth2UtilTest {
         lenient().when(organizationManagerMock.resolveTenantDomain("application-resident-org-id")).
                 thenThrow(OrganizationManagementException.class);
         OAuth2Util.getAppResidentTenantDomain();
+    }
+    @DataProvider(name = "signatureAlgorithmProvider")
+    public Object[][] provideSignatureAlgorithm() {
+        return new Object[][]{
+                {NONE, JWSAlgorithm.NONE},
+                {SHA256_WITH_RSA, JWSAlgorithm.RS256},
+                {SHA384_WITH_RSA, JWSAlgorithm.RS384},
+                {RS384, JWSAlgorithm.RS384},
+                {SHA512_WITH_RSA, JWSAlgorithm.RS512},
+                {SHA256_WITH_HMAC, JWSAlgorithm.HS256},
+                {SHA384_WITH_HMAC, JWSAlgorithm.HS384},
+                {SHA512_WITH_HMAC, JWSAlgorithm.HS512},
+                {SHA256_WITH_EC, JWSAlgorithm.ES256},
+                {ES256, JWSAlgorithm.ES256},
+                {SHA384_WITH_EC, JWSAlgorithm.ES384},
+                {ES384, JWSAlgorithm.ES384},
+                {SHA512_WITH_EC, JWSAlgorithm.ES512},
+                {SHA256_WITH_PS, JWSAlgorithm.PS256},
+                {PS256, JWSAlgorithm.PS256}
+        };
+    }
+
+    @Test(dataProvider = "signatureAlgorithmProvider")
+    public void testMapSignatureAlgorithmForJWSAlgorithm(String signatureAlgo,
+                                                         Object expectedNimbusdsAlgorithm) throws Exception {
+        JWSAlgorithm actual = mapSignatureAlgorithmForJWSAlgorithm(signatureAlgo);
+        Assert.assertEquals(actual, expectedNimbusdsAlgorithm);
     }
 }

@@ -30,6 +30,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.User;
@@ -683,8 +684,79 @@ public class OAuth2ServiceTest {
             setPrivateField(oAuthTokenPersistenceFactory, "managementDAO", mockTokenManagementDAOImpl);
             AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
             setPrivateField(oAuthTokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
-            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(anyInt())).thenReturn(
-                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(3);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(3)).thenReturn("myorg");
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
+
+            OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
+            oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO);
+            assertFalse(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).isError());
+        }
+    }
+
+    @Test
+    public void testRevokeTokenByOAuthClientWithAccessTokenAndAppResidentOrgId() throws Exception {
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            setUpRevokeToken(oAuthComponentServiceHolder, oAuth2Util, oAuthUtil);
+            AccessTokenDO accessTokenDO = getAccessToken();
+            TokenBinding tokenBinding = new TokenBinding();
+            tokenBinding.setBindingReference("dummyReference");
+            accessTokenDO.setTokenBinding(tokenBinding);
+            accessTokenDO.setTenantID(3);
+            when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+
+            OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
+            TokenManagementDAOImpl mockTokenManagementDAOImpl = mock(TokenManagementDAOImpl.class);
+            setPrivateField(oAuthTokenPersistenceFactory, "managementDAO", mockTokenManagementDAOImpl);
+            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+            setPrivateField(oAuthTokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(3)).thenReturn("myorg");
+
+            OAuthAppDO oAuthAppDO = new OAuthAppDO();
+            when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);
+
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId("1234");
+
+            OAuthRevocationRequestDTO revokeRequestDTO = getOAuthRevocationRequestDTO();
+            oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO);
+            assertFalse(oAuth2Service.revokeTokenByOAuthClient(revokeRequestDTO).isError());
+        } finally {
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setApplicationResidentOrganizationId(null);
+        }
+    }
+
+    @Test
+    public void testRevokeTokenByOAuthClientWithAccessTokenForSubOrgFederatedLogin() throws Exception {
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<OAuthUtil> oAuthUtil = mockStatic(OAuthUtil.class);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
+            setUpRevokeToken(oAuthComponentServiceHolder, oAuth2Util, oAuthUtil);
+            AccessTokenDO accessTokenDO = getAccessToken();
+            TokenBinding tokenBinding = new TokenBinding();
+            tokenBinding.setBindingReference("dummyReference");
+            accessTokenDO.setTokenBinding(tokenBinding);
+            // Access token has the sub org tenant id.
+            accessTokenDO.setTenantID(5);
+            when(OAuth2Util.findAccessToken(anyString(), anyBoolean())).thenReturn(accessTokenDO);
+
+            OAuthTokenPersistenceFactory oAuthTokenPersistenceFactory = OAuthTokenPersistenceFactory.getInstance();
+            TokenManagementDAOImpl mockTokenManagementDAOImpl = mock(TokenManagementDAOImpl.class);
+            setPrivateField(oAuthTokenPersistenceFactory, "managementDAO", mockTokenManagementDAOImpl);
+            AccessTokenDAO mockAccessTokenDAO = mock(AccessTokenDAO.class);
+            setPrivateField(oAuthTokenPersistenceFactory, "tokenDAO", mockAccessTokenDAO);
+            // Login tenant should be set to parent org tenant id.
+            identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(3);
+            identityTenantUtil.when(() -> IdentityTenantUtil.getTenantDomain(3)).thenReturn("myorg");
 
             OAuthAppDO oAuthAppDO = new OAuthAppDO();
             when(OAuth2Util.getAppInformationByClientId(anyString(), anyString())).thenReturn(oAuthAppDO);

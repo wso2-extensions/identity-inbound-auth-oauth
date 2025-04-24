@@ -6,7 +6,7 @@
  * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -286,7 +286,7 @@ public class AuthzUtil {
      * @param authenticationResult The authentication result of authorization call.
      */
     private static void addFederatedTokensToSessionCache(OAuthMessage oAuthMessage,
-                                                  AuthenticationResult authenticationResult) {
+                                                         AuthenticationResult authenticationResult) {
 
         if (!(authenticationResult.getProperty(FrameworkConstants.FEDERATED_TOKENS) instanceof List)) {
             return;
@@ -313,7 +313,7 @@ public class AuthzUtil {
      * @param authenticationResult The authentication result of authorization call.
      */
     private static void addMappedRemoteClaimsToSessionCache(OAuthMessage oAuthMessage,
-                                                  AuthenticationResult authenticationResult) {
+                                                            AuthenticationResult authenticationResult) {
 
         Optional<Map<String, String>> mappedRemoteClaims = authenticationResult.getMappedRemoteClaims();
         if (!mappedRemoteClaims.isPresent()) {
@@ -380,8 +380,8 @@ public class AuthzUtil {
         OAuth2Parameters oAuth2Parameters = getOAuth2ParamsFromOAuthMessage(oAuthMessage);
         return Response.status(HttpServletResponse.SC_FOUND).location(new URI(getErrorPageURL
                 (oAuthMessage.getRequest(), OAuth2ErrorCodes.INVALID_REQUEST, OAuth2ErrorCodes.OAuth2SubErrorCodes
-                        .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
-                oAuth2Parameters))).build();
+                                .INVALID_AUTHORIZATION_REQUEST, "Invalid authorization request", null,
+                        oAuth2Parameters))).build();
     }
 
     public static void handleCachePersistence(OAuthMessage oAuthMessage) {
@@ -607,7 +607,7 @@ public class AuthzUtil {
      * @return true if response mode is form_post with errors
      */
     private static boolean isFormPostWithErrors(AuthorizationResponseDTO authorizationResponseDTO,
-                                         ResponseModeProvider responseModeProvider) {
+                                                ResponseModeProvider responseModeProvider) {
         return authorizationResponseDTO.isError() &&
                 (ResponseModeProvider.AuthResponseType.POST_RESPONSE.equals
                         (responseModeProvider.getAuthResponseType()))
@@ -828,6 +828,7 @@ public class AuthzUtil {
                 getSSOConsentService().processConsent(approvedClaimIds, serviceProvider,
                         loggedInUser, value, false);
             }
+
         } catch (OAuthSystemException | SSOConsentServiceException e) {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -865,10 +866,11 @@ public class AuthzUtil {
             throw new ConsentHandlingFailedException("Error while getting essential claims for the session data key " +
                     ": " + oauth2Params.getSessionDataKey(), e);
         }
+
     }
 
     private static ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
-                                                       OAuth2Parameters oAuth2Parameters)
+                                                              OAuth2Parameters oAuth2Parameters)
             throws SSOConsentServiceException {
 
         if (hasPromptContainsConsent(oAuth2Parameters)) {
@@ -948,7 +950,7 @@ public class AuthzUtil {
     }
 
     private static void manageOIDCSessionState(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                        AuthorizationResponseDTO authorizationResponseDTO) {
+                                               AuthorizationResponseDTO authorizationResponseDTO) {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         boolean isOIDCRequest = OAuth2Util.isOIDCAuthzRequest(oauth2Params.getScopes());
@@ -963,9 +965,9 @@ public class AuthzUtil {
     }
 
     private static void handleFormPostResponseMode(OAuthMessage oAuthMessage,
-                                            OIDCSessionState sessionState,
-                                            AuthorizationResponseDTO authorizationResponseDTO,
-                                            AuthenticatedUser authenticatedUser) {
+                                                   OIDCSessionState sessionState,
+                                                   AuthorizationResponseDTO authorizationResponseDTO,
+                                                   AuthenticatedUser authenticatedUser) {
 
         String authenticatedIdPs = oAuthMessage.getSessionDataCacheEntry().getAuthenticatedIdPs();
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
@@ -997,7 +999,7 @@ public class AuthzUtil {
     }
 
     private static Response handleFormPostResponseModeError(OAuthMessage oAuthMessage,
-                                                     OAuthProblemException oauthProblemException) {
+                                                            OAuthProblemException oauthProblemException) {
 
         OAuth2Parameters oauth2Params = oAuthMessage.getSessionDataCacheEntry().getoAuth2Parameters();
         if (OAuthServerConfiguration.getInstance().isOAuthResponseJspPageAvailable()) {
@@ -1009,10 +1011,9 @@ public class AuthzUtil {
         }
     }
 
-    private static void handleDeniedConsent(
-            OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO,
-            ResponseModeProvider responseModeProvider)
-            throws OAuthSystemException {
+    private static void handleDeniedConsent(OAuthMessage oAuthMessage,
+                                            AuthorizationResponseDTO authorizationResponseDTO,
+                                            ResponseModeProvider responseModeProvider) throws OAuthSystemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
         OpenIDConnectUserRPStore.getInstance().putUserRPToStore(getLoggedInUser(oAuthMessage),
@@ -1131,6 +1132,7 @@ public class AuthzUtil {
                 }
                 return handleSuccessfulAuthentication(oAuthMessage, oauth2Params, authnResult,
                         authorizationResponseDTO, responseModeProvider);
+
             } else {
                 if (LoggerUtils.isDiagnosticLogsEnabled()) {
                     LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -1234,8 +1236,8 @@ public class AuthzUtil {
     }
 
     private static Response handleFailedState(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                       OAuthProblemException oauthException, AuthorizationResponseDTO
-                                               authorizationResponseDTO)
+                                              OAuthProblemException oauthException, AuthorizationResponseDTO
+                                                      authorizationResponseDTO)
             throws URISyntaxException {
 
         String redirectURL = EndpointUtil.getErrorRedirectURL(oauthException, oauth2Params);
@@ -1251,8 +1253,8 @@ public class AuthzUtil {
     }
 
     private static Response handleFailedAuthentication(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                                AuthenticationResult authnResult,
-                                                AuthorizationResponseDTO authorizationResponseDTO)
+                                                       AuthenticationResult authnResult,
+                                                       AuthorizationResponseDTO authorizationResponseDTO)
             throws URISyntaxException {
 
         OAuthErrorDTO oAuthErrorDTO = getOAuth2Service().handleAuthenticationFailure(oauth2Params);
@@ -1281,8 +1283,8 @@ public class AuthzUtil {
     }
 
     private static void addToAuthenticationResultDetailsToOAuthMessage(OAuthMessage oAuthMessage,
-                                                                AuthenticationResult authnResult,
-                                                                AuthenticatedUser authenticatedUser) {
+                                                                       AuthenticationResult authnResult,
+                                                                       AuthenticatedUser authenticatedUser) {
 
         oAuthMessage.getSessionDataCacheEntry().setLoggedInUser(authenticatedUser);
         oAuthMessage.getSessionDataCacheEntry().setAuthenticatedIdPs(authnResult.getAuthenticatedIdPs());
@@ -1430,7 +1432,7 @@ public class AuthzUtil {
     }
 
     private static String createFormPage(String jsonPayLoad, String redirectURI, String authenticatedIdPs,
-                                  String sessionStateValue) {
+                                         String sessionStateValue) {
 
         String params = buildParams(jsonPayLoad, authenticatedIdPs, sessionStateValue);
         return createBaseFormPage(params, redirectURI);
@@ -1504,7 +1506,8 @@ public class AuthzUtil {
     }
 
     private static String handleUserConsent(OAuthMessage oAuthMessage, String consent, OIDCSessionState sessionState,
-                                     OAuth2Parameters oauth2Params, AuthorizationResponseDTO authorizationResponseDTO)
+                                            OAuth2Parameters oauth2Params,
+                                            AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         storeUserConsent(oAuthMessage, consent);
@@ -1646,8 +1649,8 @@ public class AuthzUtil {
     }
 
     private static String handleServerErrorAuthorization(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                                  OAuth2Parameters oauth2Params,
-                                                  AuthorizationResponseDTO authorizationResponseDTO) {
+                                                         OAuth2Parameters oauth2Params,
+                                                         AuthorizationResponseDTO authorizationResponseDTO) {
 
         sessionState.setAuthenticated(false);
         String errorCode = OAuth2ErrorCodes.SERVER_ERROR;
@@ -1676,9 +1679,9 @@ public class AuthzUtil {
     }
 
     private static String handleFailureAuthorization(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                              OAuth2Parameters oauth2Params,
-                                              OAuth2AuthorizeRespDTO authzRespDTO,
-        AuthorizationResponseDTO authorizationResponseDTO) {
+                                                     OAuth2Parameters oauth2Params,
+                                                     OAuth2AuthorizeRespDTO authzRespDTO,
+                                                     AuthorizationResponseDTO authorizationResponseDTO) {
 
         sessionState.setAuthenticated(false);
         String errorMsg;
@@ -1710,8 +1713,9 @@ public class AuthzUtil {
         return EndpointUtil.getErrorRedirectURL(oAuthMessage.getRequest(), oauthProblemException, oauth2Params);
     }
 
-    private static String handleAuthorizationFailureBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters
-            oauth2Params, OAuth2AuthorizeRespDTO authzRespDTO) {
+    private static String handleAuthorizationFailureBeforeConsent(OAuthMessage oAuthMessage,
+                                                                  OAuth2Parameters oauth2Params,
+                                                                  OAuth2AuthorizeRespDTO authzRespDTO) {
 
         String errorMsg = authzRespDTO.getErrorMsg() != null ? authzRespDTO.getErrorMsg()
                 : "Error occurred while processing authorization request.";
@@ -1734,9 +1738,9 @@ public class AuthzUtil {
     }
 
     private static OAuthResponse handleSuccessAuthorization(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                                     OAuth2Parameters oauth2Params, String responseType,
-                                                     OAuth2AuthorizeRespDTO authzRespDTO,
-                                                     AuthorizationResponseDTO authorizationResponseDTO)
+                                                            OAuth2Parameters oauth2Params, String responseType,
+                                                            OAuth2AuthorizeRespDTO authzRespDTO,
+                                                            AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         OAuthASResponse.OAuthAuthorizationResponseBuilder builder = OAuthASResponse.authorizationResponse(
@@ -1842,8 +1846,9 @@ public class AuthzUtil {
     }
 
     private static OAuthResponse handleFormPostMode(OAuthMessage oAuthMessage,
-                                             OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                             String redirectURL, AuthorizationResponseDTO authorizationResponseDTO)
+                                                    OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                                    String redirectURL,
+                                                    AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         OAuthResponse oauthResponse;
@@ -1875,17 +1880,17 @@ public class AuthzUtil {
     }
 
     private static void setIdToken(OAuth2AuthorizeRespDTO authzRespDTO,
-                            OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                            AuthorizationResponseDTO authorizationResponseDTO) {
+                                   OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                   AuthorizationResponseDTO authorizationResponseDTO) {
 
         builder.setParam(OAuthConstants.ID_TOKEN, authzRespDTO.getIdToken());
         authorizationResponseDTO.getSuccessResponseDTO().setIdToken(authzRespDTO.getIdToken());
     }
 
     private static void setAuthorizationCode(OAuthMessage oAuthMessage, OAuth2AuthorizeRespDTO authzRespDTO,
-                                      OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                      String tokenBindingValue, OAuth2Parameters oauth2Params, AuthorizationResponseDTO
-                                              authorizationResponseDTO)
+                                             OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                             String tokenBindingValue, OAuth2Parameters oauth2Params,
+                                             AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException {
 
         String authorizationCode = authzRespDTO.getAuthorizationCode();
@@ -1901,7 +1906,7 @@ public class AuthzUtil {
     }
 
     private static AccessTokenExtendedAttributes getExtendedTokenAttributes(OAuthMessage oAuthMessage,
-                                                                     OAuth2Parameters oauth2Params) {
+                                                                            OAuth2Parameters oauth2Params) {
 
         try {
             ServiceProvider serviceProvider = getServiceProvider(oauth2Params.getClientId());
@@ -1952,8 +1957,8 @@ public class AuthzUtil {
     }
 
     private static void setAccessToken(OAuth2AuthorizeRespDTO authzRespDTO,
-                                OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                AuthorizationResponseDTO authorizationResponseDTO) {
+                                       OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                       AuthorizationResponseDTO authorizationResponseDTO) {
 
         builder.setAccessToken(authzRespDTO.getAccessToken());
         builder.setExpiresIn(authzRespDTO.getValidityPeriod());
@@ -1964,16 +1969,16 @@ public class AuthzUtil {
     }
 
     private static void setSubjectToken(OAuth2AuthorizeRespDTO authzRespDTO,
-                                 OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                 AuthorizationResponseDTO authorizationResponseDTO) {
+                                        OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                        AuthorizationResponseDTO authorizationResponseDTO) {
 
         builder.setParam(OAuthConstants.SUBJECT_TOKEN, authzRespDTO.getSubjectToken());
         authorizationResponseDTO.getSuccessResponseDTO().setSubjectToken(authzRespDTO.getSubjectToken());
     }
 
     private static void setScopes(OAuth2AuthorizeRespDTO authzRespDTO,
-                           OAuthASResponse.OAuthAuthorizationResponseBuilder builder, AuthorizationResponseDTO
-                                   authorizationResponseDTO) {
+                                  OAuthASResponse.OAuthAuthorizationResponseBuilder builder, AuthorizationResponseDTO
+                                          authorizationResponseDTO) {
 
         String[] scopes = authzRespDTO.getScope();
         if (scopes != null && scopes.length > 0) {
@@ -1985,8 +1990,8 @@ public class AuthzUtil {
     }
 
     private static void addUserAttributesToOAuthMessage(OAuthMessage oAuthMessage, String code, String codeId,
-                                                 String tokenBindingValue,
-                                                 AccessTokenExtendedAttributes tokenExtendedAttributes)
+                                                        String tokenBindingValue,
+                                                        AccessTokenExtendedAttributes tokenExtendedAttributes)
             throws OAuthSystemException {
 
         SessionDataCacheEntry sessionDataCacheEntry = oAuthMessage.getSessionDataCacheEntry();
@@ -2165,7 +2170,7 @@ public class AuthzUtil {
     }
 
     public static void populateValidationResponseWithAppDetail(OAuthMessage oAuthMessage,
-                                                         OAuth2ClientValidationResponseDTO validationResponse)
+                                                               OAuth2ClientValidationResponseDTO validationResponse)
             throws OAuthSystemException {
 
         String clientId = oAuthMessage.getRequest().getParameter(CLIENT_ID);
@@ -2471,8 +2476,8 @@ public class AuthzUtil {
     }
 
     public static String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
-                                           OAuth2ClientValidationResponseDTO validationResponse,
-                                           OAuthAuthzRequest oauthRequest)
+                                                 OAuth2ClientValidationResponseDTO validationResponse,
+                                                 OAuthAuthzRequest oauthRequest)
             throws OAuthSystemException, InvalidRequestException {
 
         String clientId = oAuthMessage.getClientId();
@@ -2600,7 +2605,7 @@ public class AuthzUtil {
     }
 
     private static void handleMaxAgeParameter(OAuthAuthzRequest oauthRequest,
-                                       OAuth2Parameters params) throws InvalidRequestException {
+                                              OAuth2Parameters params) throws InvalidRequestException {
         // Set max_age parameter sent in the authorization request.
         String maxAgeParam = oauthRequest.getParam(OAuthConstants.OIDCClaims.MAX_AGE);
         if (StringUtils.isNotBlank(maxAgeParam)) {
@@ -2627,7 +2632,7 @@ public class AuthzUtil {
     }
 
     private static void handleOIDCRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                         OAuth2Parameters parameters)
+                                                OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
         validateRequestObjectParams(oauthRequest);
@@ -2678,7 +2683,7 @@ public class AuthzUtil {
     }
 
     private static void handleRequestObject(OAuthMessage oAuthMessage, OAuthAuthzRequest oauthRequest,
-                                     OAuth2Parameters parameters)
+                                            OAuth2Parameters parameters)
             throws RequestObjectException, InvalidRequestException {
 
         RequestObject requestObject = OIDCRequestObjectUtil.buildRequestObject(oauthRequest, parameters);
@@ -2715,9 +2720,9 @@ public class AuthzUtil {
     }
 
     private static void overrideAuthzParameters(OAuthMessage oAuthMessage, OAuth2Parameters params,
-                                         String requestParameterValue,
-                                         String requestURIParameterValue, RequestObject requestObject,
-                                         boolean ignoreClaimsOutsideRequestObject) {
+                                                String requestParameterValue,
+                                                String requestURIParameterValue, RequestObject requestObject,
+                                                boolean ignoreClaimsOutsideRequestObject) {
 
         if (StringUtils.isNotBlank(requestParameterValue) || StringUtils.isNotBlank(requestURIParameterValue)) {
             replaceIfPresent(requestObject, REDIRECT_URI, params::setRedirectURI, ignoreClaimsOutsideRequestObject);
@@ -2805,7 +2810,7 @@ public class AuthzUtil {
     }
 
     private static void replaceIfPresent(RequestObject requestObject, String claim, Consumer<String> consumer,
-                                  boolean ignoreClaimsOutsideRequestObject) {
+                                         boolean ignoreClaimsOutsideRequestObject) {
 
         String claimValue = requestObject.getClaimValue(claim);
         if (StringUtils.isNotEmpty(claimValue)) {
@@ -2882,7 +2887,8 @@ public class AuthzUtil {
      * @throws OAuthSystemException OAuthSystemException
      */
     private static String doUserAuthorization(OAuthMessage oAuthMessage, String sessionDataKeyFromLogin,
-                                       OIDCSessionState sessionState, AuthorizationResponseDTO authorizationResponseDTO)
+                                              OIDCSessionState sessionState,
+                                              AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
         OAuth2Parameters oauth2Params = getOauth2Params(oAuthMessage);
@@ -3003,7 +3009,7 @@ public class AuthzUtil {
      * @param oauth2Params oauth2Params
      */
     private static void validateScopesBeforeConsent(OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
-                                             OAuth2AuthorizeReqDTO authzReqDTO)
+                                                    OAuth2AuthorizeReqDTO authzReqDTO)
             throws IdentityOAuth2UnauthorizedScopeException, OAuthSystemException {
 
         try {
@@ -3037,9 +3043,9 @@ public class AuthzUtil {
     }
 
     private static String handleConsent(OAuthMessage oAuthMessage, String sessionDataKey,
-                                 OIDCSessionState sessionState, OAuth2Parameters oauth2Params,
-                                 AuthenticatedUser authenticatedUser, boolean hasUserApproved, AuthorizationResponseDTO
-                                         authorizationResponseDTO)
+                                        OIDCSessionState sessionState, OAuth2Parameters oauth2Params,
+                                        AuthenticatedUser authenticatedUser, boolean hasUserApproved,
+                                        AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException {
 
         if (isConsentSkipped(oauth2Params)) {
@@ -3065,8 +3071,9 @@ public class AuthzUtil {
     }
 
     private static String promptUserForConsent(String sessionDataKey, OAuth2Parameters oauth2Params,
-                                        AuthenticatedUser user, boolean ignoreExistingConsents,
-                                        OAuthMessage oAuthMessage, AuthorizationResponseDTO authorizationResponseDTO)
+                                               AuthenticatedUser user, boolean ignoreExistingConsents,
+                                               OAuthMessage oAuthMessage,
+                                               AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         authorizationResponseDTO.setIsConsentRedirect(true);
@@ -3101,10 +3108,10 @@ public class AuthzUtil {
     }
 
     private static String handlePromptNone(OAuthMessage oAuthMessage,
-                                    OIDCSessionState sessionState,
-                                    OAuth2Parameters oauth2Params,
-                                    AuthenticatedUser authenticatedUser,
-                                    boolean hasUserApproved, AuthorizationResponseDTO authorizationResponseDTO)
+                                           OIDCSessionState sessionState,
+                                           OAuth2Parameters oauth2Params,
+                                           AuthenticatedUser authenticatedUser,
+                                           boolean hasUserApproved, AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException,
             ConsentHandlingFailedException, OAuthProblemException {
 
@@ -3157,14 +3164,16 @@ public class AuthzUtil {
         return StringUtils.isNotBlank(preConsentQueryParams);
     }
 
-    private static String handlePreConsentExcludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser
-            user) throws ConsentHandlingFailedException, OAuthSystemException {
+    private static String handlePreConsentExcludingExistingConsents(OAuth2Parameters oauth2Params,
+                                                                    AuthenticatedUser user)
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
         return handlePreConsent(oauth2Params, user, false);
     }
 
-    private static String handlePreConsentIncludingExistingConsents(OAuth2Parameters oauth2Params, AuthenticatedUser
-            user) throws ConsentHandlingFailedException, OAuthSystemException {
+    private static String handlePreConsentIncludingExistingConsents(OAuth2Parameters oauth2Params,
+                                                                    AuthenticatedUser user)
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
         return handlePreConsent(oauth2Params, user, true);
     }
@@ -3181,8 +3190,9 @@ public class AuthzUtil {
      * @throws ConsentHandlingFailedException
      * @throws OAuthSystemException
      */
-    private static String handlePreConsent(OAuth2Parameters oauth2Params, AuthenticatedUser user, boolean
-            useExistingConsents) throws ConsentHandlingFailedException, OAuthSystemException {
+    private static String handlePreConsent(OAuth2Parameters oauth2Params, AuthenticatedUser user,
+                                           boolean useExistingConsents)
+            throws ConsentHandlingFailedException, OAuthSystemException {
 
         String additionalQueryParam = StringUtils.EMPTY;
         String clientId = oauth2Params.getClientId();
@@ -3213,7 +3223,7 @@ public class AuthzUtil {
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 params.put("skip consent", "true");
                 DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder = new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
+                        OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
                         OAuthConstants.LogConstants.ActionIDs.GENERATE_CONSENT_CLAIMS);
                 diagnosticLogBuilder.inputParams(params)
                         .resultStatus(DiagnosticLog.ResultStatus.SUCCESS)
@@ -3308,8 +3318,8 @@ public class AuthzUtil {
      * @throws ClaimMetadataException If an error occurred while getting claim mappings.
      */
     private static List<ClaimMetaData> removeConsentRequestedNullUserAttributes(List<ClaimMetaData> requestedClaims,
-                                                                         Map<ClaimMapping, String> userAttributes,
-                                                                         String spTenantDomain)
+                                                                             Map<ClaimMapping, String> userAttributes,
+                                                                             String spTenantDomain)
             throws ClaimMetadataException {
 
         List<String> localClaims = new ArrayList<>();
@@ -3349,8 +3359,8 @@ public class AuthzUtil {
      * @throws ClaimMetadataException   If an error occurred while getting claim mappings.
      */
     private static List<ClaimMetaData> getRequestedOidcClaimsList(ConsentClaimsData claimsForApproval,
-                                                           OAuth2Parameters oauth2Params, String spTenantDomain,
-                                                           boolean isMandatory)
+                                                                  OAuth2Parameters oauth2Params, String spTenantDomain,
+                                                                  boolean isMandatory)
             throws RequestObjectException, ClaimMetadataException {
 
         List<ClaimMetaData> requestedOidcClaimsList = new ArrayList<>();
@@ -3439,8 +3449,9 @@ public class AuthzUtil {
     }
 
     private static ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user,
-                                                       ServiceProvider serviceProvider,
-                                                       boolean useExistingConsents) throws SSOConsentServiceException {
+                                                              ServiceProvider serviceProvider,
+                                                              boolean useExistingConsents)
+            throws SSOConsentServiceException {
 
         if (useExistingConsents) {
             return getSSOConsentService().getConsentRequiredClaimsWithExistingConsents(serviceProvider, user);
@@ -3474,10 +3485,10 @@ public class AuthzUtil {
     }
 
     private static String handleIdTokenHint(OAuthMessage oAuthMessage,
-                                     OIDCSessionState sessionState,
-                                     OAuth2Parameters oauth2Params,
-                                     AuthenticatedUser loggedInUser,
-                                     boolean hasUserApproved, AuthorizationResponseDTO authorizationResponseDTO)
+                                            OIDCSessionState sessionState,
+                                            OAuth2Parameters oauth2Params,
+                                            AuthenticatedUser loggedInUser,
+                                            boolean hasUserApproved, AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException,
             ConsentHandlingFailedException, OAuthProblemException {
 
@@ -3537,8 +3548,8 @@ public class AuthzUtil {
     }
 
     private static String handlePreviouslyApprovedConsent(OAuthMessage oAuthMessage, OIDCSessionState sessionState,
-                                                   OAuth2Parameters oauth2Params, boolean hasUserApproved,
-                                                   AuthorizationResponseDTO authorizationResponseDTO)
+                                                          OAuth2Parameters oauth2Params, boolean hasUserApproved,
+                                                          AuthorizationResponseDTO authorizationResponseDTO)
             throws OAuthSystemException, ConsentHandlingFailedException, OAuthProblemException {
 
         sessionState.setAddSessionState(true);
@@ -3617,8 +3628,10 @@ public class AuthzUtil {
         }
     }
 
-    private static String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage, OIDCSessionState
-            sessionState, OAuth2Parameters oauth2Params, AuthorizationResponseDTO authorizationResponseDTO)
+    private static String handleApproveAlwaysWithPromptForNewConsent(OAuthMessage oAuthMessage,
+                                                                     OIDCSessionState sessionState,
+                                                                     OAuth2Parameters oauth2Params,
+                                                                     AuthorizationResponseDTO authorizationResponseDTO)
             throws ConsentHandlingFailedException, OAuthSystemException {
 
         AuthenticatedUser authenticatedUser = getLoggedInUser(oAuthMessage);
@@ -3700,9 +3713,9 @@ public class AuthzUtil {
     }
 
     private static String getUserConsentURL(String sessionDataKey,
-                                     OAuth2Parameters oauth2Params,
-                                     AuthenticatedUser authenticatedUser,
-                                     String additionalQueryParams, OAuthMessage oAuthMessage)
+                                            OAuth2Parameters oauth2Params,
+                                            AuthenticatedUser authenticatedUser,
+                                            String additionalQueryParams, OAuthMessage oAuthMessage)
             throws OAuthSystemException {
 
         String loggedInUser = authenticatedUser.getAuthenticatedSubjectIdentifier();
@@ -3712,7 +3725,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Here we set the authenticated user to the session data
+     * Here we set the authenticated user to the session data.
      *
      * @param authzReqMsgCtx authzReqMsgCtx
      * @return
@@ -3787,13 +3800,13 @@ public class AuthzUtil {
         if (authResultCacheEntry != null) {
             authResult = authResultCacheEntry.getResult();
         } else {
-            log.error("Cannot find AuthenticationResult from the cache");
+            log.warn("Cannot find AuthenticationResult from the cache");
         }
         return authResult;
     }
 
     /**
-     * Get authentication result from request
+     * Get authentication result from request.
      *
      * @param request Http servlet request
      * @return AuthenticationResult
@@ -3808,7 +3821,7 @@ public class AuthzUtil {
 
         try {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
-            AuthzUtil.invokeCommonauthFlow(oAuthMessage, responseWrapper);
+            invokeCommonauthFlow(oAuthMessage, responseWrapper);
             return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
         } catch (ServletException | IOException | URLBuilderException | AuthServiceException |
                  IdentityOAuth2Exception e) {
@@ -3822,8 +3835,8 @@ public class AuthzUtil {
             throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException,
             AuthServiceException, IdentityOAuth2Exception {
 
-        if (AuthzUtil.isAuthFlowStateExists(oAuthMessage)) {
-            if (AuthzUtil.isFlowStateIncomplete(oAuthMessage)) {
+        if (isAuthFlowStateExists(oAuthMessage)) {
+            if (isFlowStateIncomplete(oAuthMessage)) {
                 return handleIncompleteFlow(oAuthMessage, responseWrapper);
             } else {
                 return handleSuccessfullyCompletedFlow(oAuthMessage);
@@ -3917,7 +3930,7 @@ public class AuthzUtil {
 
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
 
-            if (AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessage)) {
+            if (isApiBasedAuthenticationFlow(oAuthMessage)) {
                 // Marking the initial request as additional validation will be done from the auth service.
                 requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_IS_INITIAL_API_BASED_AUTH_REQUEST, true);
                 requestWrapper.setAttribute(AuthServiceConstants.REQ_ATTR_RELYING_PARTY, oAuthMessage.getClientId());
@@ -3926,7 +3939,7 @@ public class AuthzUtil {
                 AuthServiceResponse authServiceResponse = authenticationService.
                         handleAuthentication(new AuthServiceRequest(requestWrapper, responseWrapper));
                 // This is done to provide a way to propagate the auth service response to needed places.
-                AuthzUtil.attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
+                attachAuthServiceResponseToRequest(requestWrapper, authServiceResponse);
             } else {
                 CommonAuthenticationHandler commonAuthenticationHandler = new CommonAuthenticationHandler();
                 commonAuthenticationHandler.doGet(requestWrapper, responseWrapper);
@@ -3938,7 +3951,7 @@ public class AuthzUtil {
 
                     if (responseWrapper.isRedirect()) {
                         return Response.status(HttpServletResponse.SC_FOUND)
-                                .location(AuthzUtil.buildURI(responseWrapper.getRedirectURL())).build();
+                                .location(buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
                         if (isAuthzChallenge(oAuthMessage.getRequest())) {
                             return Response.status(HttpServletResponse.SC_FORBIDDEN)
@@ -3949,7 +3962,7 @@ public class AuthzUtil {
                 } else {
                     try {
                         String serviceProviderId =
-                                AuthzUtil.getServiceProvider(oAuthMessage.getRequest().getParameter(CLIENT_ID))
+                                getServiceProvider(oAuthMessage.getRequest().getParameter(CLIENT_ID))
                                         .getApplicationResourceId();
                         requestWrapper.setParameter(SERVICE_PROVIDER_ID, serviceProviderId);
                     } catch (Exception e) {
@@ -3973,7 +3986,7 @@ public class AuthzUtil {
                 return oAuth2AuthzEndpoint.authorize(requestWrapper, oAuthMessage.getResponse());
             }
         } catch (AuthServiceException e) {
-            return AuthzUtil.handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
+            return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
         } catch (ServletException | IOException | URLBuilderException | IdentityOAuth2Exception e) {
             log.error("Error occurred while sending request to authentication framework.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
@@ -4000,9 +4013,9 @@ public class AuthzUtil {
     }
 
     private static String manageOIDCSessionState(OAuthMessage oAuthMessage,
-                                          OIDCSessionState sessionStateObj, OAuth2Parameters oAuth2Parameters,
-                                          String authenticatedUser, SessionDataCacheEntry sessionDataCacheEntry,
-                                          AuthorizationResponseDTO authorizationResponseDTO) {
+                                                 OIDCSessionState sessionStateObj, OAuth2Parameters oAuth2Parameters,
+                                                 String authenticatedUser, SessionDataCacheEntry sessionDataCacheEntry,
+                                                 AuthorizationResponseDTO authorizationResponseDTO) {
 
         HttpServletRequest request = oAuthMessage.getRequest();
         HttpServletResponse response = oAuthMessage.getResponse();
@@ -4072,7 +4085,7 @@ public class AuthzUtil {
     }
 
     private static String appendAuthenticatedIDPs(SessionDataCacheEntry sessionDataCacheEntry, String redirectURL,
-                                           AuthorizationResponseDTO authorizationResponseDTO) {
+                                                  AuthorizationResponseDTO authorizationResponseDTO) {
 
         if (sessionDataCacheEntry != null) {
             String authenticatedIdPs = sessionDataCacheEntry.getAuthenticatedIdPs();
@@ -4206,13 +4219,13 @@ public class AuthzUtil {
         if (sessionContext == null) {
             return authTime;
         }
-            if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
-                authTime = Long.parseLong(
-                        sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
-            } else {
-                authTime = Long.parseLong(
-                        sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
-            }
+        if (sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP) != null) {
+            authTime = Long.parseLong(
+                    sessionContext.getProperty(FrameworkConstants.UPDATED_TIMESTAMP).toString());
+        } else {
+            authTime = Long.parseLong(
+                    sessionContext.getProperty(FrameworkConstants.CREATED_TIMESTAMP).toString());
+        }
         return authTime;
     }
 
@@ -4224,7 +4237,7 @@ public class AuthzUtil {
      * @return
      */
     public static OAuthProblemException buildOAuthProblemException(AuthenticationResult authenticationResult,
-                                                     OAuthErrorDTO oAuthErrorDTO) {
+                                                                   OAuthErrorDTO oAuthErrorDTO) {
 
         String errorCode = String.valueOf(authenticationResult.getProperty(FrameworkConstants.AUTH_ERROR_CODE));
         if (IdentityUtil.isBlank(errorCode)) {
@@ -4265,7 +4278,7 @@ public class AuthzUtil {
      * @param authorizationResponseDTO
      */
     private static void storeSidClaim(AuthorizationResponseDTO authorizationResponseDTO, OAuthMessage oAuthMessage,
-                               OIDCSessionState sessionState) {
+                                      OIDCSessionState sessionState) {
 
         if (authorizationResponseDTO.getSuccessResponseDTO().getIdToken() != null) {
             String oidcSessionState = (String) oAuthMessage.getProperty(OIDC_SESSION_ID);
@@ -4277,7 +4290,7 @@ public class AuthzUtil {
     }
 
     /**
-     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State
+     * Generate sessionID if there is no sessionID otherwise get sessionId from Session State.
      *
      * @param sessionState
      */
@@ -4446,8 +4459,8 @@ public class AuthzUtil {
     }
 
     private static Response forwardToOauthResponseJSP(OAuthMessage oAuthMessage, String params, String redirectURI,
-                                               AuthorizationResponseDTO authorizationResponseDTO,
-                                               AuthenticatedUser authenticatedUser) {
+                                                      AuthorizationResponseDTO authorizationResponseDTO,
+                                                      AuthenticatedUser authenticatedUser) {
 
         try {
             HttpServletRequest request = oAuthMessage.getRequest();
@@ -4549,7 +4562,7 @@ public class AuthzUtil {
     }
 
     public static void attachAuthServiceResponseToRequest(HttpServletRequest request,
-                                                    AuthServiceResponse authServiceResponse) {
+                                                          AuthServiceResponse authServiceResponse) {
 
         request.setAttribute(AUTH_SERVICE_RESPONSE, authServiceResponse);
     }
@@ -4585,7 +4598,7 @@ public class AuthzUtil {
 
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
-                String jsonString;
+                String jsonString = null;
                 try {
                     jsonString = objectMapper.writeValueAsString(authResponse);
                 } catch (JsonProcessingException e) {
@@ -4612,7 +4625,6 @@ public class AuthzUtil {
                                     new SuccessCompleteAuthResponse(queryParams);
                             String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                            // Keeping the app native flow as it is.
                             if (isAuthzChallenge(oAuthMessage.getRequest())) {
                                 if (attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED) {
                                     AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse =
@@ -4832,7 +4844,7 @@ public class AuthzUtil {
      * @throws OAuthSystemException                    If there is an error during the validation process.
      */
     private static void validateAuthorizationDetailsBeforeConsent(final OAuthMessage oAuthMessage,
-                                                           final OAuth2Parameters oAuth2Parameters)
+                                                                  final OAuth2Parameters oAuth2Parameters)
             throws AuthorizationDetailsProcessingException, OAuthSystemException {
 
         if (!AuthorizationDetailsUtils.isRichAuthorizationRequest(oAuth2Parameters)) {
@@ -4891,8 +4903,8 @@ public class AuthzUtil {
     }
 
     private static void setAuthorizationDetails(final OAuth2AuthorizeRespDTO oAuth2AuthorizeRespDTO,
-                                         final OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
-                                         final AuthorizationResponseDTO authorizationResponseDTO) {
+                                                final OAuthASResponse.OAuthAuthorizationResponseBuilder builder,
+                                                final AuthorizationResponseDTO authorizationResponseDTO) {
 
         final AuthorizationDetails authorizationDetails = oAuth2AuthorizeRespDTO.getAuthorizationDetails();
         builder.setParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS,
