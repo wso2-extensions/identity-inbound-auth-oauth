@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Generic response for authorization challenge endpoint.
+ */
 public class AuthzChallengeGenericResponse {
 
     @JsonProperty("auth_session")

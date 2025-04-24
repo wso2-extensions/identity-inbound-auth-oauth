@@ -18,8 +18,14 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.authzchallenge;
 
+/**
+ * Constants used in the authorization challenge endpoint.
+ */
 public class AuthzChallengeConstants {
 
+    /**
+     * Error values used in the authorization challenge endpoint.
+     */
     public enum Error {
 
         INVALID_REQUEST("invalid_request"),

@@ -21,6 +21,9 @@ package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Failure response for the authorization challenge endpoint.
+ */
 public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
 
     private String code;
@@ -90,9 +93,9 @@ public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
         return requestUri;
     }
 
-    public void setRequestUri(String request_uri) {
+    public void setRequestUri(String requestUri) {
 
-        this.requestUri = request_uri;
+        this.requestUri = requestUri;
     }
 
     @JsonIgnore

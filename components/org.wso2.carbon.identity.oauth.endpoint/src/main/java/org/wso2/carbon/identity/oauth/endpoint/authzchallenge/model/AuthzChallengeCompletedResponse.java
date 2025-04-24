@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Success completed response for authorization challenge endpoint.
+ */
 public class AuthzChallengeCompletedResponse {
 
     @JsonProperty("authData")

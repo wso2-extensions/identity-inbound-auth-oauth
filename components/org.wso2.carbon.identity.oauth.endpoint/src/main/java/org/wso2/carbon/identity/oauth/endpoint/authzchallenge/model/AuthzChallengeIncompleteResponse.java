@@ -22,6 +22,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 
+/**
+ * Incomplete status response for authorization challenge endpoint.
+ */
 public class AuthzChallengeIncompleteResponse  extends AuthzChallengeGenericResponse {
 
     @JsonProperty("next_step")
