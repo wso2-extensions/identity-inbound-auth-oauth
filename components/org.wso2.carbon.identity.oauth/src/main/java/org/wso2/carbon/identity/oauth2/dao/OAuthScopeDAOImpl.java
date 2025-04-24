@@ -47,7 +47,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.DEFAULT_SCOPE_BINDING;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SQLPlaceholders.SCOPE_LIST_PLACEHOLDER;
