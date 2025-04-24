@@ -277,6 +277,8 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
         frameworkUtils = mockStatic(FrameworkUtils.class);
         frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(MULTI_ATTRIBUTE_SEPARATOR_DEFAULT);
+        applicationManagementService = mock(ApplicationManagementService.class);
+        OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
     }
 
     @AfterMethod
@@ -321,7 +323,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
 
             ServiceProvider serviceProvider = new ServiceProvider();
             serviceProvider.setApplicationName(SERVICE_PROVIDER_NAME);
-            mockApplicationManagementService();
 
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
@@ -988,7 +989,6 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
                     .thenReturn(SAMPLE_ACCESS_TOKEN);
 
             mockAuthorizationGrantCache(null, authorizationGrantCache);
-            mockApplicationManagementService();
 
             OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO = new OAuth2AuthorizeReqDTO();
             when(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
@@ -1055,26 +1055,18 @@ public class DefaultOIDCClaimsCallbackHandlerTest {
             when(oAuth2AccessTokenReqDTO.getTenantDomain()).thenReturn(SAMPLE_TENANT_DOMAIN);
             when(oAuth2AccessTokenReqDTO.getClientId()).thenReturn(DUMMY_CLIENT_ID);
 
-            mockApplicationManagementService();
-
             JWTClaimsSet jwtClaimsSet = getJwtClaimSet(jwtClaimsSetBuilder, requestMsgCtx, jdbcPersistenceManager,
                     oAuthServerConfiguration);
             assertEquals(jwtClaimsSet.getClaims().size(), 0, "Claims are not successfully set.");
         }
     }
 
-    private void mockApplicationManagementService() throws Exception {
-
-        when(applicationManagementService.getServiceProviderNameByClientId(anyString(), anyString(), anyString()))
-                .thenReturn(SERVICE_PROVIDER_NAME);
-        setStaticField(OAuth2ServiceComponentHolder.class, "applicationMgtService", applicationManagementService);
-    }
-
     private void mockApplicationManagementService(ServiceProvider sp) throws Exception {
 
-        mockApplicationManagementService();
         when(applicationManagementService.getApplicationExcludingFileBasedSPs(sp.getApplicationName(), TENANT_DOMAIN))
                 .thenReturn(sp);
+        when(applicationManagementService.getServiceProviderNameByClientId(anyString(), anyString(), anyString()))
+                .thenReturn(SERVICE_PROVIDER_NAME);
     }
 
     @Test
