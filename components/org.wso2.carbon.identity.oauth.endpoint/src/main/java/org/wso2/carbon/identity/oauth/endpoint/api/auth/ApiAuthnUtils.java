@@ -78,7 +78,7 @@ public class ApiAuthnUtils {
      * Build response for client error.
      *
      * @param exception AuthServiceClientException.
-     * @param log       Log object.
+     * @param log Log object.
      * @return Client error response.
      */
     public static Response buildResponseForClientError(AuthServiceClientException exception, Log log) {
@@ -123,7 +123,7 @@ public class ApiAuthnUtils {
      * Build response for server error.
      *
      * @param exception AuthServiceException.
-     * @param log       Log object.
+     * @param log Log object.
      * @return Server error response.
      */
     public static Response buildResponseForServerError(AuthServiceException exception, Log log) {
@@ -176,7 +176,7 @@ public class ApiAuthnUtils {
      * Build response for authorization failure.
      *
      * @param description Error description.
-     * @param log         Log object.
+     * @param log Log object.
      * @return Authorization failure response.
      */
     public static Response buildResponseForAuthorizationFailure(String description, Log log) {
