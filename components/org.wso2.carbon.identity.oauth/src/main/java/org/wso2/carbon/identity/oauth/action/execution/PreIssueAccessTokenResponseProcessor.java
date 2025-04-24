@@ -100,11 +100,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
         AccessToken requestAccessToken = preIssueAccessTokenEvent.getAccessToken();
         AccessToken.Builder responseAccessTokenBuilder = preIssueAccessTokenEvent.getAccessToken().copy();
 
-        RefreshToken requestRefreshToken = preIssueAccessTokenEvent.getRefreshToken();
-        RefreshToken.Builder responseRefreshTokenBuilder = null;
-        if (requestRefreshToken != null) {
-            responseRefreshTokenBuilder = preIssueAccessTokenEvent.getRefreshToken().copy();
-        }
+        Optional<RefreshToken> optionalRequestRefreshToken =
+                Optional.ofNullable(preIssueAccessTokenEvent.getRefreshToken());
+        Optional<RefreshToken.Builder> optionalResponseRefreshTokenBuilder =
+                optionalRequestRefreshToken.map(RefreshToken::copy);
 
         List<OperationExecutionResult> operationExecutionResultList = new ArrayList<>();
 
@@ -122,10 +121,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
                     case REPLACE:
                         operationExecutionResultList.add(
                                 handleReplaceOperation(operation, requestAccessToken, responseAccessTokenBuilder));
-                        if (responseRefreshTokenBuilder != null) {
-                            operationExecutionResultList.add(handleReplaceOperation(operation, requestRefreshToken,
-                                    responseRefreshTokenBuilder));
-                        }
+                        optionalRequestRefreshToken.ifPresent(requestRT ->
+                                optionalResponseRefreshTokenBuilder.ifPresent(
+                                        responseRTBuilder -> operationExecutionResultList.add(
+                                                handleReplaceOperation(operation, requestRT, responseRTBuilder))));
                         break;
                     default:
                         break;
@@ -137,10 +136,10 @@ public class PreIssueAccessTokenResponseProcessor implements ActionExecutionResp
 
         AccessToken responseAccessToken = responseAccessTokenBuilder.build();
 
-        RefreshToken responseRefreshToken = null;
-        if (responseRefreshTokenBuilder != null) {
-            responseRefreshToken = responseRefreshTokenBuilder.build();
-        }
+        RefreshToken responseRefreshToken = optionalResponseRefreshTokenBuilder
+                .map(RefreshToken.Builder::build)
+                .orElse(null);
+
         updateTokenMessageContext(tokenMessageContext, responseAccessToken, responseRefreshToken);
 
         return new SuccessStatus.Builder().setResponseContext(flowContext.getContextData()).build();

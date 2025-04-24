@@ -788,7 +788,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         // If issuing new refresh token, use default refresh token validity Period
         // otherwise use existing refresh token's validity period
         long validityPeriodFromMsgContext = tokenReqMessageContext.getRefreshTokenvalidityPeriod();
-        // Priority given to the validity period mentioned in the OAuthTokenReqMessageContext
+        /*
+        Gives priority to the refresh token validity period specified in OAuthTokenReqMessageContext,
+         in the following order:
+         1. Overridden by pre-issue access token action execution.
+         2. Set by a custom refresh grant handler.
+         */
         if (tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis() > 0) {
             refreshTokenValidityPeriod = tokenReqMessageContext.getRefreshTokenValidityPeriodInMillis();
         } else if (validityPeriodFromMsgContext != OAuthConstants.UNASSIGNED_VALIDITY_PERIOD

@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequ
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.RefreshToken;
@@ -121,21 +122,12 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         }
 
         // Retrieving app information here to reduce the perf overhead.
-        OAuthAppDO oAuthAppDO;
-        try {
-            oAuthAppDO = getAppInformation(tokenMessageContext);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
-            throw new ActionExecutionRequestBuilderException(
-                    "Failed to generate pre issue access token action request for application: " +
-                            tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " grant type: " +
-                            tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);
-        }
+        OAuthAppDO oAuthAppDO = getAppInformation(tokenMessageContext);
 
         eventBuilder.accessToken(getAccessToken(tokenMessageContext, oAuthAppDO, claimsToAdd));
 
         if (isRefreshTokenAllowed(oAuthAppDO)) {
-            eventBuilder.refreshToken(getRefreshToken(oAuthAppDO.getRefreshTokenExpiryTime(),
-                    tokenMessageContext.getRefreshTokenValidityPeriodInMillis()));
+            eventBuilder.refreshToken(getRefreshToken(oAuthAppDO, tokenMessageContext));
         }
         eventBuilder.request(getRequest(tokenReqDTO));
 
@@ -156,19 +148,40 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         return false;
     }
 
-    private RefreshToken getRefreshToken(long refreshTokenExpiryInSecondsFromApp,
-                                         long refreshTokenValidityPeriodInMillisFromContext) {
+    private RefreshToken getRefreshToken(OAuthAppDO oAuthAppDO, OAuthTokenReqMessageContext tokenMessageContext) {
 
-        long refreshTokenValidityPeriod = -1;
-        if (refreshTokenValidityPeriodInMillisFromContext > 0) {
-            // To honor the existing custom refresh grant handling.
-            refreshTokenValidityPeriod = TimeUnit.MICROSECONDS.toSeconds(refreshTokenValidityPeriodInMillisFromContext);
-        } else if (refreshTokenExpiryInSecondsFromApp > 0) {
-            refreshTokenValidityPeriod = refreshTokenExpiryInSecondsFromApp;
+        long refreshTokenValidityPeriod = resolveRefreshTokenValidityPeriod(oAuthAppDO, tokenMessageContext);
+        long refreshTokenIssuedAt = resolveRefreshTokenIssuedAt(tokenMessageContext);
+
+        RefreshToken.Builder refreshTokenBuilder = new RefreshToken.Builder()
+                .addClaim(RefreshToken.ClaimNames.EXPIRES_IN.getName(), refreshTokenValidityPeriod);
+
+        // Adding this claim to improve the user experience only when existing refresh token is reused.
+        if (refreshTokenIssuedAt > -1) {
+            refreshTokenBuilder.addClaim(AbstractToken.ClaimNames.IAT.getName(), refreshTokenIssuedAt);
         }
-        RefreshToken.Builder refreshTokenBuilder = new RefreshToken.Builder();
-        refreshTokenBuilder.addClaim(RefreshToken.ClaimNames.EXPIRES_IN.getName(), refreshTokenValidityPeriod);
+
         return refreshTokenBuilder.build();
+    }
+
+    private long resolveRefreshTokenValidityPeriod(OAuthAppDO oAuthAppDO,
+                                                   OAuthTokenReqMessageContext tokenMessageContext) {
+        /*
+        Prioritizes the refresh token expiry defined in OAuthTokenReqMessageContext.
+        This honors the expiry value overridden at updateRefreshTokenValidityPeriodInMessageContext.
+         */
+        if (tokenMessageContext.getRefreshTokenValidityPeriodInMillis() > 0) {
+            return TimeUnit.MILLISECONDS.toSeconds(tokenMessageContext.getRefreshTokenValidityPeriodInMillis());
+        } else if (oAuthAppDO.getRefreshTokenExpiryTime() > 0) {
+            return oAuthAppDO.getRefreshTokenExpiryTime();
+        }
+        return -1;
+    }
+
+    private long resolveRefreshTokenIssuedAt(OAuthTokenReqMessageContext tokenMessageContext) {
+
+        return tokenMessageContext.getRefreshTokenIssuedTime() > 0 ? tokenMessageContext.getRefreshTokenIssuedTime() :
+                -1;
     }
 
     private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder, AuthenticatedUser user,
@@ -251,11 +264,20 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
     }
 
     private OAuthAppDO getAppInformation(OAuthTokenReqMessageContext tokenMessageContext)
-            throws InvalidOAuthClientException, IdentityOAuth2Exception {
+            throws ActionExecutionRequestBuilderException {
 
-        return OAuth2Util.getAppInformationByClientId(
-                tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
-                tokenMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+        OAuthAppDO oAuthAppDO;
+        try {
+            oAuthAppDO = OAuth2Util.getAppInformationByClientId(
+                    tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId(),
+                    tokenMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain());
+        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+            throw new ActionExecutionRequestBuilderException(
+                    "Failed to retrieve OAuth application with client id: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getClientId() + " tenant domain: " +
+                            tokenMessageContext.getOauth2AccessTokenReqDTO().getTenantDomain(), e);
+        }
+        return oAuthAppDO;
     }
 
     private String getIssuer(OAuthTokenReqMessageContext tokenMessageContext) throws IdentityOAuth2Exception {
@@ -317,7 +339,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             JWTClaimsSet claimsSet =
                     claimsCallBackHandler.handleCustomClaims(new JWTClaimsSet.Builder(), tokenMessageContext);
             return Optional.ofNullable(claimsSet).map(JWTClaimsSet::getClaims).orElseGet(HashMap::new);
-        } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
+        } catch (IdentityOAuth2Exception e) {
             throw new ActionExecutionRequestBuilderException(
                     "Failed to retrieve OIDC claim set for the access token for grant type: " +
                             tokenMessageContext.getOauth2AccessTokenReqDTO().getGrantType(), e);

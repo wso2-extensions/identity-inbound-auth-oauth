@@ -647,8 +647,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (!isTokenRenewalPerRequestConfigured() &&
                 isRefreshTokenValid(existingTokenBean, tokReqMsgCtx.getValidityPeriod(),
                         tokenReq.getClientId()) && !isExtendedToken) {
-            setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean,
-                    tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis());
+            setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean, tokReqMsgCtx);
         } else {
             // no valid refresh token found in existing Token
             newTokenBean.setRefreshTokenIssuedTime(new Timestamp(tokReqMsgCtx.getAccessTokenIssuedTime()));
@@ -785,14 +784,17 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
     private void setRefreshTokenDetailsFromExistingToken(AccessTokenDO existingAccessTokenDO,
                                                          AccessTokenDO newTokenBean,
-                                                         long refreshTokenExpiryInMillisFromActions) {
+                                                         OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         newTokenBean.setRefreshToken(existingAccessTokenDO.getRefreshToken());
         newTokenBean.setRefreshTokenIssuedTime(existingAccessTokenDO.getRefreshTokenIssuedTime());
 
-        // Overriding the value from actions
-        if (refreshTokenExpiryInMillisFromActions > 0) {
-            newTokenBean.setRefreshTokenValidityPeriodInMillis(refreshTokenExpiryInMillisFromActions);
+        /*
+        Giving precedence to OAuthTokenReqMessageContext which is updated during
+        pre-issue access token action execution.
+         */
+        if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
+            newTokenBean.setRefreshTokenValidityPeriodInMillis(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis());
         } else {
             newTokenBean.setRefreshTokenValidityPeriodInMillis(existingAccessTokenDO
                     .getRefreshTokenValidityPeriodInMillis());
@@ -828,8 +830,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 isRefreshTokenValid(existingTokenBean, tokReqMsgCtx.getValidityPeriod(), tokenReq.getClientId()) &&
                 !isExtendedToken) {
             /*
-             Checking whether existing refresh token will be reused, if so the refresh expiry time
-             should be reused instead of calculating the refresh expiry from the app level.
+            Checks if the existing refresh token will be reused. If so, its original expiry time should be
+            retained instead of recalculating it from the application-level configuration.
              */
             refreshTokenValidityPeriodInMillis = existingTokenBean.getRefreshTokenValidityPeriodInMillis();
         } else if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
