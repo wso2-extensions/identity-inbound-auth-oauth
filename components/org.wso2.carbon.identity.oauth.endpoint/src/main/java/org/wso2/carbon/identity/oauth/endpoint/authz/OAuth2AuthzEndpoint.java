@@ -64,6 +64,9 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil.validate
 @InInterceptors(classes = {OAuthClientAuthenticatorProxy.class, ClientAttestationProxy.class})
 public class OAuth2AuthzEndpoint {
 
+    public static final String COMMA_SEPARATOR = ",";
+    public static final String SPACE_SEPARATOR = " ";
+
     @GET
     @Path("/")
     @Consumes("application/x-www-form-urlencoded")
