@@ -30,8 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.IdentityProviderProperty;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -39,7 +37,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -234,21 +231,7 @@ public class JWTSignatureValidationUtils {
     protected static X509Certificate resolveSignerCertificate(JWSHeader header,
                                                               IdentityProvider idp) throws IdentityOAuth2Exception {
 
-        X509Certificate x509Certificate = null;
-        String tenantDomain = getTenantDomain();
-        try {
-            if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
-                    idp.getIdentityProviderName())) {
-                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain);
-            } else {
-                x509Certificate =
-                        (X509Certificate) IdentityApplicationManagementUtil.decodeCertificate(idp.getCertificate());
-            }
-        } catch (CertificateException e) {
-            handleServerException("Error occurred while decoding public certificate of Identity Provider "
-                    + idp.getIdentityProviderName());
-        }
-        return x509Certificate;
+        return OAuth2Util.resolverSignerCertificate(idp);
     }
 
     /**
