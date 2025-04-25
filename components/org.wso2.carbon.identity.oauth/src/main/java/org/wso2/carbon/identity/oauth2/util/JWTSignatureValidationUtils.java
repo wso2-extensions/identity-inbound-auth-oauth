@@ -259,20 +259,4 @@ public class JWTSignatureValidationUtils {
         log.error(errorMessage);
         throw new IdentityOAuth2ServerException(errorMessage);
     }
-
-    /**
-     * Retrieves the tenant domain associated with the current execution context using CarbonContext.
-     * If the tenant domain is empty or not available, the super tenant domain name is returned as the default.
-     *
-     * @return The tenant domain associated with the current execution context, or the super tenant domain name
-     * if not available.
-     */
-    private static String getTenantDomain() {
-
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
-        if (StringUtils.isEmpty(tenantDomain)) {
-            tenantDomain = IdentityUtil.getPrimaryDomainName();
-        }
-        return tenantDomain;
-    }
 }
