@@ -19,7 +19,10 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axis2.context.ConfigurationContext;
@@ -29,6 +32,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -109,6 +113,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -117,9 +122,11 @@ import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -3098,6 +3105,51 @@ public class OAuth2UtilTest {
             Assert.assertTrue(e.getMessage().contains(
                     "Error while obtaining public certificate for the alias test-client-cert " +
                             "in the tenant domain tenant-1"));
+        }
+    }
+
+    @Test(description = "Test the validateIdToken method")
+    public void testValidateIdToken() throws Exception {
+
+        String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImMxMGMzODUwMjNjYzIwOGQ0OWY0YWE5MjUzNTkwY2I1MDdmN2"
+                + "JjNDYifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJteS1jbGllbnQtaWQi"
+                + "LCJleHAiOjE2MTY3MTcyMDAsImlhdCI6MTYxNjcxMzYwMCwic3ViIjoiMTIzNDU2Nzg5MCIsImVtYWlsIjoid"
+                + "GVzdEBleGFtcGxlLmNvbSJ9.signature";
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        String clientId = "750a8400-e29b-56d4-a716-446655440000";
+
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                wso2KeyStore.getCertificate("wso2carbon"));
+
+        // Mock the required components
+        try (MockedStatic<SignedJWT> signedJWTMock = mockStatic(SignedJWT.class);
+             MockedStatic<MultitenantUtils> multiTenantUtilsMock = mockStatic(MultitenantUtils.class)) {
+            multiTenantUtilsMock.when(() -> MultitenantUtils.getTenantDomain(anyString()))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+            JWTClaimsSet claimsSet = mock(JWTClaimsSet.class);
+            when(claimsSet.getSubject()).thenReturn(userId);
+            when(claimsSet.getAudience()).thenReturn(Collections.singletonList(clientId));
+
+            // Setup JWT parser mock
+            SignedJWT signedJWT = mock(SignedJWT.class);
+            when(signedJWT.getJWTClaimsSet()).thenReturn(claimsSet);
+
+            // Mock static methods
+            signedJWTMock.when(() -> SignedJWT.parse(idToken)).thenReturn(signedJWT);
+
+            ArgumentCaptor<RSASSAVerifier> verifierCaptor = ArgumentCaptor.forClass(RSASSAVerifier.class);
+            when(signedJWT.verify(verifierCaptor.capture())).thenReturn(true);
+
+            // Test successful validation
+            boolean result = OAuth2Util.validateIdToken(idToken);
+            assertTrue(result, "Valid ID token should pass validation");
+
+            RSASSAVerifier capturedVerifier = verifierCaptor.getValue();
+            RSAPublicKey capturedPublicKey = capturedVerifier.getPublicKey();
+            assertEquals(capturedPublicKey.toString(),
+                    wso2KeyStore.getCertificate("wso2carbon").getPublicKey().toString(),
+                    "The public key used for verification should match the one in the keystore");
         }
     }
 }
