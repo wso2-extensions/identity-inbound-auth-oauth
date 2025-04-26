@@ -80,6 +80,7 @@ import org.wso2.carbon.identity.oauth.endpoint.util.factory.Oauth2ScopeServiceFa
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.RequestObjectServiceFactory;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -129,6 +130,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
 @WithCarbonHome
@@ -993,6 +995,44 @@ public class EndpointUtilTest {
             EndpointUtil.validateFAPIAllowedResponseTypeAndMode(responseType, responseMode);
         } catch (OAuthProblemException e) {
             Assert.assertFalse(shouldPass, "Expected exception not thrown");
+        }
+    }
+
+    @Test(description = "Test the validateAppAccess method")
+    public void testValidateAppAccess() throws Exception {
+
+        try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class);
+            MockedStatic<IdentityTenantUtil> identityTenantUtilMockedStatic = mockStatic(IdentityTenantUtil.class);
+            MockedStatic<LoggerUtils> loggerUtilsMockedStatic = mockStatic(LoggerUtils.class)) {
+            loggerUtilsMockedStatic.when(() -> LoggerUtils.triggerDiagnosticLogEvent(any()))
+                    .thenAnswer(invocation -> null);
+            ServiceProvider serviceProvider = mock(ServiceProvider.class);
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getServiceProvider(anyString())).thenReturn(serviceProvider);
+            identityTenantUtilMockedStatic.when(() ->
+                    IdentityTenantUtil.getTenantId("carbon.super")).thenReturn(-1234);
+
+            // Test the application enabled state.
+            when(serviceProvider.isApplicationEnabled()).thenReturn(true);
+            EndpointUtil.validateAppAccess("test-consumer-key");
+
+            // Test the application disabled state.
+            when(serviceProvider.isApplicationEnabled()).thenReturn(false);
+            assertThrows(() -> EndpointUtil.validateAppAccess("test-consumer-key"));
+
+            loggerUtilsMockedStatic.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+
+            // Test the application disabled state with diagnostic logs.
+            when(serviceProvider.isApplicationEnabled()).thenReturn(false);
+            assertThrows(() -> EndpointUtil.validateAppAccess("test-consumer-key"));
+
+            // Test the application enabled state with diagnostic logs.
+            when(serviceProvider.isApplicationEnabled()).thenReturn(true);
+            EndpointUtil.validateAppAccess("test-consumer-key");
+
+            // Test service provider resolving exception.
+            oAuth2UtilMockedStatic.when(() -> OAuth2Util.getServiceProvider(anyString())).thenThrow(
+                    IdentityOAuth2Exception.class);
+            assertThrows(() -> EndpointUtil.validateAppAccess("test-consumer-key"));
         }
     }
 }
