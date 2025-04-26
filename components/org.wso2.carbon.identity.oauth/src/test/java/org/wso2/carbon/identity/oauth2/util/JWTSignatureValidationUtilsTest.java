@@ -35,6 +35,8 @@ import java.io.FileInputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyStore;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
 import static org.mockito.Mockito.mock;
@@ -126,8 +128,11 @@ public class JWTSignatureValidationUtilsTest {
                 "CN=Intermediate CA, OU=IAM, O=WSO2, L=Colombo, ST=Western, C=LK");
 
         // Test the exception when the certificate is not found.
-        when(identityProvider.getCertificate()).thenReturn(null);
-        assertThrows(() -> JWTSignatureValidationUtils.resolveSignerCertificate(null, identityProvider));
+        try (MockedStatic<CertificateFactory> mockCertificateFactory = mockStatic(CertificateFactory.class)) {
+            mockCertificateFactory.when(() -> CertificateFactory.getInstance("X.509"))
+                    .thenThrow(CertificateException.class);
+            assertThrows(() -> JWTSignatureValidationUtils.resolveSignerCertificate(null, identityProvider));
+        }
     }
 
     private void mockKeystores() throws Exception {

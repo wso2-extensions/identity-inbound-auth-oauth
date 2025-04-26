@@ -119,6 +119,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
@@ -3151,5 +3152,27 @@ public class OAuth2UtilTest {
                     wso2KeyStore.getCertificate("wso2carbon").getPublicKey().toString(),
                     "The public key used for verification should match the one in the keystore");
         }
+    }
+
+    @Test(description = "Test the getPrivateKey method")
+    public void testGetPrivateKey() throws Exception {
+
+        Key testKey = wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        when(identityKeyStoreResolver.getPrivateKey(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(testKey);
+        Key privateKey = OAuth2Util.getPrivateKey(SUPER_TENANT_DOMAIN_NAME, -1234);
+        assertEquals(privateKey.toString(), testKey.toString(),
+                "The private key should match the one in the keystore");
+    }
+
+    @Test(description = "Test the getCertificate method")
+    public void testGetCertificate() throws Exception {
+
+        Certificate testCert = wso2KeyStore.getCertificate("wso2carbon");
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(testCert);
+        Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, -1234);
+        assertEquals(certificate.toString(), testCert.toString(),
+                "The certificate should match the one in the keystore");
     }
 }
