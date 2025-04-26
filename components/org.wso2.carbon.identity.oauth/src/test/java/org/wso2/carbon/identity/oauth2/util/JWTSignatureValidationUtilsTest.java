@@ -41,6 +41,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertThrows;
 import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @Listeners(MockitoTestNGListener.class)
@@ -107,15 +108,26 @@ public class JWTSignatureValidationUtilsTest {
 
         when(privilegedCarbonContext.getTenantDomain()).thenReturn(SUPER_TENANT_DOMAIN_NAME);
         IdentityProvider identityProvider = mock(IdentityProvider.class);
+
+        // Test the resident IDP certificate.
         when(identityProvider.getIdentityProviderName()).thenReturn(
                 IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME);
         X509Certificate certificate = JWTSignatureValidationUtils.resolveSignerCertificate(null, identityProvider);
         assertEquals(certificate.getIssuerDN().getName(), "CN=localhost, O=WSO2, L=Mountain View, ST=CA, C=US");
+        when(privilegedCarbonContext.getTenantDomain()).thenReturn(null);
+        certificate = JWTSignatureValidationUtils.resolveSignerCertificate(null, identityProvider);
+        assertEquals(certificate.getIssuerDN().getName(), "CN=localhost, O=WSO2, L=Mountain View, ST=CA, C=US");
+
+        // Test the secondary IDP certificate.
         when(identityProvider.getIdentityProviderName()).thenReturn("test-idp");
         when(identityProvider.getCertificate()).thenReturn(SAMPLE_ENCODED_CERT);
         certificate = JWTSignatureValidationUtils.resolveSignerCertificate(null, identityProvider);
         assertEquals(certificate.getIssuerDN().getName(),
                 "CN=Intermediate CA, OU=IAM, O=WSO2, L=Colombo, ST=Western, C=LK");
+
+        // Test the exception when the certificate is not found.
+        when(identityProvider.getCertificate()).thenReturn(null);
+        assertThrows(() -> JWTSignatureValidationUtils.resolveSignerCertificate(null, identityProvider));
     }
 
     private void mockKeystores() throws Exception {
