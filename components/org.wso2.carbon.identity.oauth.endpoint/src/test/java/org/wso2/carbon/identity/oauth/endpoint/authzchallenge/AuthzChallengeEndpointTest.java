@@ -356,7 +356,7 @@ public class AuthzChallengeEndpointTest extends TestOAuthEndpointBase {
                     .thenReturn(authClientAuthnContext);
 
             AuthzChallengeEndpoint spyEndpoint = spy(authzChallengeEndpoint);
-            Response mockResponse = Response.status(HttpServletResponse.SC_FORBIDDEN).entity("Mocked response").build();
+            Response mockResponse = Response.status(HttpServletResponse.SC_BAD_REQUEST).entity("Mocked response").build();
             doReturn(mockResponse).when(spyEndpoint).handleInitialAuthzChallengeRequest(
                     any(HttpServletRequest.class), any(HttpServletResponse.class), anyBoolean());
 
@@ -390,7 +390,7 @@ public class AuthzChallengeEndpointTest extends TestOAuthEndpointBase {
                 verify(spyEndpoint, never()).handleInitialAuthzChallengeRequest(
                         any(HttpServletRequest.class), any(HttpServletResponse.class), anyBoolean());
             } else {
-                assertEquals(response.getStatus(), HttpServletResponse.SC_FORBIDDEN,
+                assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST,
                         "Valid request should return the mocked response status");
                 assertEquals(response.getEntity(), "Mocked response",
                         "Valid request should return the mocked response entity");

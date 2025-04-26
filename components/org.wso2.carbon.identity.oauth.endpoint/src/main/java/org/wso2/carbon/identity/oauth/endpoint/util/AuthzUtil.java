@@ -3954,7 +3954,7 @@ public class AuthzUtil {
                                 .location(buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
                         if (isAuthzChallenge(oAuthMessage.getRequest())) {
-                            return Response.status(HttpServletResponse.SC_FORBIDDEN)
+                            return Response.status(HttpServletResponse.SC_BAD_REQUEST)
                                     .entity(responseWrapper.getContent()).build();
                         }
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
@@ -4633,7 +4633,7 @@ public class AuthzUtil {
                                     return Response.status(HttpServletResponse.SC_OK).entity(challengeJsonPayload)
                                             .build();
                                 }
-                                return Response.status(HttpServletResponse.SC_FORBIDDEN).entity(jsonPayload).build();
+                                return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonPayload).build();
                             } else {
                                 return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
                             }
