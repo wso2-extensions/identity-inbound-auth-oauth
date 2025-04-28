@@ -81,13 +81,13 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
         return impersonationContext;
     }
 
-    private boolean isUserAccountLocked(String username, String tenantDomain, String domainName)
+    private boolean isUserAccountLocked(String username, String tenantDomain, String userStoreDomain)
             throws IdentityOAuth2Exception {
 
-        if (username != null && tenantDomain != null) {
+        if (username != null && tenantDomain != null && userStoreDomain != null) {
             try {
                 return OAuth2ServiceComponentHolder.getAccountLockService().isAccountLocked(
-                        username, tenantDomain, domainName);
+                        username, tenantDomain, userStoreDomain);
             } catch (AccountLockServiceException e) {
                 throw new IdentityOAuth2Exception(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
                         String.format(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getMessage(), username), e);

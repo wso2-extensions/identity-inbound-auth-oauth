@@ -3893,7 +3893,7 @@ public class OAuth2Util {
                 String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                         .getSubjectClaimUri();
                 if (subjectClaimUri != null) {
-                    String subjectClaimValue = getClaimValue(userName,
+                    String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
                             OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
                                             IdentityTenantUtil.getTenantId(tenantDomain))
                                     .getUserStoreManager(), subjectClaimUri);
@@ -3965,11 +3965,13 @@ public class OAuth2Util {
         return subjectClaimValue;
     }
 
-    private static String getClaimValue(String username, org.wso2.carbon.user.api.UserStoreManager userStoreManager,
+    private static String getClaimValue(String domainQualifiedUserName,
+                                        org.wso2.carbon.user.api.UserStoreManager userStoreManager,
                                         String claimURI) throws IdentityOAuth2Exception {
 
         try {
-            Map<String, String> claimValues = userStoreManager.getUserClaimValues(username, new String[]{claimURI},
+            Map<String, String> claimValues = userStoreManager.getUserClaimValues(domainQualifiedUserName,
+                    new String[]{claimURI},
                     UserCoreConstants.DEFAULT_PROFILE);
             return claimValues.get(claimURI);
         } catch (UserStoreException e) {
