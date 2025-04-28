@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,12 +11,16 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oidc.session.util;
 
+import com.nimbusds.jose.crypto.RSADecrypter;
+import com.nimbusds.jwt.EncryptedJWT;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -26,22 +30,33 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
+
+import java.math.BigInteger;
+import java.security.SecureRandom;
+import java.security.interfaces.RSAPrivateKey;
+import java.text.ParseException;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertThrows;
 
 /*
  Unit test coverage for OIDCSessionManagementUtil class
@@ -87,7 +102,7 @@ public class OIDCSessionManagementUtilTest {
     public void testGetSessionStateParam() {
 
         String state = OIDCSessionManagementUtil.getSessionStateParam(CLIENT_ID, CALLBACK_URL, OPBROWSER_STATE);
-        Assert.assertNotNull(state, "This is empty");
+        assertNotNull(state, "This is empty");
     }
 
     /***
@@ -166,7 +181,7 @@ public class OIDCSessionManagementUtilTest {
 
         String state = OIDCSessionManagementUtil.addSessionStateToURL(url, CLIENT_ID, CALLBACK_URL, (Cookie) obpscookie,
                 responseType[1]);
-        Assert.assertNotNull(state, "This is empty");
+        assertNotNull(state, "This is empty");
     }
 
     /***
@@ -200,7 +215,7 @@ public class OIDCSessionManagementUtilTest {
 
         HttpServletResponse response = mock(HttpServletResponse.class);
         Cookie cookie = OIDCSessionManagementUtil.addOPBrowserStateCookie(response);
-        Assert.assertNotNull(cookie, "Opbs cookie is null");
+        assertNotNull(cookie, "Opbs cookie is null");
     }
 
     /***
@@ -415,4 +430,43 @@ public class OIDCSessionManagementUtilTest {
         };
     }
 
+    @Test(description = "Test the decryptWithRSA method")
+    public void testDecryptWithRSA() throws Exception {
+
+        String idToken = "sample-id-token";
+        try (MockedStatic<EncryptedJWT> mockEncryptedJWT = mockStatic(EncryptedJWT.class);
+             MockedStatic<IdentityKeyStoreResolver> mockIdentityKeyStoreResolver = mockStatic(
+                     IdentityKeyStoreResolver.class)) {
+            EncryptedJWT encryptedJWT = mock(EncryptedJWT.class);
+            mockEncryptedJWT.when(() -> EncryptedJWT.parse(idToken)).thenReturn(encryptedJWT);
+            IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+            mockIdentityKeyStoreResolver.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+            RSAPrivateKey privateKey = mock(RSAPrivateKey.class);
+            when(privateKey.getAlgorithm()).thenReturn("rsa");
+            BigInteger bigInteger;
+            do {
+                bigInteger = new BigInteger(2048, new SecureRandom());
+            } while (bigInteger.bitLength() < 2048);
+            when(privateKey.getModulus()).thenReturn(bigInteger);
+            when(identityKeyStoreResolver.getPrivateKey("carbon.super",
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(privateKey);
+            ArgumentCaptor<RSADecrypter> decrypterArgumentCaptor = ArgumentCaptor.forClass(RSADecrypter.class);
+            doAnswer(invocation -> null).when(encryptedJWT).decrypt(decrypterArgumentCaptor.capture());
+
+            // Test the successful decryption.
+            OIDCSessionManagementUtil.decryptWithRSA("carbon.super", idToken);
+            RSADecrypter rsaDecrypter = decrypterArgumentCaptor.getValue();
+            assertNotNull(rsaDecrypter.getPrivateKey(), "Private key is null");
+
+            // Test the exception cases.
+            mockEncryptedJWT.when(() -> EncryptedJWT.parse(idToken)).thenThrow(ParseException.class);
+            assertThrows(() -> OIDCSessionManagementUtil.decryptWithRSA("carbon.super", idToken));
+            mockEncryptedJWT.when(() -> EncryptedJWT.parse(idToken)).thenReturn(encryptedJWT);
+            when(identityKeyStoreResolver.getPrivateKey("carbon.super",
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenThrow(
+                    IdentityKeyStoreResolverException.class);
+            assertThrows(() -> OIDCSessionManagementUtil.decryptWithRSA("carbon.super", idToken));
+        }
+    }
 }

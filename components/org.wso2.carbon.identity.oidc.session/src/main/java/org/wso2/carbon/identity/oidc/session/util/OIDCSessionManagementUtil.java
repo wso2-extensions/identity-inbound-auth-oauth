@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2023, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2016-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -29,10 +29,11 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
 import org.wso2.carbon.core.ServletCookie;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -44,7 +45,6 @@ import org.wso2.carbon.identity.oidc.session.OIDCSessionConstants;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionManager;
 import org.wso2.carbon.identity.oidc.session.OIDCSessionStateManager;
 import org.wso2.carbon.identity.oidc.session.config.OIDCSessionManagementConfiguration;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -433,17 +433,9 @@ public class OIDCSessionManagementUtil {
      */
     public static JWT decryptWithRSA(String tenantDomain, String idToken) throws IdentityOAuth2Exception {
 
-        int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-        RSAPrivateKey privateKey;
-        KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
         try {
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                privateKey = (RSAPrivateKey) keyStoreManager.getPrivateKey(fileName, tenantDomain);
-            } else {
-                privateKey = (RSAPrivateKey) keyStoreManager.getDefaultPrivateKey();
-            }
+            RSAPrivateKey privateKey = (RSAPrivateKey) IdentityKeyStoreResolver.getInstance()
+                    .getPrivateKey(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(idToken);
             RSADecrypter decrypter = new RSADecrypter(privateKey);
             encryptedJWT.decrypt(decrypter);
