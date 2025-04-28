@@ -71,6 +71,7 @@ import org.wso2.carbon.identity.oauth.common.exception.OAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidApplicationClientException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
+import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2ServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuth2TokenValidatorServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OAuthAdminServiceFactory;
@@ -84,7 +85,9 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
+import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.model.OAuth2ScopeConsentResponse;
@@ -132,6 +135,7 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 
 @WithCarbonHome
 @Listeners(MockitoTestNGListener.class)
@@ -378,6 +382,7 @@ public class EndpointUtilTest {
                 oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
                         .thenReturn(mockedOAuthServerConfiguration);
                 lenient().when(mockedOAuthServerConfiguration.isDropUnregisteredScopes()).thenReturn(false);
+                lenient().when(mockedOAuthServerConfiguration.isUserSessionImpersonationEnabled()).thenReturn(true);
                 oauth2ScopeServiceFactory.when(Oauth2ScopeServiceFactory::getOAuth2ScopeService)
                         .thenReturn(oAuth2ScopeService);
                 lenient().when(oAuth2ScopeService.getUserConsentForApp(anyString(), anyString(), anyInt()))
@@ -1033,6 +1038,43 @@ public class EndpointUtilTest {
             oAuth2UtilMockedStatic.when(() -> OAuth2Util.getServiceProvider(anyString())).thenThrow(
                     IdentityOAuth2Exception.class);
             assertThrows(() -> EndpointUtil.validateAppAccess("test-consumer-key"));
+        }
+    }
+
+    @DataProvider
+    public Object[][] providePersistImpersonationInfoToSessionDataCache() {
+
+        return new Object[][]{
+                {true, "dummyImpersonator", true},
+                {true, "", true},
+                {true, null, false},
+                {false, "dummyImpersonator", false}
+        };
+    }
+
+    @Test(dataProvider = "providePersistImpersonationInfoToSessionDataCache")
+    public void testPersistImpersonationInfoToSessionDataCache(boolean isUserSessionImpersonationEnabled,
+                                                               String impersonatingActor, boolean expected) {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration
+                     = mockStatic(OAuthServerConfiguration.class);) {
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockedOAuthServerConfiguration);
+
+            when(mockedOAuthServerConfiguration.isUserSessionImpersonationEnabled()).thenReturn(
+                    isUserSessionImpersonationEnabled);
+
+            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+            OAuth2AuthorizeReqDTO authorizationReqDTO = new OAuth2AuthorizeReqDTO();
+            OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizationReqDTO);
+            sessionDataCacheEntry.setAuthzReqMsgCtx(authzReqMsgCtx);
+            OAuthMessage oAuthMessage = mock(OAuthMessage.class);
+            Map<String, Object> properties = new HashMap<>();
+            properties.put(IMPERSONATING_ACTOR, impersonatingActor);
+            lenient().when(oAuthMessage.getProperties()).thenReturn(properties);
+
+            EndpointUtil.persistImpersonationInfoToSessionDataCache(sessionDataCacheEntry, oAuthMessage);
+            assertEquals(authzReqMsgCtx.isImpersonationRequest(), expected);
         }
     }
 }

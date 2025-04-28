@@ -24,6 +24,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCache;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.SessionDataCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState;
 import org.wso2.carbon.identity.oauth.endpoint.state.OAuthRequestStateValidator;
@@ -71,6 +72,22 @@ public class OAuthMessage {
             cacheKey = new SessionDataCacheKey(sessionDataKeyFromConsent);
             resultFromConsent = SessionDataCache.getInstance().getValueFromCache(cacheKey);
             SessionDataCache.getInstance().clearCacheEntry(cacheKey);
+        }
+        preparePostConsentOAuthMessage(resultFromConsent);
+    }
+
+    private void preparePostConsentOAuthMessage(SessionDataCacheEntry resultFromConsent) {
+
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return;
+        }
+        if (resultFromConsent != null && resultFromConsent.getAuthzReqMsgCtx() != null &&
+                resultFromConsent.getAuthzReqMsgCtx().isImpersonationRequest() &&
+                resultFromConsent.getAuthzReqMsgCtx().getProperty(OAuthConstants.IMPERSONATING_ACTOR) != null) {
+            this.setProperty(OAuthConstants.IMPERSONATING_ACTOR,
+                    resultFromConsent.getAuthzReqMsgCtx().getProperty(OAuthConstants.IMPERSONATING_ACTOR));
         }
     }
 

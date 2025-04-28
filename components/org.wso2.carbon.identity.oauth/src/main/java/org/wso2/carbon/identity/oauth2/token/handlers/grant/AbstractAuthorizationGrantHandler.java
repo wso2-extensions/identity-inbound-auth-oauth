@@ -618,14 +618,15 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
             OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         if (tokReqMsgCtx.isImpersonationRequest()) {
-            addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
+            accessTokenExtendedAttributes =
+                    addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
                     accessTokenExtendedAttributes);
         }
         // Add any new extended attributes here using @addExtendedAttribute.
         return accessTokenExtendedAttributes;
     }
 
-    private void addExtendedAttribute(String key, String value, AccessTokenExtendedAttributes
+    private AccessTokenExtendedAttributes addExtendedAttribute(String key, String value, AccessTokenExtendedAttributes
             accessTokenExtendedAttributes) {
 
         if (accessTokenExtendedAttributes == null) {
@@ -634,6 +635,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (key != null && value != null) {
             accessTokenExtendedAttributes.getParameters().put(key, value);
         }
+        return accessTokenExtendedAttributes;
     }
 
     private void updateMessageContextToCreateNewToken(OAuthTokenReqMessageContext tokReqMsgCtx, String consumerKey,
