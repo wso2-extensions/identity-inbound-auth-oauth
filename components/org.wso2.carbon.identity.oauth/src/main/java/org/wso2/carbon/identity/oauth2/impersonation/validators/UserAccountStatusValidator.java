@@ -68,7 +68,7 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
         String subjectUserName = subjectUser.getUserName();
         String domainName = subjectUser.getUserStoreDomain();
 
-        if (isUserAccountLocked(subjectUserName, tenantDomain)
+        if (isUserAccountLocked(subjectUserName, tenantDomain, domainName)
                 || isUserAccountDisabled(subjectUserName, tenantDomain, domainName)) {
             String errorMessage = String.format("Cannot impersonate an inactive user account: %s.", subjectUserName);
             impersonationContext.setValidated(false);
@@ -81,12 +81,13 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
         return impersonationContext;
     }
 
-    private boolean isUserAccountLocked(String username, String tenantDomain)
+    private boolean isUserAccountLocked(String username, String tenantDomain, String domainName)
             throws IdentityOAuth2Exception {
 
         if (username != null && tenantDomain != null) {
             try {
-                return OAuth2ServiceComponentHolder.getAccountLockService().isAccountLocked(username, tenantDomain);
+                return OAuth2ServiceComponentHolder.getAccountLockService().isAccountLocked(
+                        username, tenantDomain, domainName);
             } catch (AccountLockServiceException e) {
                 throw new IdentityOAuth2Exception(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getCode(),
                         String.format(ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS.getMessage(), username), e);
