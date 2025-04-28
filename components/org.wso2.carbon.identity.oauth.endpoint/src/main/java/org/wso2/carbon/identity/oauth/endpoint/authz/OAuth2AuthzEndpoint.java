@@ -1296,16 +1296,17 @@ public class OAuth2AuthzEndpoint {
         if (!isUserSessionImpersonationEnabled) {
             return;
         }
-        boolean isImpersonationInitRequest = StringUtils.contains(oauth2Params.getResponseType(),
-                OAuthConstants.SUBJECT_TOKEN);
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
         if (sessionContext != null) {
             try {
                 String impersonatingActor = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
                 String impersonatedSubject = sessionContext.getImpersonatedUser();
+                boolean isImpersonationInitRequest = StringUtils.contains(oauth2Params.getResponseType(),
+                        OAuthConstants.SUBJECT_TOKEN);
+                boolean isImpersonationSSORequest = impersonatingActor != null && impersonatedSubject != null;
                 if (isImpersonationInitRequest) {
                     handleInitImpersonationRequest(impersonatedSubject, oAuthMessage);
-                } else {
+                } else if (isImpersonationSSORequest) {
                     handleSSOImpersonationRequest(impersonatingActor, impersonatedSubject, oAuthMessage, oauth2Params,
                             sessionContext, authnResult);
                 }
@@ -1325,28 +1326,26 @@ public class OAuth2AuthzEndpoint {
             throws IdentityOAuth2Exception, InvalidOAuthClientException, UserIdNotFoundException {
 
         /* Change authenticated user as the impersonated user only during SSO. */
-        if (impersonatingActor != null && impersonatedSubject != null) {
-            // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
-            OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
-                    oauth2Params, sessionContext, authnResult);
-            authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, true);
-            ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
-            if (impersonationContext.isValidated()) {
-                /* Used in two places.
-                    1. When preparing authorization grant cache entry for code & device code.
-                    2. When generating additional claims for implicit & hybrid flows. */
-                String impersonator = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
-                oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
-                authzReqMsgCtx.setImpersonationRequest(true);
-                // Set AuthenticationResult authenticated user as impersonatee.
-                AuthenticatedUser impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject,
-                        impersonationContext.getImpersonationRequestDTO().getTenantDomain(),
-                        impersonationContext.getImpersonationRequestDTO().getClientId());
-                authnResult.setSubject(impersonatedUser);
-            } else {
-                removeImpersonationScope(impersonationContext);
-                authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
-            }
+        OAuthAuthzReqMessageContext authzReqMsgCtx = getOAuthAuthzReqMessageContext(oAuthMessage,
+                oauth2Params, sessionContext, authnResult);
+        // Write Impersonation details to the OAuthAuthzReqMessageContext for scope validation.
+        authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, true);
+        ImpersonationContext impersonationContext = validateImpersonation(authzReqMsgCtx);
+        if (impersonationContext.isValidated()) {
+            /* Used in two places.
+                1. When preparing authorization grant cache entry for code & device code.
+                2. When generating additional claims for implicit & hybrid flows. */
+            String impersonator = authnResult.getSubject().getAuthenticatedSubjectIdentifier();
+            oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
+            authzReqMsgCtx.setImpersonationRequest(true);
+            // Set AuthenticationResult authenticated user as impersonatee.
+            AuthenticatedUser impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject,
+                    impersonationContext.getImpersonationRequestDTO().getTenantDomain(),
+                    impersonationContext.getImpersonationRequestDTO().getClientId());
+            authnResult.setSubject(impersonatedUser);
+        } else {
+            removeImpersonationScope(impersonationContext);
+            authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
         }
     }
 
