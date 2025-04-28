@@ -135,7 +135,8 @@ public class UserAccountStatusValidatorTest {
             OAuth2ServiceComponentHolder.setAccountDisableService(mockAccountDisableService);
             // Mock service output.
             lenient().when(mockAccountLockService.isAccountLocked(impersonatedUser.getUserName(),
-                    impersonationRequestDTO.getTenantDomain())).thenReturn(accountLocked);
+                    impersonationRequestDTO.getTenantDomain(), impersonatedUser.getUserStoreDomain()))
+                    .thenReturn(accountLocked);
             lenient().when(mockAccountDisableService.isAccountDisabled(impersonatedUser.getUserName(),
                     impersonationRequestDTO.getTenantDomain(), impersonatedUser.getUserStoreDomain()))
                     .thenReturn(accountDisabled);
