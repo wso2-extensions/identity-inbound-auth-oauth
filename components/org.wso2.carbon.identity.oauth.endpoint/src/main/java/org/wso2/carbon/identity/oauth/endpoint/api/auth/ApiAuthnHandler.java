@@ -112,6 +112,9 @@ public class ApiAuthnHandler {
         response.setAuthSession(authResponse.getFlowId());
         response.setError(AuthzChallengeConstants.Error.REDIRECT_TO_WEB.value());
         response.setErrorDescription("Authorization failed. Start a web-based flow.");
+        if (authResponse.getNextStep().getMessages() != null) {
+            response.setNextStep(authResponse.getNextStep());
+        }
 
         return response;
     }

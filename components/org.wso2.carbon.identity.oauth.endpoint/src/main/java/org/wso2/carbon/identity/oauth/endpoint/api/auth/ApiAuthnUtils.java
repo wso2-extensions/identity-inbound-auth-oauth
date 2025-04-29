@@ -29,9 +29,12 @@ import org.apache.commons.logging.LogFactory;
 import org.slf4j.MDC;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorMessage;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponseData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -47,6 +50,7 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentExc
 import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -60,6 +64,7 @@ import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
+
 
 /**
  * Utility class for authentication API.
@@ -350,8 +355,26 @@ public class ApiAuthnUtils {
     public static Response handleIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse
             authServiceResponse) throws AuthServiceException {
 
+        if (AuthzUtil.isAuthzChallenge(request)) {
+            checkIsUserLocked(authServiceResponse);
+        }
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
         return buildResponse(request, authResponse);
+    }
+
+    private static void checkIsUserLocked (AuthServiceResponse authServiceResponse) {
+        if (!authServiceResponse.getData().isPresent()) {
+            return;
+        }
+
+        AuthServiceResponseData responseData = authServiceResponse.getData().get();
+        for (AuthenticatorData authenticatorData : responseData.getAuthenticatorOptions()) {
+            AuthenticatorMessage message = authenticatorData.getMessage();
+            if (message != null && UserCoreConstants.ErrorCode.USER_IS_LOCKED.equals(message.getCode())) {
+                authServiceResponse.setFlowStatus(AuthServiceConstants.FlowStatus.FAIL_COMPLETED);
+                return;
+            }
+        }
     }
 
     public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse

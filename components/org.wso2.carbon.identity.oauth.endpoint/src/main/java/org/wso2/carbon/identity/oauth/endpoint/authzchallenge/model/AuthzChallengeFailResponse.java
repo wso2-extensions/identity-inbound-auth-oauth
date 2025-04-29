@@ -20,6 +20,7 @@ package org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 
 /**
  * Failure response for the authorization challenge endpoint.
@@ -40,19 +41,11 @@ public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
     @JsonProperty("expires_in")
     private String expiresIn;
 
+    @JsonProperty("next_step")
+    private NextStep nextStep;
+
     public AuthzChallengeFailResponse() {
 
-    }
-
-    public AuthzChallengeFailResponse(String authSession, String error, String errorDescription, String code,
-                                      String traceId, String errorUri, String requestUri, String expiresIn) {
-
-        super(authSession, error, errorDescription);
-        this.code = code;
-        this.traceId = traceId;
-        this.errorUri = errorUri;
-        this.requestUri = requestUri;
-        this.expiresIn = expiresIn;
     }
 
     public String getCode() {
@@ -107,5 +100,15 @@ public class AuthzChallengeFailResponse extends  AuthzChallengeGenericResponse {
     public void setExpiresIn(String expiresIn) {
 
         this.expiresIn = expiresIn;
+    }
+
+    public NextStep getNextStep() {
+
+        return nextStep;
+    }
+
+    public void setNextStep(NextStep nextStep) {
+
+        this.nextStep = nextStep;
     }
 }
