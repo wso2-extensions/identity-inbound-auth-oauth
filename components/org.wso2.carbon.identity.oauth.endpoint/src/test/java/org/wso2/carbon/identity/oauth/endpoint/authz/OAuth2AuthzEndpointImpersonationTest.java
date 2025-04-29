@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package org.wso2.carbon.identity.oauth.endpoint.util;
+package org.wso2.carbon.identity.oauth.endpoint.authz;
 
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -34,6 +34,7 @@ import org.wso2.carbon.identity.oauth.cache.SessionDataCacheEntry;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
+import org.wso2.carbon.identity.oauth.endpoint.util.TestOAuthEndpointBase;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
@@ -200,13 +201,15 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
                         dummyClientId)).thenReturn(impersonatedUser);
 
                 // Invoke handleSessionImpersonation method.
-                Method handleSessionImpersonation = AuthzUtil.class.getDeclaredMethod(
-                        "handleSessionImpersonation", OAuthMessage.class, String.class, OAuth2Parameters.class,
-                        AuthenticationResult.class);
+                Class<?> clazz = OAuth2AuthzEndpoint.class;
+                Object authzEndpointObj = clazz.newInstance();
+                Method handleSessionImpersonation = authzEndpointObj.getClass().
+                        getDeclaredMethod("handleSessionImpersonation", OAuthMessage.class, String.class,
+                                OAuth2Parameters.class, AuthenticationResult.class);
                 handleSessionImpersonation.setAccessible(true);
 
                 if (!isUserSessionImpersonationEnabled) {
-                    handleSessionImpersonation.invoke(null,
+                    handleSessionImpersonation.invoke(authzEndpointObj,
                             oAuthMessage, "", oAuth2Parameters, authenticationResult);
                     assertEquals("Impersonation should not be allowed when impersonation is disabled.",
                             authenticationResult.getSubject().getUserId(), impersonator.getUserId());
@@ -215,12 +218,12 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
 
                 if (rejectImpersonation) {
                     assertThrows(Exception.class, () -> {
-                        handleSessionImpersonation.invoke(null,
+                        handleSessionImpersonation.invoke(authzEndpointObj,
                                 oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
                     });
                 } else {
                     if (ssoImpersonation) {
-                        handleSessionImpersonation.invoke(null,
+                        handleSessionImpersonation.invoke(authzEndpointObj,
                                 oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
                         assertEquals(Objects.equals(authenticationResult.getSubject().getUserId(),
                                 impersonatedUser.getUserId()), validImpersonation);
