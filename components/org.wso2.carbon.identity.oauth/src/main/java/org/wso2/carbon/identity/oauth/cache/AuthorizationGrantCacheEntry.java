@@ -83,6 +83,7 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     private boolean isRequestObjectFlow;
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
     private boolean isApiBasedAuthRequest;
+    private String impersonator;
 
     private List<FederatedTokenDO> federatedTokens;
 
@@ -361,6 +362,16 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
     public void setApiBasedAuthRequest(boolean apiBasedAuthRequest) {
 
         isApiBasedAuthRequest = apiBasedAuthRequest;
+    }
+
+    public String getImpersonator() {
+
+        return impersonator;
+    }
+
+    public void setImpersonator(String impersonator) {
+
+        this.impersonator = impersonator;
     }
 
     public List<String> getAudiences() {

@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -19,7 +19,10 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axis2.context.ConfigurationContext;
@@ -29,6 +32,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -58,8 +62,11 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
@@ -106,16 +113,21 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -257,6 +269,9 @@ public class OAuth2UtilTest {
     @Mock
     OAuthAdminServiceImpl oAuthAdminService;
 
+    @Mock
+    IdentityKeyStoreResolver identityKeyStoreResolver;
+
     private KeyStore wso2KeyStore;
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
@@ -268,6 +283,7 @@ public class OAuth2UtilTest {
     private MockedStatic<NetworkUtils> networkUtils;
     private MockedStatic<IdentityProviderManager> identityProviderManager;
     private MockedStatic<LoggerUtils> loggerUtils;
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -322,6 +338,9 @@ public class OAuth2UtilTest {
         identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 
     @AfterMethod
@@ -335,6 +354,7 @@ public class OAuth2UtilTest {
         networkUtils.close();
         identityProviderManager.close();
         loggerUtils.close();
+        identityKeyStoreResolverMockedStatic.close();
     }
 
     @Test
@@ -3064,5 +3084,95 @@ public class OAuth2UtilTest {
                                                          Object expectedNimbusdsAlgorithm) throws Exception {
         JWSAlgorithm actual = mapSignatureAlgorithmForJWSAlgorithm(signatureAlgo);
         Assert.assertEquals(actual, expectedNimbusdsAlgorithm);
+    }
+
+    @Test(description = "Test get certificate with alias")
+    public void testGetCertificateWithAlias() throws Exception {
+
+        // Verify the success case.
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(wso2KeyStore);
+        Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, "test-client-cert");
+        assertEquals(((X509Certificate) certificate).getIssuerDN().getName(), "CN=MyCert");
+
+        // Test when the IdentityKeyStoreResolverException is thrown.
+        when(identityKeyStoreResolver.getKeyStore("tenant-1",
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenThrow(
+                new IdentityKeyStoreResolverException("test-error-code", "test-error"));
+        try {
+            OAuth2Util.getCertificate("tenant-1", "test-client-cert");
+            Assert.fail("Expected IdentityOAuth2Exception to be thrown");
+        } catch (IdentityOAuth2Exception e) {
+            Assert.assertTrue(e.getMessage().contains(
+                    "Error while obtaining public certificate for the alias test-client-cert " +
+                            "in the tenant domain tenant-1"));
+        }
+    }
+
+    @Test(description = "Test the validateIdToken method")
+    public void testValidateIdToken() throws Exception {
+
+        String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImMxMGMzODUwMjNjYzIwOGQ0OWY0YWE5MjUzNTkwY2I1MDdmN2"
+                + "JjNDYifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJteS1jbGllbnQtaWQi"
+                + "LCJleHAiOjE2MTY3MTcyMDAsImlhdCI6MTYxNjcxMzYwMCwic3ViIjoiMTIzNDU2Nzg5MCIsImVtYWlsIjoid"
+                + "GVzdEBleGFtcGxlLmNvbSJ9.signature";
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        String clientId = "750a8400-e29b-56d4-a716-446655440000";
+
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                wso2KeyStore.getCertificate("wso2carbon"));
+
+        // Mock the required components
+        try (MockedStatic<SignedJWT> signedJWTMock = mockStatic(SignedJWT.class);
+             MockedStatic<MultitenantUtils> multiTenantUtilsMock = mockStatic(MultitenantUtils.class)) {
+            multiTenantUtilsMock.when(() -> MultitenantUtils.getTenantDomain(anyString()))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+            JWTClaimsSet claimsSet = mock(JWTClaimsSet.class);
+            when(claimsSet.getSubject()).thenReturn(userId);
+            when(claimsSet.getAudience()).thenReturn(Collections.singletonList(clientId));
+
+            // Setup JWT parser mock
+            SignedJWT signedJWT = mock(SignedJWT.class);
+            when(signedJWT.getJWTClaimsSet()).thenReturn(claimsSet);
+
+            // Mock static methods
+            signedJWTMock.when(() -> SignedJWT.parse(idToken)).thenReturn(signedJWT);
+
+            ArgumentCaptor<RSASSAVerifier> verifierCaptor = ArgumentCaptor.forClass(RSASSAVerifier.class);
+            when(signedJWT.verify(verifierCaptor.capture())).thenReturn(true);
+
+            // Test successful validation
+            boolean result = OAuth2Util.validateIdToken(idToken);
+            assertTrue(result, "Valid ID token should pass validation");
+
+            RSASSAVerifier capturedVerifier = verifierCaptor.getValue();
+            RSAPublicKey capturedPublicKey = capturedVerifier.getPublicKey();
+            assertEquals(capturedPublicKey.toString(),
+                    wso2KeyStore.getCertificate("wso2carbon").getPublicKey().toString(),
+                    "The public key used for verification should match the one in the keystore");
+        }
+    }
+
+    @Test(description = "Test the getPrivateKey method")
+    public void testGetPrivateKey() throws Exception {
+
+        Key testKey = wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        when(identityKeyStoreResolver.getPrivateKey(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(testKey);
+        Key privateKey = OAuth2Util.getPrivateKey(SUPER_TENANT_DOMAIN_NAME, -1234);
+        assertEquals(privateKey.toString(), testKey.toString(),
+                "The private key should match the one in the keystore");
+    }
+
+    @Test(description = "Test the getCertificate method")
+    public void testGetCertificate() throws Exception {
+
+        Certificate testCert = wso2KeyStore.getCertificate("wso2carbon");
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(testCert);
+        Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, -1234);
+        assertEquals(certificate.toString(), testCert.toString(),
+                "The certificate should match the one in the keystore");
     }
 }

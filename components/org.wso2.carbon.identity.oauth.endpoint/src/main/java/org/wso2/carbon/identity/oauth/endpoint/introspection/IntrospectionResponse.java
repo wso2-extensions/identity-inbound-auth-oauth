@@ -53,6 +53,10 @@ public final class IntrospectionResponse {
     // time-stamp to indicate when this token is not to be used before
     public static final String NBF = "nbf";
 
+    /** OPTIONAL
+    Claim used to indicate an impersonated token. */
+    public static final String ACT = "act";
+
     // OPTIONAL
     // intended audience for the token
     public static final String AUD = "aud";

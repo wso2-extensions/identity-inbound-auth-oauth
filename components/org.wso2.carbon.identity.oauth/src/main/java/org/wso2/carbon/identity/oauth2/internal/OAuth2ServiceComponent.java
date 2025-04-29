@@ -50,6 +50,7 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
+import org.wso2.carbon.identity.handler.event.account.lock.service.AccountDisableService;
 import org.wso2.carbon.identity.handler.event.account.lock.service.AccountLockService;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.token.bindings.TokenBinderInfo;
@@ -87,6 +88,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotif
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonatorPermissionValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.UserAccountStatusValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.keyidprovider.KeyIDProvider;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -413,6 +415,7 @@ public class OAuth2ServiceComponent {
             OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(new ImpersonationMgtServiceImpl());
             bundleContext.registerService(ImpersonationValidator.class, new SubjectScopeValidator(), null);
             bundleContext.registerService(ImpersonationValidator.class, new ImpersonatorPermissionValidator(), null);
+            bundleContext.registerService(ImpersonationValidator.class, new UserAccountStatusValidator(), null);
             bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
             bundleContext.registerService(ImpersonationNotificationMgtService.class,
@@ -1650,6 +1653,25 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.setAccountLockService(null);
         log.debug("AccountLockService unset in OAuth2ServiceComponent bundle.");
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.handler.event.account.lock.service.AccountDisableService",
+            service = AccountDisableService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetAccountDisableService"
+    )
+    protected void setAccountDisableService(AccountDisableService accountDisableService) {
+
+        OAuth2ServiceComponentHolder.setAccountDisableService(accountDisableService);
+        log.debug("AccountDisableService set in OAuth2ServiceComponent bundle.");
+    }
+
+    protected void unsetAccountDisableService(AccountDisableService accountDisableService) {
+
+        OAuth2ServiceComponentHolder.setAccountDisableService(null);
+        log.debug("AccountDisableService unset in OAuth2ServiceComponent bundle.");
     }
 
     /**

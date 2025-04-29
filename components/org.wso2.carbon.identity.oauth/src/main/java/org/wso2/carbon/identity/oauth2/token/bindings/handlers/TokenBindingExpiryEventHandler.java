@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -58,6 +60,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.COMMONAUTH_COOKIE;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.RequestParams.TYPE;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 
 /**
  * Event handler for token revocation during access token binding expiration.
@@ -325,15 +328,20 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                         isFederatedRoleBasedAuthzEnabled = OAuth2Util.isFederatedRoleBasedAuthzEnabled(consumerKey);
                     }
 
+                    boolean isImpersonatingActorInitiatedRevocation = validateImpersonatingActorInitiatedRevocation(
+                            accessTokenDO, userId);
                     if (isFederatedRoleBasedAuthzEnabled
                             && StringUtils.equalsIgnoreCase(
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
-                            && StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName())) {
+                            && (isImpersonatingActorInitiatedRevocation
+                            || StringUtils.equalsIgnoreCase(user.getUserName(), authenticatedUser.getUserName()))) {
                         revokeFederatedTokens(consumerKey, user, accessTokenDO, tokenBindingReference);
                     } else if (
                             StringUtils.equalsIgnoreCase(tokenBindingType,
-                                    OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER) ||
-                                    StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())) {
+                                    OAuth2Constants.TokenBinderType.SSO_SESSION_BASED_TOKEN_BINDER)
+                                    || isImpersonatingActorInitiatedRevocation
+                                    || StringUtils.equalsIgnoreCase(userId, authenticatedUser.getUserId())
+                    ) {
                         revokeTokens(consumerKey, accessTokenDO, tokenBindingReference);
                     }
                 } catch (UserIdNotFoundException e) {
@@ -344,6 +352,23 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 }
             }
         }
+    }
+
+    private boolean validateImpersonatingActorInitiatedRevocation(AccessTokenDO accessTokenDO, String userId) {
+
+        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
+                .isUserSessionImpersonationEnabled();
+        if (!isUserSessionImpersonationEnabled) {
+            return false;
+        }
+        boolean isImpersonationRequest = accessTokenDO.getAccessTokenExtendedAttributes() != null &&
+                accessTokenDO.getAccessTokenExtendedAttributes().getParameters() != null &&
+                accessTokenDO.getAccessTokenExtendedAttributes().getParameters().containsKey(IMPERSONATING_ACTOR);
+        if (isImpersonationRequest) {
+            return Objects.equals(accessTokenDO.getAccessTokenExtendedAttributes()
+                    .getParameters().get(IMPERSONATING_ACTOR), userId);
+        }
+        return false;
     }
 
     /**

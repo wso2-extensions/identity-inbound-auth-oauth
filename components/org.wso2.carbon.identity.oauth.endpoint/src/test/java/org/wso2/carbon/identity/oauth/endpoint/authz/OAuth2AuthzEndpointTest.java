@@ -303,6 +303,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
 
     private KeyStore clientKeyStore;
     private MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil;
+    private AutoCloseable closeable;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -333,7 +334,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @BeforeMethod
     public void setUpMethod() {
 
-        MockitoAnnotations.openMocks(this);
+        closeable = MockitoAnnotations.openMocks(this);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         mockDatabase(identityDatabaseUtil);
         IdentityEventService identityEventService = mock(IdentityEventService.class);
@@ -375,7 +376,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     }
 
     @AfterMethod
-    public void tearDownMethod() {
+    public void tearDownMethod() throws Exception {
 
         if (identityDatabaseUtil != null) {
             identityDatabaseUtil.close();
@@ -383,6 +384,7 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
         Mockito.reset(oAuth2ScopeService);
         mockedConstruction.close();
         PrivilegedCarbonContext.endTenantFlow();
+        closeable.close();
     }
 
     @AfterClass
@@ -1324,7 +1326,6 @@ public class OAuth2AuthzEndpointTest extends TestOAuthEndpointBase {
     @DataProvider(name = "provideRequestParams")
     public Object[][] provideRequestParams() {
 
-        MockitoAnnotations.openMocks(this);
         return addDiagnosticLogStatusToExistingDataProvider(new Object[][]{
                 {AuthenticatorFlowStatus.SUCCESS_COMPLETED, "sample_scope", HttpServletResponse.SC_FOUND}
         });

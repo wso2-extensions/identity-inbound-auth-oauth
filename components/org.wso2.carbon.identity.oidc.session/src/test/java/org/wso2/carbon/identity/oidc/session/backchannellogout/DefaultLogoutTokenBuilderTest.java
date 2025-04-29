@@ -18,7 +18,10 @@
 
 package org.wso2.carbon.identity.oidc.session.backchannellogout;
 
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.SignedJWT;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
@@ -28,9 +31,12 @@ import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURL;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -46,6 +52,10 @@ import org.wso2.carbon.identity.organization.management.service.OrganizationMana
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 
+import java.lang.reflect.Method;
+import java.security.cert.Certificate;
+import java.security.interfaces.RSAPublicKey;
+import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -56,6 +66,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Unit tests for DefaultLogoutTokenBuilder.
@@ -107,7 +120,7 @@ public class DefaultLogoutTokenBuilderTest {
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
                     .thenReturn(oAuthServerConfiguration);
             when(oAuthServerConfiguration.getIdTokenSignatureAlgorithm()).thenReturn("SHA256withRSA");
-            when(oAuthServerConfiguration.getOpenIDConnectBCLogoutTokenExpiration()).thenReturn("3600");
+            lenient().when(oAuthServerConfiguration.getOpenIDConnectBCLogoutTokenExpiration()).thenReturn("3600");
             logoutTokenBuilder = new DefaultLogoutTokenBuilder();
         }
     }
@@ -222,5 +235,66 @@ public class DefaultLogoutTokenBuilderTest {
         ServiceURL serviceURL = mock(ServiceURL.class);
         lenient().when(serviceURL.getAbsolutePublicURL()).thenReturn(url);
         lenient().when(mockServiceURLBuilder.build()).thenReturn(serviceURL);
+    }
+
+    @Test(description = "Test the validateIdTokenHint method")
+    public void testValidateIdToken() throws Exception {
+
+        String clientId = "sample-client-id";
+        String idToken = "sample-id-token";
+        String tenantDomain = "sample-tenant-domain";
+        String stringPublicKey = "string-public-key";
+
+        try (MockedStatic<OAuth2Util> mockOAuth2Util = mockStatic(OAuth2Util.class);
+             MockedStatic<IdentityKeyStoreResolver> mockIdentityKeyStoreResolver = mockStatic(
+                     IdentityKeyStoreResolver.class);
+             MockedStatic<SignedJWT> mockSignedJWT = mockStatic(SignedJWT.class);
+             MockedStatic<OAuthServerConfiguration> mockOAuthServerConfiguration
+                     = mockStatic(OAuthServerConfiguration.class)) {
+            OAuthServerConfiguration oAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            mockOAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(oAuthServerConfiguration);
+            when(oAuthServerConfiguration.isJWTSignedWithSPKey()).thenReturn(false);
+            IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+            Certificate certificate = mock(Certificate.class);
+            when(identityKeyStoreResolver.getCertificate(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(certificate);
+            RSAPublicKey rsaPublicKey = mock(RSAPublicKey.class);
+            when(certificate.getPublicKey()).thenReturn(rsaPublicKey);
+            when(rsaPublicKey.toString()).thenReturn(stringPublicKey);
+            mockIdentityKeyStoreResolver.when(IdentityKeyStoreResolver::getInstance)
+                    .thenReturn(identityKeyStoreResolver);
+            OAuthAppDO oAuthAppDO = mock(OAuthAppDO.class);
+            mockOAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(clientId))
+                    .thenReturn(oAuthAppDO);
+            AuthenticatedUser authenticatedUser = mock(AuthenticatedUser.class);
+            when(oAuthAppDO.getUser()).thenReturn(authenticatedUser);
+            when(authenticatedUser.getTenantDomain()).thenReturn(tenantDomain);
+            SignedJWT signedJWT = mock(SignedJWT.class);
+            mockSignedJWT.when(() -> SignedJWT.parse(idToken)).thenReturn(signedJWT);
+            ArgumentCaptor<RSASSAVerifier> verifierArgumentCaptor = ArgumentCaptor.forClass(RSASSAVerifier.class);
+            when(signedJWT.verify(verifierArgumentCaptor.capture())).thenReturn(true);
+
+            Method method = DefaultLogoutTokenBuilder.class.getDeclaredMethod("validateIdTokenHint", String.class,
+                    String.class);
+            method.setAccessible(true);
+
+            // Test the successful case.
+            boolean result = (boolean) method.invoke(logoutTokenBuilder, clientId, idToken);
+            assertTrue(result);
+            RSASSAVerifier verifier = verifierArgumentCaptor.getValue();
+            assertEquals(verifier.getPublicKey().toString(), stringPublicKey, "Public key mismatch");
+
+            // Test the exception case.
+            mockSignedJWT.when(() -> SignedJWT.parse(idToken)).thenThrow(ParseException.class);
+            result = (boolean) method.invoke(logoutTokenBuilder, clientId, idToken);
+            assertFalse(result);
+            when(identityKeyStoreResolver.getCertificate(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenThrow(
+                    IdentityKeyStoreResolverException.class);
+            mockSignedJWT.when(() -> SignedJWT.parse(idToken)).thenReturn(signedJWT);
+            result = (boolean) method.invoke(logoutTokenBuilder, clientId, idToken);
+            assertFalse(result);
+        }
     }
 }

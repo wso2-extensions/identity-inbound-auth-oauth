@@ -38,6 +38,7 @@ import org.wso2.carbon.utils.DiagnosticLog;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT_TOKEN_TYPE;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 
 /**
  * The {@code SubjectTokenIssuer} class is responsible for issuing subject tokens for OAuth authorization requests
@@ -56,6 +57,8 @@ public class SubjectTokenIssuer {
      */
     public SubjectTokenDO issue(OAuthAuthzReqMessageContext oauthAuthzMsgCtx) throws IdentityOAuth2Exception {
 
+        // Set the status as the request is an impersonation validation request.
+        oauthAuthzMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, true);
         // Validate impersonation request
         ImpersonationMgtService impersonationMgtService = OAuth2ServiceComponentHolder.getInstance()
                 .getImpersonationMgtService();
@@ -64,6 +67,7 @@ public class SubjectTokenIssuer {
 
         // If impersonation request is not validated, throw an exception
         if (!impersonationContext.isValidated()) {
+            oauthAuthzMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
             String client = impersonationContext.getImpersonationRequestDTO().getClientId();
             AuthenticatedUser impersonator = impersonationContext.getImpersonationRequestDTO().getImpersonator();
             String subject = impersonationContext.getImpersonationRequestDTO().getSubject();
@@ -75,8 +79,9 @@ public class SubjectTokenIssuer {
                 throw new IdentityOAuth2Exception(impersonationContext.getValidationFailureErrorCode(),
                         errorMsg + " Error Message : " + impersonationContext.getValidationFailureErrorMessage());
             }
-
             throw new IdentityOAuth2Exception(errorMsg);
+        } else {
+            oauthAuthzMsgCtx.setImpersonationRequest(true);
         }
 
         // Issue subject token using OAuth token issuer

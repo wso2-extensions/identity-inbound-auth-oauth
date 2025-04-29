@@ -1,28 +1,35 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 package org.wso2.carbon.identity.oauth2.authcontext;
 
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.JWTParser;
+import com.nimbusds.jwt.SignedJWT;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.testng.MockitoTestNGListener;
 import org.testng.Assert;
-import org.testng.annotations.AfterTest;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
@@ -33,6 +40,8 @@ import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithH2Database;
 import org.wso2.carbon.identity.common.testng.WithKeyStore;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -46,7 +55,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageContext;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.user.core.UserCoreConstants;
@@ -54,19 +62,17 @@ import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
 import java.lang.reflect.Field;
-import java.security.Key;
-import java.security.cert.Certificate;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.DEFAULT_BACKCHANNEL_LOGOUT_URL;
-import static org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils.setFinalStatic;
 
 @WithCarbonHome
 @WithRealmService(tenantId = MultitenantConstants.SUPER_TENANT_ID,
@@ -92,6 +98,8 @@ public class JWTTokenGeneratorTest {
     RealmService realmService;
     @Mock
     private TenantManager tenantManager;
+
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -130,10 +138,13 @@ public class JWTTokenGeneratorTest {
         oAuth2TokenValidationMessageContext.addProperty("AccessTokenDO", accessTokenDO);
         jwtTokenGenerator = new JWTTokenGenerator();
         jwtTokenGenerator = new JWTTokenGenerator(includeClaims, enableSigning);
+        mockKeystores();
     }
 
-    @AfterTest
+    @AfterClass
     public void tearDown() throws Exception {
+
+        identityKeyStoreResolverMockedStatic.close();
     }
 
     @Test
@@ -164,16 +175,10 @@ public class JWTTokenGeneratorTest {
             addSampleOauth2Application();
             ClaimCache claimsLocalCache = ClaimCache.getInstance();
             setPrivateField(jwtTokenGenerator, "claimsLocalCache", claimsLocalCache);
-            Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<>();
-            publicCerts.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                    .getCertificate("wso2carbon"));
             OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
             when(realmService.getTenantManager()).thenReturn(tenantManager);
-            setFinalStatic(OAuth2Util.class.getDeclaredField("publicCerts"), publicCerts);
-            Map<Integer, Key> privateKeys = new ConcurrentHashMap<>();
-            privateKeys.put(-1234, ReadCertStoreSampleUtil.createKeyStore(getClass())
-                    .getKey("wso2carbon", "wso2carbon".toCharArray()));
-            setFinalStatic(OAuth2Util.class.getDeclaredField("privateKeys"), privateKeys);
+            when(tenantManager.getDomain(MultitenantConstants.SUPER_TENANT_ID)).thenReturn(
+                    MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
 
             accessToken.setTokenType("Bearer");
             oAuth2TokenValidationRequestDTO.setAccessToken(accessToken);
@@ -235,6 +240,31 @@ public class JWTTokenGeneratorTest {
         Assert.assertEquals(signatureAlgorithm.getName(), "none");
     }
 
+    @Test(description = "This will test the `signJWTWithRSA` method.")
+    public void testSignJWTWithRSA() throws Exception {
+
+        jwtTokenGenerator = new JWTTokenGenerator();
+        JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                .subject("testUser")
+                .issuer("https://example.com")
+                .expirationTime(new Date(new Date().getTime() + 60 * 1000))
+                .build();
+        SignedJWT signedJWT = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT).build(),
+                claimsSet
+        );
+        signedJWT = jwtTokenGenerator.signJWTWithRSA(signedJWT, null, SUPER_TENANT_DOMAIN_NAME, SUPER_TENANT_ID);
+        assertNotNull(signedJWT.getSignature());
+
+        // Verify the signature generation when the tenant domain is null.
+        signedJWT = new SignedJWT(
+                new JWSHeader.Builder(JWSAlgorithm.RS256).type(JOSEObjectType.JWT).build(),
+                claimsSet
+        );
+        signedJWT = jwtTokenGenerator.signJWTWithRSA(signedJWT, null, null, 0);
+        assertNotNull(signedJWT.getSignature());
+    }
+
     private void addSampleOauth2Application() throws IdentityOAuthAdminException {
 
         OAuthAppDO oAuthAppDO = new OAuthAppDO();
@@ -268,6 +298,21 @@ public class JWTTokenGeneratorTest {
         Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(object);
+    }
+
+    private void mockKeystores() throws Exception {
+
+        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        when(identityKeyStoreResolver.getPrivateKey(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                ReadCertStoreSampleUtil.createKeyStore(getClass()).getKey("wso2carbon", "wso2carbon".toCharArray()));
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                ReadCertStoreSampleUtil.createKeyStore(getClass()).getCertificate("wso2carbon"));
+
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 
 }

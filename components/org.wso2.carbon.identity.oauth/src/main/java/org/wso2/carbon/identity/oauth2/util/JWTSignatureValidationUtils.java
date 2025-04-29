@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2021, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2021-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.IdentityProviderProperty;
-import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -37,7 +36,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.validators.jwt.JWKSBasedJWTValidator;
 
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
@@ -232,15 +230,7 @@ public class JWTSignatureValidationUtils {
     protected static X509Certificate resolveSignerCertificate(JWSHeader header,
                                                               IdentityProvider idp) throws IdentityOAuth2Exception {
 
-        X509Certificate x509Certificate = null;
-        try {
-            x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
-                    .decodeCertificate(idp.getCertificate());
-        } catch (CertificateException e) {
-            handleServerException("Error occurred while decoding public certificate of Identity Provider "
-                    + idp.getIdentityProviderName());
-        }
-        return x509Certificate;
+        return OAuth2Util.resolverSignerCertificate(idp);
     }
 
     /**
