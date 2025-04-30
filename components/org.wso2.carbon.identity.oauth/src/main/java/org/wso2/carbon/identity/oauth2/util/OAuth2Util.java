@@ -4558,8 +4558,7 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
-                getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
+        if (useTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
@@ -4576,7 +4575,7 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() || IdentityTenantUtil.isConsoleAppRequest()) {
+        if (useTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -4589,6 +4588,18 @@ public class OAuth2Util {
         } else {
             return getIssuerLocation(tenantDomain);
         }
+    }
+
+    /**
+     * Used to check if tenant qualified URLs should be used to access resources.
+     *
+     * Console and My account applications in each tenant should operate in a tenanted environment at all times.
+     * @return if tenant qualified URLs should be used or not.
+     */
+    private static boolean useTenantQualifiedURLs() {
+
+        return IdentityTenantUtil.isTenantQualifiedUrlsEnabled() || IdentityTenantUtil.isConsoleAppRequest()
+                || IdentityTenantUtil.isMyAccountAppRequest();
     }
 
     /**
