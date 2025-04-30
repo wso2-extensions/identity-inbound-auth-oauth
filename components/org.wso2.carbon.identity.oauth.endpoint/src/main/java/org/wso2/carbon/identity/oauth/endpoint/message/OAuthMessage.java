@@ -55,6 +55,8 @@ public class OAuthMessage {
     protected boolean isPassiveAuthentication = false;
     protected String sessionDataKeyFromConsent;
 
+    protected String dPoPThumbprint;
+
     protected OAuthMessage(HttpServletRequest request, HttpServletResponse response) {
 
         this.request = request;
@@ -275,6 +277,16 @@ public class OAuthMessage {
     public String getOauthPKCECodeChallengeMethod() {
 
         return request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
+    }
+
+    public String getDPoPThumbprint() {
+
+        return dPoPThumbprint;
+    }
+
+    public void setDPoPThumbprint(String dPoPThumbprint) {
+
+        this.dPoPThumbprint = dPoPThumbprint;
     }
 
     @Override

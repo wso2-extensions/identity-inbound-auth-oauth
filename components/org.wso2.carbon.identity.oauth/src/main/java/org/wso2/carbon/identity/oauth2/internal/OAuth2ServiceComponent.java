@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -67,6 +67,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authzchallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.bean.ScopeBinding;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
@@ -1800,5 +1801,38 @@ public class OAuth2ServiceComponent {
             log.debug("Unregistering the AuthorizationDetailsSchemaValidator service.");
         }
         OAuth2ServiceComponentHolder.getInstance().setAuthorizationDetailsSchemaValidator(null);
+    }
+
+    /**
+     * Registers the {@link AuthzChallengeInterceptor} service.
+     *
+     * @param authzChallengeInterceptor The {@code AuthzChallengeInterceptor} instance.
+     */
+    @Reference(
+            name = "org.wso2.carbon.identity.oauth2.authzchallenge.event.AuthzChallengeInterceptor",
+            service = AuthzChallengeInterceptor.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unregisterAuthzChallengeInterceptor"
+    )
+    protected void registerAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Registering the AuthzChallengeInterceptor service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().addAuthzChallengeInterceptor(authzChallengeInterceptor);
+    }
+
+    /**
+     * Unregisters the {@link AuthzChallengeInterceptor} service.
+     *
+     * @param authzChallengeInterceptor The {@code AuthzChallengeInterceptor} instance.
+     */
+    protected void unregisterAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistering the AuthzChallengeInterceptor service.");
+        }
+        OAuth2ServiceComponentHolder.getInstance().removeAuthzChallengeInterceptor(authzChallengeInterceptor);
     }
 }

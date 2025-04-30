@@ -49,7 +49,8 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
     private static final Log log = LogFactory.getLog(OAuthClientAuthenticatorProxy.class);
     private static final String HTTP_REQUEST = "HTTP.REQUEST";
     private static final List<String> PROXY_ENDPOINT_LIST = Arrays.asList("/oauth2/token", "/oauth2/revoke",
-            "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par", "/oauth2/authorize");
+            "/oauth2/device_authorize", "/oauth2/ciba", "/oauth2/par", "/oauth2/authorize",
+            "/oauth2/authorize-challenge");
     private static final String SLASH = "/";
 
     public OAuthClientAuthenticatorProxy() {
@@ -74,7 +75,7 @@ public class OAuthClientAuthenticatorProxy extends AbstractPhaseInterceptor<Mess
                         .getOAuthClientAuthnService().authenticateClient(request, bodyContentParams);
                 if (!oAuthClientAuthnContext.isPreviousAuthenticatorEngaged()) {
                     /* If the previous authenticator is not engaged it means that either client authentication
-                    flow failed or no supported authenticaiton mechanism was found.If the error details are already
+                    flow failed or no supported authentication mechanism was found.If the error details are already
                     not set in the context, set the default error details. */
                     if (StringUtils.isBlank(oAuthClientAuthnContext.getErrorCode())) {
                         oAuthClientAuthnContext.setErrorCode(OAuth2ErrorCodes.INVALID_CLIENT);

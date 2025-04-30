@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2014-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.OAuthAuthorizationRequestBuilder;
 import org.wso2.carbon.identity.oauth2.authz.validators.ResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.authzchallenge.event.AuthzChallengeInterceptor;
 import org.wso2.carbon.identity.oauth2.bean.Scope;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtService;
@@ -138,6 +139,8 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizationDetailsValidator authorizationDetailsValidator;
     private AuthorizationDetailsTypeManager authorizationDetailsTypeManager;
     private AuthorizationDetailsSchemaValidator authorizationDetailsSchemaValidator;
+
+    private List<AuthzChallengeInterceptor> authzChallengeInterceptors = new ArrayList<>();
 
     private OAuth2ServiceComponentHolder() {
 
@@ -1049,5 +1052,36 @@ public class OAuth2ServiceComponentHolder {
     public void setAuthorizationDetailsSchemaValidator(AuthorizationDetailsSchemaValidator schemaValidator) {
 
         this.authorizationDetailsSchemaValidator = schemaValidator;
+    }
+
+    /**
+     * Add an {@link AuthzChallengeInterceptor} instance.
+     *
+     * @param authzChallengeInterceptor An {@link AuthzChallengeInterceptor} instance.
+     */
+    public void addAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
+        authzChallengeInterceptors.add(authzChallengeInterceptor);
+    }
+
+    /**
+     * Remove an {@link AuthzChallengeInterceptor} instance.
+     *
+     * @param authzChallengeInterceptor An {@link AuthzChallengeInterceptor} instance.
+     */
+    public void removeAuthzChallengeInterceptor(AuthzChallengeInterceptor authzChallengeInterceptor) {
+
+        authzChallengeInterceptors.removeIf(authzChallengeInterceptor1 ->
+                authzChallengeInterceptor1.getClass().getName().equals(authzChallengeInterceptor.getClass().getName()));
+    }
+
+    /**
+     * Get the list of {@link AuthzChallengeInterceptor} instances.
+     *
+     * @return List of {@link AuthzChallengeInterceptor} instances.
+     */
+    public List<AuthzChallengeInterceptor> getAuthzChallengeInterceptors() {
+
+        return authzChallengeInterceptors;
     }
 }

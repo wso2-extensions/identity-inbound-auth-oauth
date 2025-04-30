@@ -29,6 +29,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.NameValuePair;
@@ -102,9 +103,12 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnHandler;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.ApiAuthnUtils;
-import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.SuccessCompleteAuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeConstants;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeCompletedResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.ConsentHandlingFailedException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
@@ -283,6 +287,7 @@ public class AuthzUtil {
     private static final String IS_API_BASED_AUTH_HANDLED = "isApiBasedAuthHandled";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
     private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
     private static Class<? extends OAuthAuthzRequest> oAuthAuthzRequestClass;
 
@@ -2501,6 +2506,9 @@ public class AuthzUtil {
         if (oAuthMessage.getRequest().getParameterMap() != null) {
             sessionDataCacheEntryNew.setParamMap(new ConcurrentHashMap<>(oAuthMessage.getRequest().getParameterMap()));
         }
+        if (oAuthMessage.getDPoPThumbprint() != null) {
+            sessionDataCacheEntryNew.setDPoPThumbprint(oAuthMessage.getDPoPThumbprint());
+        }
         sessionDataCacheEntryNew.setValidityPeriod(TimeUnit.MINUTES.toNanos(IdentityUtil.getTempDataCleanUpTimeout()));
         SessionDataCache.getInstance().addToCache(cacheKey, sessionDataCacheEntryNew);
         oAuthMessage.setSessionDataCacheEntry(sessionDataCacheEntryNew);
@@ -4050,7 +4058,8 @@ public class AuthzUtil {
             CommonAuthResponseWrapper responseWrapper = new CommonAuthResponseWrapper(oAuthMessage.getResponse());
             invokeCommonauthFlow(oAuthMessage, responseWrapper);
             return processAuthResponseFromFramework(oAuthMessage, responseWrapper);
-        } catch (ServletException | IOException | URLBuilderException e) {
+        } catch (ServletException | IOException | URLBuilderException | AuthServiceException |
+                 IdentityOAuth2Exception e) {
             log.error("Error occurred while sending request to authentication framework.");
             return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR).build();
         }
@@ -4058,7 +4067,8 @@ public class AuthzUtil {
 
     private static Response processAuthResponseFromFramework(OAuthMessage oAuthMessage,
                                                              CommonAuthResponseWrapper responseWrapper)
-            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException {
+            throws IOException, InvalidRequestParentException, URISyntaxException, URLBuilderException,
+            AuthServiceException, IdentityOAuth2Exception {
 
         if (isAuthFlowStateExists(oAuthMessage)) {
             if (isFlowStateIncomplete(oAuthMessage)) {
@@ -4072,16 +4082,24 @@ public class AuthzUtil {
     }
 
     private static Response handleUnknownFlowState(OAuthMessage oAuthMessage)
-            throws URISyntaxException, InvalidRequestParentException {
+            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
 
         oAuthMessage.getRequest().setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus
                 .UNKNOWN);
+        if (isAuthzChallenge(oAuthMessage.getRequest())) {
+            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(),
+                    oAuthMessage.getResponse(), true);
+        }
         return oAuth2AuthzEndpoint.authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
     }
 
     public static Response handleSuccessfullyCompletedFlow(OAuthMessage oAuthMessage)
-            throws URISyntaxException, InvalidRequestParentException {
+            throws URISyntaxException, InvalidRequestParentException, AuthServiceException, IdentityOAuth2Exception {
 
+        if (isAuthzChallenge(oAuthMessage.getRequest())) {
+            return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(oAuthMessage.getRequest(),
+                    oAuthMessage.getResponse(), true);
+        }
         return oAuth2AuthzEndpoint.authorize(oAuthMessage.getRequest(), oAuthMessage.getResponse());
     }
 
@@ -4170,6 +4188,10 @@ public class AuthzUtil {
                         return Response.status(HttpServletResponse.SC_FOUND)
                                 .location(buildURI(responseWrapper.getRedirectURL())).build();
                     } else {
+                        if (isAuthzChallenge(oAuthMessage.getRequest())) {
+                            return Response.status(HttpServletResponse.SC_BAD_REQUEST)
+                                    .entity(responseWrapper.getContent()).build();
+                        }
                         return Response.status(HttpServletResponse.SC_OK).entity(responseWrapper.getContent()).build();
                     }
                 } else {
@@ -4183,16 +4205,24 @@ public class AuthzUtil {
                         // the process should continue without breaking.
                         log.error("Error occurred while getting service provider id.");
                     }
+                    if (isAuthzChallenge(oAuthMessage.getRequest())) {
+                        return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(requestWrapper,
+                                oAuthMessage.getResponse(), true);
+                    }
                     return oAuth2AuthzEndpoint.authorize(requestWrapper, oAuthMessage.getResponse());
                 }
             } else {
                 requestWrapper
                         .setAttribute(FrameworkConstants.RequestParams.FLOW_STATUS, AuthenticatorFlowStatus.UNKNOWN);
+                if (isAuthzChallenge(oAuthMessage.getRequest())) {
+                    return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(requestWrapper,
+                            oAuthMessage.getResponse(), true);
+                }
                 return oAuth2AuthzEndpoint.authorize(requestWrapper, oAuthMessage.getResponse());
             }
         } catch (AuthServiceException e) {
             return handleApiBasedAuthErrorResponse(oAuthMessage.getRequest(), e);
-        } catch (ServletException | IOException | URLBuilderException e) {
+        } catch (ServletException | IOException | URLBuilderException | IdentityOAuth2Exception e) {
             log.error("Error occurred while sending request to authentication framework.");
             if (LoggerUtils.isDiagnosticLogsEnabled()) {
                 LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
@@ -4751,6 +4781,9 @@ public class AuthzUtil {
 
     public static boolean isApiBasedAuthenticationFlow(OAuthMessage oAuthMessage) {
 
+        if (isAuthzChallenge(oAuthMessage.getRequest())) {
+            return true;
+        }
         OAuth2Parameters oAuth2Parameters = getOauth2Params(oAuthMessage);
         if (oAuth2Parameters != null) {
             return isApiBasedAuthenticationFlow(getOauth2Params(oAuthMessage));
@@ -4797,8 +4830,14 @@ public class AuthzUtil {
                                 AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.message());
                     }
                 }
+                Object authResponse;
 
-                AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+                if (isAuthzChallenge(oAuthMessage.getRequest())) {
+                    authResponse = API_AUTHN_HANDLER.handleInitialAuthzChallengeResponse(authServiceResponse);
+                } else {
+                    authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+                }
+
                 ObjectMapper objectMapper = new ObjectMapper();
                 objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
                 String jsonString = null;
@@ -4809,7 +4848,7 @@ public class AuthzUtil {
                             "Error while building JSON response.", e);
                 }
                 oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                return Response.ok().entity(jsonString).build();
+                return Response.status(oauthResponse.getStatus()).entity(jsonString).build();
             } else {
                 List<Object> locationHeader = oauthResponse.getMetadata().get("Location");
                 if (CollectionUtils.isNotEmpty(locationHeader)) {
@@ -4828,7 +4867,18 @@ public class AuthzUtil {
                                     new SuccessCompleteAuthResponse(queryParams);
                             String jsonPayload = new Gson().toJson(successCompleteAuthResponse);
                             oAuthMessage.getRequest().setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-                            return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                            if (isAuthzChallenge(oAuthMessage.getRequest())) {
+                                if (attribute == AuthenticatorFlowStatus.SUCCESS_COMPLETED) {
+                                    AuthzChallengeCompletedResponse authzChallengeCompleteAuthResponse =
+                                            new AuthzChallengeCompletedResponse(queryParams);
+                                    String challengeJsonPayload = new Gson().toJson(authzChallengeCompleteAuthResponse);
+                                    return Response.status(HttpServletResponse.SC_OK).entity(challengeJsonPayload)
+                                            .build();
+                                }
+                                return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonPayload).build();
+                            } else {
+                                return Response.status(HttpServletResponse.SC_OK).entity(jsonPayload).build();
+                            }
                         } else {
                             /* At this point if the location header doesn't indicate a redirection to the client
                              we can assume it is an error scenario which redirects to the error page. Therefore,
@@ -4853,12 +4903,19 @@ public class AuthzUtil {
 
     public static Response handleApiBasedAuthErrorResponse(HttpServletRequest request, AuthServiceException e) {
 
-        if (e instanceof AuthServiceClientException) {
-            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
+        request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
+        if (isAuthzChallenge(request)) {
+            if (e instanceof AuthServiceClientException) {
+                return buildAuthzChallengeResponseForClientError((AuthServiceClientException) e, log);
+            } else {
+                return buildAuthzChallengeResponseForServerError(e, log);
+            }
         } else {
-            request.setAttribute(IS_API_BASED_AUTH_HANDLED, true);
-            return ApiAuthnUtils.buildResponseForServerError(e, log);
+            if (e instanceof AuthServiceClientException) {
+                return ApiAuthnUtils.buildResponseForClientError((AuthServiceClientException) e, log);
+            } else {
+                return ApiAuthnUtils.buildResponseForServerError(e, log);
+            }
         }
     }
 
@@ -4963,11 +5020,15 @@ public class AuthzUtil {
      * @param oAuthClientAuthnContext OAuth client authentication context.
      * @return Auth failure response.
      */
-    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext) {
+    public static Response handleAuthFailureResponse(OAuthClientAuthnContext oAuthClientAuthnContext,
+                                                     HttpServletRequest request) {
 
         if (OAuth2ErrorCodes.SERVER_ERROR.equals(oAuthClientAuthnContext.getErrorCode())) {
             String msg = "Server encountered an error while authorizing the request.";
             return ApiAuthnUtils.buildResponseForServerError(new AuthServiceException(msg), log);
+        }
+        if (isAuthzChallenge(request)) {
+            return buildAuthzChallengeResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
         }
         return ApiAuthnUtils.buildResponseForAuthorizationFailure(oAuthClientAuthnContext.getErrorMessage(), log);
     }
@@ -4980,9 +5041,15 @@ public class AuthzUtil {
 
     public static Response handleUnsupportedGrantForApiBasedAuth(HttpServletRequest request) {
 
-        return ApiAuthnUtils.buildResponseForClientError(
-                new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
-                        "App native authentication is only supported with code response type."), log);
+        if (isAuthzChallenge(request)) {
+            return buildAuthzChallengeResponseForClientError(
+                    new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "Authorize challenge endpoint only supports 'code' response type."), log);
+        } else {
+            return ApiAuthnUtils.buildResponseForClientError(
+                    new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
+                            "App native authentication is only supported with code response type."), log);
+        }
     }
 
     public static String addServiceProviderIdToRedirectURI(String redirectURI, String serviceProviderId) {
@@ -5085,5 +5152,197 @@ public class AuthzUtil {
         builder.setParam(AuthorizationDetailsConstants.AUTHORIZATION_DETAILS,
                 AuthorizationDetailsUtils.getUrlEncodedAuthorizationDetails(authorizationDetails));
         authorizationResponseDTO.getSuccessResponseDTO().setAuthorizationDetails(authorizationDetails);
+    }
+
+    /**
+     * Handle the authentication failure response for authorize-challenge flow.
+     *
+     * @param description Error Message in ClientAuthnContext.
+     * @return Auth failure response.
+     */
+    private static Response buildAuthzChallengeResponseForAuthorizationFailure(String description, Log log) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Request authorization failed. " + description);
+        }
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        authzChallengeFailResponse.setError(AuthzChallengeConstants.Error.INVALID_CLIENT.value());
+        if (StringUtils.isNotBlank(description)) {
+            authzChallengeFailResponse.setErrorDescription(description);
+        } else {
+            authzChallengeFailResponse.setErrorDescription("Authorization failure. Authorization information " +
+                    "was invalid or missing from your request.");
+        }
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+
+        return Response.status(HttpServletResponse.SC_UNAUTHORIZED)
+                .header(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE, EndpointUtil.getRealmInfo())
+                .entity(jsonString).build();
+    }
+
+    /**
+     * Handles Identity OAuth2 exceptions by creating an appropriate error response.
+     *
+     * @param exception The IdentityOAuth2Exception
+     * @return A Response object with HTTP status code 400 (Bad Request)
+     */
+    public static Response handleIdentityOAuth2Exception(IdentityOAuth2Exception exception) {
+
+        String error;
+        String errorDescription;
+
+        AuthzChallengeFailResponse authzChallengeFailResponse = new AuthzChallengeFailResponse();
+        error = exception.getErrorCode() != null ?
+                exception.getErrorCode() :
+                AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code();
+
+        errorDescription = exception.getMessage() != null ?
+                exception.getMessage() :
+                AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.description();
+
+        authzChallengeFailResponse.setError(error);
+        authzChallengeFailResponse.setErrorDescription(errorDescription);
+        String jsonString = new Gson().toJson(authzChallengeFailResponse);
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    /**
+     * Checks if the request is being processed as an authorize-challenge flow.
+     *
+     * @param request The HTTP servlet request to check
+     * @return {@code true} if this is an authorization challenge request, {@code false} otherwise
+     */
+    public static Boolean isAuthzChallenge(HttpServletRequest request) {
+
+            return Boolean.TRUE.equals(request.getAttribute("isAuthzChallenge"));
+    }
+
+    /**
+     * Builds an HTTP response for client errors that occur during authorize-challenge flow.
+     *
+     * @param exception The client exception containing error details
+     * @param log Logger instance
+     * @return Response object with HTTP 400 (Bad Request)
+     */
+    public static Response buildAuthzChallengeResponseForClientError(AuthServiceClientException exception, Log log) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Client error while handling authentication request.", exception);
+        }
+
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+        Pair<String, String> errorMapping = mapFrameworkError(exception.getErrorCode());
+        String error = errorMapping.getLeft();
+        String errorDescription = errorMapping.getRight();
+
+        if (errorDescription == null) {
+            errorDescription = exception.getMessage();
+        }
+
+        String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() :
+                AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code();
+
+        response.setCode(errorCode);
+        response.setError(error);
+        response.setErrorDescription(errorDescription);
+        response.setTraceId(ApiAuthnUtils.getCorrelationId());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        String jsonString;
+        try {
+            jsonString = objectMapper.writeValueAsString(response);
+        } catch (JsonProcessingException e) {
+            return Response.status(HttpServletResponse.SC_BAD_REQUEST)
+                    .entity("Internal Server Error: " + e.getMessage()).build();
+        }
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+    }
+
+    /**
+     * Builds an HTTP response for server errors that occur during authorize-challenge flow.
+     *
+     * @param exception The server exception containing error details
+     * @param log Logger instance
+     * @return Response object with HTTP 500 (Internal Server Error)
+     */
+    public static Response buildAuthzChallengeResponseForServerError(AuthServiceException exception, Log log) {
+
+        int httpStatusCode = HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+        boolean isUnSupportedAuthenticatorError = StringUtils.equals(exception.getErrorCode(),
+                AuthServiceConstants.ErrorMessage.ERROR_AUTHENTICATOR_NOT_SUPPORTED.code());
+
+        if (isUnSupportedAuthenticatorError) {
+        /* Unsupported authenticator error can be triggered by the client if an unsupported authenticator is configured
+        in the server. Therefore, we log this error as a debug log. */
+            if (log.isDebugEnabled()) {
+                log.debug("Unsupported authenticator error while handling authentication request.", exception);
+            }
+        } else {
+            log.error("Error while handling authentication request.", exception);
+        }
+
+        if (isUnSupportedAuthenticatorError) {
+            httpStatusCode = HttpServletResponse.SC_NOT_IMPLEMENTED;
+        }
+
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+
+        Pair<String, String> errorMapping = mapFrameworkError(exception.getErrorCode());
+        String error = errorMapping.getLeft();
+        String errorDescription = errorMapping.getRight();
+
+        if (errorDescription == null) {
+            errorDescription = exception.getMessage();
+        }
+
+        if (error.isEmpty()) {
+            String errorCode = exception.getErrorCode() != null ? exception.getErrorCode() :
+                    AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code();
+            response.setCode(errorCode);
+            response.setError(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.message());
+            response.setErrorDescription(AuthServiceConstants.ErrorMessage
+                    .ERROR_UNABLE_TO_PROCEED.description());
+        } else {
+            response.setCode(exception.getErrorCode());
+            response.setError(error);
+            response.setErrorDescription(errorDescription);
+        }
+
+        response.setTraceId(ApiAuthnUtils.getCorrelationId());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+        String jsonString;
+        try {
+            jsonString = objectMapper.writeValueAsString(response);
+        } catch (JsonProcessingException e) {
+            return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                    .entity("Internal Server Error: " + e.getMessage()).build();
+        }
+        return Response.status(httpStatusCode).entity(jsonString).build();
+    }
+
+    /**
+     * Map the framework error code to the authz challenge error and error description.
+     *
+     * @param frameworkErrorCode Framework error code.
+     * @return Error code and error description.
+     */
+    public static Pair<String, String> mapFrameworkError(String frameworkErrorCode) {
+
+        switch (frameworkErrorCode) {
+            case "60002":
+            case "60011":
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_CLIENT.value(), null);
+            case "60007":
+                return Pair.of(AuthzChallengeConstants.Error.UNAUTHORIZED_CLIENT.value(),
+                        "This client is not authorized to use this endpoint.");
+            case "60009":
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_SESSION.value(),
+                        "The provided auth_session is invalid.");
+            default:
+                return Pair.of(AuthzChallengeConstants.Error.INVALID_REQUEST.value(), null);
+        }
     }
 }

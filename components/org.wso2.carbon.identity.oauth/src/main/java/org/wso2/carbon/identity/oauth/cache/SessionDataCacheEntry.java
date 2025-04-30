@@ -44,6 +44,7 @@ public class SessionDataCacheEntry extends CacheEntry {
     private String authenticatedIdPs;
     private String essentialClaims;
     private String sessionContextIdentifier;
+    private String dPoPThumbprint;
 
    // Flag to indicate whether the entry needs to be removed once consumed.
     private boolean removeOnConsume = false;
@@ -183,5 +184,15 @@ public class SessionDataCacheEntry extends CacheEntry {
     public void setMappedRemoteClaims(Map<ClaimMapping, String> mappedRemoteClaims) {
 
         this.mappedRemoteClaims = mappedRemoteClaims;
+    }
+
+    public String getDPoPThumbprint() {
+
+        return dPoPThumbprint;
+    }
+
+    public void setDPoPThumbprint(String dPoPThumbprint) {
+
+        this.dPoPThumbprint = dPoPThumbprint;
     }
 }

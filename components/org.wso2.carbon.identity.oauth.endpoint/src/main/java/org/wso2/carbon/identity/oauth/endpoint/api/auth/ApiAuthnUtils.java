@@ -23,14 +23,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.MDC;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceClientException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.auth.service.AuthServiceException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorData;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatorMessage;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceErrorInfo;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceRequest;
 import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponse;
+import org.wso2.carbon.identity.application.authentication.framework.model.auth.service.AuthServiceResponseData;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.authentication.framework.util.auth.service.AuthServiceConstants;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -39,8 +43,14 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.APIError;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthRequest;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.AuthResponse;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeGenericResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
+import org.wso2.carbon.identity.oauth.endpoint.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.user.core.UserCoreConstants;
 
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -69,6 +79,7 @@ public class ApiAuthnUtils {
     private static final String IDP = "idp";
     private static final ApiAuthnHandler API_AUTHN_HANDLER = new ApiAuthnHandler();
     private static final OAuth2AuthzEndpoint oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+    private static final AuthzChallengeEndpoint authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
     private ApiAuthnUtils() {
 
@@ -248,18 +259,48 @@ public class ApiAuthnUtils {
         }
     }
 
-    public static Response buildResponse(AuthResponse response) throws AuthServiceException {
+    public static Response buildResponse(HttpServletRequest request, AuthResponse response)
+            throws AuthServiceException {
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
         String jsonString;
-        try {
-            jsonString = objectMapper.writeValueAsString(response);
-        } catch (JsonProcessingException e) {
-            throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
-                    "Error while building JSON response.", e);
+        AuthzChallengeGenericResponse authzChallengeResponse;
+
+        if (AuthzUtil.isAuthzChallenge(request)) {
+            if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
+                authzChallengeResponse = API_AUTHN_HANDLER.handleIncompleteAuthzChallengeResponse(response);
+            } else if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED ||
+                    response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_INCOMPLETE) {
+                authzChallengeResponse = API_AUTHN_HANDLER.handleFailedAuthzChallengeResponse(response);
+            } else {
+                throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                        "Error while building JSON. Invalid flow status.");
+            }
+
+            try {
+                jsonString = objectMapper.writeValueAsString(authzChallengeResponse);
+            } catch (JsonProcessingException e) {
+                throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                        "Error while building JSON response.", e);
+            }
+
+            if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.FAIL_COMPLETED) {
+                return Response.status(HttpServletResponse.SC_BAD_REQUEST).entity(jsonString).build();
+            }
+            if (response.getFlowStatus() == AuthServiceConstants.FlowStatus.INCOMPLETE) {
+                return Response.status(HttpServletResponse.SC_ACCEPTED).entity(jsonString).build();
+            }
+        } else {
+            try {
+                jsonString = objectMapper.writeValueAsString(response);
+            } catch (JsonProcessingException e) {
+                throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_UNABLE_TO_PROCEED.code(),
+                        "Error while building JSON response.", e);
+            }
+            return Response.ok().entity(jsonString).build();
         }
-        return Response.ok().entity(jsonString).build();
+        return Response.status(HttpServletResponse.SC_BAD_REQUEST).build();
     }
 
     public static AuthServiceRequest getAuthServiceRequest(HttpServletRequest request, HttpServletResponse response,
@@ -310,9 +351,33 @@ public class ApiAuthnUtils {
                 StandardCharsets.UTF_8);
     }
 
-    public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse response,
-                                                              AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
+    public static Response handleIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse
+            authServiceResponse) throws AuthServiceException {
+
+        if (AuthzUtil.isAuthzChallenge(request)) {
+            checkIsUserLocked(authServiceResponse);
+        }
+        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
+        return buildResponse(request, authResponse);
+    }
+
+    private static void checkIsUserLocked (AuthServiceResponse authServiceResponse) {
+        if (!authServiceResponse.getData().isPresent()) {
+            return;
+        }
+
+        AuthServiceResponseData responseData = authServiceResponse.getData().get();
+        for (AuthenticatorData authenticatorData : responseData.getAuthenticatorOptions()) {
+            AuthenticatorMessage message = authenticatorData.getMessage();
+            if (message != null && UserCoreConstants.ErrorCode.USER_IS_LOCKED.equals(message.getCode())) {
+                authServiceResponse.setFlowStatus(AuthServiceConstants.FlowStatus.FAIL_COMPLETED);
+                return;
+            }
+        }
+    }
+
+    public static Response handleSuccessCompletedAuthResponse(HttpServletRequest request, HttpServletResponse
+            response, AuthServiceResponse authServiceResponse) throws AuthServiceException {
 
         String callerSessionDataKey = authServiceResponse.getSessionDataKey();
 
@@ -322,46 +387,81 @@ public class ApiAuthnUtils {
         internalRequest.setInternalRequest(true);
 
         try {
+            if (AuthzUtil.isAuthzChallenge(request)) {
+                return authzChallengeEndpoint.handleInitialAuthzChallengeRequest(internalRequest, response, true);
+            }
             return oAuth2AuthzEndpoint.authorize(internalRequest, response);
-        } catch (InvalidRequestParentException | URISyntaxException e) {
+        } catch (InvalidRequestParentException | URISyntaxException | IdentityOAuth2Exception e) {
             throw new AuthServiceException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
                     "Error while processing the final oauth authorization request.", e);
         }
     }
 
-    public static Response handleIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
+    public static Response handleFailIncompleteAuthResponse(HttpServletRequest request, AuthServiceResponse
+            authServiceResponse) throws AuthServiceException {
 
         AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
-        return buildResponse(authResponse);
+        return buildResponse(request, authResponse);
     }
 
-    public static Response handleFailIncompleteAuthResponse(AuthServiceResponse authServiceResponse)
-            throws AuthServiceException {
+    public static Response handleFailCompletedAuthResponse(HttpServletRequest request,
+                                                           AuthServiceResponse authServiceResponse) {
 
-        AuthResponse authResponse = API_AUTHN_HANDLER.handleResponse(authServiceResponse);
-        return buildResponse(authResponse);
-    }
+        String jsonString;
+        if (AuthzUtil.isAuthzChallenge(request)) {
+            AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+            if (authServiceResponse.getErrorInfo().isPresent()) {
+                AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
+                String errorCode = errorInfo.getErrorCode();
+                Pair<String, String> errorMapping = AuthzUtil.mapFrameworkError(errorCode.split("-")[1]);
+                String error = errorMapping.getLeft();
+                String errorDescription = errorMapping.getRight();
 
-    public static Response handleFailCompletedAuthResponse(AuthServiceResponse authServiceResponse) {
+                if (errorDescription == null) {
+                    errorDescription = errorInfo.getErrorDescription();
+                }
 
-        APIError apiError = new APIError();
-        if (authServiceResponse.getErrorInfo().isPresent()) {
-            AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
-            apiError.setCode(errorInfo.getErrorCode());
-            apiError.setMessage(errorInfo.getErrorMessage());
-            apiError.setDescription(errorInfo.getErrorDescription());
-        } else {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Error info is not present in the authentication service response. " +
-                        "Setting default error details.");
+                response.setCode(errorCode);
+                response.setError(error);
+                response.setErrorDescription(errorDescription);
+            } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error info is not present in the authentication service response. " +
+                            "Setting default error details.");
+                }
+                response.setCode(getDefaultAuthenticationFailureError().code());
+                response.setError(ApiAuthnUtils.getDefaultAuthenticationFailureError().message());
+                response.setErrorDescription(ApiAuthnUtils.getDefaultAuthenticationFailureError().description());
             }
-            apiError.setCode(getDefaultAuthenticationFailureError().code());
-            apiError.setMessage(getDefaultAuthenticationFailureError().message());
-            apiError.setDescription(getDefaultAuthenticationFailureError().description());
+            response.setTraceId(ApiAuthnUtils.getCorrelationId());
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+            try {
+                jsonString = objectMapper.writeValueAsString(response);
+            } catch (JsonProcessingException e) {
+                return Response.status(HttpServletResponse.SC_INTERNAL_SERVER_ERROR)
+                        .entity("Internal Server Error: " + e.getMessage()).build();
+            }
+        } else {
+            APIError apiError = new APIError();
+            if (authServiceResponse.getErrorInfo().isPresent()) {
+                AuthServiceErrorInfo errorInfo = authServiceResponse.getErrorInfo().get();
+                apiError.setCode(errorInfo.getErrorCode());
+                apiError.setMessage(errorInfo.getErrorMessage());
+                apiError.setDescription(errorInfo.getErrorDescription());
+            } else {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error info is not present in the authentication service response. " +
+                            "Setting default error details.");
+                }
+                apiError.setCode(getDefaultAuthenticationFailureError().code());
+                apiError.setMessage(getDefaultAuthenticationFailureError().message());
+                apiError.setDescription(getDefaultAuthenticationFailureError().description());
+            }
+            apiError.setTraceId(ApiAuthnUtils.getCorrelationId());
+            jsonString = new Gson().toJson(apiError);
         }
-        apiError.setTraceId(ApiAuthnUtils.getCorrelationId());
-        String jsonString = new Gson().toJson(apiError);
+
         /* Authentication FAIL_COMPLETED status could happen due to both client errors and server errors.
          Generally FAIL_COMPLETED status is received when an authenticator throws a AuthenticationFailedException
          and this exception could be thrown for both client and server errors and with the current framework

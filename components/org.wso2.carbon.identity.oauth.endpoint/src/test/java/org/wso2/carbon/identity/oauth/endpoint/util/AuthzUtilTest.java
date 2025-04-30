@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.util;
 
+import com.google.gson.Gson;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -32,6 +33,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.commons.logging.Log;
 import org.apache.oltu.oauth2.as.request.OAuthAuthzRequest;
 import org.apache.oltu.oauth2.as.validator.CodeValidator;
 import org.apache.oltu.oauth2.as.validator.TokenValidator;
@@ -98,6 +100,8 @@ import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthErrorDTO;
 import org.wso2.carbon.identity.oauth.endpoint.authz.OAuth2AuthzEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeEndpoint;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
 import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestParentException;
 import org.wso2.carbon.identity.oauth.endpoint.expmapper.InvalidRequestExceptionMapper;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
@@ -111,6 +115,7 @@ import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetail;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -182,6 +187,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -316,6 +322,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
     private static final int TIME_MARGIN_IN_SECONDS = 3000;
 
     private OAuth2AuthzEndpoint oAuth2AuthzEndpoint;
+    private AuthzChallengeEndpoint authzChallengeEndpoint;
     private Object authzUtilObject;
     private ServiceProvider dummySp;
 
@@ -330,6 +337,7 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                 Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
         );
         oAuth2AuthzEndpoint = new OAuth2AuthzEndpoint();
+        authzChallengeEndpoint = new AuthzChallengeEndpoint();
 
         initiateInMemoryH2();
         try {
@@ -1951,5 +1959,159 @@ public class AuthzUtilTest extends TestOAuthEndpointBase {
                         any(AuthenticatedUser.class))).thenReturn(new ConsentClaimsData());
 
         when(mockedSSOConsentService.isSSOConsentManagementEnabled(any())).thenReturn(isConsentMgtEnabled);
+    }
+
+    @DataProvider(name = "apiBasedAuthFlowTestData")
+    public Object[][] apiBasedAuthFlowTestData() {
+        return new Object[][] {
+
+                // isAuthzChallenge, responseMode, oauth2ParamsPresent, oauth2UtilResult, expectedResult
+                { true, null, true, false, true },
+                { false, "direct", true, false, true },
+                { false, "query", true, false, false },
+                { false, null, false, true, false },
+                { false, null, false, false, false }
+        };
+    }
+
+    @Test(dataProvider = "apiBasedAuthFlowTestData")
+    public void testIsApiBasedAuthenticationFlow(boolean isAuthzChallenge, String responseMode,
+                                                 boolean oauth2ParamsPresent, boolean oauth2UtilResult,
+                                                 boolean expectedResult) throws Exception {
+
+        OAuthMessage oAuthMessageMock = mock(OAuthMessage.class);
+        HttpServletRequest requestMock = mock(HttpServletRequest.class);
+        OAuth2Parameters oAuth2ParametersMock;
+
+        when(oAuthMessageMock.getRequest()).thenReturn(requestMock);
+        when(requestMock.getAttribute("isAuthzChallenge")).thenReturn(isAuthzChallenge);
+
+        if (oauth2ParamsPresent) {
+            oAuth2ParametersMock = mock(OAuth2Parameters.class);
+            SessionDataCacheEntry sessionDataCacheEntryMock = mock(SessionDataCacheEntry.class);
+            when(oAuthMessageMock.getSessionDataCacheEntry()).thenReturn(sessionDataCacheEntryMock);
+            when(sessionDataCacheEntryMock.getoAuth2Parameters()).thenReturn(oAuth2ParametersMock);
+            when(AuthzUtil.getOauth2Params(oAuthMessageMock)).thenReturn(oAuth2ParametersMock);
+            when(oAuth2ParametersMock.getResponseMode()).thenReturn(responseMode);
+        } else {
+            when(AuthzUtil.getOauth2Params(oAuthMessageMock)).thenReturn(null);
+        }
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
+                OAuthServerConfiguration.class);) {
+            mockOAuthServerConfiguration(oAuthServerConfiguration);
+            try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);) {
+                oAuth2Util.when(() -> OAuth2Util.isApiBasedAuthenticationFlow(requestMock))
+                        .thenReturn(oauth2UtilResult);
+            }
+        }
+
+        boolean result = AuthzUtil.isApiBasedAuthenticationFlow(oAuthMessageMock);
+
+        assertEquals(result, expectedResult, "isApiBasedAuthenticationFlow should return " +
+                expectedResult + " for isAuthzChallenge=" + isAuthzChallenge +
+                ", responseMode=" + responseMode + ", oauth2ParamsPresent=" + oauth2ParamsPresent +
+                ", oauth2UtilResult=" + oauth2UtilResult);
+    }
+
+    @DataProvider(name = "provideAuthzChallengeResponseData")
+    public Object[][] provideAuthzChallengeResponseData() {
+        return new Object[][]{
+                {"Test error description", "invalid_client", "Test error description"},
+                {null, "invalid_client", "Authorization failure. Authorization information " +
+                        "was invalid or missing from your request."},
+                {"", "invalid_client", "Authorization failure. Authorization information " +
+                        "was invalid or missing from your request."}
+        };
+    }
+
+    @Test(dataProvider = "provideAuthzChallengeResponseData")
+    public void testBuildAuthzChallengeResponseForAuthorizationFailure(String description, String expectedError,
+                                                                       String expectedErrorDescription)
+            throws Exception {
+
+        try (MockedStatic<EndpointUtil> endpointUtil = mockStatic(EndpointUtil.class)) {
+            endpointUtil.when(EndpointUtil::getRealmInfo).thenReturn("Basic realm=WSO2 Identity Server");
+            Log mockLog = mock(Log.class);
+            when(mockLog.isDebugEnabled()).thenReturn(true);
+
+            Method buildAuthzChallengeResponseMethod = authzUtilObject.getClass().getDeclaredMethod(
+                    "buildAuthzChallengeResponseForAuthorizationFailure", String.class, Log.class);
+            buildAuthzChallengeResponseMethod.setAccessible(true);
+            Response response =
+                    (Response) buildAuthzChallengeResponseMethod.invoke(authzUtilObject, description, mockLog);
+
+            assertNotNull(response, "Response should not be null");
+            assertEquals(HttpServletResponse.SC_UNAUTHORIZED,
+                    response.getStatus(), "Status code should be 401 Unauthorized");
+
+            MultivaluedMap<String, Object> headers = response.getMetadata();
+            assertTrue(headers.containsKey(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE),
+                    "Response should contain WWW-Authenticate header");
+            assertEquals("Basic realm=WSO2 Identity Server",
+                    headers.getFirst(OAuthConstants.HTTP_RESP_HEADER_AUTHENTICATE),
+                    "WWW-Authenticate header value is incorrect");
+
+            String responseBody = (String) response.getEntity();
+            assertNotNull(responseBody, "Response body should not be null");
+
+            AuthzChallengeFailResponse failResponse =
+                    new Gson().fromJson(responseBody, AuthzChallengeFailResponse.class);
+            assertEquals(expectedError, failResponse.getError(), "Error code is incorrect");
+            assertEquals(expectedErrorDescription, failResponse.getErrorDescription(),
+                    "Error description is incorrect");
+
+            verify(mockLog).isDebugEnabled();
+            verify(mockLog).debug(contains("Request authorization failed."));
+        }
+    }
+
+    @DataProvider(name = "provideIdentityOAuth2ExceptionData")
+    public Object[][] provideIdentityOAuth2ExceptionData() {
+
+        return new Object[][]{
+                {"invalid_request", "Test error description", "invalid_request", "Test error description"},
+                {"server_error", "An internal error occurred", "server_error", "An internal error occurred"},
+                {"test_value", "An internal error occurred", "test_value", "An internal error occurred"}
+        };
+    }
+
+    @Test(dataProvider = "provideIdentityOAuth2ExceptionData")
+    public void testHandleIdentityOAuth2Exception(String errorCode, String errorMessage, String expectedError,
+                                                  String expectedErrorDescription) throws Exception {
+
+        IdentityOAuth2Exception mockException = mock(IdentityOAuth2Exception.class);
+        when(mockException.getErrorCode()).thenReturn(errorCode);
+        when(mockException.getMessage()).thenReturn(errorMessage);
+        Response response = AuthzUtil.handleIdentityOAuth2Exception(mockException);
+        assertEquals(response.getStatus(), HttpServletResponse.SC_BAD_REQUEST, "HTTP status should be 400 Bad Request");
+        String jsonResponse = (String) response.getEntity();
+        assertNotNull(jsonResponse, "Response entity should not be null");
+        AuthzChallengeFailResponse failResponse = new Gson().fromJson(jsonResponse, AuthzChallengeFailResponse.class);
+        assertEquals(failResponse.getError(), expectedError, "Error code in response is incorrect");
+        assertEquals(failResponse.getErrorDescription(), expectedErrorDescription,
+                "Error description in response is incorrect");
+    }
+
+    @DataProvider(name = "authzChallengeTestData")
+    public Object[][] authzChallengeTestData() {
+        return new Object[][] {
+                {Boolean.TRUE, true},
+                {Boolean.FALSE, false},
+                {null, false},
+                {"true", false}
+        };
+    }
+
+    @Test(dataProvider = "authzChallengeTestData")
+    public void testIsAuthzChallenge(Object attributeValue, boolean expectedResult) {
+
+        Map<String, String[]> requestParams = new HashMap<>();
+        Map<String, Object> requestAttributes = new HashMap<>();
+
+        requestAttributes.put("isAuthzChallenge", attributeValue);
+        mockHttpRequest(requestParams, requestAttributes, HttpMethod.POST);
+        Boolean result = AuthzUtil.isAuthzChallenge(httpServletRequest);
+        assertEquals(result, expectedResult);
     }
 }

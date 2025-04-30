@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, WSO2 LLC. (https://www.wso2.com) All Rights Reserved.
+ * Copyright (c) 2023-2025, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -37,6 +37,9 @@ import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Message;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.NextStep;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.Param;
 import org.wso2.carbon.identity.oauth.endpoint.api.auth.model.StepTypeEnum;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.AuthzChallengeConstants;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeFailResponse;
+import org.wso2.carbon.identity.oauth.endpoint.authzchallenge.model.AuthzChallengeIncompleteResponse;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.nio.charset.StandardCharsets;
@@ -75,6 +78,45 @@ public class ApiAuthnHandler {
         authResponse.setLinks(buildLinks());
 
         return authResponse;
+    }
+
+    public AuthzChallengeIncompleteResponse handleInitialAuthzChallengeResponse(AuthServiceResponse authServiceResponse)
+            throws AuthServiceException {
+
+        AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
+        response.setAuthSession(authServiceResponse.getSessionDataKey());
+        response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
+        response.setErrorDescription("The provided authorization is not sufficient; " +
+                "additional steps are required to complete the process.");
+        NextStep nextStep = buildNextStep(authServiceResponse);
+        response.setNextStep(nextStep);
+
+        return response;
+    }
+
+    public AuthzChallengeIncompleteResponse handleIncompleteAuthzChallengeResponse(AuthResponse authResponse) {
+
+        AuthzChallengeIncompleteResponse response = new AuthzChallengeIncompleteResponse();
+        response.setAuthSession(authResponse.getFlowId());
+        response.setError(AuthzChallengeConstants.Error.INSUFFICIENT_AUTHORIZATION.value());
+        response.setErrorDescription("The provided authorization is not sufficient; " +
+                "additional steps are required to complete the process.");
+        response.setNextStep(authResponse.getNextStep());
+
+        return response;
+    }
+
+    public AuthzChallengeFailResponse handleFailedAuthzChallengeResponse(AuthResponse authResponse) {
+
+        AuthzChallengeFailResponse response = new AuthzChallengeFailResponse();
+        response.setAuthSession(authResponse.getFlowId());
+        response.setError(AuthzChallengeConstants.Error.REDIRECT_TO_WEB.value());
+        response.setErrorDescription("Authorization failed. Start a web-based flow.");
+        if (authResponse.getNextStep().getMessages() != null) {
+            response.setNextStep(authResponse.getNextStep());
+        }
+
+        return response;
     }
 
     private NextStep buildNextStep(AuthServiceResponse authServiceResponse) {

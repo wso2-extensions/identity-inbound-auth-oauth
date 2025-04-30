@@ -96,7 +96,7 @@ public class OAuth2AuthzEndpoint {
         if (OAuth2Util.isApiBasedAuthenticationFlow(request)) {
             OAuthClientAuthnContext oAuthClientAuthnContext = AuthzUtil.getClientAuthnContext(request);
             if (!oAuthClientAuthnContext.isAuthenticated()) {
-                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext);
+                return AuthzUtil.handleAuthFailureResponse(oAuthClientAuthnContext, request);
             }
 
             ClientAttestationContext clientAttestationContext = AuthzUtil.getClientAttestationContext(request);
