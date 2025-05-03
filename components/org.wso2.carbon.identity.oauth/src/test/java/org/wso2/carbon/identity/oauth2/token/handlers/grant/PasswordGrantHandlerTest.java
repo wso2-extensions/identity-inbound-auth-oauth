@@ -262,25 +262,11 @@ public class PasswordGrantHandlerTest {
              MockedStatic<MultitenantUtils> multitenantUtils = mockStatic(MultitenantUtils.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<FileBasedConfigurationBuilder> fileBasedConfigBuilder = mockStatic(
-                     FileBasedConfigurationBuilder.class)) {
-
-            fileBasedConfigBuilder.when(FileBasedConfigurationBuilder::getInstance)
-                    .thenReturn(fileBasedConfigurationBuilder);
-            AuthenticatorConfig basicAuthenticatorConfig = new AuthenticatorConfig();
-            Map<String, String> parameterMap = new HashMap<>();
-            if (isShowAuthFailureReason) {
-                parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "true");
-            } else {
-                parameterMap.put(SHOW_AUTHFAILURE_RESON_CONFIG, "false");
-            }
-            basicAuthenticatorConfig.setParameterMap(parameterMap);
-            when(fileBasedConfigurationBuilder.getAuthenticatorBean(anyString())).thenReturn(
-                    basicAuthenticatorConfig);
+             MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class)) {
 
             oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(serverConfiguration);
             when(serverConfiguration.getIdentityOauthTokenIssuer()).thenReturn(oauthIssuer);
+            when(serverConfiguration.isShowAuthFailureReasonForPasswordGrant()).thenReturn(isShowAuthFailureReason);
             multitenantUtils.when(() -> MultitenantUtils.getTenantDomain(anyString())).thenReturn(tenantDomain);
 
             when(tokReqMsgCtx.getOauth2AccessTokenReqDTO()).thenReturn(oAuth2AccessTokenReqDTO);
