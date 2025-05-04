@@ -166,7 +166,7 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
                     response.addCookie(oldCookie);
 
                     if (log.isDebugEnabled()) {
-                        log.debug("OPBS cookie was found with the root path and Invalidated it.");
+                        log.debug("OPBS cookie with root path found and invalidated.");
                     }
                 }
             }
