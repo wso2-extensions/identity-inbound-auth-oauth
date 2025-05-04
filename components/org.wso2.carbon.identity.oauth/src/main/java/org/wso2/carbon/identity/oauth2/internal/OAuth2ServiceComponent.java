@@ -79,6 +79,8 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthService;
 import org.wso2.carbon.identity.oauth2.device.api.DeviceAuthServiceImpl;
 import org.wso2.carbon.identity.oauth2.device.response.DeviceFlowResponseTypeRequestValidator;
+import org.wso2.carbon.identity.oauth2.finegrainedauthz.services.FineGrainedAuthzConfigMgtService;
+import org.wso2.carbon.identity.oauth2.finegrainedauthz.services.FineGrainedAuthzConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationConfigMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
@@ -424,6 +426,9 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(JWTAccessTokenClaimProvider.class,
                     new JWTAccessTokenRARClaimProvider(), null);
             bundleContext.registerService(IntrospectionDataProvider.class, new IntrospectionRARDataProvider(), null);
+
+            bundleContext.registerService(FineGrainedAuthzConfigMgtService.class,
+                    new FineGrainedAuthzConfigMgtServiceImpl(), null);
 
             // Note : DO NOT add any activation related code below this point,
             // to make sure the server doesn't start up if any activation failures occur
