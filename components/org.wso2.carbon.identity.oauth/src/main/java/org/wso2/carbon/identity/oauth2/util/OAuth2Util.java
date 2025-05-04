@@ -4593,7 +4593,8 @@ public class OAuth2Util {
     /**
      * Used to check if tenant qualified URLs should be used to access resources.
      *
-     * Console and My account applications in each tenant should operate in a tenanted environment at all times.
+     * Console and My Account applications in each tenant should continue to function in a multi-tenant environment
+     * even if tenant-qualified URLs are disabled.
      * @return if tenant qualified URLs should be used or not.
      */
     private static boolean useTenantQualifiedURLs() {
