@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2015, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2015-2025, WSO2 LLC. (http://www.wso2.org).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth2.internal;
 
 import com.google.gson.Gson;
@@ -243,7 +244,6 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                         .getInboundAuthenticationRequestConfigs()) {
                     if (OAUTH.equals(authConfig.getInboundAuthType()) ||
                             OAUTH2.equals(authConfig.getInboundAuthType())) {
-
                         OAuthAppDO oAuthAppDO = getOAuthAppDO(authConfig, serviceProvider);
                         User owner = serviceProvider.getOwner();
                         oAuthAppDO.setAppOwner(new AuthenticatedUser(owner));
@@ -298,8 +298,8 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
             authConfig.setInboundConfigurationProtocol(oAuthAppDO);
             return oAuthAppDO;
         }
-        String errorMsg = String.format("No inbound configurations found for oauth in the imported %s",
-                serviceProvider.getApplicationName());
+        String errorMsg = String.format("No inbound authentication configurations found " +
+                        "for the imported service provider: %s.", serviceProvider.getApplicationName());
         throw new IdentityApplicationManagementException(errorMsg);
     }
 
