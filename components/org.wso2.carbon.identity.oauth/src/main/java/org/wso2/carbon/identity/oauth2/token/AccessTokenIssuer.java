@@ -205,15 +205,19 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
-            if (authorizationGrantCacheEntry != null &&
-                    authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
-                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
-                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
-                    tokReqMsgCtx.setRefreshTokenvalidityPeriod(
-                            authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+            if (authorizationGrantCacheEntry != null) {
+                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
+                    if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
+                            EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
+                        tokReqMsgCtx.setRefreshTokenvalidityPeriod(
+                                authorizationGrantCacheEntry.getAccessTokenExtensionDO()
+                                        .getRefreshTokenValidityPeriod());
+                    }
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
+                            authorizationGrantCacheEntry.getAccessTokenExtensionDO());
                 }
-                tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
-                        authorizationGrantCacheEntry.getAccessTokenExtensionDO());
+                tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
+                tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
             }
             persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }
@@ -395,12 +399,16 @@ public class AccessTokenIssuer {
 
         String syncLockString = authzGrantHandler.buildSyncLockString(tokReqMsgCtx);
         if (StringUtils.isBlank(syncLockString)) {
-            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+            OAuth2AccessTokenRespDTO respDTO =
+                    validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
+            return respDTO;
         }
         synchronized (syncLockString.intern()) {
-            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+            OAuth2AccessTokenRespDTO respDTO =
+                    validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
+            return respDTO;
         }
     }
 

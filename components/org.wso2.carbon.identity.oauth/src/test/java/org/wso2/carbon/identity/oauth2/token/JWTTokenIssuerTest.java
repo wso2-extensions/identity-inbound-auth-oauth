@@ -348,6 +348,8 @@ public class JWTTokenIssuerTest {
         tokenReqMessageContext.addProperty(EXPIRY_TIME_JWT, cal.getTime());
         tokenReqMessageContext.addProperty(OAuthConstants.UserType.USER_TYPE, OAuthConstants.UserType.APPLICATION);
         tokenReqMessageContext.setAudiences(Collections.singletonList(DUMMY_CLIENT_ID));
+        tokenReqMessageContext.setSelectedAcr("acr_test");
+        tokenReqMessageContext.setAuthTime(1000);
         authenticatedUserForTokenReq.setFederatedUser(false);
 
         return new Object[][]{
@@ -467,6 +469,8 @@ public class JWTTokenIssuerTest {
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_CLIENT_ID);
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_CONSENTED), false);
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.IS_FEDERATED), false);
+                assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ACR), "acr_test");
+                assertEquals(jwtClaimSet.getClaim(OAuth2Constants.AUTH_TIME), (long) 1);
             }
             if (authzReqMessageContext != null) {
                 assertEquals(jwtClaimSet.getClaim(OAuth2Constants.ENTITY_ID), DUMMY_USER_ID);

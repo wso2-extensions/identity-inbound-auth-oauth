@@ -60,7 +60,6 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenExtendedAttributes;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -78,13 +77,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_APP;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
@@ -606,36 +603,10 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setValidityPeriodInMillis(tokReqMsgCtx.getValidityPeriod());
         newTokenBean.setValidityPeriod(tokReqMsgCtx.getValidityPeriod() / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
-        newTokenBean.setAccessTokenExtendedAttributes(
-                getAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes(), tokReqMsgCtx));
+        newTokenBean.setAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes());
         setRefreshTokenDetails(tokReqMsgCtx, existingTokenBean, newTokenBean, oauthTokenIssuer);
 
         return newTokenBean;
-    }
-
-    private AccessTokenExtendedAttributes getAccessTokenExtendedAttributes(
-            AccessTokenExtendedAttributes accessTokenExtendedAttributes,
-            OAuthTokenReqMessageContext tokReqMsgCtx) {
-
-        if (tokReqMsgCtx.isImpersonationRequest()) {
-            accessTokenExtendedAttributes =
-                    addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
-                    accessTokenExtendedAttributes);
-        }
-        // Add any new extended attributes here using @addExtendedAttribute.
-        return accessTokenExtendedAttributes;
-    }
-
-    private AccessTokenExtendedAttributes addExtendedAttribute(String key, String value, AccessTokenExtendedAttributes
-            accessTokenExtendedAttributes) {
-
-        if (accessTokenExtendedAttributes == null) {
-            accessTokenExtendedAttributes = new AccessTokenExtendedAttributes(new HashMap<>());
-        }
-        if (key != null && value != null) {
-            accessTokenExtendedAttributes.getParameters().put(key, value);
-        }
-        return accessTokenExtendedAttributes;
     }
 
     private void updateMessageContextToCreateNewToken(OAuthTokenReqMessageContext tokReqMsgCtx, String consumerKey,
@@ -660,7 +631,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         tokReqMsgCtx.setAccessTokenIssuedTime(timestamp.getTime());
         tokReqMsgCtx.setAudiences(OAuth2Util.getOIDCAudience(consumerKey, oAuthAppBean));
 
-        updateRefreshTokenValidityPeriodInMessageContext(oAuthAppBean, existingTokenBean, tokReqMsgCtx);
+        updateRefreshTokenValidityPeriodInMessageContext(oAuthAppBean, tokReqMsgCtx);
     }
 
     private void setRefreshTokenDetails(OAuthTokenReqMessageContext tokReqMsgCtx, AccessTokenDO existingTokenBean,
@@ -676,17 +647,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (!isTokenRenewalPerRequestConfigured() &&
                 isRefreshTokenValid(existingTokenBean, tokReqMsgCtx.getValidityPeriod(),
                         tokenReq.getClientId()) && !isExtendedToken) {
-            setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean, tokReqMsgCtx);
+            setRefreshTokenDetailsFromExistingToken(existingTokenBean, newTokenBean);
         } else {
             // no valid refresh token found in existing Token
             newTokenBean.setRefreshTokenIssuedTime(new Timestamp(tokReqMsgCtx.getAccessTokenIssuedTime()));
             // Set refresh token validity period.
-            if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
-                newTokenBean.setRefreshTokenValidityPeriodInMillis(
-                        tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis());
-            } else {
-                newTokenBean.setRefreshTokenValidityPeriodInMillis(tokReqMsgCtx.getRefreshTokenvalidityPeriod());
-            }
+            newTokenBean.setRefreshTokenValidityPeriodInMillis(tokReqMsgCtx.getRefreshTokenvalidityPeriod());
             newTokenBean.setRefreshToken(getRefreshToken(tokReqMsgCtx, oauthTokenIssuer));
         }
     }
@@ -812,22 +778,11 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void setRefreshTokenDetailsFromExistingToken(AccessTokenDO existingAccessTokenDO,
-                                                         AccessTokenDO newTokenBean,
-                                                         OAuthTokenReqMessageContext tokReqMsgCtx) {
-
+                                                         AccessTokenDO newTokenBean) {
         newTokenBean.setRefreshToken(existingAccessTokenDO.getRefreshToken());
         newTokenBean.setRefreshTokenIssuedTime(existingAccessTokenDO.getRefreshTokenIssuedTime());
-
-        /*
-        Giving precedence to OAuthTokenReqMessageContext which is updated during
-        pre-issue access token action execution.
-         */
-        if (tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis() > 0) {
-            newTokenBean.setRefreshTokenValidityPeriodInMillis(tokReqMsgCtx.getRefreshTokenValidityPeriodInMillis());
-        } else {
-            newTokenBean.setRefreshTokenValidityPeriodInMillis(existingAccessTokenDO
-                    .getRefreshTokenValidityPeriodInMillis());
-        }
+        newTokenBean.setRefreshTokenValidityPeriodInMillis(existingAccessTokenDO
+                .getRefreshTokenValidityPeriodInMillis());
     }
 
     private void validateGrantTypeParam(OAuth2AccessTokenReqDTO tokenReq) throws IdentityOAuth2Exception {
@@ -837,13 +792,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
     }
 
     private void updateRefreshTokenValidityPeriodInMessageContext(OAuthAppDO oAuthAppBean,
-                                                                  AccessTokenDO existingTokenBean,
                                                                   OAuthTokenReqMessageContext tokReqMsgCtx) {
-
-        OAuth2AccessTokenReqDTO tokenReq = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
-        boolean isExtendedToken = tokenReq.getAccessTokenExtendedAttributes() != null &&
-                tokenReq.getAccessTokenExtendedAttributes().getRefreshTokenValidityPeriod() >
-                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 
         long refreshTokenValidityPeriodInMillis;
         long validityPeriodFromMsgContext = tokReqMsgCtx.getRefreshTokenvalidityPeriod();
@@ -855,14 +804,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                         "validity period configured from OAuthTokenReqMessageContext: " +
                         refreshTokenValidityPeriodInMillis + " ms");
             }
-        } else if (existingTokenBean != null && !isTokenRenewalPerRequestConfigured() &&
-                isRefreshTokenValid(existingTokenBean, tokReqMsgCtx.getValidityPeriod(), tokenReq.getClientId()) &&
-                !isExtendedToken) {
-            /*
-            Checks if the existing refresh token will be reused. If so, its original expiry time should be
-            retained instead of recalculating it from the application-level configuration.
-             */
-            refreshTokenValidityPeriodInMillis = existingTokenBean.getRefreshTokenValidityPeriodInMillis();
         } else if (oAuthAppBean.getRefreshTokenExpiryTime() != 0) {
             refreshTokenValidityPeriodInMillis =
                     oAuthAppBean.getRefreshTokenExpiryTime() * SECONDS_TO_MILISECONDS_FACTOR;
@@ -876,7 +817,6 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         }
 
         tokReqMsgCtx.setRefreshTokenvalidityPeriod(refreshTokenValidityPeriodInMillis);
-        tokReqMsgCtx.setRefreshTokenValidityPeriodInMillis(refreshTokenValidityPeriodInMillis);
     }
 
     private void addTokenToCache(OAuthCacheKey cacheKey, AccessTokenDO existingAccessTokenDO) {
