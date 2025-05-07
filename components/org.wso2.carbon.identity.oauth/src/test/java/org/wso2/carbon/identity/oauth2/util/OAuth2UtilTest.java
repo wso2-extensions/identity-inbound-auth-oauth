@@ -1296,6 +1296,8 @@ public class OAuth2UtilTest {
                      mockStatic(IdentityApplicationManagementUtil.class)) {
             identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled)
                     .thenReturn(enableTenantURLSupport);
+            identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs)
+                    .thenReturn(enableTenantURLSupport);
             identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
             PrivilegedCarbonContext mockPrivilegedCarbonContext = mock(PrivilegedCarbonContext.class);
             privilegedCarbonContext.when(
@@ -1432,6 +1434,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1468,6 +1471,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1533,6 +1537,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOidcWebFingerEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1588,6 +1593,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOauth2UserInfoEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1634,6 +1640,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1681,6 +1688,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
