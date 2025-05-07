@@ -1529,24 +1529,6 @@ public class OAuth2Util {
         }
 
         /**
-         * This method is used to get token endpoint URL when mTLS is enabled.
-         * Tenant qualified token endpoint URL will be returned if ‘tenant_context.enable_tenant_qualified_urls’
-         * mode is set in deployment.toml, or if the request originates from a system application.
-         *
-         * @param clientID client ID.
-         * @param tenantDomain tenant domain.
-         * @return token endpoint URL when mTLS is enabled.
-         */
-        public static String getOAuth2MTLSTokenEPUrl(String clientID, String tenantDomain) {
-
-            return buildUrlWithHostname(OAUTH2_TOKEN_EP_URL,
-                    OAuthServerConfiguration.getInstance()::getOAuth2TokenEPUrl,
-                    OAuthServerConfiguration.getInstance()::getOauth2TokenEPUrlV2,
-                    IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME),
-                    clientID, tenantDomain);
-        }
-
-        /**
          * This method is used to get the resolved URL for the OAuth2 Registration Endpoint.
          *
          * @param tenantDomain Tenant Domain.
@@ -1787,36 +1769,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Builds a URL with a given context in both the tenant-qualified url supported mode and the legacy mode.
-     * Gives precedence to the file configurations in the legacy mode except for system applications.
-     * Returns the absolute URL build from the default context in the tenant-qualified url supported mode.
-     * When the legacy mode is enabled, system applications will still function in tenanted environment to ensure
-     * tenant level separation for non-SaaS console and my account.
-     *
-     * @param defaultContext              Default URL context.
-     * @param getValueFromFileBasedConfig File-based Configuration.
-     * @param hostname                    hostname of the service
-     * @return Absolute URL.
-     */
-    private static String buildUrlWithHostname(String defaultContext, Supplier<String> getValueFromFileBasedConfig,
-                                               Supplier<String> getValueFromFileBasedConfigV2, String hostname,
-                                               String clientID, String tenantDomain) {
-
-        String oauth2EndpointURLInFile = null;
-        String oauth2EndpointURLV2InFile = null;
-        if (getValueFromFileBasedConfig != null) {
-            oauth2EndpointURLInFile = getValueFromFileBasedConfig.get();
-        }
-        if (getValueFromFileBasedConfigV2 != null) {
-            oauth2EndpointURLV2InFile = getValueFromFileBasedConfigV2.get();
-        }
-        return hostname != null ?
-                buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLV2InFile,
-                        hostname, clientID, tenantDomain) :
-                buildServiceUrl(defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLV2InFile);
-    }
-
-    /**
      * Returns the public service url given the default context and the url picked from the configuration based on
      * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml.
      *
@@ -1899,47 +1851,7 @@ public class OAuth2Util {
     public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
                                                      String oauth2EndpointURLInFileV2, String hostname) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            if (StringUtils.isNotBlank(oauth2EndpointURLInFileV2)) {
-                return oauth2EndpointURLInFileV2;
-            }
-            try {
-                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
-                return ServiceURLBuilder.create().addPath(defaultContext).setOrganization(organizationId)
-                        .build(hostname).getAbsolutePublicURL();
-            } catch (URLBuilderException e) {
-                throw new OAuthRuntimeException("Error while building url for context: " + defaultContext, e);
-            }
-        } else if (StringUtils.isNotBlank(oauth2EndpointURLInFile)) {
-            // Use the value configured in the file.
-            return oauth2EndpointURLInFile;
-        }
-        // Use the default context.
-        try {
-            return ServiceURLBuilder.create().addPath(defaultContext).build(hostname).getAbsolutePublicURL();
-        } catch (URLBuilderException e) {
-            throw new OAuthRuntimeException("Error while building url for context: " + defaultContext, e);
-        }
-    }
-
-    /**
-     * Builds the public service URL using the default context path.
-     * Tenant qualified service URL will be returned if ‘tenant_context.enable_tenant_qualified_urls’ mode is set
-     * in deployment.toml, or if the request originates from a system application.
-     *
-     * @param defaultContext          default url context path.
-     * @param oauth2EndpointURLInFile url picked from the file configuration.
-     * @param oauth2EndpointURLInFileV2 v2 url picked from the file configuration.
-     * @param hostname                hostname of the service.
-     * @param clientID clientID of the application.
-     * @param tenantDomain tenant domain.
-     * @return absolute public url of the service.
-     */
-    public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
-                                                     String oauth2EndpointURLInFileV2, String hostname,
-                                                     String clientID, String tenantDomain) {
-
-        if (useTenantQualifiedURLs(clientID, tenantDomain)) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLInFileV2)) {
                 return oauth2EndpointURLInFileV2;
             }
@@ -4668,9 +4580,9 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (useTenantQualifiedURLs(clientId, tenantDomain)) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
-                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl(clientId, tenantDomain) :
+                return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
                                 PORTAL_APP_IDS.contains(clientId)).build().getAbsolutePublicURL();
             } catch (URLBuilderException e) {
