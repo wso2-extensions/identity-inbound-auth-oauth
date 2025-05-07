@@ -444,6 +444,10 @@ public class TokenValidationHandler {
         // Add client id.
         introResp.setClientId(refreshTokenDataDO.getConsumerKey());
         // Adding the AccessTokenDO as a context property for further use.
+        // Set selected acr value
+        introResp.setAcr(refreshTokenDataDO.getAcr());
+        // Set auth_time
+        introResp.setAuthTime(refreshTokenDataDO.getAuthTime());
         messageContext.addProperty("RefreshTokenDO", refreshTokenDataDO);
         // Add authenticated user object since username attribute may not have the domain appended if the
         // subject identifier is built based in the SP config.
@@ -622,6 +626,10 @@ public class TokenValidationHandler {
             }
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
+            // Set selected acr value
+            introResp.setAcr(accessTokenDO.getAcr());
+            // Set auth_time
+            introResp.setAuthTime(accessTokenDO.getAuthTime());
             // Set token binding info.
             if (accessTokenDO.getTokenBinding() != null) {
                 String bindingType = accessTokenDO.getTokenBinding().getBindingType();

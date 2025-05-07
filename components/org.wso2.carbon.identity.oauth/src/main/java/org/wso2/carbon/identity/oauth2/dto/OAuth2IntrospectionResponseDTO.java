@@ -123,6 +123,16 @@ public class OAuth2IntrospectionResponseDTO {
     private AuthenticatedUser authorizedUser;
 
     /*
+     * OPTIONAL. Selected ACR value of user authentication
+     */
+    private String acr;
+
+    /*
+     * OPTIONAL. Current authentication time
+     */
+    private long authTime;
+
+    /*
      * this is used for extensions.
      */
     private Map<String, Object> properties = new HashMap<String, Object>();
@@ -254,11 +264,6 @@ public class OAuth2IntrospectionResponseDTO {
         return properties;
     }
 
-    public void setProperties(Map<String, Object> properties) {
-
-        this.properties = properties;
-    }
-
     public String getError() {
 
         return error;
@@ -327,5 +332,26 @@ public class OAuth2IntrospectionResponseDTO {
     public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
 
         this.authorizedUser = authorizedUser;
+    }
+
+    public String getAcr() {
+        return acr;
+    }
+
+    public void setAcr(String acr) {
+        this.acr = acr;
+    }
+
+    public long getAuthTime() {
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+        this.authTime = authTime;
+    }
+
+    public void setProperties(Map<String, Object> properties) {
+
+        this.properties = properties;
     }
 }

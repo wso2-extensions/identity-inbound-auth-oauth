@@ -145,7 +145,9 @@ public class OAuth2IntrospectionEndpoint {
                 .setIssuedAt(introspectionResponse.getIat())
                 .setExpiration(introspectionResponse.getExp())
                 .setAuthorizedUserType(introspectionResponse.getAut())
-                .setAudience(introspectionResponse.getAud());;
+                .setAudience(introspectionResponse.getAud())
+                .setSelectedAcr(introspectionResponse.getAcr())
+                .setAuthTime(introspectionResponse.getAuthTime() / 1000);
 
 
         boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()

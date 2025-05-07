@@ -144,6 +144,9 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             return handleError(OAuth2ErrorCodes.INVALID_GRANT, "Refresh token is expired.", tokenReq);
         }
 
+        // Set acr and auth_time claims in to tokReqMsgCtx
+        setSelectedAcrAndAuthTime(tokReqMsgCtx);
+
         tokReqMsgCtx.setValidityPeriod(validationBean.getAccessTokenValidityInMillis());
 
         ActionExecutionStatus<?> executionStatus = executePreIssueAccessTokenActions(validationBean, tokReqMsgCtx);
@@ -186,7 +189,25 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
             addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
         }
+        
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
+    }
+
+    private void setSelectedAcrAndAuthTime(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        RefreshTokenValidationDataDO oldAccessToken =
+                (RefreshTokenValidationDataDO) tokReqMsgCtx.getProperty(PREV_ACCESS_TOKEN);
+        if (oldAccessToken.getTokenId() == null) {
+            return;
+        }
+        String tokenId = oldAccessToken.getTokenId();
+        AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(tokenId);
+        AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
+                AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(cacheKey, tokenId);
+        if (authorizationGrantCacheEntry != null) {
+            tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
+            tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
+        }
     }
 
     private OAuth2AccessTokenRespDTO getFailureOrErrorResponseDTO(ActionExecutionStatus<?> executionStatus) {
