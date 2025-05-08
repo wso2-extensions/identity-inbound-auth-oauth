@@ -33,8 +33,8 @@ import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -356,10 +356,12 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
      */
     private boolean isSystemApplication(String tenantDomain, String clientID) {
 
-        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID, "CONSOLE") ||
-                StringUtils.equalsIgnoreCase(clientID, "CONSOLE_" + tenantDomain);
-        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID, "MY_ACCOUNT") ||
-                StringUtils.equalsIgnoreCase(clientID, "MY_ACCOUNT_" + tenantDomain);
+        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_" + tenantDomain);
+        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID + "_" + tenantDomain);
 
         return isConsoleRequest || isMyAccountRequest;
     }

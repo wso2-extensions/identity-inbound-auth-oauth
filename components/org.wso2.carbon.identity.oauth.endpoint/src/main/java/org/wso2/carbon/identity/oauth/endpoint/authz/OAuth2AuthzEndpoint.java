@@ -23,6 +23,7 @@ import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.exception.OAuthProblemException;
 import org.apache.oltu.oauth2.common.exception.OAuthSystemException;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
@@ -167,10 +168,12 @@ public class OAuth2AuthzEndpoint {
      */
     private boolean isSystemApplication(String tenantDomain, String clientID) {
 
-        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID, "CONSOLE") ||
-                StringUtils.equalsIgnoreCase(clientID, "CONSOLE_" + tenantDomain);
-        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID, "MY_ACCOUNT") ||
-                StringUtils.equalsIgnoreCase(clientID, "MY_ACCOUNT_" + tenantDomain);
+        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_" + tenantDomain);
+        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
+                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID + "_" + tenantDomain);
 
         return isConsoleRequest || isMyAccountRequest;
     }
