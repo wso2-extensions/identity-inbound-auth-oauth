@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.application.authentication.framework.Authenticat
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
@@ -118,7 +119,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // Checks if the current application is a system app and sets the value to thread local
         if (StringUtils.isNotEmpty(spTenantDomain) && StringUtils.isNotEmpty(clientId)) {
             IdentityUtil.threadLocalProperties.get().put(IdentityCoreConstants.IS_SYSTEM_APPLICATION,
-                    isSystemApplication(spTenantDomain, clientId));
+                    IdentityTenantUtil.isSystemApplication(spTenantDomain, clientId));
         }
         String requestURL = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getHttpServletRequestWrapper()
                 .getRequestURL().toString();
@@ -345,25 +346,6 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
                 getSigningTenantDomain(authzReqMessageContext), idTokenSignatureAlgorithm);
-    }
-
-    /**
-     * Checks whether the current application is a system app.
-     *
-     * @param tenantDomain Tenant Domain.
-     * @param clientID Client ID.
-     * @return true if the application is a system app.
-     */
-    private boolean isSystemApplication(String tenantDomain, String clientID) {
-
-        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_" + tenantDomain);
-        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID + "_" + tenantDomain);
-
-        return isConsoleRequest || isMyAccountRequest;
     }
 
     private String getIDToken(String clientId, String spTenantDomain, JWTClaimsSet jwtClaimsSet, OAuthAppDO oAuthAppDO,

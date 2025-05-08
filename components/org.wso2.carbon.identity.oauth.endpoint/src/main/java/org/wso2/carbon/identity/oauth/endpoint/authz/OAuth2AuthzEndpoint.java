@@ -120,7 +120,7 @@ public class OAuth2AuthzEndpoint {
                     tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
                     // Checks if the current application is a system app and sets the value to thread local
                     IdentityUtil.threadLocalProperties.get().put(IdentityCoreConstants.IS_SYSTEM_APPLICATION,
-                            isSystemApplication(tenantDomain, oAuthMessage.getClientId()));
+                            IdentityTenantUtil.isSystemApplication(tenantDomain, oAuthMessage.getClientId()));
                 } else if (oAuthMessage.getSessionDataCacheEntry() != null) {
                     OAuth2Parameters oauth2Params = AuthzUtil.getOauth2Params(oAuthMessage);
                     tenantDomain = oauth2Params.getTenantDomain();
@@ -157,25 +157,6 @@ public class OAuth2AuthzEndpoint {
                 FrameworkUtils.endTenantFlow();
             }
         }
-    }
-
-    /**
-     * Checks whether the current application is a system app.
-     *
-     * @param tenantDomain Tenant Domain.
-     * @param clientID Client ID.
-     * @return true if the application is a system app.
-     */
-    private boolean isSystemApplication(String tenantDomain, String clientID) {
-
-        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_" + tenantDomain);
-        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID) || StringUtils.equalsIgnoreCase(clientID,
-                ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID + "_" + tenantDomain);
-
-        return isConsoleRequest || isMyAccountRequest;
     }
 
     @POST
