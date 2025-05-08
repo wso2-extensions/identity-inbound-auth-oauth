@@ -4596,29 +4596,6 @@ public class OAuth2Util {
     }
 
     /**
-     * Use to check if tenant qualified URLs should be used to access resources.
-     * Console and My Account applications in each tenant should continue to function in a multi-tenant environment
-     * even if tenant-qualified URLs are disabled.
-     *
-     * @param clientID client ID.
-     * @param tenantDomain tenant domain.
-     * @return true if tenant qualified URLs should be used.
-     */
-    private static boolean useTenantQualifiedURLs(String clientID, String tenantDomain) {
-
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
-            return true;
-        }
-
-        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID, OAuth2Constants.CONSOLE_CLIENT_ID) ||
-                StringUtils.equalsIgnoreCase(clientID, OAuth2Constants.CONSOLE_CLIENT_ID + "_" + tenantDomain);
-        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID, OAuth2Constants.MY_ACCOUNT_CLIENT_ID) ||
-                StringUtils.equalsIgnoreCase(clientID, OAuth2Constants.MY_ACCOUNT_CLIENT_ID + "_" + tenantDomain);
-
-        return isConsoleRequest || isMyAccountRequest;
-    }
-
-    /**
      * Used to get the issuer url for a given tenant.
      *
      * @param tenantDomain Tenant domain.

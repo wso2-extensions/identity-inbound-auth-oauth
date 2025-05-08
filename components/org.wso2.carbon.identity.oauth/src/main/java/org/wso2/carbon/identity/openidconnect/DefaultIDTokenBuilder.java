@@ -115,6 +115,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
                                OAuth2AccessTokenRespDTO tokenRespDTO) throws IdentityOAuth2Exception {
         String clientId = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getClientId();
         String spTenantDomain = getSpTenantDomain(tokenReqMsgCtxt);
+        // Checks if the current application is a system app and sets the value to thread local
         if (StringUtils.isNotEmpty(spTenantDomain) && StringUtils.isNotEmpty(clientId)) {
             IdentityUtil.threadLocalProperties.get().put(IdentityCoreConstants.IS_SYSTEM_APPLICATION,
                     IdentityTenantUtil.isSystemApplication(spTenantDomain, clientId));
