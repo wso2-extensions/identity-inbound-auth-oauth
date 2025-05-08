@@ -118,7 +118,7 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
         // Checks if the current application is a system app and sets the value to thread local
         if (StringUtils.isNotEmpty(spTenantDomain) && StringUtils.isNotEmpty(clientId)) {
             IdentityUtil.threadLocalProperties.get().put(IdentityCoreConstants.IS_SYSTEM_APPLICATION,
-                    IdentityTenantUtil.isSystemApplication(spTenantDomain, clientId));
+                    isSystemApplication(spTenantDomain, clientId));
         }
         String requestURL = tokenReqMsgCtxt.getOauth2AccessTokenReqDTO().getHttpServletRequestWrapper()
                 .getRequestURL().toString();
@@ -345,6 +345,23 @@ public class DefaultIDTokenBuilder implements org.wso2.carbon.identity.openidcon
 
         return getIDToken(clientId, spTenantDomain, jwtClaimsSet, oAuthAppDO,
                 getSigningTenantDomain(authzReqMessageContext), idTokenSignatureAlgorithm);
+    }
+
+    /**
+     * Checks whether the current application is a system app.
+     *
+     * @param tenantDomain Tenant Domain.
+     * @param clientID Client ID.
+     * @return true if the application is a system app.
+     */
+    private boolean isSystemApplication(String tenantDomain, String clientID) {
+
+        boolean isConsoleRequest = StringUtils.equalsIgnoreCase(clientID, "CONSOLE") ||
+                StringUtils.equalsIgnoreCase(clientID, "CONSOLE_" + tenantDomain);
+        boolean isMyAccountRequest = StringUtils.equalsIgnoreCase(clientID, "MY_ACCOUNT") ||
+                StringUtils.equalsIgnoreCase(clientID, "MY_ACCOUNT_" + tenantDomain);
+
+        return isConsoleRequest || isMyAccountRequest;
     }
 
     private String getIDToken(String clientId, String spTenantDomain, JWTClaimsSet jwtClaimsSet, OAuthAppDO oAuthAppDO,
