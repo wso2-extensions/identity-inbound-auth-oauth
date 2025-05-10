@@ -173,6 +173,8 @@ public class DefaultLogoutTokenBuilderTest {
 
             identityTenantUtilMockedStatic.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled)
                     .thenReturn(true);
+            identityTenantUtilMockedStatic.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs)
+                    .thenReturn(true);
             organizationManagementUtilMockedStatic.when(() -> OrganizationManagementUtil
                             .isOrganization(appDO.getUser().getTenantDomain())).thenReturn(isOrganization);
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)

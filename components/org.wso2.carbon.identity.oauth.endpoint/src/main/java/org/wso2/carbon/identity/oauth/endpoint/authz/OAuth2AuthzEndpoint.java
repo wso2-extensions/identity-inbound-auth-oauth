@@ -26,7 +26,9 @@ import org.wso2.carbon.identity.application.authentication.framework.util.Framew
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.client.attestation.filter.ClientAttestationProxy;
 import org.wso2.carbon.identity.client.attestation.mgt.model.ClientAttestationContext;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.client.authn.filter.OAuthClientAuthenticatorProxy;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.endpoint.OAuthRequestWrapper;
@@ -115,6 +117,9 @@ public class OAuth2AuthzEndpoint {
                 String tenantDomain = null;
                 if (StringUtils.isNotEmpty(oAuthMessage.getClientId())) {
                     tenantDomain = EndpointUtil.getSPTenantDomainFromClientId(oAuthMessage.getClientId());
+                    // Checks if the current application is a system app and sets the value to thread local
+                    IdentityUtil.threadLocalProperties.get().put(IdentityCoreConstants.IS_SYSTEM_APPLICATION,
+                            IdentityTenantUtil.isSystemApplication(tenantDomain, oAuthMessage.getClientId()));
                 } else if (oAuthMessage.getSessionDataCacheEntry() != null) {
                     OAuth2Parameters oauth2Params = AuthzUtil.getOauth2Params(oAuthMessage);
                     tenantDomain = oauth2Params.getTenantDomain();
