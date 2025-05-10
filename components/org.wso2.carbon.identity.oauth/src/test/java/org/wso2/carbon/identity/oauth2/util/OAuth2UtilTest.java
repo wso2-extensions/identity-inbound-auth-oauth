@@ -63,7 +63,6 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.core.DefaultServiceURLBuilder;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
@@ -137,7 +136,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.function.Supplier;
 
 import javax.servlet.http.HttpServletRequest;
@@ -288,8 +286,6 @@ public class OAuth2UtilTest {
     private MockedStatic<IdentityProviderManager> identityProviderManager;
     private MockedStatic<LoggerUtils> loggerUtils;
     private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
-    private MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic;
-    private MockedStatic<DefaultServiceURLBuilder> defaultServiceURLBuilderMockedStatic;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -313,8 +309,6 @@ public class OAuth2UtilTest {
         networkUtils = mockStatic(NetworkUtils.class);
         identityProviderManager = mockStatic(IdentityProviderManager.class);
         loggerUtils = mockStatic(LoggerUtils.class);
-        serviceURLBuilderMockedStatic = mockStatic(ServiceURLBuilder.class);
-        defaultServiceURLBuilderMockedStatic = mockStatic(DefaultServiceURLBuilder.class);
 
         oAuthComponentServiceHolder.when(
                 OAuthComponentServiceHolder::getInstance).thenReturn(oAuthComponentServiceHolderMock);
@@ -363,8 +357,6 @@ public class OAuth2UtilTest {
         identityProviderManager.close();
         loggerUtils.close();
         identityKeyStoreResolverMockedStatic.close();
-        serviceURLBuilderMockedStatic.close();
-        defaultServiceURLBuilderMockedStatic.close();
     }
 
     @Test
@@ -3195,10 +3187,7 @@ public class OAuth2UtilTest {
     }
 
     @DataProvider
-    public Object[][] gettestBuildServiceUrlWithHostnameTestData() {
-
-        String orgID1 = mockOrganizationID();
-        String orgID2 = mockOrganizationID();
+    public Object[][] getTestBuildServiceUrlWithHostnameTestData() {
 
         return new Object[][]{
                 // defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLInFileV2, hostname,
@@ -3210,7 +3199,7 @@ public class OAuth2UtilTest {
         };
     }
 
-    @Test(dataProvider = "getPreAddAuthorizedAPITestData")
+    @Test(dataProvider = "getTestBuildServiceUrlWithHostnameTestData")
     public void testBuildServiceUrlWithHostname(String defaultContext, String hostname, String oauth2EndpointURLInFile,
                                                 boolean shouldUseTenantQualifiedURLs, String tenantDomain,
                                                 String expectedServiceURL) {
@@ -3219,17 +3208,15 @@ public class OAuth2UtilTest {
                 thenReturn(shouldUseTenantQualifiedURLs);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
 
-        serviceURLBuilderMockedStatic.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
-                setOrganization(null)).thenCallRealMethod();
+        try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
+            serviceURLBuilder.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
+                    setOrganization(null)).thenCallRealMethod();
+        }
 
         String actualServiceURL = OAuth2Util.buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile,
                 null, hostname);
 
         assertEquals(actualServiceURL, expectedServiceURL);
-    }
-
-    private String mockOrganizationID() {
-        return UUID.randomUUID().toString();
     }
 
     @DataProvider
@@ -3256,8 +3243,11 @@ public class OAuth2UtilTest {
                 thenReturn(true);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).
                 thenReturn(tenantDomain);
-        serviceURLBuilderMockedStatic.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
-                setOrganization(null)).thenCallRealMethod();
+
+        try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
+            serviceURLBuilder.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
+                    setOrganization(null)).thenCallRealMethod();
+        }
 
         oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl()).
                 thenReturn(oauth2EndpointURLInFile);
