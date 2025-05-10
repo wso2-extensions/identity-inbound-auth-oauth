@@ -3203,8 +3203,10 @@ public class OAuth2UtilTest {
         return new Object[][]{
                 // defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLInFileV2, hostname,
                 // shouldUseTenantQualifiedURLs, organizationId"
-                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize", true, "abc.com", "https://localhost:9443/t/abc.com/oauth2/authorize" },
-                { "oauth2/userinfo", "localhost", "https://localhost:9443/oauth2/userinfo", false, "carbon.super", "https://localhost:9443/oauth2/userinfo" }
+                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize", true, "abc.com",
+                        "https://localhost:9443/t/abc.com/oauth2/authorize" },
+                { "oauth2/userinfo", "localhost", "https://localhost:9443/oauth2/userinfo", false, "carbon.super",
+                        "https://localhost:9443/oauth2/userinfo" }
         };
     }
 
