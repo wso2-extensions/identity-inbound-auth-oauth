@@ -1797,7 +1797,7 @@ public class OAuth2Util {
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile,
                                          String oauth2EndpointURLV2InFile) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLV2InFile)) {
                 return oauth2EndpointURLV2InFile;
             }

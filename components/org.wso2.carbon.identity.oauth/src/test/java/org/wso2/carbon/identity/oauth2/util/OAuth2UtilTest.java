@@ -56,13 +56,16 @@ import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.DefaultServiceURLBuilder;
 import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
@@ -134,6 +137,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 import javax.servlet.http.HttpServletRequest;
@@ -284,6 +288,8 @@ public class OAuth2UtilTest {
     private MockedStatic<IdentityProviderManager> identityProviderManager;
     private MockedStatic<LoggerUtils> loggerUtils;
     private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
+    private MockedStatic<ServiceURLBuilder> serviceURLBuilderMockedStatic;
+    private MockedStatic<DefaultServiceURLBuilder> defaultServiceURLBuilderMockedStatic;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -307,6 +313,8 @@ public class OAuth2UtilTest {
         networkUtils = mockStatic(NetworkUtils.class);
         identityProviderManager = mockStatic(IdentityProviderManager.class);
         loggerUtils = mockStatic(LoggerUtils.class);
+        serviceURLBuilderMockedStatic = mockStatic(ServiceURLBuilder.class);
+        defaultServiceURLBuilderMockedStatic = mockStatic(DefaultServiceURLBuilder.class);
 
         oAuthComponentServiceHolder.when(
                 OAuthComponentServiceHolder::getInstance).thenReturn(oAuthComponentServiceHolderMock);
@@ -355,6 +363,8 @@ public class OAuth2UtilTest {
         identityProviderManager.close();
         loggerUtils.close();
         identityKeyStoreResolverMockedStatic.close();
+        serviceURLBuilderMockedStatic.close();
+        defaultServiceURLBuilderMockedStatic.close();
     }
 
     @Test
@@ -3182,5 +3192,77 @@ public class OAuth2UtilTest {
         Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, -1234);
         assertEquals(certificate.toString(), testCert.toString(),
                 "The certificate should match the one in the keystore");
+    }
+
+    @DataProvider
+    public Object[][] gettestBuildServiceUrlWithHostnameTestData() {
+
+        String orgID1 = mockOrganizationID();
+        String orgID2 = mockOrganizationID();
+
+        return new Object[][]{
+                // defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLInFileV2, hostname,
+                // shouldUseTenantQualifiedURLs, organizationId"
+                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize", true, "abc.com", "https://localhost:9443/t/abc.com/oauth2/authorize" },
+                { "oauth2/userinfo", "localhost", "https://localhost:9443/oauth2/userinfo", false, "carbon.super", "https://localhost:9443/oauth2/userinfo" }
+        };
+    }
+
+    @Test(dataProvider = "getPreAddAuthorizedAPITestData")
+    public void testBuildServiceUrlWithHostname(String defaultContext, String hostname, String oauth2EndpointURLInFile,
+                                                boolean shouldUseTenantQualifiedURLs, String tenantDomain,
+                                                String expectedServiceURL) {
+
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).
+                thenReturn(shouldUseTenantQualifiedURLs);
+        identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
+
+        serviceURLBuilderMockedStatic.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
+                setOrganization(null)).thenCallRealMethod();
+
+        String actualServiceURL = OAuth2Util.buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile,
+                null, hostname);
+
+        assertEquals(actualServiceURL, expectedServiceURL);
+    }
+
+    private String mockOrganizationID() {
+        return UUID.randomUUID().toString();
+    }
+
+    @DataProvider
+    public Object[][] getTestGetIdTokenIssuerTestData() {
+
+        String consoleTenantedClientID = ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_abc.com";
+
+        return new Object[][]{
+                // tenantDomain, clientID, expectedResult
+                { "abc.com", consoleTenantedClientID, "https://localhost:9443/t/abc.com/oauth2/token" },
+                { ApplicationConstants.SUPER_TENANT, ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID,
+                        "https://localhost:9443/oauth2/token" }
+        };
+    }
+
+    @Test(dataProvider = "getTestGetIdTokenIssuerTestData")
+    public void testGetIdTokenIssuer(String tenantDomain,
+                                     String clientID, String expectedResult) throws IdentityOAuth2Exception {
+
+        String defaultContext = "oauth2/token";
+        String oauth2EndpointURLInFile = "https://localhost:9443/oauth2/token";
+
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).
+                thenReturn(true);
+        identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).
+                thenReturn(tenantDomain);
+        serviceURLBuilderMockedStatic.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
+                setOrganization(null)).thenCallRealMethod();
+
+        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl()).
+                thenReturn(oauth2EndpointURLInFile);
+        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getOauth2TokenEPUrlV2()).
+                thenReturn(null);
+
+        String actualIdTokenIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain, clientID, true);
+        assertEquals(actualIdTokenIssuer, expectedResult);
     }
 }
