@@ -67,6 +67,7 @@ import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
@@ -3190,19 +3191,22 @@ public class OAuth2UtilTest {
     public Object[][] getTestBuildServiceUrlWithHostnameTestData() {
 
         return new Object[][]{
-                // defaultContext, oauth2EndpointURLInFile, oauth2EndpointURLInFileV2, hostname,
-                // shouldUseTenantQualifiedURLs, organizationId"
-                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize", true, "abc.com",
+                // defaultContext, hostname, oauth2EndpointURLInFile, oauth2EndpointURLInFileV2,
+                // shouldUseTenantQualifiedURLs, tenantDomain, expectedServiceURL
+                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize", null, true, "abc.com",
                         "https://localhost:9443/t/abc.com/oauth2/authorize" },
-                { "oauth2/userinfo", "localhost", "https://localhost:9443/oauth2/userinfo", false, "carbon.super",
+                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize",
+                        "https://localhost:9443/t/abc.com/oauth2/authorize", true, "abc.com",
+                        "https://localhost:9443/t/abc.com/oauth2/authorize" },
+                { "oauth2/userinfo", "localhost", "https://localhost:9443/oauth2/userinfo", null, false, "carbon.super",
                         "https://localhost:9443/oauth2/userinfo" }
         };
     }
 
     @Test(dataProvider = "getTestBuildServiceUrlWithHostnameTestData")
     public void testBuildServiceUrlWithHostname(String defaultContext, String hostname, String oauth2EndpointURLInFile,
-                                                boolean shouldUseTenantQualifiedURLs, String tenantDomain,
-                                                String expectedServiceURL) {
+                                                String oauth2EndpointURLInFileV2, boolean shouldUseTenantQualifiedURLs,
+                                                String tenantDomain, String expectedServiceURL) {
 
         identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).
                 thenReturn(shouldUseTenantQualifiedURLs);
@@ -3214,7 +3218,7 @@ public class OAuth2UtilTest {
         }
 
         String actualServiceURL = OAuth2Util.buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile,
-                null, hostname);
+                oauth2EndpointURLInFileV2, hostname);
 
         assertEquals(actualServiceURL, expectedServiceURL);
     }
@@ -3225,36 +3229,41 @@ public class OAuth2UtilTest {
         String consoleTenantedClientID = ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_abc.com";
 
         return new Object[][]{
-                // tenantDomain, clientID, expectedResult
-                { "abc.com", consoleTenantedClientID, "https://localhost:9443/t/abc.com/oauth2/token" },
-                { ApplicationConstants.SUPER_TENANT, ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID,
+                // tenantDomain, clientID, isMtlsRequest, isIncorrectHostName, expectedResult
+                { "abc.com", consoleTenantedClientID, true, false, "https://localhost:9443/t/abc.com/oauth2/token" },
+                { "abc.com", consoleTenantedClientID, false, true, "https://localhost:9443/t/abc.com/oauth2/token" },
+                { ApplicationConstants.SUPER_TENANT, ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, true, false,
                         "https://localhost:9443/oauth2/token" }
         };
     }
 
     @Test(dataProvider = "getTestGetIdTokenIssuerTestData")
-    public void testGetIdTokenIssuer(String tenantDomain,
-                                     String clientID, String expectedResult) throws IdentityOAuth2Exception {
+    public void testGetIdTokenIssuer(String tenantDomain, String clientID, boolean isMtlsRequest,
+                                     boolean isIncorrectHostName, String expectedResult)
+            throws IdentityOAuth2Exception {
 
         String defaultContext = "oauth2/token";
-        String oauth2EndpointURLInFile = "https://localhost:9443/oauth2/token";
+        String incorrectHostName = "#host_name";
 
         identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).
                 thenReturn(true);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).
                 thenReturn(tenantDomain);
 
+        if (isIncorrectHostName) {
+            try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+                identityUtil.when(() -> IdentityUtil.getProperty(IdentityCoreConstants.SERVER_HOST_NAME)).
+                        thenReturn(incorrectHostName);
+            }
+            IdentityUtil.getProperty(IdentityCoreConstants.SERVER_HOST_NAME);
+        }
+
         try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
             serviceURLBuilder.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
                     setOrganization(null)).thenCallRealMethod();
         }
 
-        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl()).
-                thenReturn(oauth2EndpointURLInFile);
-        oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getOauth2TokenEPUrlV2()).
-                thenReturn(null);
-
-        String actualIdTokenIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain, clientID, true);
+        String actualIdTokenIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain, clientID, isMtlsRequest);
         assertEquals(actualIdTokenIssuer, expectedResult);
     }
 }
