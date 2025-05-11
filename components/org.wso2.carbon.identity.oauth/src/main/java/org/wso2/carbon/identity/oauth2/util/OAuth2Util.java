@@ -4563,7 +4563,8 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
+                getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).build().getAbsolutePublicURL();
