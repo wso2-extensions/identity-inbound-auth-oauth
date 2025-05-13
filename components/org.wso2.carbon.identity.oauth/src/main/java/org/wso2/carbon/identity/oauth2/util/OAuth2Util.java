@@ -1515,6 +1515,11 @@ public class OAuth2Util {
                     IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
         }
 
+        /**
+         * This method is used to get token endpoint URL when mTLS is enabled.
+         *
+         * @return token endpoint URL when mTLS is enabled.
+         */
         public static String getOAuth2MTLSTokenEPUrl() {
 
             return buildUrlWithHostname(OAUTH2_TOKEN_EP_URL,
@@ -1792,7 +1797,7 @@ public class OAuth2Util {
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile,
                                          String oauth2EndpointURLV2InFile) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLV2InFile)) {
                 return oauth2EndpointURLV2InFile;
             }
@@ -1846,7 +1851,7 @@ public class OAuth2Util {
     public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
                                                      String oauth2EndpointURLInFileV2, String hostname) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLInFileV2)) {
                 return oauth2EndpointURLInFileV2;
             }
@@ -4558,7 +4563,7 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
@@ -4576,7 +4581,7 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
