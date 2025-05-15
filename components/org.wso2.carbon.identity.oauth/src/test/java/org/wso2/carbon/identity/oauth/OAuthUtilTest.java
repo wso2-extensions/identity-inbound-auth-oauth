@@ -422,7 +422,7 @@ public class OAuthUtilTest {
 
         try (MockedStatic<UserCoreUtil> userCoreUtil = mockStatic(UserCoreUtil.class)) {
 
-            UniqueIDJDBCUserStoreManager userStoreManager = Mockito.spy(
+            UniqueIDJDBCUserStoreManager userStoreManager = spy(
                     new UniqueIDJDBCUserStoreManager(new RealmConfiguration(), 1));
 
             org.wso2.carbon.user.core.common.User mockUser = Mockito.mock(org.wso2.carbon.user.core.common.User.class);
@@ -484,7 +484,7 @@ public class OAuthUtilTest {
         UserStoreManager userStoreManager = mock(UserStoreManager.class);
 
         // Create a real instance of AuthorizationCodeDAO and spy on it
-        AuthorizationCodeDAO authorizationCodeDAO = Mockito.spy(new AuthorizationCodeDAOImpl());
+        AuthorizationCodeDAO authorizationCodeDAO = spy(new AuthorizationCodeDAOImpl());
 
         when(userStoreManager.getTenantId()).thenReturn(-1234);
         when(userStoreManager.getRealmConfiguration()).thenReturn(mock(RealmConfiguration.class));

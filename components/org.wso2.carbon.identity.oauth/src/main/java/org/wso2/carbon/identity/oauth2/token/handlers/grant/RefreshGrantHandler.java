@@ -189,7 +189,6 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
             setTokenDataToMessageContext(tokReqMsgCtx, accessTokenBean);
             addUserAttributesToCache(accessTokenBean, tokReqMsgCtx);
         }
-        
         return buildTokenResponse(tokReqMsgCtx, accessTokenBean);
     }
 

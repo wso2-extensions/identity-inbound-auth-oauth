@@ -399,16 +399,12 @@ public class AccessTokenIssuer {
 
         String syncLockString = authzGrantHandler.buildSyncLockString(tokReqMsgCtx);
         if (StringUtils.isBlank(syncLockString)) {
-            OAuth2AccessTokenRespDTO respDTO =
-                    validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
-            return respDTO;
         }
         synchronized (syncLockString.intern()) {
-            OAuth2AccessTokenRespDTO respDTO =
-                    validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
-            return respDTO;
         }
     }
 

@@ -264,6 +264,11 @@ public class OAuth2IntrospectionResponseDTO {
         return properties;
     }
 
+    public void setProperties(Map<String, Object> properties) {
+
+        this.properties = properties;
+    }
+
     public String getError() {
 
         return error;
@@ -350,8 +355,4 @@ public class OAuth2IntrospectionResponseDTO {
         this.authTime = authTime;
     }
 
-    public void setProperties(Map<String, Object> properties) {
-
-        this.properties = properties;
-    }
 }
