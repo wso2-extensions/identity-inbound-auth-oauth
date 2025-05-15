@@ -604,6 +604,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setValidityPeriod(tokReqMsgCtx.getValidityPeriod() / SECONDS_TO_MILISECONDS_FACTOR);
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
         newTokenBean.setAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes());
+        newTokenBean.setAcr(tokReqMsgCtx.getSelectedAcr());
+        newTokenBean.setAuthTime(tokReqMsgCtx.getAuthTime());
         setRefreshTokenDetails(tokReqMsgCtx, existingTokenBean, newTokenBean, oauthTokenIssuer);
 
         return newTokenBean;
@@ -1090,6 +1092,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     log.debug("Retrieved latest access token for client Id: " + tokenReq.getClientId() + " user: " +
                             tokenMsgCtx.getAuthorizedUser() + " and scope: " + scope + " from db");
                 }
+            }
+            if (tokenMsgCtx.getSelectedAcr() != null) {
+                existingToken.setAcr(tokenMsgCtx.getSelectedAcr());
+            }
+            if (tokenMsgCtx.getAuthTime() != 0) {
+                existingToken.setAuthTime(tokenMsgCtx.getAuthTime());
             }
             long expireTime = getAccessTokenExpiryTimeMillis(existingToken);
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) &&

@@ -100,10 +100,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
-import org.wso2.carbon.identity.oauth.cache.CacheEntry;
-import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.cache.*;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -2185,6 +2182,8 @@ public class OAuth2Util {
 
         // check the cache, if caching is enabled.
         OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenIdentifier);
+        AuthorizationGrantCacheKey authorizationGrantCacheKey =
+                new AuthorizationGrantCacheKey(accessTokenIdentifier);
         CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
         // cache hit, do the type check.
         if (result != null && result instanceof AccessTokenDO) {
@@ -2203,6 +2202,12 @@ public class OAuth2Util {
         if (accessTokenDO == null) {
             accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessToken(accessTokenIdentifier, includeExpired);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(authorizationGrantCacheKey);
+            if (cacheEntry != null) {
+                accessTokenDO.setAcr(cacheEntry.getSelectedAcrValue());
+                accessTokenDO.setAuthTime(cacheEntry.getAuthTime());
+            }
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Retrieved active access token from OAuthCache for token Identifier: " +
