@@ -329,7 +329,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                     }
 
                     boolean isImpersonatingActorInitiatedRevocation = validateImpersonatingActorInitiatedRevocation(
-                            accessTokenDO, userId);
+                            accessTokenDO, user.getAuthenticatedSubjectIdentifier());
                     if (isFederatedRoleBasedAuthzEnabled
                             && StringUtils.equalsIgnoreCase(
                                     user.getFederatedIdPName(), authenticatedUser.getFederatedIdPName())
@@ -354,7 +354,8 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         }
     }
 
-    private boolean validateImpersonatingActorInitiatedRevocation(AccessTokenDO accessTokenDO, String userId) {
+    private boolean validateImpersonatingActorInitiatedRevocation(
+            AccessTokenDO accessTokenDO, String authenticatedSubjectIdentifier) {
 
         boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
                 .isUserSessionImpersonationEnabled();
@@ -366,7 +367,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
                 accessTokenDO.getAccessTokenExtendedAttributes().getParameters().containsKey(IMPERSONATING_ACTOR);
         if (isImpersonationRequest) {
             return Objects.equals(accessTokenDO.getAccessTokenExtendedAttributes()
-                    .getParameters().get(IMPERSONATING_ACTOR), userId);
+                    .getParameters().get(IMPERSONATING_ACTOR), authenticatedSubjectIdentifier);
         }
         return false;
     }
