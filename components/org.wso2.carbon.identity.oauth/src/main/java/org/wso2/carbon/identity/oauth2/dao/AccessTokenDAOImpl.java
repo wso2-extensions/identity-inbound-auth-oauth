@@ -1159,7 +1159,7 @@ public class AccessTokenDAOImpl extends AbstractOAuthDAO implements AccessTokenD
                     dataDO.setIsConsentedToken(isConsentedToken);
                     dataDO.setAppResidentTenantId(appResideTenantId);
                     dataDO.setAccessTokenExtendedAttributes(new AccessTokenExtendedAttributes(
-                            getAccessTokenExtendedAttributeParameters(accessTokenIdentifier)));
+                            getAccessTokenExtendedAttributeParameters(tokenId)));
 
                     if (StringUtils.isNotBlank(tokenBindingReference) && !NONE.equals(tokenBindingReference)) {
                         setTokenBindingToAccessTokenDO(dataDO, connection, tokenId);
