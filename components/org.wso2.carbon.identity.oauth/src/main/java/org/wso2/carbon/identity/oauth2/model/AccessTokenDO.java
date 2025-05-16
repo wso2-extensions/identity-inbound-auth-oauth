@@ -109,8 +109,8 @@ public class AccessTokenDO extends CacheEntry {
     }
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
-            TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
-            long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
+                         TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
+                         long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
 
         this.consumerKey = consumerKey;
         this.authzUser = authzUser;
@@ -121,19 +121,6 @@ public class AccessTokenDO extends CacheEntry {
         this.refreshTokenValidityPeriodInMillis = refreshTokenValidityPeriodInMillis;
         this.tokenType = tokenType;
         this.tokenBinding = tokenBinding;
-    }
-
-    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
-                         Timestamp issuedTime, Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
-                         long refreshTokenValidityPeriodInMillis, String tokenType, String acr, long authTime) {
-        super();
-    }
-
-    public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
-                         Timestamp issuedTime, Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
-                         long refreshTokenValidityPeriodInMillis, String tokenType, Timestamp issuedTime1,
-                         String acr, long authTime) {
-        super();
     }
 
     /**
@@ -151,11 +138,8 @@ public class AccessTokenDO extends CacheEntry {
                 tokenDO.getRefreshTokenIssuedTime(),
                 tokenDO.getValidityPeriodInMillis(),
                 tokenDO.getRefreshTokenValidityPeriodInMillis(),
-                tokenDO.getTokenType(),
-                tokenDO.getAcr(),
-                tokenDO.getAuthTime()
+                tokenDO.getTokenType()
         );
-        newTokenDO.setAuthzUser(tokenDO.getAuthzUser());
         newTokenDO.setTenantID(tokenDO.getTenantID());
         newTokenDO.setTokenState(tokenDO.getTokenState());
         newTokenDO.setRefreshToken(tokenDO.getRefreshToken());
@@ -167,11 +151,6 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
         newTokenDO.setAppResidentTenantId(tokenDO.getAppResidentTenantId());
         newTokenDO.setAccessTokenExtendedAttributes(tokenDO.getAccessTokenExtendedAttributes());
-        newTokenDO.setConsumerKey(tokenDO.getConsumerKey());
-        newTokenDO.setIssuedTime(tokenDO.getIssuedTime());
-        newTokenDO.setRefreshTokenIssuedTime(tokenDO.getRefreshTokenIssuedTime());
-        newTokenDO.setValidityPeriodInMillis(tokenDO.getValidityPeriodInMillis());
-        newTokenDO.setRefreshTokenValidityPeriodInMillis(tokenDO.getRefreshTokenValidityPeriodInMillis());
         newTokenDO.setAcr(tokenDO.getAcr());
         newTokenDO.setAuthTime(tokenDO.getAuthTime());
 

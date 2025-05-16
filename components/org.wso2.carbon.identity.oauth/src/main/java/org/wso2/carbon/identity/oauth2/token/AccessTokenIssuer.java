@@ -216,8 +216,12 @@ public class AccessTokenIssuer {
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
                             authorizationGrantCacheEntry.getAccessTokenExtensionDO());
                 }
-                tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
-                tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
+                if (authorizationGrantCacheEntry.getAcrValue() != null) {
+                    tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
+                }
+                if (authorizationGrantCacheEntry.getMaxAge() > 0) {
+                    tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
+                }
             }
             persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }

@@ -39,8 +39,14 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
-import org.wso2.carbon.identity.oauth.cache.*;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.CacheEntry;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
@@ -71,6 +77,7 @@ import java.sql.PreparedStatement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,7 +89,16 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -139,6 +155,7 @@ public class OAuthUtilTest {
         OAuthComponentServiceHolder.getInstance().setIdpManager(idpManager);
         OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
         OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+        oAuth2Util = mockStatic(OAuth2Util.class);
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         oAuthTokenPersistenceFactory = mockStatic(OAuthTokenPersistenceFactory.class);
         authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
@@ -148,6 +165,7 @@ public class OAuthUtilTest {
     public void tearDown() throws Exception {
 
         organizationManagementUtil.close();
+        oAuth2Util.close();
         identityDatabaseUtil.close();
         oAuthTokenPersistenceFactory.close();
         authorizationGrantCache.close();
@@ -159,7 +177,7 @@ public class OAuthUtilTest {
         reset(organizationManager);
         closeable.close();
     }
-    
+
     @DataProvider(name = "testGetAuthenticatedUser")
     public Object[][] fullQualifiedUserName() {
         return new Object[][] { { "JDBC/siripala@is.com", "siripala" }, { "JDBC/siripala", "siripala" },
@@ -425,7 +443,7 @@ public class OAuthUtilTest {
             UniqueIDJDBCUserStoreManager userStoreManager = spy(
                     new UniqueIDJDBCUserStoreManager(new RealmConfiguration(), 1));
 
-            org.wso2.carbon.user.core.common.User mockUser = Mockito.mock(org.wso2.carbon.user.core.common.User.class);
+            org.wso2.carbon.user.core.common.User mockUser = mock(org.wso2.carbon.user.core.common.User.class);
             doReturn(mockUser).when(userStoreManager).getUser(any(), eq(null));
 
             Map<String, String> claimsMap = new HashMap<>();
@@ -523,8 +541,14 @@ public class OAuthUtilTest {
     @Test
     public void testGetAccessTokenDOFromDBWithStepUpClaimsFromSessionStore() throws Exception {
         // Mocked inputs
+        final String testAcr = "test_acr";
+        final long testAuthTime = 1686239200L;
+        final long testMaxAge = 3000L;
         String accessTokenIdentifier = "testAccessToken";
         boolean includeExpired = false;
+        LinkedHashSet<String> testAcrValue = new LinkedHashSet<>();
+        testAcrValue.add("test_acr_value_1");
+        testAcrValue.add("test_acr_value_2");
 
         // Mock the required objects
         AccessTokenDO mockedAccessTokenDO = new AccessTokenDO();
@@ -534,15 +558,18 @@ public class OAuthUtilTest {
         mockedAccessTokenDO.setAuthzUser(authenticatedUser);
 
         AccessTokenDAO mockedAccessTokenDAO = mock(AccessTokenDAO.class);
-        when(mockedAccessTokenDAO.getAccessToken(accessTokenIdentifier, includeExpired)).thenReturn(mockedAccessTokenDO);
+        when(mockedAccessTokenDAO.getAccessToken(accessTokenIdentifier, includeExpired))
+                .thenReturn(mockedAccessTokenDO);
 
         OAuthTokenPersistenceFactory mockedPersistenceFactory = mock(OAuthTokenPersistenceFactory.class);
         when(mockedPersistenceFactory.getAccessTokenDAO()).thenReturn(mockedAccessTokenDAO);
 
         AuthorizationGrantCacheKey grantCacheKey = new AuthorizationGrantCacheKey(accessTokenIdentifier);
         AuthorizationGrantCacheEntry cacheEntry = spy(new AuthorizationGrantCacheEntry());
-        cacheEntry.setSelectedAcrValue("testAcr");
-        cacheEntry.setAuthTime(1686239200L);
+        cacheEntry.setAcrValue(testAcrValue);
+        cacheEntry.setSelectedAcrValue(testAcr);
+        cacheEntry.setMaxAge(testMaxAge);
+        cacheEntry.setAuthTime(testAuthTime);
 
         AuthorizationGrantCache mockedAuthorizationGrantCache = mock(AuthorizationGrantCache.class);
         when(mockedAuthorizationGrantCache.getValueFromCacheByToken(grantCacheKey)).thenReturn(cacheEntry);
@@ -550,12 +577,17 @@ public class OAuthUtilTest {
         when(OAuthTokenPersistenceFactory.getInstance()).thenReturn(mockedPersistenceFactory);
         when(AuthorizationGrantCache.getInstance()).thenReturn(mockedAuthorizationGrantCache);
 
+        TokenPersistenceProcessor mockTokenPersistenceProcessor = mock(TokenPersistenceProcessor.class);
+        when(OAuth2Util.getPersistenceProcessor()).thenReturn(mockTokenPersistenceProcessor);
+
+        oAuth2Util.when(() -> OAuth2Util.getAccessTokenDOFromTokenIdentifier(anyString(), anyBoolean()))
+                .thenCallRealMethod();
         AccessTokenDO result = OAuth2Util.getAccessTokenDOFromTokenIdentifier(accessTokenIdentifier, includeExpired);
 
         // Assertions
         assertNotNull(result, "AccessTokenDO should not be null.");
-        assertEquals(result.getAcr(), "testAcr", "ACR value should be correctly set in AccessTokenDO.");
-        assertEquals(result.getAuthTime(), 1686239200L, "AuthTime value should be correctly set in AccessTokenDO.");
+        assertEquals(result.getAcr(), testAcr, "ACR value should be correctly set in AccessTokenDO.");
+        assertEquals(result.getAuthTime(), testAuthTime, "AuthTime value should be correctly set in AccessTokenDO.");
     }
 
     private OAuthCache getOAuthCache(OAuthCacheKey oAuthCacheKey) {

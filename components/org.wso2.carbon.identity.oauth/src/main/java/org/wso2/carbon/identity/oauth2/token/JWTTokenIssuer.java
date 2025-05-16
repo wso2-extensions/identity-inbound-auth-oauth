@@ -666,7 +666,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 jwtClaimsSetBuilder.claim(ACR, tokenReqMessageContext.getSelectedAcr());
             }
             if (tokenReqMessageContext.getAuthTime() != 0) {
-                jwtClaimsSetBuilder.claim(AUTH_TIME, TimeUnit.MILLISECONDS.toSeconds(tokenReqMessageContext.getAuthTime()));
+                jwtClaimsSetBuilder.claim(AUTH_TIME,
+                        TimeUnit.MILLISECONDS.toSeconds(tokenReqMessageContext.getAuthTime()));
             }
         }
 

@@ -204,8 +204,12 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                 AuthorizationGrantCache.getInstance().getValueFromCacheByTokenId(cacheKey, tokenId);
         if (authorizationGrantCacheEntry != null) {
-            tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
-            tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
+            if (authorizationGrantCacheEntry.getAcrValue() != null) {
+                tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
+            }
+            if (authorizationGrantCacheEntry.getMaxAge() > 0) {
+                tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
+            }
         }
     }
 
