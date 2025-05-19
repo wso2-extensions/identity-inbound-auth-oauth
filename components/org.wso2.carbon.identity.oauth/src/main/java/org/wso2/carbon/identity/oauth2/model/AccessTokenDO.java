@@ -367,18 +367,22 @@ public class AccessTokenDO extends CacheEntry {
     }
 
     public String getAcr() {
+
         return acr;
     }
 
     public void setAcr(String acr) {
+
         this.acr = acr;
     }
 
     public long getAuthTime() {
+
         return authTime;
     }
 
     public void setAuthTime(long authTime) {
+
         this.authTime = authTime;
     }
 }

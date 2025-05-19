@@ -273,18 +273,22 @@ public class OAuthTokenReqMessageContext {
     }
 
     public long getAuthTime() {
+
         return authTime;
     }
 
     public void setAuthTime(long authTime) {
+
         this.authTime = authTime;
     }
 
     public String getSelectedAcr() {
+
         return selectedAcr;
     }
 
     public void setSelectedAcr(String selectedAcr) {
+
         this.selectedAcr = selectedAcr;
     }
 }

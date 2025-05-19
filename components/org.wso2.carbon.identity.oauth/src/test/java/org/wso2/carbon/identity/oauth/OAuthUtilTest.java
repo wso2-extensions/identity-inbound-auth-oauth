@@ -540,6 +540,7 @@ public class OAuthUtilTest {
 
     @Test
     public void testGetAccessTokenDOFromDBWithStepUpClaimsFromSessionStore() throws Exception {
+
         // Mocked inputs
         final String testAcr = "test_acr";
         final long testAuthTime = 1686239200L;
