@@ -97,6 +97,8 @@ public class DefaultRefreshTokenGrantProcessor implements RefreshTokenGrantProce
         accessTokenDO.setGrantType(tokenReq.getGrantType());
         accessTokenDO.setIssuedTime(timestamp);
         accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
+        accessTokenDO.setAcr(tokReqMsgCtx.getSelectedAcr());
+        accessTokenDO.setAuthTime(tokReqMsgCtx.getAuthTime());
 
         if (OAuth2ServiceComponentHolder.isConsentedTokenColumnEnabled()) {
             String previousGrantType = validationBean.getGrantType();
