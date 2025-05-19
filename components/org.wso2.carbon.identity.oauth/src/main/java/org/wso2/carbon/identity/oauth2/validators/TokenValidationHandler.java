@@ -626,9 +626,9 @@ public class TokenValidationHandler {
             }
             // add client id
             introResp.setClientId(accessTokenDO.getConsumerKey());
-            // Set selected acr value
+            // Set selected acr value.
             introResp.setAcr(accessTokenDO.getAcr());
-            // Set auth_time
+            // Set auth_time.
             introResp.setAuthTime(accessTokenDO.getAuthTime());
             // Set token binding info.
             if (accessTokenDO.getTokenBinding() != null) {
