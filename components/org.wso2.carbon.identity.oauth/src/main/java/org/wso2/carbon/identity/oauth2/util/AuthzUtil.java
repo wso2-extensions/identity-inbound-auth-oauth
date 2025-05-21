@@ -281,7 +281,7 @@ public class AuthzUtil {
         // Set the allowed scopes to the thread local to be used down the flow.
         IdentityUtil.threadLocalProperties.get().put(OAuth2Constants.AUTHORIZED_SCOPES, permissions);
 
-        return new HashSet<>(permissions).containsAll(requestedPermissions);
+        return requestedPermissions.stream().anyMatch(permissions::contains);
     }
 
     /**
