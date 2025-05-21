@@ -1724,6 +1724,12 @@ public class SQLQueries {
                     "TOKEN.TOKEN_ID=BINDING.TOKEN_ID WHERE TOKEN.REFRESH_TOKEN = ? " +
                     "AND BINDING.TOKEN_BINDING_TYPE = ?";
 
+    public static final String ADD_OAUTH2_CODE_ACTOR =
+            "INSERT INTO IDN_OAUTH2_AUTHZ_CODE_ACTOR (CODE_ID, ACTOR, TENANT_ID) VALUES (?, ?, ?)";
+
+    public static final String GET_OAUTH2_CODE_ACTOR = "SELECT ACTOR FROM IDN_OAUTH2_AUTHZ_CODE_ACTOR WHERE " +
+            "CODE_ID=? AND TENANT_ID=?";
+
     private SQLQueries() {
 
     }

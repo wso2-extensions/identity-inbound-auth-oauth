@@ -67,6 +67,8 @@ public class OAuth2AuthorizeReqDTO {
     private Map<ClaimMapping, String> mappedRemoteClaims;
     private AuthorizationDetails authorizationDetails;
     private boolean isImpersonationRequest;
+    private String resourceIdentifier;
+    private String requestedActor;
 
     public boolean isImpersonationRequest() {
 
@@ -351,5 +353,25 @@ public class OAuth2AuthorizeReqDTO {
     public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
         this.authorizationDetails = authorizationDetails;
+    }
+
+    public String getResourceIdentifier() {
+
+        return resourceIdentifier;
+    }
+
+    public void setResourceIdentifier(String resourceIdentifier) {
+
+        this.resourceIdentifier = resourceIdentifier;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }

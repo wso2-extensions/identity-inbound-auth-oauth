@@ -86,6 +86,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             // token request should send matching redirect_uri value.
             validateCallbackUrlFromRequest(tokenReq.getCallbackURI(), authzCodeBean.getCallbackUrl());
             validatePKCECode(authzCodeBean, tokenReq.getPkceCodeVerifier());
+            validateRequestedActor(authzCodeBean, tokReqMsgCtx);
             setPropertiesForTokenGeneration(tokReqMsgCtx, tokenReq, authzCodeBean);
         } finally {
             // After validating grant, authorization code is revoked. This is done to stop repetitive usage of
@@ -595,6 +596,28 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
             }
             throw new IdentityOAuth2Exception("PKCE validation failed");
         }
+        return true;
+    }
+
+    private boolean validateRequestedActor(AuthzCodeDO authzCodeBean, OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String actorToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getActorToken();
+        String requestedActor = authzCodeBean.getRequestedActor();
+        if (StringUtils.isNotBlank(requestedActor) && StringUtils.isBlank(actorToken)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Actor token is not provided in the request.");
+            }
+            throw new IdentityOAuth2Exception("Actor token is not provided in the request.");
+        } else if (StringUtils.isNotBlank(actorToken) && StringUtils.isBlank(requestedActor)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Actor token is provided in the request, but requested actor is not available.");
+            }
+            throw new IdentityOAuth2Exception("Requested actor is not available.");
+        }
+
+        // TODO: Implement the logic to validate the actor token with the requested actor.
+        tokReqMsgCtx.setRequestedActor(requestedActor);
         return true;
     }
 

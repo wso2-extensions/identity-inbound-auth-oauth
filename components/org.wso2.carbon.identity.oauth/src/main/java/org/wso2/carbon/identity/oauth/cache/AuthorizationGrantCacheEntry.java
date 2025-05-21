@@ -93,6 +93,8 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
 
     private boolean isPreIssueAccessTokenActionsExecuted;
 
+    private String requestedActor;
+
     public String getSubjectClaim() {
         return subjectClaim;
     }
@@ -413,5 +415,15 @@ public class AuthorizationGrantCacheEntry extends CacheEntry {
             Map<ClaimMapping, String> mappedRemoteClaims) {
 
         this.mappedRemoteClaims = mappedRemoteClaims;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }

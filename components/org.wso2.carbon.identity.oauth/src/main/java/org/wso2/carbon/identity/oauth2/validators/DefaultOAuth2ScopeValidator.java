@@ -27,6 +27,7 @@ import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.identity.api.resource.mgt.APIResourceMgtException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
+import org.wso2.carbon.identity.application.common.model.APIResource;
 import org.wso2.carbon.identity.application.common.model.AuthorizedScopes;
 import org.wso2.carbon.identity.application.common.model.Scope;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -106,8 +107,10 @@ public class DefaultOAuth2ScopeValidator {
             String appResideOrgId = resolveOrgIdByTenantDomain(tenantDomain);
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
+        String resource = authzReqMessageContext.getAuthorizationReqDTO().getResourceIdentifier();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
-                        .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
+                        .getAuthorizationReqDTO().getUser(), appId, null, null, resource,
+                tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         handleImpersonationScope(authzReqMessageContext, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
@@ -147,8 +150,9 @@ public class DefaultOAuth2ScopeValidator {
         }
         String grantType = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getGrantType();
         String userType = tokenReqMessageContext.getProperty(OAuthConstants.UserType.USER_TYPE).toString();
+        String resource = tokenReqMessageContext.getOauth2AccessTokenReqDTO().getResourceIdentifier();
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, tokenReqMessageContext
-                .getAuthorizedUser(), appId, grantType, userType, tenantDomain);
+                .getAuthorizedUser(), appId, grantType, userType, resource, tenantDomain);
         removeRegisteredScopes(tokenReqMessageContext);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
          handleImpersonationScope(tokenReqMessageContext, authorizedScopes);
@@ -237,12 +241,14 @@ public class DefaultOAuth2ScopeValidator {
      * @param appId             App ID.
      * @param grantType         Grant type.
      * @param userType          User type.
+     * @param resource          Resource Identifier.
      * @param tenantDomain      Tenant domain.
      * @return Authorized scopes.
      * @throws IdentityOAuth2Exception if any error occurs during getting authorized scopes.
      */
     private List<String> getAuthorizedScopes(List<String> requestedScopes, AuthenticatedUser authenticatedUser,
-                                             String appId, String grantType, String userType, String tenantDomain)
+                                             String appId, String grantType, String userType, String resource,
+                                             String tenantDomain)
             throws IdentityOAuth2Exception {
 
         // Filter OIDC scopes and add to approved scopes list.
@@ -270,6 +276,14 @@ public class DefaultOAuth2ScopeValidator {
             requestedScopes.addAll(getConsoleScopes(tenantDomain));
         }
         List<AuthorizedScopes> authorizedScopesList = getAuthorizedScopes(appId, tenantDomain);
+        if (StringUtils.isNotEmpty(resource)) {
+            Set<String> resourceScopeNames = getResourceScopes(resource, tenantDomain).stream()
+                    .map(Scope::getName).collect(Collectors.toSet());
+
+            authorizedScopesList = authorizedScopesList.stream()
+                    .filter(auth -> auth.getScopes().stream().anyMatch(resourceScopeNames::contains))
+                    .collect(Collectors.toList());
+        }
         List<ScopeValidationHandler> scopeValidationHandlers =
                 OAuthComponentServiceHolder.getInstance().getScopeValidationHandlers();
         Map<String, List<String>> validatedScopesByHandler = new HashMap<>();
@@ -561,5 +575,17 @@ public class DefaultOAuth2ScopeValidator {
                     " tenant domain : " + tenantDomain, e);
         }
         return false;
+    }
+
+    private List<Scope> getResourceScopes(String resource, String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            APIResource apiResource = OAuth2ServiceComponentHolder.getInstance().getApiResourceManager()
+                    .getAPIResourceByIdentifier(resource, tenantDomain);
+            return apiResource.getScopes();
+        } catch (APIResourceMgtException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving resource scopes for tenant domain: "
+                    + tenantDomain, e);
+        }
     }
 }
