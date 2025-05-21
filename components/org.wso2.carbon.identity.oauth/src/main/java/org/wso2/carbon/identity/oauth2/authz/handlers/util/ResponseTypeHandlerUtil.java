@@ -293,7 +293,7 @@ public class ResponseTypeHandlerUtil {
                 oauthAuthzMsgCtx.getApprovedScope(), timestamp, validityPeriod, authorizationReqDTO.getCallbackUrl(),
                 authorizationReqDTO.getConsumerKey(), authorizationCode, codeId,
                 authorizationReqDTO.getPkceCodeChallenge(), authorizationReqDTO.getPkceCodeChallengeMethod());
-
+        authzCodeDO.setRequestedActor(authorizationReqDTO.getRequestedActor());
         String appTenant = authorizationReqDTO.getTenantDomain();
         if (StringUtils.isNotEmpty(appTenant)) {
             OAuthTokenPersistenceFactory.getInstance().getAuthorizationCodeDAO()
