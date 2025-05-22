@@ -88,6 +88,7 @@
                 org.wso2.carbon.identity.oauth.endpoint.user.OpenIDConnectUserEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.jwks.JwksEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryEndpoint,
+                org.wso2.carbon.identity.oauth.endpoint.authzservermetadata.AuthzServerMetadataEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.device.DeviceEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.device.UserAuthenticationEndpoint,
                 org.wso2.carbon.identity.oauth.endpoint.ciba.OAuth2CibaEndpoint,
