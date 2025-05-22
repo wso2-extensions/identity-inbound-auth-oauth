@@ -43,7 +43,6 @@ public class AuthzServerMetadataJsonResponseBuilder {
             "introspection_endpoint",
             "introspection_endpoint_auth_methods_supported",
             "code_challenge_methods_supported"
-
     };
 
     public String getAuthzServerMetadataConfigString(OIDProviderConfigResponse oidProviderConfigResponse) {
