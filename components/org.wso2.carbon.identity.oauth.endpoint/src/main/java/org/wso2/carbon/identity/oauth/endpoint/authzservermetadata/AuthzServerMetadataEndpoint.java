@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.org).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -49,8 +49,8 @@ public class AuthzServerMetadataEndpoint {
 
     @GET
     @Produces("application/json")
-    public Response getOIDProviderConfiguration(
-            @PathParam("issuer") String discoveryEpPathComponent, @Context HttpServletRequest request) {
+    public Response getAuthzServerMetadata(
+            @PathParam("issuer") String authzServerMetadataEpPathComponent, @Context HttpServletRequest request) {
 
         String tenantDomain = null;
         Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
@@ -60,17 +60,17 @@ public class AuthzServerMetadataEndpoint {
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-        if (isValidIssuer(discoveryEpPathComponent)) {
+        if (isValidIssuer(authzServerMetadataEpPathComponent)) {
             return this.getResponse(request, tenantDomain);
         } else {
             Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_BAD_REQUEST);
             if (log.isDebugEnabled()) {
-                log.debug("The discovery path component is " + discoveryEpPathComponent +
-                        " . The expected discovery path component is either '"
+                log.debug("The oauth authorization server metadata path component is " + authzServerMetadataEpPathComponent +
+                        " . The expected oauth authorization server metadata path component is either '"
                         + AUTHZ_SERVER_METADATA_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN);
             }
-            return errorResponse.entity("Invalid path to the discovery document. " +
-                    "Received path : " + discoveryEpPathComponent + " is not resolvable").build();
+            return errorResponse.entity("Invalid path to the oauth authorization server metadata document. " +
+                    "Received path : " + authzServerMetadataEpPathComponent + " is not resolvable").build();
         }
     }
 
@@ -80,7 +80,7 @@ public class AuthzServerMetadataEndpoint {
             return true;
         }
         if (log.isDebugEnabled()) {
-            log.debug("DiscoveryEndpointPathComponent validation failed. DiscoveryEndpointPathComponent value: " +
+            log.debug("AuthzServerMetadataEndpointPathComponent validation failed. AuthzServerMetadataEndpointPathComponent value: " +
                     issuer + ", not matched to '"
                     + AUTHZ_SERVER_METADATA_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN);
         }
