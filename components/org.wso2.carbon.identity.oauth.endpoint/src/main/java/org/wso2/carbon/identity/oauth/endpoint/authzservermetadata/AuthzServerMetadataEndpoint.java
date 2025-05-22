@@ -39,7 +39,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 /**
- * Rest implementation of OIDC discovery endpoint.
+ * Rest implementation of OAuth 2 Authorization Server Metadata endpoint.
  */
 @Path("/{issuer}/.well-known/oauth-authorization-server")
 public class AuthzServerMetadataEndpoint {
