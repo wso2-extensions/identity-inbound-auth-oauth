@@ -157,6 +157,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
@@ -2802,6 +2803,43 @@ public class OAuth2UtilTest {
                 } else {
                     assertEquals(e.getMessage(), expectedException);
                 }
+            }
+        }
+    }
+
+    @DataProvider(name = "extractBearerTokenDataProvider")
+    public Object[][] extractBearerTokenDataProvider() {
+
+        String errorMessage = "Bearer authorization header is not available in the request.";
+
+        return new Object[][]{
+                // authzHeaderKey, authzHeaderValue, expectedResult
+                { "Authorization", "Bearer f2c8a9b3-7e4a-42cd-91df-64f61aaf9a87",
+                        "f2c8a9b3-7e4a-42cd-91df-64f61aaf9a87" },
+                { "authorization", "Bearer a6db9d92-13c0-441d-8c96-77ebf8b9ea56",
+                        "a6db9d92-13c0-441d-8c96-77ebf8b9ea56" },
+                { "authorization", "BearerXY 0a4d6e11-c8c2-47a5-9ad0-7c82fa4db938", errorMessage }
+
+        };
+    }
+
+
+    @Test(dataProvider = "extractBearerTokenDataProvider")
+    public void testExtractBearerTokenFromAuthzHeader(String authzHeaderKey, String authzHeaderValue,
+                                                     String expectedResult) {
+
+        try (MockedStatic<OAuthUtils> oauthUtils = mockStatic(OAuthUtils.class)) {
+            HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
+            lenient().when(httpServletRequest.getHeader(authzHeaderKey)).thenReturn(authzHeaderValue);
+
+            oauthUtils.when(() -> OAuthUtils.getAuthHeaderField(authzHeaderValue)).thenReturn(expectedResult);
+
+            try {
+                String extractedToken = OAuth2Util.extractBearerTokenFromAuthzHeader(httpServletRequest);
+                assertEquals(extractedToken, expectedResult);
+            } catch (OAuthClientAuthnException ex) {
+                assertThrows(OAuthClientAuthnException.class, () ->
+                        OAuth2Util.extractBearerTokenFromAuthzHeader(httpServletRequest));
             }
         }
     }
