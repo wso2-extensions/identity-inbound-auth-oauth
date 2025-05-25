@@ -23,17 +23,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfigurationException;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -41,50 +39,22 @@ import javax.ws.rs.core.Response;
 /**
  * Rest implementation of OAuth 2 Authorization Server Metadata endpoint.
  */
-@Path("/{issuer}/.well-known/oauth-authorization-server")
+@Path("/token/.well-known/oauth-authorization-server")
 public class AuthzServerMetadataEndpoint {
 
     private static final Log log = LogFactory.getLog(AuthzServerMetadataEndpoint.class);
-    private static final String AUTHZ_SERVER_METADATA_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN = "token";
 
     @GET
     @Produces("application/json")
-    public Response getAuthzServerMetadata(
-            @PathParam("issuer") String authzServerMetadataEpPathComponent, @Context HttpServletRequest request) {
+    public Response getAuthzServerMetadata(@Context HttpServletRequest request) {
 
-        String tenantDomain = null;
-        Object tenantObj = IdentityUtil.threadLocalProperties.get().get(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
-        if (tenantObj != null) {
-            tenantDomain = (String) tenantObj;
-        }
+        String tenantDomain = CarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+
         if (StringUtils.isEmpty(tenantDomain)) {
             tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
         }
-        if (isValidIssuer(authzServerMetadataEpPathComponent)) {
-            return this.getResponse(request, tenantDomain);
-        } else {
-            Response.ResponseBuilder errorResponse = Response.status(HttpServletResponse.SC_BAD_REQUEST);
-            if (log.isDebugEnabled()) {
-                log.debug("The oauth authorization server metadata path component is " + authzServerMetadataEpPathComponent +
-                        " . The expected oauth authorization server metadata path component is either '"
-                        + AUTHZ_SERVER_METADATA_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN);
-            }
-            return errorResponse.entity("Invalid path to the oauth authorization server metadata document. " +
-                    "Received path : " + authzServerMetadataEpPathComponent + " is not resolvable").build();
-        }
-    }
 
-    private boolean isValidIssuer(String issuer) {
-
-        if (AUTHZ_SERVER_METADATA_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN.equals(issuer)) {
-            return true;
-        }
-        if (log.isDebugEnabled()) {
-            log.debug("AuthzServerMetadataEndpointPathComponent validation failed. AuthzServerMetadataEndpointPathComponent value: " +
-                    issuer + ", not matched to '"
-                    + AUTHZ_SERVER_METADATA_ENDPOINT_PATH_COMPONENT_VALUE_TOKEN);
-        }
-        return false;
+        return this.getResponse(request, tenantDomain);
     }
 
     private Response getResponse(HttpServletRequest request, String tenant) {
