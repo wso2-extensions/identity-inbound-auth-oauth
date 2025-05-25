@@ -21,7 +21,10 @@ package org.wso2.carbon.identity.oauth.endpoint.authzservermetadata;
 import com.google.gson.Gson;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
 public class AuthzServerMetadataJsonResponseBuilder {
 
