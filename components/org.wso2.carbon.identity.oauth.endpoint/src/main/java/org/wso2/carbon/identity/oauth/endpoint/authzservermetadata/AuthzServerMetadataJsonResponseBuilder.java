@@ -21,11 +21,14 @@ package org.wso2.carbon.identity.oauth.endpoint.authzservermetadata;
 import com.google.gson.Gson;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
-import java.util.Arrays;
 
+/**
+ * This class builds the JSON response for the Authorization server metadata request.
+ */
 public class AuthzServerMetadataJsonResponseBuilder {
 
     private static final String[] AUTHZ_SERVER_METADATA_RESPONSE_ATTRIBUTES = {
