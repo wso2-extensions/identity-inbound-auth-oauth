@@ -220,6 +220,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.factory.SSOConsentSer
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager.OAUTH_APP_PROPERTY;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
@@ -1336,7 +1337,14 @@ public class AuthzUtil {
 
         String[] initialRequestedScopes = authzReqMessageContext.getAuthorizationReqDTO().getScopes();
         List<String> updatedRequestedScopes = new ArrayList<>(Arrays.asList(initialRequestedScopes));
-        if (!updatedRequestedScopes.contains(IMPERSONATION_SCOPE_NAME) &&
+
+        boolean isOrgRequest = authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser() &&
+                StringUtils.isNotBlank(authzReqMessageContext.getAuthorizationReqDTO().getUser()
+                        .getAccessingOrganization());
+        if (isOrgRequest && !updatedRequestedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME) &&
+                !updatedRequestedScopes.contains(SYSTEM_SCOPE)) {
+            updatedRequestedScopes.add(IMPERSONATION_ORG_SCOPE_NAME);
+        } else if (!updatedRequestedScopes.contains(IMPERSONATION_SCOPE_NAME) &&
                 !updatedRequestedScopes.contains(SYSTEM_SCOPE)) {
             updatedRequestedScopes.add(IMPERSONATION_SCOPE_NAME);
         }
