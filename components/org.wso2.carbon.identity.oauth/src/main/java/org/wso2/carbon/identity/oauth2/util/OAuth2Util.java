@@ -3868,7 +3868,7 @@ public class OAuth2Util {
         authenticatedImpersonatingUser.setUserId(userId);
         authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
                 getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userStoreDomain,
-                clientId, false));
+                clientId));
         authenticatedImpersonatingUser.setUserName(userName);
         authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
         authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
@@ -3882,49 +3882,46 @@ public class OAuth2Util {
      * @param tenantDomain    Tenant domain.
      * @param userStoreDomain User store domain.
      * @param clientId        Client id.
-     * @param isFederatedUser True if the user is a federated user.
+     *
      * @return Authenticated user subject identifier.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
     public static String getAuthenticatedSubjectIdentifier(String userId, String userName, String tenantDomain,
-                                                           String userStoreDomain, String clientId,
-                                                           boolean isFederatedUser)
+                                                           String userStoreDomain, String clientId)
             throws IdentityOAuth2Exception {
 
         String authenticatedSubjectIdentifier = userId;
         try {
             ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
                     .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
-            if (!isFederatedUser) {
-                String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .getSubjectClaimUri();
-                if (subjectClaimUri != null) {
-                    String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
-                            OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
-                                            IdentityTenantUtil.getTenantId(tenantDomain))
-                                    .getUserStoreManager(), subjectClaimUri);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            if (subjectClaimUri != null) {
+                String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
+                        OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
+                                        IdentityTenantUtil.getTenantId(tenantDomain))
+                                .getUserStoreManager(), subjectClaimUri);
 
-                    if (subjectClaimValue != null) {
-                        authenticatedSubjectIdentifier = subjectClaimValue;
-                    }
+                if (subjectClaimValue != null) {
+                    authenticatedSubjectIdentifier = subjectClaimValue;
                 }
+            }
 
-                boolean useUserStoreDomainInLocalSubjectIdentifier
-                        = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseUserstoreDomainInLocalSubjectIdentifier();
-                boolean useTenantDomainInLocalSubjectIdentifier
-                        = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseTenantDomainInLocalSubjectIdentifier();
-                if (useUserStoreDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(userStoreDomain)) {
-                    authenticatedSubjectIdentifier = IdentityUtil.addDomainToName(authenticatedSubjectIdentifier,
-                            userStoreDomain);
-                }
-                if (useTenantDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(tenantDomain) &&
-                        StringUtils.countMatches(authenticatedSubjectIdentifier,
-                                UserCoreConstants.TENANT_DOMAIN_COMBINER) < 2) {
-                    authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
-                            tenantDomain);
-                }
+            boolean useUserStoreDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+            boolean useTenantDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            if (useUserStoreDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(userStoreDomain)) {
+                authenticatedSubjectIdentifier = IdentityUtil.addDomainToName(authenticatedSubjectIdentifier,
+                        userStoreDomain);
+            }
+            if (useTenantDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(tenantDomain) &&
+                    StringUtils.countMatches(authenticatedSubjectIdentifier,
+                            UserCoreConstants.TENANT_DOMAIN_COMBINER) < 2) {
+                authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
+                        tenantDomain);
             }
         } catch (IdentityApplicationManagementException | UserStoreException e) {
             throw new IdentityOAuth2Exception("Error while obtaining subject identifier for user: " + userName, e);
@@ -3938,31 +3935,29 @@ public class OAuth2Util {
      * @param subjectIdentifier Subject identifier value.
      * @param clientId          Client id of the application.
      * @param tenantDomain      Tenant domain.
-     * @param isFederatedUser   True if the user is a federated user.
+     *
      * @return Subject claim value.
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the subject claim.
      */
     public static String getSubjectClaimFromSubjectIdentifier(String subjectIdentifier, String clientId,
-                                                           String tenantDomain, boolean isFederatedUser)
+                                                           String tenantDomain)
             throws IdentityOAuth2Exception {
 
         String subjectClaimValue = subjectIdentifier;
         try {
             ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
                     .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
-            if (!isFederatedUser) {
-                boolean useUserStoreDomainInLocalSubjectIdentifier
-                        = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseUserstoreDomainInLocalSubjectIdentifier();
-                boolean useTenantDomainInLocalSubjectIdentifier
-                        = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
-                        .isUseTenantDomainInLocalSubjectIdentifier();
-                if (useTenantDomainInLocalSubjectIdentifier) {
-                    subjectClaimValue = subjectClaimValue.split(UserCoreConstants.TENANT_DOMAIN_COMBINER)[0];
-                }
-                if (useUserStoreDomainInLocalSubjectIdentifier) {
-                    subjectClaimValue = UserCoreUtil.removeDomainFromName(subjectClaimValue);
-                }
+            boolean useUserStoreDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+            boolean useTenantDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            if (useTenantDomainInLocalSubjectIdentifier) {
+                subjectClaimValue = subjectClaimValue.split(UserCoreConstants.TENANT_DOMAIN_COMBINER)[0];
+            }
+            if (useUserStoreDomainInLocalSubjectIdentifier) {
+                subjectClaimValue = UserCoreUtil.removeDomainFromName(subjectClaimValue);
             }
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error while obtaining subject claim from subject value: "
@@ -4003,7 +3998,7 @@ public class OAuth2Util {
                     .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
             String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                     .getSubjectClaimUri();
-            String subjectClaimValue = getSubjectClaimFromSubjectIdentifier(claimValue, clientId, tenantDomain, false);
+            String subjectClaimValue = getSubjectClaimFromSubjectIdentifier(claimValue, clientId, tenantDomain);
             org.wso2.carbon.user.core.common.User user = getUserFromSubjectIdentifier(subjectClaimValue,
                     subjectClaimUri != null ? subjectClaimUri : USER_ID_CLAIM, tenantDomain);
 
