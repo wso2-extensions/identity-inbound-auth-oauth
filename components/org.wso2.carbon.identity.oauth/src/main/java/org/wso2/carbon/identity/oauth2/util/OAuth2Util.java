@@ -208,6 +208,7 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
@@ -3932,6 +3933,7 @@ public class OAuth2Util {
         authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
         authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
         authenticatedImpersonatingUser.setFederatedUser(true);
+        authenticatedImpersonatingUser.setFederatedIdPName(ORGANIZATION_LOGIN_IDP_NAME);
         authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
         authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
         return authenticatedImpersonatingUser;
@@ -4010,7 +4012,7 @@ public class OAuth2Util {
         String authenticatedSubjectIdentifier = userId;
         try {
             ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
-                    .getServiceProviderByClientId(clientId, OAUTH2, userAccessingOrg);
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
             String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                     .getSubjectClaimUri();
             if (subjectClaimUri != null) {
