@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
 
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 
 /**
@@ -71,7 +72,8 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
-        if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+        if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME) ||
+                authorizedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME)) {
             impersonationContext.setValidated(true);
         } else {
             String errorMessage = String.format("Authenticated user : %s doesn't have impersonation permission for " +
