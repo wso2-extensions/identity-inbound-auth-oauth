@@ -42,6 +42,7 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import java.util.Map;
 
 import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.wso2.carbon.identity.oauth2.token.handlers.grant.RefreshGrantHandler.SESSION_IDENTIFIER;
 
 /**
  * This class extends AbstractOAuthEventInterceptor and listen to oauth related events. In this class, we persist
@@ -143,9 +144,13 @@ public class OAuthTokenSessionMappingEventHandler extends AbstractOAuthEventInte
             }
             return;
         }
-        persistTokenToSessionMapping(getSessionContextIdentifierByToken(tokenRespDTO.getAccessToken()),
-                tokenRespDTO.getTokenId(), OAuth2Util.getTenantId(tokenReqDTO.getTenantDomain()),
-                tokenReqDTO.getClientId());
+        String sessionContextId = (String) tokReqMsgCtx.getProperty(SESSION_IDENTIFIER);
+        if (StringUtils.isBlank(sessionContextId)) {
+            // Try to get the session context id from the authorization grant cache.
+            sessionContextId = getSessionContextIdentifierByToken(tokenRespDTO.getAccessToken());
+        }
+        persistTokenToSessionMapping(sessionContextId, tokenRespDTO.getTokenId(),
+                OAuth2Util.getTenantId(tokenReqDTO.getTenantDomain()), tokenReqDTO.getClientId());
     }
 
     /**
