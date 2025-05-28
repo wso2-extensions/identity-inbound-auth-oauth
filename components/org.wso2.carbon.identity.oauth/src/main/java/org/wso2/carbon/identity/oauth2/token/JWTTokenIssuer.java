@@ -202,6 +202,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.audience(audience);
 
         List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        /* Assumption: User resident org and authorized org are same during authorize request.
+        This will get differ only during token requests - ex: org switch. */
         for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
             Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(oauthAuthzMsgCtx);
             if (additionalClaims != null) {
