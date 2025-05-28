@@ -3849,6 +3849,37 @@ public class OAuth2Util {
     }
 
     /**
+     * Get Authenticated user object.
+     *
+     * @param userId          User id of the user.
+     * @param tenantDomain    Tenant domain of the user.
+     * @param clientId        Client id of the application.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUser(String userId, String tenantDomain, String userAccessingOrg,
+                                                         String userResidentOrg, String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int userAccessingOrgId = realmService.getTenantManager().getTenantId(userAccessingOrg);
+
+            User user = OAuthUtil.getUserFromTenant(userId, userAccessingOrgId);
+            if (user == null) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid User Id provided for the request. Unable to find the user for given " +
+                                "user id : " + userId + " organization : " + userAccessingOrg);
+            }
+            return getAuthenticatedUser(userId, user.getUserName(), tenantDomain, userAccessingOrg, userResidentOrg,
+                    user.getUserStoreDomain(), clientId, null);
+        } catch (UserStoreException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Use mapped local subject is mandatory but a local user couldn't be found");
+        }
+    }
+
+    /**
      * Get Authenticated user using user id and tenant domain.
      *
      * @param userId          User id of the user.
@@ -3872,6 +3903,37 @@ public class OAuth2Util {
         authenticatedImpersonatingUser.setUserName(userName);
         authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
         authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
+        return authenticatedImpersonatingUser;
+    }
+
+    /**
+     * Get Authenticated user using user id and tenant domain.
+     *
+     * @param userId          User id of the user.
+     * @param userName        Username of the user.
+     * @param tenantDomain    Tenant domain of the user.
+     * @param userStoreDomain User store domain of the user.
+     * @param clientId        Client id of the application.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUser(String userId, String userName,
+                                                         String tenantDomain, String userAccessingOrg,
+                                                         String userResidentOrg, String userStoreDomain,
+                                                         String clientId, String subjectIdentifier)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
+        authenticatedImpersonatingUser.setUserId(userId);
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
+                getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userAccessingOrg, userStoreDomain,
+                        clientId));
+        authenticatedImpersonatingUser.setUserName(userName);
+        authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
+        authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
+        authenticatedImpersonatingUser.setFederatedUser(true);
+        authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
+        authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
         return authenticatedImpersonatingUser;
     }
 
@@ -3900,6 +3962,61 @@ public class OAuth2Util {
                 String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
                         OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
                                         IdentityTenantUtil.getTenantId(tenantDomain))
+                                .getUserStoreManager(), subjectClaimUri);
+
+                if (subjectClaimValue != null) {
+                    authenticatedSubjectIdentifier = subjectClaimValue;
+                }
+            }
+
+            boolean useUserStoreDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+            boolean useTenantDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            if (useUserStoreDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(userStoreDomain)) {
+                authenticatedSubjectIdentifier = IdentityUtil.addDomainToName(authenticatedSubjectIdentifier,
+                        userStoreDomain);
+            }
+            if (useTenantDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(tenantDomain) &&
+                    StringUtils.countMatches(authenticatedSubjectIdentifier,
+                            UserCoreConstants.TENANT_DOMAIN_COMBINER) < 2) {
+                authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
+                        tenantDomain);
+            }
+        } catch (IdentityApplicationManagementException | UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining subject identifier for user: " + userName, e);
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    /**
+     * Returns the user subject identifier
+     *
+     * @param userName        User name.
+     * @param tenantDomain    Tenant domain.
+     * @param userStoreDomain User store domain.
+     * @param clientId        Client id.
+     *
+     * @return Authenticated user subject identifier.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static String getAuthenticatedSubjectIdentifier(String userId, String userName, String tenantDomain,
+                                                           String userAccessingOrg, String userStoreDomain,
+                                                           String clientId)
+            throws IdentityOAuth2Exception {
+
+        String authenticatedSubjectIdentifier = userId;
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, userAccessingOrg);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            if (subjectClaimUri != null) {
+                String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
+                        OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
+                                        IdentityTenantUtil.getTenantId(userAccessingOrg))
                                 .getUserStoreManager(), subjectClaimUri);
 
                 if (subjectClaimValue != null) {
