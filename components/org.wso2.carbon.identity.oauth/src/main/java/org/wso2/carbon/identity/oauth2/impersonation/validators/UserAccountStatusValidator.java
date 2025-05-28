@@ -63,13 +63,26 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
 
         String subjectUserId = impersonationContext.getImpersonationRequestDTO().getSubject();
         String tenantDomain = impersonationContext.getImpersonationRequestDTO().getTenantDomain();
-        AuthenticatedUser subjectUser = OAuth2Util.getAuthenticatedUser(
-                subjectUserId, tenantDomain, impersonationContext.getImpersonationRequestDTO().getClientId());
+        String userAccessingOrg = impersonationContext.getImpersonationRequestDTO()
+                .getImpersonator().getAccessingOrganization();
+        boolean isFederatedUser = impersonationContext.getImpersonationRequestDTO()
+                .getImpersonator().isFederatedUser();
+        AuthenticatedUser subjectUser = null;
+        String subjectUserTenantDomain = tenantDomain;
+        if (isFederatedUser && userAccessingOrg != null) {
+            subjectUserTenantDomain = userAccessingOrg;
+            subjectUser = OAuth2Util.getAuthenticatedUser(
+                    subjectUserId, userAccessingOrg, impersonationContext.getImpersonationRequestDTO().getClientId());
+        } else {
+            subjectUser = OAuth2Util.getAuthenticatedUser(
+                    subjectUserId, tenantDomain, impersonationContext.getImpersonationRequestDTO().getClientId());
+        }
+
         String subjectUserName = subjectUser.getUserName();
         String domainName = subjectUser.getUserStoreDomain();
 
-        if (isUserAccountLocked(subjectUserName, tenantDomain, domainName)
-                || isUserAccountDisabled(subjectUserName, tenantDomain, domainName)) {
+        if (isUserAccountLocked(subjectUserName, subjectUserTenantDomain, domainName)
+                || isUserAccountDisabled(subjectUserName, subjectUserTenantDomain, domainName)) {
             String errorMessage = String.format("Cannot impersonate an inactive user account: %s.", subjectUserName);
             impersonationContext.setValidated(false);
             impersonationContext.setValidationFailureErrorMessage(errorMessage);

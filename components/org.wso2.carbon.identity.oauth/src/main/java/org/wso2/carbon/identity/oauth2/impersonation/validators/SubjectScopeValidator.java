@@ -19,6 +19,7 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -72,8 +73,13 @@ public class SubjectScopeValidator implements ImpersonationValidator {
 
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
 
+        String subjectUserTenantDomain = impersonator.getTenantDomain();
+        if (impersonator.isFederatedUser() && StringUtils.isNotBlank(impersonator.getAccessingOrganization())) {
+            subjectUserTenantDomain = impersonator.getAccessingOrganization();
+        }
+
         // Switching end-user as authenticated user to validate scopes.
-        AuthenticatedUser subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, impersonator.getTenantDomain(),
+        AuthenticatedUser subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, subjectUserTenantDomain,
                 impersonationRequestDTO.getClientId());
         authzReqMessageContext.getAuthorizationReqDTO().setUser(subjectUser);
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
