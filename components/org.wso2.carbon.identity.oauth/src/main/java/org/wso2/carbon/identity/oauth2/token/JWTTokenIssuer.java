@@ -201,6 +201,14 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
         jwtClaimsSetBuilder.audience(audience);
 
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(oauthAuthzMsgCtx);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+
         return jwtClaimsSetBuilder.build();
     }
 
