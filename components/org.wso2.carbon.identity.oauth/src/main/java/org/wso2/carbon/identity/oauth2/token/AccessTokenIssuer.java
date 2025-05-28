@@ -710,16 +710,14 @@ public class AccessTokenIssuer {
 
         // Write impersonation details to into the session context.
         if (!tokenRespDTO.isError() && tokReqMsgCtx.isImpersonationRequest() && TOKEN_EXCHANGE.equals(grantType)) {
-            persistImpersonationInfoToSessionContext(tokenReqDTO, tenantDomainOfApp,
-                    tokReqMsgCtx.getAuthorizedUser().getTenantDomain(), tokenRespDTO, tokReqMsgCtx);
+            persistImpersonationInfoToSessionContext(tokenReqDTO, tokReqMsgCtx.getAuthorizedUser().getTenantDomain(),
+                    tokReqMsgCtx);
         }
 
         return tokenRespDTO;
     }
 
     private void persistImpersonationInfoToSessionContext(OAuth2AccessTokenReqDTO tokenReqDTO, String tenantDomain,
-                                                          String loginTenantDomain,
-                                                          OAuth2AccessTokenRespDTO tokenRespDTO,
                                                           OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
