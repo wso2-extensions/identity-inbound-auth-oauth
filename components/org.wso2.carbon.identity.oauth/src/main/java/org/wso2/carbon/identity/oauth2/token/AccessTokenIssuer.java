@@ -745,13 +745,13 @@ public class AccessTokenIssuer {
 
             // Set session context data.
             if (subClaim != null && iskClaim != null) {
-                SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, loginTenantDomain);
+                SessionContext sessionContext = FrameworkUtils.getSessionContextFromCache(iskClaim, tenantDomain);
                 // Send notification only on session impersonation initiation.
                 if (sessionContext.getImpersonatedUser() == null) {
                     notifyImpersonation(tokReqMsgCtx);
                 }
                 sessionContext.setImpersonatedUser(subClaim);
-                FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext, tenantDomain, loginTenantDomain);
+                FrameworkUtils.addSessionContextToCache(iskClaim, sessionContext, tenantDomain, tenantDomain);
             }
         }
     }
