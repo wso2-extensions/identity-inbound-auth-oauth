@@ -536,6 +536,12 @@ public class DCRMService {
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
         boolean isManagementApp = registrationRequest.isManagementApp();
+
+        if (StringUtils.isBlank(spName)) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT,
+                    DCRMConstants.ErrorMessages.MISSING_CLIENT_NAME.getMessage());
+        }
+
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
