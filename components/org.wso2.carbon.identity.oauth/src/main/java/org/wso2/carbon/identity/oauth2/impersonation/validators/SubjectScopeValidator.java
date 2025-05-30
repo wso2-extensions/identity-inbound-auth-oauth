@@ -67,20 +67,22 @@ public class SubjectScopeValidator implements ImpersonationValidator {
 
         ImpersonationRequestDTO impersonationRequestDTO = impersonationContext.getImpersonationRequestDTO();
         OAuthAuthzReqMessageContext authzReqMessageContext = impersonationRequestDTO.getoAuthAuthzReqMessageContext();
+        authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
 
         String subjectUserId = impersonationRequestDTO.getSubject();
         AuthenticatedUser impersonator = impersonationRequestDTO.getImpersonator();
-
-        authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
-
-        String subjectUserTenantDomain = impersonator.getTenantDomain();
-        if (impersonator.isFederatedUser() && StringUtils.isNotBlank(impersonator.getAccessingOrganization())) {
-            subjectUserTenantDomain = impersonator.getAccessingOrganization();
+        String tenantDomain = impersonator.getTenantDomain();
+        String userAccessingOrg = impersonator.getAccessingOrganization();
+        String userResidentOrg = impersonator.getUserResidentOrganization();
+        AuthenticatedUser subjectUser;
+        if (StringUtils.isNotBlank(userAccessingOrg) && StringUtils.isNotBlank(userResidentOrg)) {
+            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
+                    userAccessingOrg, userResidentOrg, impersonationRequestDTO.getClientId());
+        } else {
+            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
+                    impersonationRequestDTO.getClientId());
         }
-
         // Switching end-user as authenticated user to validate scopes.
-        AuthenticatedUser subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, subjectUserTenantDomain,
-                impersonationRequestDTO.getClientId());
         authzReqMessageContext.getAuthorizationReqDTO().setUser(subjectUser);
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
         authzReqMessageContext.setApprovedScope(authorizedScopes.toArray(new String[0]));
