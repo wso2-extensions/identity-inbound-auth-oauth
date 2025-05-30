@@ -61,6 +61,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
@@ -183,11 +184,25 @@ public class DefaultOAuth2ScopeValidator {
         }
 
         boolean impersonationRequest = authzReqMessageContext.isImpersonationRequest();
-        if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+        boolean isOrgImpersonationRequest = getIsOrgImpersonationRequest(
+                authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser(),
+                authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization(),
+                impersonationRequest);
+
+        if (isOrgImpersonationRequest && !authorizedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME)) {
+            authorizedScopes.add(IMPERSONATION_ORG_SCOPE_NAME);
+        } else if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
             authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
         } else {
             authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
+            authorizedScopes.remove(IMPERSONATION_ORG_SCOPE_NAME);
         }
+    }
+
+    private boolean getIsOrgImpersonationRequest(boolean federatedUser, String accessingOrganization,
+                                                 boolean impersonationRequest) {
+
+        return federatedUser && StringUtils.isNotBlank(accessingOrganization) && impersonationRequest;
     }
 
     /**

@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
@@ -28,6 +29,7 @@ import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountDisa
 import org.wso2.carbon.identity.handler.event.account.lock.exception.AccountLockServiceException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
+import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
@@ -61,15 +63,27 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
     public ImpersonationContext validateImpersonation(ImpersonationContext impersonationContext)
             throws IdentityOAuth2Exception {
 
-        String subjectUserId = impersonationContext.getImpersonationRequestDTO().getSubject();
-        String tenantDomain = impersonationContext.getImpersonationRequestDTO().getTenantDomain();
-        AuthenticatedUser subjectUser = OAuth2Util.getAuthenticatedUser(
-                subjectUserId, tenantDomain, impersonationContext.getImpersonationRequestDTO().getClientId());
+        ImpersonationRequestDTO impersonationRequestDTO = impersonationContext.getImpersonationRequestDTO();
+        AuthenticatedUser impersonator = impersonationRequestDTO.getImpersonator();
+        String subjectUserId = impersonationRequestDTO.getSubject();
+        String subjectTenantDomain = impersonator.getTenantDomain();
+        String tenantDomain = impersonator.getTenantDomain();
+        String userAccessingOrg = impersonator.getAccessingOrganization();
+        String userResidentOrg = impersonator.getUserResidentOrganization();
+        AuthenticatedUser subjectUser;
+        if (StringUtils.isNotBlank(userAccessingOrg) && StringUtils.isNotBlank(userResidentOrg)) {
+            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
+                    userAccessingOrg, userResidentOrg, impersonationRequestDTO.getClientId());
+            subjectTenantDomain = userAccessingOrg;
+        } else {
+            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
+                    impersonationRequestDTO.getClientId());
+        }
+
         String subjectUserName = subjectUser.getUserName();
         String domainName = subjectUser.getUserStoreDomain();
-
-        if (isUserAccountLocked(subjectUserName, tenantDomain, domainName)
-                || isUserAccountDisabled(subjectUserName, tenantDomain, domainName)) {
+        if (isUserAccountLocked(subjectUserName, subjectTenantDomain, domainName)
+                || isUserAccountDisabled(subjectUserName, subjectTenantDomain, domainName)) {
             String errorMessage = String.format("Cannot impersonate an inactive user account: %s.", subjectUserName);
             impersonationContext.setValidated(false);
             impersonationContext.setValidationFailureErrorMessage(errorMessage);
