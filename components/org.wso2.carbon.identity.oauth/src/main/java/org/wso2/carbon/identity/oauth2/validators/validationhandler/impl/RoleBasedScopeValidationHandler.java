@@ -21,6 +21,8 @@ package org.wso2.carbon.identity.oauth2.validators.validationhandler.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.RoleV2;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
@@ -47,6 +49,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
+
 /**
  * Role based scope validation handler validate scopes based on users roles.
  */
@@ -69,8 +73,15 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
             throws ScopeValidationHandlerException {
 
         try {
-            List<String> userRoles = AuthzUtil.getUserRoles(scopeValidationContext.getAuthenticatedUser(),
-                    scopeValidationContext.getAppId());
+            AuthenticatedUser authenticatedUser = scopeValidationContext.getAuthenticatedUser();
+            List<String> userRoles;
+            if (isSubOrgImpersonationAllowed(appAuthorizedScopes) && isImpersonatedSubOrgUser(authenticatedUser)) {
+                userRoles = AuthzUtil.getSubOrgUserRoles(scopeValidationContext.getAuthenticatedUser().getUserId(),
+                        scopeValidationContext.getAuthenticatedUser().getAccessingOrganization());
+            } else {
+                userRoles = AuthzUtil.getUserRoles(scopeValidationContext.getAuthenticatedUser(),
+                        scopeValidationContext.getAppId());
+            }
             if (userRoles.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -106,7 +117,22 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
         } catch (IdentityOAuth2Exception | IdentityRoleManagementException e) {
             throw new ScopeValidationHandlerException("Error while validation scope with RBAC Scope Validation " +
                     "handler", e);
+        } catch (UserIdNotFoundException e) {
+            throw new ScopeValidationHandlerException("Error while retrieving user id.", e);
         }
+    }
+
+    private boolean isSubOrgImpersonationAllowed(List<String> appAuthorizedScopes) {
+
+        return appAuthorizedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME);
+    }
+
+    private boolean isImpersonatedSubOrgUser(AuthenticatedUser authenticatedUser) {
+
+        return authenticatedUser.isFederatedUser()
+                && authenticatedUser.getAccessingOrganization() != null
+                && (authenticatedUser.getUserAttributes() == null
+                || authenticatedUser.getUserAttributes().isEmpty());
     }
 
     /**
