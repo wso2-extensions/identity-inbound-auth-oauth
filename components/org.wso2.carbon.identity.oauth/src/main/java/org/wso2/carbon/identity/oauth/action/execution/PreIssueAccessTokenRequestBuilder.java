@@ -449,9 +449,8 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             org.wso2.carbon.identity.organization.management.service.model.Organization existingOrganization =
                     organizationManager.getOrganization(organizationId, false, false);
 
-            Organization organization = new Organization(existingOrganization.getId(), existingOrganization.getName());
-            organization.setOrgHandle(existingOrganization.getOrganizationHandle());
-            return organization;
+            return new Organization(existingOrganization.getId(), existingOrganization.getName(),
+                    existingOrganization.getOrganizationHandle());
 
         } catch (OrganizationManagementException e) {
             LOG.error("Error while retrieving organization with ID: " + organizationId, e);
