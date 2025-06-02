@@ -46,7 +46,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
@@ -153,13 +152,8 @@ public class JwksEndpointTest {
                 OAuthServerConfiguration.class);
              MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<KeystoreUtils> keystoreUtils = mockStatic(KeystoreUtils.class);) {
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
 
-            Path keystorePath =
-                    Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                            "security", "wso2carbon.jks");
-            keystoreUtils.when(() -> KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
             // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
