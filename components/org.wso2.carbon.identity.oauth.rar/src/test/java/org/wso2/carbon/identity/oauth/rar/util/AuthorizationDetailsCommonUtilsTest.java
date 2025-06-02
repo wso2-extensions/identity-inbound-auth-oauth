@@ -27,11 +27,11 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.EMPTY_JSON_ARRAY;
 import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants.EMPTY_JSON_OBJECT;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_NAME;
