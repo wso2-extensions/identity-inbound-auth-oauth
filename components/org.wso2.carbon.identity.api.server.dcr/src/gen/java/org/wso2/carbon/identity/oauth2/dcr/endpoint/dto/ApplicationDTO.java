@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.*;
 import javax.validation.constraints.NotNull;
 
 @ApiModel(description = "")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApplicationDTO  {
   
   
