@@ -66,10 +66,15 @@ public class OAuthCacheRemoveListener extends AbstractCacheListener<OAuthCacheKe
         OAuthCacheKey oauthcacheKey = new OAuthCacheKey(accessTokenDO.getAccessToken());
         oauthCache.clearCacheEntry(oauthcacheKey, accessTokenDO.getAuthzUser().getTenantDomain());
 
+        String subject;
         try {
-            String userId = accessTokenDO.getAuthzUser().getUserId();
+            if (OAuth2Util.useUsernameAsSubClaim()) {
+                subject = accessTokenDO.getAuthzUser().getUserName();
+            } else {
+                subject = accessTokenDO.getAuthzUser().getUserId();
+            }
             String cacheKeyString;
-            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + userId + ":" +
+            cacheKeyString = accessTokenDO.getConsumerKey() + ":" + subject + ":" +
                     OAuth2Util.buildScopeString(accessTokenDO.getScope()) + ":" +
                     accessTokenDO.getAuthzUser().getFederatedIdPName();
 

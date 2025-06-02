@@ -133,9 +133,13 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
         String scope = OAuth2Util.buildScopeString(tokReqMsgCtx.getScope());
         String consumerKey = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-        String authorizedUserId;
+        String authorizedUser;
         try {
-            authorizedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            if (OAuth2Util.useUsernameAsSubClaim()) {
+                authorizedUser = tokReqMsgCtx.getAuthorizedUser().getUserName();
+            } else {
+                authorizedUser = tokReqMsgCtx.getAuthorizedUser().getUserId();
+            }
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception(
                     "User id is not available for user: " + tokReqMsgCtx.getAuthorizedUser().getLoggableUserId(), e);
@@ -151,7 +155,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     "Error while retrieving oauth issuer for the app with clientId: " + consumerKey, e);
         }
 
-        synchronized ((consumerKey + ":" + authorizedUserId + ":" + scope + ":" + tokenBindingReference).intern()) {
+        synchronized ((consumerKey + ":" + authorizedUser + ":" + scope + ":" + tokenBindingReference).intern()) {
             AccessTokenDO existingTokenBean = null;
 
             OAuthAppDO oAuthAppDO = (OAuthAppDO) tokReqMsgCtx.getProperty(OAUTH_APP);
@@ -178,7 +182,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             if (isHashDisabled) {
                 existingTokenBean = getExistingToken(tokReqMsgCtx,
-                        getOAuthCacheKey(scope, consumerKey, authorizedUserId, authenticatedIDP,
+                        getOAuthCacheKey(scope, consumerKey, authorizedUser, authenticatedIDP,
                                 tokenBindingReference));
             }
 
@@ -190,7 +194,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     if (log.isDebugEnabled()) {
                         log.debug("TokenRenewalPerRequest is enabled. " +
                                 "Proceeding to revoke any existing active tokens and issue new token for client Id: " +
-                                consumerKey + ", user: " + authorizedUserId + " and scope: " + scope + ".");
+                                consumerKey + ", user: " + authorizedUser + " and scope: " + scope + ".");
                     }
                     return renewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, oauthTokenIssuer);
                 }
@@ -199,7 +203,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                 if (isExistingTokenValid(existingTokenBean, expireTime)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Existing token is active for client Id: " + consumerKey + ", user: " +
-                                authorizedUserId + " and scope: " + scope + ". Therefore issuing the same token.");
+                                authorizedUser + " and scope: " + scope + ". Therefore issuing the same token.");
                     }
                     return issueExistingAccessToken(tokReqMsgCtx, scope, expireTime, existingTokenBean);
                 }
@@ -207,7 +211,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
 
             if (log.isDebugEnabled()) {
                 log.debug("No active access token found for client Id: " + consumerKey + ", user: " +
-                        authorizedUserId + " and scope: " + scope + ". Therefore issuing new token.");
+                        authorizedUser + " and scope: " + scope + ". Therefore issuing new token.");
             }
             return generateNewAccessToken(tokReqMsgCtx, scope, consumerKey, existingTokenBean, true,
                     oauthTokenIssuer);
@@ -590,16 +594,20 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     }
                 }
 
-                String userId;
+                String subject;
                 try {
-                    userId = tokenToCache.getAuthzUser().getUserId();
+                    if (OAuth2Util.useUsernameAsSubClaim()) {
+                        subject = tokenToCache.getAuthzUser().getUserName();
+                    } else {
+                        subject = tokenToCache.getAuthzUser().getUserId();
+                    }
                 } catch (UserIdNotFoundException e) {
                     throw new IdentityOAuth2Exception(
                             "User id is not available for user: " + tokenToCache.getAuthzUser().getLoggableUserId(), e);
                 }
 
                 String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(tokenToCache.getAuthzUser());
-                OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), userId,
+                OAuthCacheKey cacheKey = getOAuthCacheKey(scope, tokenToCache.getConsumerKey(), subject,
                         authenticatedIDP, getTokenBindingReference(tokenToCache));
                 oauthCache.addToCache(cacheKey, tokenToCache);
                 if (log.isDebugEnabled()) {

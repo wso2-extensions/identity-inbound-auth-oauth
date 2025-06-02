@@ -180,14 +180,18 @@ public final class OAuthUtil {
     public static void clearOAuthCache(String consumerKey, AuthenticatedUser authorizedUser) {
 
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
-        String userId;
+        String subject;
         try {
-            userId = authorizedUser.getUserId();
+            if (OAuth2Util.useUsernameAsSubClaim()) {
+                subject = authorizedUser.getUserName();
+            } else {
+                subject = authorizedUser.getUserId();
+            }
         } catch (UserIdNotFoundException e) {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, authenticatedIDP);
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, subject, authenticatedIDP);
     }
 
     /**
@@ -233,14 +237,18 @@ public final class OAuthUtil {
 
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
-        String userId;
+        String userIdentifier;
         try {
-            userId = authorizedUser.getUserId();
+            if (OAuth2Util.useUsernameAsSubClaim()) {
+                userIdentifier = authorizedUser.getUserName();
+            } else {
+                userIdentifier = authorizedUser.getUserId();
+            }
         } catch (UserIdNotFoundException e) {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userId, scope, authenticatedIDP,
+        clearOAuthCacheWithAuthenticatedIDP(consumerKey, userIdentifier, scope, authenticatedIDP,
                 authorizedUser.getTenantDomain());
     }
 
@@ -291,17 +299,21 @@ public final class OAuthUtil {
 
         String authenticatedIDP = OAuth2Util.getAuthenticatedIDP(authorizedUser);
 
-        String userId;
+        String userIdentifier;
         String tenantDomain;
         try {
-            userId = authorizedUser.getUserId();
+            if (OAuth2Util.useUsernameAsSubClaim()) {
+                userIdentifier = authorizedUser.getUserName();
+            } else {
+                userIdentifier = authorizedUser.getUserId();
+            }
             tenantDomain = authorizedUser.getTenantDomain();
 
         } catch (UserIdNotFoundException e) {
             LOG.error("User id cannot be found for user: " + authorizedUser.getLoggableUserId());
             return;
         }
-        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userId,
+        clearOAuthCacheByTenant(buildCacheKeyStringForToken(consumerKey, scope, userIdentifier,
                 authenticatedIDP, tokenBindingReference), tenantDomain);
     }
 
