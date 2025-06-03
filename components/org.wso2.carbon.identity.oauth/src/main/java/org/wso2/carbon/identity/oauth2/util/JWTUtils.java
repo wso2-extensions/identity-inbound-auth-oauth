@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -207,6 +208,10 @@ public class JWTUtils {
                     OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
             String jwtIssuerOrgId = organizationManager.resolveOrganizationId(tenantDomain);
             List<String> switchedOrgOrgAncestors = organizationManager.getAncestorOrganizationIds(switchedOrgId);
+            if (switchedOrgOrgAncestors == null || switchedOrgOrgAncestors.isEmpty()) {
+                // Client exception thrown since the organization ID (provided in JWT token) has empty ancestor list.
+                throw new IdentityOAuth2ClientException("No ancestors found for the organization ID: " + switchedOrgId);
+            }
             int depthOfRootOrg = getSubOrgStartLevel() - 1;
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
