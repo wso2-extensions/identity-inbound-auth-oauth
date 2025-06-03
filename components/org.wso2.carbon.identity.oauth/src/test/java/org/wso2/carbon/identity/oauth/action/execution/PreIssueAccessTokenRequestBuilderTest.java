@@ -19,7 +19,9 @@
 package org.wso2.carbon.identity.oauth.action.execution;
 
 import org.apache.commons.codec.binary.Base64;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.MockitoAnnotations;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -31,24 +33,31 @@ import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.api.model.Header;
 import org.wso2.carbon.identity.action.execution.api.model.Operation;
+import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Param;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
+import org.wso2.carbon.identity.action.execution.api.model.User;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
 import org.wso2.carbon.identity.oauth.action.model.PreIssueAccessTokenEvent;
 import org.wso2.carbon.identity.oauth.action.model.TokenRequest;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
+import org.wso2.carbon.identity.oauth2.test.utils.CommonTestUtils;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,12 +70,23 @@ import java.util.Map;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertNotNull;
 
 /**
  * Unit test class for PreIssueAccessTokenRequestBuilder class.
  */
 public class PreIssueAccessTokenRequestBuilderTest {
 
+    @Mock
+    OrganizationManager mockOrganizationManager;
+
+    @Mock
+    OAuthComponentServiceHolder mockOAuthComponentServiceHolder;
+
+    private static final String ORG_NAME = "test.com";
+    private static final String ORG_ID = "2364283-349o34nnv-92713972nx";
     private PreIssueAccessTokenRequestBuilder preIssueAccessTokenRequestBuilder;
 
     private MockedStatic<ClaimHandlerUtil> claimHandlerUtilMockedStatic;
@@ -88,8 +108,13 @@ public class PreIssueAccessTokenRequestBuilderTest {
     private static final String AUDIENCE_TEST = "audience1";
 
     @BeforeClass
-    public void setUp() {
+    public void setUp() throws Exception {
 
+        MockitoAnnotations.openMocks(this);
+
+        CommonTestUtils.initPrivilegedCarbonContext(ORG_NAME, 1, "abc@wso2.com");
+
+        IdentityContext.getThreadLocalIdentityContext().setAccessTokenIssuedOrganization(ORG_NAME);
         preIssueAccessTokenRequestBuilder = new PreIssueAccessTokenRequestBuilder();
 
         OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
@@ -148,35 +173,58 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
     @Test
     public void testBuildActionExecutionRequest()
-            throws ActionExecutionRequestBuilderException {
+            throws ActionExecutionRequestBuilderException, OrganizationManagementException {
 
-        ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
-                buildActionExecutionRequest(
-                        FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), null);
-        Assert.assertNotNull(actionExecutionRequest);
-        Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
-        assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
-        assertAllowedOperations(actionExecutionRequest.getAllowedOperations(), getExpectedAllowedOperations());
+        org.wso2.carbon.identity.organization.management.service.model.Organization actualOrg =
+                new org.wso2.carbon.identity.organization.management.service.model.Organization();
+        actualOrg.setId(ORG_ID);
+        actualOrg.setName(ORG_NAME);
+
+        try (MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
+                     mockStatic(OAuthComponentServiceHolder.class)) {
+
+            oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
+                    .thenReturn(mockOAuthComponentServiceHolder);
+            when(mockOAuthComponentServiceHolder.getOrganizationManager()).thenReturn(mockOrganizationManager);
+            when(mockOrganizationManager.resolveOrganizationId(ORG_NAME)).thenReturn(ORG_ID);
+            when(mockOrganizationManager.getOrganization(ORG_ID, false, false)).thenReturn(actualOrg);
+
+            ActionExecutionRequest actionExecutionRequest = preIssueAccessTokenRequestBuilder.
+                    buildActionExecutionRequest(
+                            FlowContext.create().add("tokenMessageContext", getMockTokenMessageContext()), null);
+            Assert.assertNotNull(actionExecutionRequest);
+            Assert.assertEquals(actionExecutionRequest.getActionType(), ActionType.PRE_ISSUE_ACCESS_TOKEN);
+            assertEvent((PreIssueAccessTokenEvent) actionExecutionRequest.getEvent(), getExpectedEvent());
+            assertAllowedOperations(actionExecutionRequest.getAllowedOperations(), getExpectedAllowedOperations());
+        }
     }
 
     /**
      * Assert that the actual event matches the expected event.
      *
-     * @param actualEvent The actual PreIssueAccessTokenEvent.
+     * @param actualEvent   The actual PreIssueAccessTokenEvent.
      * @param expectedEvent The expected PreIssueAccessTokenEvent.
      */
 
     private void assertEvent(PreIssueAccessTokenEvent actualEvent, PreIssueAccessTokenEvent expectedEvent) {
 
-        Assert.assertEquals(expectedEvent.getTenant().getId(), actualEvent.getTenant().getId());
+        assertEquals(expectedEvent.getTenant().getId(), actualEvent.getTenant().getId());
+        assertOrganization(expectedEvent.getOrganization(), actualEvent.getOrganization());
         assertAccessToken(actualEvent.getAccessToken(), expectedEvent.getAccessToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
+    }
+
+    private void assertOrganization(Organization expectedOrg, Organization actualOrg) {
+
+        assertNotNull(actualOrg);
+        assertEquals(actualOrg.getId(), expectedOrg.getId());
+        assertEquals(actualOrg.getName(), expectedOrg.getName());
     }
 
     /**
      * Assert that the actual access token matches the expected access token.
      *
-     * @param actualAccessToken The actual AccessToken.
+     * @param actualAccessToken   The actual AccessToken.
      * @param expectedAccessToken The expected AccessToken.
      */
 
@@ -200,7 +248,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     /**
      * Assert that the actual token request matches the expected token request.
      *
-     * @param actualRequest The actual TokenRequest.
+     * @param actualRequest   The actual TokenRequest.
      * @param expectedRequest The expected TokenRequest.
      */
     private static void assertRequest(TokenRequest actualRequest, TokenRequest expectedRequest) {
@@ -230,7 +278,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     /**
      * Assert that the actual allowed operations match the expected allowed operations.
      *
-     * @param actual List of actual AllowedOperation.
+     * @param actual   List of actual AllowedOperation.
      * @param expected List of expected AllowedOperation.
      */
     private void assertAllowedOperations(List<AllowedOperation> actual, List<AllowedOperation> expected) {
@@ -275,7 +323,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
                 new HttpRequestHeader("accept", "application/json")
         };
         tokenReqDTO.setHttpRequestHeaders(requestHeaders);
-        RequestParameter[] requestParameters = new RequestParameter[] {
+        RequestParameter[] requestParameters = new RequestParameter[]{
                 new RequestParameter("grant_type", GRANT_TYPE_TEST),
                 new RequestParameter("username", USERNAME_TEST),
                 new RequestParameter("password", PASSWORD_TEST),
@@ -297,13 +345,14 @@ public class PreIssueAccessTokenRequestBuilderTest {
         authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
         authenticatedUser.setUserId(USER_ID_TEST);
         authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
+        authenticatedUser.setUserResidentOrganization(ORG_ID);
         return authenticatedUser;
     }
 
     /**
      * Mock the OAuthTokenReqMessageContext for testing.
      *
-     * @param tokenReqDTO The OAuth2AccessTokenReqDTO used in the message context.
+     * @param tokenReqDTO       The OAuth2AccessTokenReqDTO used in the message context.
      * @param authenticatedUser The authenticated user for the request.
      * @return OAuthTokenReqMessageContext with mock data.
      */
@@ -330,7 +379,11 @@ public class PreIssueAccessTokenRequestBuilderTest {
     private PreIssueAccessTokenEvent getExpectedEvent() {
 
         PreIssueAccessTokenEvent.Builder eventBuilder = new PreIssueAccessTokenEvent.Builder();
-        eventBuilder.tenant(new Tenant(String.valueOf(TENANT_ID_TEST), TENANT_DOMAIN_TEST));
+        eventBuilder.tenant(new Tenant(String.valueOf(TENANT_ID_TEST), TENANT_DOMAIN_TEST))
+                .organization(new Organization(ORG_ID, ORG_NAME))
+                .user(new User.Builder("76345726419")
+                        .organization(new Organization(ORG_ID, ORG_NAME))
+                        .build());
         AccessToken.Builder accessTokenBuilder = new AccessToken.Builder();
         accessTokenBuilder
                 .addClaim(AccessToken.ClaimNames.ISS.getName(), TEST_URL)
@@ -393,7 +446,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
     /**
      * Encode the client ID and client secret as a Base64 encoded string.
      *
-     * @param clientId The client ID.
+     * @param clientId     The client ID.
      * @param clientSecret The client secret.
      * @return Base64 encoded string representing client ID and secret.
      */
