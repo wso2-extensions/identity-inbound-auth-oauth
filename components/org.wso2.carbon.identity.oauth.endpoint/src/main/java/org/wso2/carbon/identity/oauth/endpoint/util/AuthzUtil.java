@@ -205,6 +205,8 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUESTED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_ACTOR;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RESOURCE_IDENTIFIER;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -2799,6 +2801,9 @@ public class AuthzUtil {
         }
         params.setRequestedSubjectId(oAuthMessage.getRequestedSubjectId());
 
+        params.setResourceIdentifier(oauthRequest.getParam(RESOURCE_IDENTIFIER));
+        params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
+
         return null;
     }
 
@@ -3988,6 +3993,8 @@ public class AuthzUtil {
         authzReqDTO.setMappedRemoteClaims(sessionDataCacheEntry.getMappedRemoteClaims());
         authzReqDTO.setAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         authzReqDTO.setImpersonationRequest(isImpersonationRequest);
+        authzReqDTO.setResourceIdentifier(oauth2Params.getResourceIdentifier());
+        authzReqDTO.setRequestedActor(oauth2Params.getRequestedActor());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {

@@ -441,6 +441,9 @@ public class OAuth2TokenEndpoint {
             tokenReqDTO.setAuthorizationDetails(new AuthorizationDetails(authorizationDetailsJson));
         }
 
+        tokenReqDTO.setResourceIdentifier(oauthRequest.getParam(OAuthConstants.RESOURCE_IDENTIFIER));
+        tokenReqDTO.setActorToken(oauthRequest.getParam(OAuthConstants.ACTOR_TOKEN));
+
         return tokenReqDTO;
     }
 }

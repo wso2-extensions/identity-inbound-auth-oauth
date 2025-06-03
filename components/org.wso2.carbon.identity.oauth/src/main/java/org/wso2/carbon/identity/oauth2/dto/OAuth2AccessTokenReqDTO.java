@@ -64,6 +64,8 @@ public class OAuth2AccessTokenReqDTO {
     private AccessTokenExtendedAttributes accessTokenExtendedAttributes;
 
     private AuthorizationDetails authorizationDetails;
+    private String resourceIdentifier;
+    private String actorToken;
 
     public String getClientId() {
         return clientId;
@@ -276,5 +278,25 @@ public class OAuth2AccessTokenReqDTO {
     public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
         this.authorizationDetails = authorizationDetails;
+    }
+
+    public String getResourceIdentifier() {
+
+        return resourceIdentifier;
+    }
+
+    public void setResourceIdentifier(String resourceIdentifier) {
+
+        this.resourceIdentifier = resourceIdentifier;
+    }
+
+    public String getActorToken() {
+
+        return actorToken;
+    }
+
+    public void setActorToken(String actorToken) {
+
+        this.actorToken = actorToken;
     }
 }
