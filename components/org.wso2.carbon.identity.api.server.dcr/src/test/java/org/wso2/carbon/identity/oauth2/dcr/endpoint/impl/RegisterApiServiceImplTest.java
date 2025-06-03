@@ -32,6 +32,8 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.context.internal.OSGiDataHolder;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationUpdateRequest;
@@ -39,9 +41,11 @@ import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMServerException;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.TestUtil;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.ApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.exceptions.DCRMEndpointException;
+import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -171,6 +175,22 @@ public class RegisterApiServiceImplTest {
     }
 
     @Test
+    public void testRegisterApplicationExcludeNullFieldsTrue() throws Exception {
+
+        try (MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
+            mockedIdentityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE))
+                    .thenReturn("true");
+
+            RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
+            registrationRequestDTO.setClientName("app1");
+            lenient().when(dcrmService.registerApplication(any(ApplicationRegistrationRequest.class)))
+                    .thenReturn(application);
+            Assert.assertEquals(registerApiService.registerApplication(registrationRequestDTO)
+                    .getStatus(), Response.Status.CREATED.getStatusCode());
+        }
+    }
+
+    @Test
     public void testUpdateApplicationServerException() throws Exception {
 
         UpdateRequestDTO updateRequestDTO = new UpdateRequestDTO();
@@ -195,5 +215,44 @@ public class RegisterApiServiceImplTest {
         Assert.assertEquals(registerApiService.updateApplication(updateRequestDTO1, clientID)
                 .getStatus(), Response.Status.OK.getStatusCode());
 
+    }
+
+    @Test
+    public void testGetApplicationByName() throws Exception {
+
+        lenient().when(dcrmService.getApplicationByName("app1")).thenReturn(application);
+        Assert.assertEquals(registerApiService.getApplicationByName("app1").getStatus(),
+                Response.Status.OK.getStatusCode());
+    }
+
+    @Test
+    public void testGetApplicationByNameJsonProcessingExceptionCaught() throws Exception {
+
+        Application app = new Application();
+        app.setClientId("client123");
+        app.setClientName("TestApp");
+
+        // Force an invalid object to cause JSON processing failure (like a circular reference)
+        ApplicationDTO dto = new ApplicationDTO() {
+            @Override
+            public String getClientId() {
+                throw new RuntimeException("Force serialization failure");
+            }
+        };
+
+        lenient().when(dcrmService.getApplicationByName("TestApp")).thenReturn(app);
+        try (MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class);
+             MockedStatic<DCRMUtils> mockedDCRMUtils = mockStatic(DCRMUtils.class)) {
+
+            mockedIdentityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE))
+                    .thenReturn("true");
+            mockedDCRMUtils.when(() -> DCRMUtils.getOAuth2DCRMService()).thenReturn(dcrmService);
+            mockedDCRMUtils.when(() -> DCRMUtils.getApplicationDTOFromApplication(any())).thenReturn(dto);
+
+            Response response = registerApiService.getApplicationByName("TestApp");
+
+            // Should gracefully handle serialization failure and return 500
+            Assert.assertEquals(response.getStatus(), Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+        }
     }
 }
