@@ -67,6 +67,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -146,6 +147,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
         loggerUtils.when(() -> LoggerUtils.isDiagnosticLogsEnabled()).thenReturn(true);
 
         AuthorizationGrantHandler authorizationGrantHandler = mock(AuthorizationGrantHandler.class);
+        when(authorizationGrantHandler.isOfTypeApplicationUser(any())).thenReturn(true);
         Map<String, AuthorizationGrantHandler> mockGrantTypesMap = new HashMap<>();
         mockGrantTypesMap.put(GRANT_TYPE_TEST, authorizationGrantHandler);
         oAuthServerConfiguration.when(() -> OAuthServerConfiguration.getInstance().getSupportedGrantTypes()).
@@ -210,6 +212,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
 
         assertEquals(expectedEvent.getTenant().getId(), actualEvent.getTenant().getId());
         assertOrganization(expectedEvent.getOrganization(), actualEvent.getOrganization());
+        assertOrganization(expectedEvent.getUser().getOrganization(), actualEvent.getUser().getOrganization());
         assertAccessToken(actualEvent.getAccessToken(), expectedEvent.getAccessToken());
         assertRequest((TokenRequest) actualEvent.getRequest(), (TokenRequest) expectedEvent.getRequest());
     }
@@ -345,7 +348,7 @@ public class PreIssueAccessTokenRequestBuilderTest {
         authenticatedUser.setUserStoreDomain(USER_STORE_TEST);
         authenticatedUser.setUserId(USER_ID_TEST);
         authenticatedUser.setAuthenticatedSubjectIdentifier(USER_ID_TEST);
-        authenticatedUser.setUserResidentOrganization(ORG_ID);
+        authenticatedUser.setAccessingOrganization(ORG_ID);
         return authenticatedUser;
     }
 
