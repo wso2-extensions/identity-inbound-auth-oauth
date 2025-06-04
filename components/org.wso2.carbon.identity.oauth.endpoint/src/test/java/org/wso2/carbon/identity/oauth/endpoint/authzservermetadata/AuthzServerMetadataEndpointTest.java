@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.org).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -11,176 +11,289 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
 package org.wso2.carbon.identity.oauth.endpoint.authzservermetadata;
 
-import org.junit.Assert;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
-import org.mockito.testng.MockitoTestNGListener;
-import org.osgi.framework.BundleContext;
-import org.osgi.util.tracker.ServiceTracker;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Listeners;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import org.wso2.carbon.base.MultitenantConstants;
-import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.context.internal.OSGiDataHolder;
-import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
-import org.wso2.carbon.identity.discovery.DefaultOIDCProcessor;
+import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.identity.discovery.OIDCDiscoveryEndPointException;
 import org.wso2.carbon.identity.discovery.OIDCProcessor;
 import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
-import org.wso2.carbon.identity.discovery.builders.OIDProviderResponseBuilder;
-import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.endpoint.oidcdiscovery.OIDCDiscoveryServiceFactory;
 import org.wso2.carbon.identity.oauth.endpoint.util.factory.OIDCProviderServiceFactory;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mockConstruction;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
- * This class tests the OAuth 2.0 Authorization Server Metadata Endpoint functionality
+ * Unit tests for AuthzServerMetadataEndpoint class.
  */
-@WithCarbonHome
-@Listeners(MockitoTestNGListener.class)
 public class AuthzServerMetadataEndpointTest {
 
     @Mock
-    HttpServletRequest httpServletRequest;
+    private HttpServletRequest mockRequest;
 
     @Mock
-    OIDProviderConfigResponse oidProviderConfigResponse;
+    private OIDCProcessor mockOIDCProcessor;
 
     @Mock
-    DefaultOIDCProcessor defaultOIDCProcessor;
+    private CarbonContext mockCarbonContext;
 
-    @Mock
-    OIDProviderResponseBuilder oidProviderResponseBuilder;
-
-    @Mock
-    BundleContext bundleContext;
-
-    MockedConstruction<ServiceTracker> mockedConstruction;
-
+    @InjectMocks
     private AuthzServerMetadataEndpoint authzServerMetadataEndpoint;
-    private Object identityUtilObj;
 
-    @BeforeClass
-    public void setUp() throws Exception {
-
-        authzServerMetadataEndpoint = new AuthzServerMetadataEndpoint();
-        Class<?> clazz = IdentityUtil.class;
-        identityUtilObj = clazz.newInstance();
-    }
+    private MockedStatic<CarbonContext> carbonContextMockedStatic;
+    private MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactoryMockedStatic;
 
     @BeforeMethod
-    public void setUpMethod() {
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
 
-        PrivilegedCarbonContext.startTenantFlow();
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+        // Mock static classes
+        carbonContextMockedStatic = Mockito.mockStatic(CarbonContext.class);
+        oidcProviderServiceFactoryMockedStatic = Mockito.mockStatic(OIDCProviderServiceFactory.class);
 
-        ArgumentCaptor<String> argumentCaptor = ArgumentCaptor.forClass(String.class);
-        mockedConstruction = mockConstruction(ServiceTracker.class,
-                (mock, context) -> {
-                    verify(bundleContext, atLeastOnce()).createFilter(argumentCaptor.capture());
-                    if (argumentCaptor.getValue().contains(OIDProviderResponseBuilder.class.getName())) {
-                        when(mock.getServices()).thenReturn(new Object[]{oidProviderResponseBuilder});
-                    }
-                    if (argumentCaptor.getValue().contains(OIDCProcessor.class.getName())) {
-                        when(mock.getServices()).thenReturn(new Object[]{defaultOIDCProcessor});
-                    }
-                });
-        OSGiDataHolder.getInstance().setBundleContext(bundleContext);
+        // Setup default behavior for static mocks
+        carbonContextMockedStatic.when(CarbonContext::getThreadLocalCarbonContext)
+                .thenReturn(mockCarbonContext);
+        oidcProviderServiceFactoryMockedStatic.when(OIDCProviderServiceFactory::getOIDCService)
+                .thenReturn(mockOIDCProcessor);
     }
 
     @AfterMethod
     public void tearDown() {
-
-        mockedConstruction.close();
-        PrivilegedCarbonContext.endTenantFlow();
+        if (carbonContextMockedStatic != null) {
+            carbonContextMockedStatic.close();
+        }
+        if (oidcProviderServiceFactoryMockedStatic != null) {
+            oidcProviderServiceFactoryMockedStatic.close();
+        }
     }
 
-    @Test(dataProvider = "provideDataForGetOAuthAuthzServerMetadataEndpoint")
-    public void testGetOAuthAuthzServerMetadataEndpoint(Map<String, Object> configMap, int expectedResponse)
-            throws Exception {
-
-        ThreadLocal<Map<String, Object>> threadLocalProperties = new ThreadLocal() {
-            protected Map<String, Object> initialValue() {
-
-                return new HashMap();
-            }
+    @DataProvider(name = "tenantDomainData")
+    public Object[][] tenantDomainData() {
+        return new Object[][]{
+                {"tenant1.com", "tenant1.com"},
+                {"", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
+                {null, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME},
+                {"   ", MultitenantConstants.SUPER_TENANT_DOMAIN_NAME}
         };
+    }
 
-        threadLocalProperties.get().put(
-                OAuthConstants.TENANT_NAME_FROM_CONTEXT, MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+    @Test(dataProvider = "tenantDomainData")
+    public void testGetAuthzServerMetadata_SuccessWithDifferentTenantDomains(String inputTenant, String expectedTenant)
+            throws Exception {
+        // Arrange
+        String expectedResponse = "{\"issuer\":\"https://localhost:9443/oauth2/token\"}";
 
-        Field threadLocalPropertiesField = identityUtilObj.getClass().getDeclaredField("threadLocalProperties");
+        // Create OIDProviderConfigResponse instance instead of string
+        OIDProviderConfigResponse oidcResponse = new OIDProviderConfigResponse();
+        oidcResponse.setIssuer("https://localhost:9443/oauth2/token");
+        oidcResponse.setAuthorizationEndpoint("https://localhost:9443/oauth2/authorize");
+        oidcResponse.setTokenEndpoint("https://localhost:9443/oauth2/token");
+        oidcResponse.setUserinfoEndpoint("https://localhost:9443/oauth2/userinfo");
+        oidcResponse.setJwksUri("https://localhost:9443/oauth2/jwks");
 
-        Method getDeclaredFields0 = Class.class.getDeclaredMethod("getDeclaredFields0", boolean.class);
-        getDeclaredFields0.setAccessible(true);
-        Field[] fields = (Field[]) getDeclaredFields0.invoke(Field.class, false);
-        Field modifiers = null;
-        for (Field each : fields) {
-            if ("modifiers".equals(each.getName())) {
-                modifiers = each;
-                break;
-            }
-        }
-        modifiers.setAccessible(true);
-        modifiers.setInt(threadLocalPropertiesField, threadLocalPropertiesField.getModifiers() & ~Modifier.FINAL);
+        when(mockCarbonContext.getTenantDomain()).thenReturn(inputTenant);
+        when(mockOIDCProcessor.getResponse(eq(mockRequest), eq(expectedTenant))).thenReturn(oidcResponse);
 
-        threadLocalPropertiesField.setAccessible(true);
-        threadLocalPropertiesField.set(identityUtilObj, threadLocalProperties);
+        // Mock the response builder using try-with-resources pattern
+        try (MockedStatic<AuthzServerMetadataJsonResponseBuilder> responseBuilderMock =
+                     Mockito.mockStatic(AuthzServerMetadataJsonResponseBuilder.class, Mockito.CALLS_REAL_METHODS)) {
 
-        try (MockedStatic<OIDCProviderServiceFactory> oidcProviderServiceFactory =
-                     mockStatic(OIDCProviderServiceFactory.class);
-             MockedStatic<OIDCDiscoveryServiceFactory> oidcDiscoveryServiceFactory =
-                     mockStatic(OIDCDiscoveryServiceFactory.class)) {
+            AuthzServerMetadataJsonResponseBuilder mockBuilder = mock(AuthzServerMetadataJsonResponseBuilder.class);
+            responseBuilderMock.when(() -> new AuthzServerMetadataJsonResponseBuilder()).thenReturn(mockBuilder);
+            when(mockBuilder.getAuthzServerMetadataConfigString(oidcResponse)).thenReturn(expectedResponse);
 
-            oidcDiscoveryServiceFactory.when(OIDCDiscoveryServiceFactory::getOIDProviderResponseBuilder)
-                    .thenReturn(oidProviderResponseBuilder);
-            oidcProviderServiceFactory.when(OIDCProviderServiceFactory::getOIDCService)
-                    .thenReturn(defaultOIDCProcessor);
-            lenient().when(defaultOIDCProcessor.getResponse(any(), any())).thenReturn(oidProviderConfigResponse);
-            lenient().when(oidProviderConfigResponse.getConfigMap()).thenReturn(configMap);
-            lenient().when(defaultOIDCProcessor.handleError(any(OIDCDiscoveryEndPointException.class)))
-                    .thenReturn(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(httpServletRequest);
-            Assert.assertEquals(expectedResponse, response.getStatus());
-            threadLocalProperties.get().remove(OAuthConstants.TENANT_NAME_FROM_CONTEXT);
+            // Act
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(mockRequest);
+
+            // Assert
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
+            Assert.assertEquals(response.getEntity(), expectedResponse);
         }
     }
 
-    private Map<String, Object> getSampleConfigMap() {
+    @Test
+    public void testGetAuthzServerMetadata_Success() throws Exception {
+        // Arrange
+        String tenantDomain = "test.com";
+        String expectedResponse = "{\"issuer\":\"https://localhost:9443/oauth2/token\"}";
+        // Create OIDProviderConfigResponse instance instead of string
+        OIDProviderConfigResponse oidcResponse = new OIDProviderConfigResponse();
+        oidcResponse.setIssuer("https://localhost:9443/oauth2/token");
+        oidcResponse.setAuthorizationEndpoint("https://localhost:9443/oauth2/authorize");
+        oidcResponse.setTokenEndpoint("https://localhost:9443/oauth2/token");
+        oidcResponse.setUserinfoEndpoint("https://localhost:9443/oauth2/userinfo");
+        oidcResponse.setJwksUri("https://localhost:9443/oauth2/jwks");
 
-        Map<String, Object> configMap = new HashMap<>();
-        configMap.put("sampleStringKey", "sampleString");
-        configMap.put("sampleStringArrayKey", new String[]{"sampleStringArrayElement1", "sampleStringArrayElement2"});
-        return configMap;
+        when(mockCarbonContext.getTenantDomain()).thenReturn(tenantDomain);
+        when(mockOIDCProcessor.getResponse(mockRequest, tenantDomain)).thenReturn(oidcResponse);
+
+        try (MockedStatic<AuthzServerMetadataJsonResponseBuilder> responseBuilderMock =
+                     Mockito.mockStatic(AuthzServerMetadataJsonResponseBuilder.class, Mockito.CALLS_REAL_METHODS)) {
+
+            AuthzServerMetadataJsonResponseBuilder mockBuilder = mock(AuthzServerMetadataJsonResponseBuilder.class);
+            responseBuilderMock.when(() -> new AuthzServerMetadataJsonResponseBuilder()).thenReturn(mockBuilder);
+            when(mockBuilder.getAuthzServerMetadataConfigString(oidcResponse)).thenReturn(expectedResponse);
+
+            // Act
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(mockRequest);
+
+            // Assert
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
+            Assert.assertEquals(response.getEntity(), expectedResponse);
+            verify(mockOIDCProcessor).getResponse(mockRequest, tenantDomain);
+        }
+    }
+
+    @Test
+    public void testGetAuthzServerMetadata_NullRequest() throws Exception {
+        // Arrange
+        String tenantDomain = "test.com";
+        String expectedResponse = "{\"issuer\":\"https://localhost:9443/oauth2/token\"}";
+
+        // Create OIDProviderConfigResponse instance instead of string
+        OIDProviderConfigResponse oidcResponse = new OIDProviderConfigResponse();
+        oidcResponse.setIssuer("https://localhost:9443/oauth2/token");
+        oidcResponse.setAuthorizationEndpoint("https://localhost:9443/oauth2/authorize");
+        oidcResponse.setTokenEndpoint("https://localhost:9443/oauth2/token");
+        oidcResponse.setUserinfoEndpoint("https://localhost:9443/oauth2/userinfo");
+        oidcResponse.setJwksUri("https://localhost:9443/oauth2/jwks");
+
+        when(mockCarbonContext.getTenantDomain()).thenReturn(tenantDomain);
+        when(mockOIDCProcessor.getResponse(null, tenantDomain)).thenReturn(oidcResponse);
+
+        try (MockedStatic<AuthzServerMetadataJsonResponseBuilder> responseBuilderMock =
+                     Mockito.mockStatic(AuthzServerMetadataJsonResponseBuilder.class, Mockito.CALLS_REAL_METHODS)) {
+
+            AuthzServerMetadataJsonResponseBuilder mockBuilder = mock(AuthzServerMetadataJsonResponseBuilder.class);
+            responseBuilderMock.when(() -> new AuthzServerMetadataJsonResponseBuilder()).thenReturn(mockBuilder);
+            when(mockBuilder.getAuthzServerMetadataConfigString(oidcResponse)).thenReturn(expectedResponse);
+
+            // Act
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(null);
+
+            // Assert
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
+            Assert.assertEquals(response.getEntity(), expectedResponse);
+        }
+    }
+
+    @Test
+    public void testGetAuthzServerMetadata_EmptyResponse() throws Exception {
+        // Arrange
+        String tenantDomain = "test.com";
+        String expectedResponse = "";
+        // Create OIDProviderConfigResponse instance instead of string
+        OIDProviderConfigResponse oidcResponse = new OIDProviderConfigResponse();
+        oidcResponse.setIssuer("https://localhost:9443/oauth2/token");
+        oidcResponse.setAuthorizationEndpoint("https://localhost:9443/oauth2/authorize");
+        oidcResponse.setTokenEndpoint("https://localhost:9443/oauth2/token");
+        oidcResponse.setUserinfoEndpoint("https://localhost:9443/oauth2/userinfo");
+        oidcResponse.setJwksUri("https://localhost:9443/oauth2/jwks");
+
+        when(mockCarbonContext.getTenantDomain()).thenReturn(tenantDomain);
+        when(mockOIDCProcessor.getResponse(mockRequest, tenantDomain)).thenReturn(oidcResponse);
+
+        try (MockedStatic<AuthzServerMetadataJsonResponseBuilder> responseBuilderMock =
+                     Mockito.mockStatic(AuthzServerMetadataJsonResponseBuilder.class, Mockito.CALLS_REAL_METHODS)) {
+
+            AuthzServerMetadataJsonResponseBuilder mockBuilder = mock(AuthzServerMetadataJsonResponseBuilder.class);
+            responseBuilderMock.when(() -> new AuthzServerMetadataJsonResponseBuilder()).thenReturn(mockBuilder);
+            when(mockBuilder.getAuthzServerMetadataConfigString(oidcResponse)).thenReturn(expectedResponse);
+
+            // Act
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(mockRequest);
+
+            // Assert
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
+            Assert.assertEquals(response.getEntity(), expectedResponse);
+        }
+    }
+
+    @Test
+    public void testGetAuthzServerMetadata_MultipleExceptionHandling() throws Exception {
+        // Arrange
+        String tenantDomain = "test.com";
+        String oidcErrorMessage = "OIDC error";
+        int oidcErrorStatus = HttpServletResponse.SC_UNAUTHORIZED;
+
+        OIDCDiscoveryEndPointException oidcException = new OIDCDiscoveryEndPointException(oidcErrorMessage);
+
+        when(mockCarbonContext.getTenantDomain()).thenReturn(tenantDomain);
+        when(mockOIDCProcessor.getResponse(mockRequest, tenantDomain)).thenThrow(oidcException);
+        when(mockOIDCProcessor.handleError(oidcException)).thenReturn(oidcErrorStatus);
+
+        // Act
+        Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(mockRequest);
+
+        // Assert
+        Assert.assertEquals(response.getStatus(), oidcErrorStatus);
+        Assert.assertEquals(response.getEntity(), oidcErrorMessage);
+
+        // Verify that ServerConfigurationException path is not executed
+        verify(mockOIDCProcessor, never()).getResponse(any(), any());
+    }
+
+    @Test
+    public void testGetAuthzServerMetadata_VerifyMethodCalls() throws Exception {
+        // Arrange
+        String tenantDomain = "custom.tenant.com";
+        String expectedResponse = "{\"test\":\"response\"}";
+        // Create OIDProviderConfigResponse instance instead of string
+        OIDProviderConfigResponse oidcResponse = new OIDProviderConfigResponse();
+        oidcResponse.setIssuer("https://localhost:9443/oauth2/token");
+        oidcResponse.setAuthorizationEndpoint("https://localhost:9443/oauth2/authorize");
+        oidcResponse.setTokenEndpoint("https://localhost:9443/oauth2/token");
+        oidcResponse.setUserinfoEndpoint("https://localhost:9443/oauth2/userinfo");
+        oidcResponse.setJwksUri("https://localhost:9443/oauth2/jwks");
+
+        when(mockCarbonContext.getTenantDomain()).thenReturn(tenantDomain);
+        when(mockOIDCProcessor.getResponse(mockRequest, tenantDomain)).thenReturn(oidcResponse);
+
+        try (MockedStatic<AuthzServerMetadataJsonResponseBuilder> responseBuilderMock =
+                     Mockito.mockStatic(AuthzServerMetadataJsonResponseBuilder.class, Mockito.CALLS_REAL_METHODS)) {
+
+            AuthzServerMetadataJsonResponseBuilder mockBuilder = mock(AuthzServerMetadataJsonResponseBuilder.class);
+            responseBuilderMock.when(() -> new AuthzServerMetadataJsonResponseBuilder()).thenReturn(mockBuilder);
+            when(mockBuilder.getAuthzServerMetadataConfigString(oidcResponse)).thenReturn(expectedResponse);
+
+            // Act
+            Response response = authzServerMetadataEndpoint.getAuthzServerMetadata(mockRequest);
+
+            // Assert
+            Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_OK);
+            Assert.assertEquals(response.getEntity(), expectedResponse);
+
+            // Verify all method calls
+            carbonContextMockedStatic.verify(CarbonContext::getThreadLocalCarbonContext, times(1));
+            verify(mockCarbonContext, times(1)).getTenantDomain();
+            oidcProviderServiceFactoryMockedStatic.verify(OIDCProviderServiceFactory::getOIDCService, times(1));
+            verify(mockOIDCProcessor, times(1)).getResponse(mockRequest, tenantDomain);
+            verify(mockBuilder, times(1)).getAuthzServerMetadataConfigString(oidcResponse);
+        }
     }
 }
