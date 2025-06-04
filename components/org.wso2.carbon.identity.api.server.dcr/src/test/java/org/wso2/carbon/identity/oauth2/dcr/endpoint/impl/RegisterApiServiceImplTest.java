@@ -178,7 +178,7 @@ public class RegisterApiServiceImplTest {
     public void testRegisterApplicationExcludeNullFieldsTrue() throws Exception {
 
         try (MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class)) {
-            mockedIdentityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE))
+            mockedIdentityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.RETURN_NULL_FIELDS_IN_DCR_RESPONSE))
                     .thenReturn("true");
 
             RegistrationRequestDTO registrationRequestDTO = new RegistrationRequestDTO();
@@ -244,8 +244,8 @@ public class RegisterApiServiceImplTest {
         try (MockedStatic<IdentityUtil> mockedIdentityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<DCRMUtils> mockedDCRMUtils = mockStatic(DCRMUtils.class)) {
 
-            mockedIdentityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE))
-                    .thenReturn("true");
+            mockedIdentityUtil.when(() -> IdentityUtil.getProperty(OAuthConstants.RETURN_NULL_FIELDS_IN_DCR_RESPONSE))
+                    .thenReturn("false");
             mockedDCRMUtils.when(() -> DCRMUtils.getOAuth2DCRMService()).thenReturn(dcrmService);
             mockedDCRMUtils.when(() -> DCRMUtils.getApplicationDTOFromApplication(any())).thenReturn(dto);
 

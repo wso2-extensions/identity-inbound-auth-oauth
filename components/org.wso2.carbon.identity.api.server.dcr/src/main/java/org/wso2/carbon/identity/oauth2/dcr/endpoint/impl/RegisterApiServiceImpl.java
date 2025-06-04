@@ -160,10 +160,12 @@ public class RegisterApiServiceImpl extends RegisterApiService {
 
     private Response buildResponseWithOptionalNullExclusion(ApplicationDTO applicationDTO, Response.Status status) {
 
-        boolean excludeNullFieldsInDcrResponse =
-                Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.EXCLUDE_NULL_FIELDS_IN_DCR_RESPONSE));
+        boolean returnNullFieldsInDcrResponse =
+                Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.RETURN_NULL_FIELDS_IN_DCR_RESPONSE));
 
-        if (excludeNullFieldsInDcrResponse) {
+        if (returnNullFieldsInDcrResponse) {
+            return Response.status(status).entity(applicationDTO).build();
+        } else {
             ObjectMapper mapper = new ObjectMapper();
             mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
             try {
@@ -176,8 +178,6 @@ public class RegisterApiServiceImpl extends RegisterApiService {
                 DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
                 return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
             }
-        } else {
-            return Response.status(status).entity(applicationDTO).build();
         }
     }
 }
