@@ -23,6 +23,7 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -208,7 +209,7 @@ public class JWTUtils {
                     OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
             String jwtIssuerOrgId = organizationManager.resolveOrganizationId(tenantDomain);
             List<String> switchedOrgOrgAncestors = organizationManager.getAncestorOrganizationIds(switchedOrgId);
-            if (switchedOrgOrgAncestors == null || switchedOrgOrgAncestors.isEmpty()) {
+            if (CollectionUtils.isEmpty(switchedOrgOrgAncestors)) {
                 // Client exception thrown since the organization ID (provided in JWT token) has empty ancestor list.
                 throw new IdentityOAuth2ClientException("No ancestors found for the organization ID: " + switchedOrgId);
             }
