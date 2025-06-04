@@ -149,9 +149,11 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -3864,19 +3866,30 @@ public class OAuth2Util {
 
         try {
             RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-            int userAccessingOrgId = realmService.getTenantManager().getTenantId(userAccessingOrg);
+            int userResidentOrgId = realmService.getTenantManager().getTenantId(userResidentOrg);
 
-            User user = OAuthUtil.getUserFromTenant(userId, userAccessingOrgId);
+            User user = OAuthUtil.getUserFromTenant(userId, userResidentOrgId);
             if (user == null) {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Invalid User Id provided for the request. Unable to find the user for given " +
-                                "user id : " + userId + " organization : " + userAccessingOrg);
+                                "user id : " + userId + " organization : " + userResidentOrg);
             }
             return getAuthenticatedUser(userId, user.getUserName(), tenantDomain, userAccessingOrg, userResidentOrg,
                     user.getUserStoreDomain(), clientId, null);
         } catch (UserStoreException | IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Use mapped local subject is mandatory but a local user couldn't be found");
+        }
+    }
+
+    private static UserAssociation getUserAssociation(String userId, String userResidentOrg)
+            throws IdentityOAuth2Exception {
+
+        try {
+            return OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService().getUserAssociation(userId, userResidentOrg);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving user association for user: " + userId, e);
         }
     }
 
@@ -3925,17 +3938,42 @@ public class OAuth2Util {
             throws IdentityOAuth2Exception {
 
         AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
-        authenticatedImpersonatingUser.setUserId(userId);
         authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
-                getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userAccessingOrg, userStoreDomain,
+                getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userResidentOrg, userStoreDomain,
                         clientId));
         authenticatedImpersonatingUser.setUserName(userName);
         authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
         authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
-        authenticatedImpersonatingUser.setFederatedUser(true);
-        authenticatedImpersonatingUser.setFederatedIdPName(ORGANIZATION_LOGIN_IDP_NAME);
-        authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
-        authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
+
+        if (userResidentOrg != null) {
+            UserAssociation association = getUserAssociation(userId, userResidentOrg);
+            if (association != null) {
+                // User from a different org.
+                userResidentOrg = association.getUserResidentOrganizationId();
+                userId = association.getAssociatedUserId();
+                try {
+                    if (OrganizationManagementUtil.isOrganization(userResidentOrg)) {
+                        // Org is another sub org.
+                        authenticatedImpersonatingUser.setFederatedUser(true);
+                        authenticatedImpersonatingUser.setFederatedIdPName(ORGANIZATION_LOGIN_IDP_NAME);
+                        authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
+                        authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
+                    }
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid User Id provided for the request. Unable to find the user for given " +
+                                    "user id : " + userId + " organization : " + userResidentOrg, e);
+                }
+            } else {
+                // User from the same sub org.
+                authenticatedImpersonatingUser.setFederatedUser(true);
+                authenticatedImpersonatingUser.setFederatedIdPName(ORGANIZATION_LOGIN_IDP_NAME);
+                authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
+                authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
+            }
+        }
+        // User from parent org.
+        authenticatedImpersonatingUser.setUserId(userId);
         return authenticatedImpersonatingUser;
     }
 
@@ -4005,7 +4043,7 @@ public class OAuth2Util {
      * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
      */
     public static String getAuthenticatedSubjectIdentifier(String userId, String userName, String tenantDomain,
-                                                           String userAccessingOrg, String userStoreDomain,
+                                                           String userResidentOrg, String userStoreDomain,
                                                            String clientId)
             throws IdentityOAuth2Exception {
 
@@ -4018,7 +4056,7 @@ public class OAuth2Util {
             if (subjectClaimUri != null) {
                 String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
                         OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
-                                        IdentityTenantUtil.getTenantId(userAccessingOrg))
+                                        IdentityTenantUtil.getTenantId(userResidentOrg))
                                 .getUserStoreManager(), subjectClaimUri);
 
                 if (subjectClaimValue != null) {

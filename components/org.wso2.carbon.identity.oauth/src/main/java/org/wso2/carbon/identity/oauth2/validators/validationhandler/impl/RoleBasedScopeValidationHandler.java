@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 
 /**
@@ -130,7 +131,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
     private boolean isImpersonatedSubOrgUser(AuthenticatedUser authenticatedUser) {
 
         return authenticatedUser.isFederatedUser()
-                && authenticatedUser.getAccessingOrganization() != null
+                && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())
                 && (authenticatedUser.getUserAttributes() == null
                 || authenticatedUser.getUserAttributes().isEmpty());
     }
