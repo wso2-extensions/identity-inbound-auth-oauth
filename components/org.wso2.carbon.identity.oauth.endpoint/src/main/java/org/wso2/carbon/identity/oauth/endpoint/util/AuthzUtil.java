@@ -1187,7 +1187,7 @@ public class AuthzUtil {
                 if (isImpersonationInitRequest) {
                     handleInitImpersonationRequest(impersonatedSubject, oauth2Params);
                 } else if (isImpersonationSSORequest) {
-                    handleSSOImpersonationRequest(impersonatingActor, impersonatedSubject, oAuthMessage, oauth2Params,
+                    handleSSOImpersonationRequest(impersonatedSubject, oAuthMessage, oauth2Params,
                             sessionContext, authnResult);
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
@@ -1200,7 +1200,7 @@ public class AuthzUtil {
         }
     }
 
-    private static void handleSSOImpersonationRequest(String impersonatingActor, String impersonatedSubject,
+    private static void handleSSOImpersonationRequest(String impersonatedSubject,
                                                OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                                SessionContext sessionContext, AuthenticationResult authnResult)
             throws IdentityOAuth2Exception, InvalidOAuthClientException, UserIdNotFoundException {
