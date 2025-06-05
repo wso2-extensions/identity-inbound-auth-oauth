@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.action.execution.api.model.ActionType;
 import org.wso2.carbon.identity.action.execution.api.model.AllowedOperation;
 import org.wso2.carbon.identity.action.execution.api.model.FlowContext;
 import org.wso2.carbon.identity.action.execution.api.model.Operation;
+import org.wso2.carbon.identity.action.execution.api.model.Organization;
 import org.wso2.carbon.identity.action.execution.api.model.Request;
 import org.wso2.carbon.identity.action.execution.api.model.Tenant;
 import org.wso2.carbon.identity.action.execution.api.model.User;
@@ -37,6 +38,7 @@ import org.wso2.carbon.identity.action.execution.api.model.UserStore;
 import org.wso2.carbon.identity.action.execution.api.service.ActionExecutionRequestBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.core.context.IdentityContext;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.action.model.AbstractToken;
 import org.wso2.carbon.identity.oauth.action.model.AccessToken;
@@ -47,6 +49,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
@@ -57,6 +60,8 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.CustomClaimsCallbackHandler;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.openidconnect.util.ClaimHandlerUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -120,6 +125,7 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
             setUserForEventBuilder(eventBuilder, authorizedUser, tokenReqDTO.getClientId(), tokenReqDTO.getGrantType());
             eventBuilder.userStore(new UserStore(authorizedUser.getUserStoreDomain()));
         }
+        eventBuilder.organization(buildAccessTokenIssuedOrganization());
 
         OAuthAppDO oAuthAppDO = getAppInformation(tokenMessageContext);
 
@@ -182,11 +188,23 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
                 -1;
     }
 
-    private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder, AuthenticatedUser user,
-                                        String clientID, String grantType) {
+    private void setUserForEventBuilder(PreIssueAccessTokenEvent.Builder eventBuilder,
+                                        AuthenticatedUser authenticatedUser, String clientID, String grantType) {
 
         try {
-            eventBuilder.user(new User(user.getUserId()));
+            String organizationId;
+            if (authenticatedUser.getAccessingOrganization() == null) {
+                organizationId = resolveOrganizationId(authenticatedUser.getTenantDomain());
+            } else {
+                organizationId = authenticatedUser.getAccessingOrganization();
+            }
+            Organization organization = buildOrganization(organizationId);
+
+            User user = new User.Builder(authenticatedUser.getUserId())
+                    .organization(organization)
+                    .build();
+
+            eventBuilder.user(user);
         } catch (UserIdNotFoundException e) {
             if (LOG.isDebugEnabled()) {
                 // todo: fall back to a different identifier like username.
@@ -406,4 +424,49 @@ public class PreIssueAccessTokenRequestBuilder implements ActionExecutionRequest
         return operation;
     }
 
+    private Organization buildAccessTokenIssuedOrganization() {
+
+        String accessTokenIssuedOrganization =
+                IdentityContext.getThreadLocalIdentityContext().getAccessTokenIssuedOrganization();
+        if (StringUtils.isEmpty(accessTokenIssuedOrganization)) {
+            return null;
+        }
+
+        String organizationId = resolveOrganizationId(accessTokenIssuedOrganization);
+
+        return buildOrganization(organizationId);
+    }
+
+    private Organization buildOrganization(String organizationId) {
+
+        if (StringUtils.isEmpty(organizationId)) {
+            return null;
+        }
+
+        OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+        try {
+
+            org.wso2.carbon.identity.organization.management.service.model.Organization existingOrganization =
+                    organizationManager.getOrganization(organizationId, false, false);
+
+            return new Organization(existingOrganization.getId(), existingOrganization.getName());
+
+        } catch (OrganizationManagementException e) {
+            LOG.error("Error while retrieving organization with ID: " + organizationId, e);
+        }
+        return null;
+    }
+
+    private String resolveOrganizationId(String tenantDomain) {
+
+        OrganizationManager organizationManager = OAuthComponentServiceHolder.getInstance().getOrganizationManager();
+
+        try {
+            return organizationManager.resolveOrganizationId(tenantDomain);
+        } catch (OrganizationManagementException e) {
+            LOG.error(
+                    "Error while retrieving organization Id with tenant: " + tenantDomain, e);
+        }
+        return null;
+    }
 }
