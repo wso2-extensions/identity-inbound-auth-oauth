@@ -1409,4 +1409,28 @@ public class OAuthAdminServiceImplTest {
                 {scope, oidcDialectClaims}
         };
     }
+
+    @Test
+    public void testGetPublicClientSupportedGrantTypes() {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class)) {
+
+            OAuthServerConfiguration mockServerConfig = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockServerConfig);
+
+            List<String> grantTypes = Arrays.asList("authorization_code", "refresh_token", "password");
+            when(mockServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(grantTypes);
+
+            OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+            String[] supportedGrantTypes = oAuthAdminService.getPublicClientSupportedGrantTypes();
+
+            Assert.assertNotNull(supportedGrantTypes);
+            Assert.assertEquals(supportedGrantTypes.length, 3);
+            Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("authorization_code"));
+            Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("refresh_token"));
+            Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("password"));
+        }
+    }
 }
