@@ -171,7 +171,8 @@ public class DCRMUtils {
             } else if (errorCode.startsWith(FORBIDDEN_STATUS)) {
                 status = Response.Status.FORBIDDEN;
             } else if (errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA) ||
-                    errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {
+                    errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT) ||
+                    errorCode.startsWith(DCRMConstants.ErrorCodes.INVALID_REDIRECT_URI)) {
                 status = Response.Status.BAD_REQUEST;
                 isStatusOnly = false;
             }
@@ -293,7 +294,8 @@ public class DCRMUtils {
             return new DCRMEndpointException(status);
         } else {
             String error = DCRMConstants.ErrorCodes.INVALID_CLIENT_METADATA;
-            if (DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI.toString().equals(code)) {
+            if (DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_REDIRECT_URI.toString().equals(code) ||
+                    DCRMConstants.ErrorCodes.INVALID_REDIRECT_URI.equals(code)) {
                 error = DCRMConstants.ErrorCodes.INVALID_REDIRECT_URI;
             }
             if (code.equals(DCRMConstants.ErrorCodes.INVALID_SOFTWARE_STATEMENT)) {
