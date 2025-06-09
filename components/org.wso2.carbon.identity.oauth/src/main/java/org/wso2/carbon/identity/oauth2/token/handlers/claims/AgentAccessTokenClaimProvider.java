@@ -32,17 +32,11 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
         if (AGENT.equalsIgnoreCase(context.getAuthorizedUser().getUserStoreDomain())) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
-            if (context.getOauth2AccessTokenReqDTO().getResourceIdentifier() != null) {
-                agentMap.put(AUD, context.getOauth2AccessTokenReqDTO().getResourceIdentifier());
-            }
             return agentMap;
         } else if (GrantType.AUTHORIZATION_CODE.toString().equals(context.getOauth2AccessTokenReqDTO().getGrantType())
             && context.getRequestedActor() != null) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(ACT, Collections.singletonMap(SUB, context.getRequestedActor()));
-            if (context.getOauth2AccessTokenReqDTO().getResourceIdentifier() != null) {
-                agentMap.put(AUD, context.getOauth2AccessTokenReqDTO().getResourceIdentifier());
-            }
             return agentMap;
         }
         return null;
