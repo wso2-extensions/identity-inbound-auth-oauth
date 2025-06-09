@@ -44,6 +44,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
     private static final String US_ASCII = "US-ASCII";
     private static final String ACCESS_TOKEN_PARAM = "access_token=";
     private static final String BEARER = "Bearer";
+    private static final String DPOP = "DPoP";
     private static final String CONTENT_TYPE_HEADER_VALUE = "application/x-www-form-urlencoded";
     public static final String CHARSET = "charset=";
 
@@ -96,10 +97,33 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             }
         }
         String[] authzHeaderInfo = authzHeaders.trim().split(" ");
-        if (authzHeaderInfo.length < 2 || !BEARER.equals(authzHeaderInfo[0])) {
-            throw new UserInfoEndpointException(OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing");
+
+        // Assume authzHeaderInfo contains the parts of the Authorization header
+        if (authzHeaderInfo.length < 2) {
+            throw new UserInfoEndpointException(
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Token missing"
+            );
         }
-        return authzHeaderInfo[1];
+
+        String authScheme = authzHeaderInfo[0];
+
+        if (BEARER.equals(authScheme)) {
+            // Bearer token. For a Bearer token no additional DPoP header is expected.
+            return authzHeaderInfo[1];
+        } else if (DPOP.equals(authScheme)) {
+            // DPoP token: the request MUST include a DPoP header
+            String dpopHeader = request.getHeader(DPOP);
+            if (dpopHeader == null || dpopHeader.trim().isEmpty()) {
+                throw new UserInfoEndpointException(
+                        OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP header is required with DPoP tokens"
+                );
+            }
+            return authzHeaderInfo[1];
+        } else {
+            throw new UserInfoEndpointException(
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Unsupported token scheme; expected Bearer or DPoP"
+            );
+        }
     }
 
     public static boolean isPureAscii(String requestBody) {
