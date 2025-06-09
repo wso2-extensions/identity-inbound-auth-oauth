@@ -294,7 +294,6 @@ public final class OAuthConstants {
             "OAuth.OpenIDConnect.EnableClaimsSeparationForAccessToken";
     public static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
 
-    public static final String RESOURCE_IDENTIFIER = "resource";
     public static final String REQUESTED_ACTOR = "requested_actor";
 
     private OAuthConstants() {
