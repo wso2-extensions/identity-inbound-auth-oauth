@@ -96,9 +96,9 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
                         "Content-Type header is wrong");
             }
         }
+
         String[] authzHeaderInfo = authzHeaders.trim().split(" ");
 
-        // Assume authzHeaderInfo contains the parts of the Authorization header
         if (authzHeaderInfo.length < 2) {
             throw new UserInfoEndpointException(
                     OAuthError.ResourceResponse.INVALID_REQUEST, "Token missing"
