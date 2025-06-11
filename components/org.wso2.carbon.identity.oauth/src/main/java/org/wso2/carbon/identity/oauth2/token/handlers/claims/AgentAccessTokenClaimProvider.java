@@ -16,7 +16,6 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
 
     private static final String ACT = "act";
     private static final String SUB = "sub";
-    private static final String AUD = "aud";
     private static final String AGENT = "AGENT";
     private static final String AUT = "aut";
 
