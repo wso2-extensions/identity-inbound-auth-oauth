@@ -101,7 +101,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
         if (authzHeaderInfo.length < 2) {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Authorization header or header value is missing"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "No valid Authorization header provided"
             );
         }
 
@@ -121,7 +121,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             return authzHeaderInfo[1];
         } else {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Unsupported token scheme: " + authScheme
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "No valid Authorization header provided"
             );
         }
     }
