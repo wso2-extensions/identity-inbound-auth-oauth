@@ -63,7 +63,6 @@ public class OAuthAuthzReqMessageContext implements Serializable {
 
     private AuthorizationDetails requestedAuthorizationDetails;
 
-
     public OAuthAuthzReqMessageContext(OAuth2AuthorizeReqDTO authorizationReqDTO) {
 
         this.authorizationReqDTO = authorizationReqDTO;
