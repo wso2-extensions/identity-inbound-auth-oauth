@@ -17,14 +17,12 @@ package org.wso2.carbon.identity.openidconnect;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,8 +32,6 @@ import java.util.Map;
 public class OIDCAgentClaimProviderImpl implements ClaimProvider {
 
     public static final Log LOG = LogFactory.getLog(OIDCAgentClaimProviderImpl.class);
-    private static final String ACT = "act";
-    private static final String SUB = "sub";
     private static final String AGENT = "AGENT";
     private static final String AUT = "aut";
 
