@@ -201,11 +201,7 @@ public class DCRConfigurationMgtServiceImpl implements DCRConfigurationMgtServic
 
     private void validateMandateSSA (DCRConfiguration dcrConfiguration) throws DCRMClientException {
 
-        if (Boolean.FALSE.equals(dcrConfiguration.getAuthenticationRequired()) &&
-                !Boolean.TRUE.equals(dcrConfiguration.getMandateSSA())) {
-            // if authenticationRequired is False, mandateSSA should be True.
-            throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_NOT_MANDATED);
-        } else if (Boolean.TRUE.equals(dcrConfiguration.getMandateSSA()) &&
+        if (Boolean.TRUE.equals(dcrConfiguration.getMandateSSA()) &&
                 StringUtils.isBlank(dcrConfiguration.getSsaJwks())) {
             // if mandateSSA is True, ssaJwks should be provided.
             throw handleClientException(DCRMConstants.DCRConfigErrorMessage.ERROR_CODE_SSA_JWKS_REQUIRED);
