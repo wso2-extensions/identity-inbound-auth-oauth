@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -141,14 +142,16 @@ public class UserInfoISAccessTokenValidatorTest {
         return new Object[][]{
                 // Valid DPoP token with proof header
                 {dpopAuthHeaderWithToken, contentTypeHeaderValue, "mocked-dpop-proof", null},
-
                 // Missing DPoP proof header
                 {dpopAuthHeaderWithToken, contentTypeHeaderValue, null,
                         "DPoP header is required with DPoP tokens"},
-
+                {dpopAuthHeaderWithToken, contentTypeHeaderValue, "",
+                        "DPoP header is required with DPoP tokens"},
+                {dpopAuthHeaderWithToken, contentTypeHeaderValue, " ",
+                        "DPoP header is required with DPoP tokens"},
                 // Unsupported token scheme
                 {"Basic " + token, contentTypeHeaderValue, null,
-                        "Unsupported token scheme; expected Bearer or DPoP"},
+                        "Unsupported token scheme: Basic"},
         };
     }
 
@@ -157,7 +160,7 @@ public class UserInfoISAccessTokenValidatorTest {
                                            String expectedExceptionMessage) {
 
         prepareHttpServletRequest(authHeader, contentType);
-        if (dpopHeader != null) {
+        if (StringUtils.isNotBlank(dpopHeader)) {
             when(httpServletRequest.getHeader("DPoP")).thenReturn(dpopHeader);
         }
 

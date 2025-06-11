@@ -101,7 +101,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
         if (authzHeaderInfo.length < 2) {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Token missing"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Authorization header or header value is missing"
             );
         }
 
@@ -113,7 +113,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
         } else if (DPOP.equals(authScheme)) {
             // DPoP token: the request MUST include a DPoP header
             String dpopHeader = request.getHeader(DPOP);
-            if (dpopHeader == null || dpopHeader.trim().isEmpty()) {
+            if (StringUtils.isBlank(dpopHeader)) {
                 throw new UserInfoEndpointException(
                         OAuthError.ResourceResponse.INVALID_REQUEST, "DPoP header is required with DPoP tokens"
                 );
@@ -121,7 +121,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             return authzHeaderInfo[1];
         } else {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "Unsupported token scheme; expected Bearer or DPoP"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Unsupported token scheme: " + authScheme
             );
         }
     }
