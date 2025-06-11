@@ -31,6 +31,7 @@ import org.wso2.carbon.identity.core.util.IdentityCoreInitializedEvent;
 import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.openidconnect.ClaimProvider;
+import org.wso2.carbon.identity.openidconnect.OIDCAgentClaimProviderImpl;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimMetaDataOperationHandler;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilter;
 import org.wso2.carbon.identity.openidconnect.OpenIDConnectSystemClaimImpl;
@@ -62,6 +63,8 @@ public class OpenIDConnectServiceComponent {
                     new RequestObjectService(), null);
             bundleContext.registerService(AbstractEventHandler.class.getName(),
                     new OIDCClaimMetaDataOperationHandler(), null);
+            bundleContext.registerService(ClaimProvider.class.getName(),
+                    new OIDCAgentClaimProviderImpl(), null);
         } catch (Throwable e) {
             String errMsg = "Error while activating OpenIDConnectServiceComponent.";
             log.error(errMsg, e);
