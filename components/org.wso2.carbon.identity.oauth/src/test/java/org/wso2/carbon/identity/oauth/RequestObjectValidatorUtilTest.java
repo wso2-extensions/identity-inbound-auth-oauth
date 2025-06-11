@@ -66,7 +66,7 @@ public class RequestObjectValidatorUtilTest {
     }
 
     @Test
-    public void testIsSignatureVerified_EXPError() {
+    public void testIsSignatureVerifiedEXPError() {
 
         SignedJWT mockJwt = mock(SignedJWT.class);
         when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
@@ -91,6 +91,65 @@ public class RequestObjectValidatorUtilTest {
         } catch (RequestObjectException e) {
             assertTrue(e.getMessage().contains("request object is expired"),
                     "Expected error message to mention 'expired'");
+        }
+    }
+
+    @Test
+    public void testIsSignatureVerifiedOtherError() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.PS256);
+
+        String jwksUri = "https://example.com/jwks";
+
+        BadJOSEException badJOSEEx = new BadJOSEException("Some other error occurred during JWT validation.");
+        IdentityOAuth2Exception ex =
+                new IdentityOAuth2Exception("Signature validation failed for the provided JWT.", badJOSEEx);
+
+        try (MockedConstruction<JWKSBasedJWTValidator> mocked = mockConstruction(JWKSBasedJWTValidator.class,
+                (mock, context) -> {
+                    when(mock.validateSignature(anyString(), anyString(), anyString(), anyMap())).thenThrow(ex);
+                })) {
+
+            RequestObjectValidatorUtil.isSignatureVerified(mockJwt, jwksUri);
+            fail("Expected RequestObjectException was not thrown.");
+        } catch (RequestObjectException e) {
+            assertTrue(e.getMessage()
+                            .contains("Error occurred while validating request object signature using jwks endpoint"),
+                    "Expected error message to mention 'expired'");
+        }
+    }
+
+    @Test
+    public void testIsSignatureVerifiedCauseMessageNull() {
+
+        SignedJWT mockJwt = mock(SignedJWT.class);
+        when(mockJwt.getParsedString()).thenReturn("dummy-jwt");
+
+        JWSHeader mockHeader = mock(JWSHeader.class);
+        when(mockJwt.getHeader()).thenReturn(mockHeader);
+        when(mockHeader.getAlgorithm()).thenReturn(JWSAlgorithm.PS256);
+
+        String jwksUri = "https://example.com/jwks";
+
+        // IdentityOAuth2Exception with no cause and null message
+        IdentityOAuth2Exception ex = new IdentityOAuth2Exception(null, (Throwable) null);
+
+        try (MockedConstruction<JWKSBasedJWTValidator> mocked = mockConstruction(JWKSBasedJWTValidator.class,
+                (mock, context) -> {
+                    when(mock.validateSignature(anyString(), anyString(), anyString(), anyMap())).thenThrow(ex);
+                })) {
+
+            RequestObjectValidatorUtil.isSignatureVerified(mockJwt, jwksUri);
+            fail("Expected RequestObjectException was not thrown.");
+        } catch (RequestObjectException e) {
+            assertTrue(e.getMessage()
+                            .contains("Error occurred while validating request object signature using jwks endpoint"),
+                    "Expected fallback error message to be present");
         }
     }
 }
