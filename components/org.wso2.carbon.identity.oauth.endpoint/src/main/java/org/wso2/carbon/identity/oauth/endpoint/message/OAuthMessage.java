@@ -277,8 +277,6 @@ public class OAuthMessage {
         return request.getParameter(OAuthConstants.OAUTH_PKCE_CODE_CHALLENGE_METHOD);
     }
 
-
-
     @Override
     public String toString() {
 

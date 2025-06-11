@@ -58,7 +58,6 @@ public class AuthzCodeDO extends CacheEntry {
 
     private String requestedActor;
 
-
     public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
                        String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId) {
 
