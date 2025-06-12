@@ -102,7 +102,7 @@
                 <xs:sequence>
                     <xs:element minOccurs="0" name="identifier" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="issuer" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenCategory" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
             <xs:complexType name="OAuth2TokenValidationRequestDTO_TokenValidationContextParam">
@@ -131,7 +131,7 @@
             <xs:complexType name="OAuth2TokenValidationResponseDTO_AuthorizationContextToken">
                 <xs:sequence>
                     <xs:element minOccurs="0" name="tokenString" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenCategory" nillable="true" type="xs:string"/>
                 </xs:sequence>
             </xs:complexType>
             <xs:complexType name="OAuth2IntrospectionResponseDTO">
@@ -152,7 +152,7 @@
                     <xs:element maxOccurs="unbounded" minOccurs="0" name="properties" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="scope" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="sub" nillable="true" type="xs:string"/>
-                    <xs:element minOccurs="0" name="tokenType" nillable="true" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tokenCategory" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="userContext" nillable="true" type="xs:string"/>
                     <xs:element minOccurs="0" name="username" nillable="true" type="xs:string"/>
                 </xs:sequence>

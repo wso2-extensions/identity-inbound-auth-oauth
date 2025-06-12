@@ -49,6 +49,8 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.cache.OAuthCache;
+import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -62,6 +64,7 @@ import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -75,7 +78,9 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationNotific
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuanceDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
@@ -84,12 +89,14 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
+import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
+import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -98,6 +105,7 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -127,7 +135,7 @@ import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_FLOW_GRANT_TYPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
-import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.EXISTING_TOKEN_USED;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
@@ -328,7 +336,7 @@ public class AccessTokenIssuer {
         // Indirectly we can say that the tenantDomain of the SP is the tenantDomain of the user who created SP.
         // This is done to avoid having to send the tenantDomain as a query param to the token endpoint
         String tenantDomainOfApp = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
-        validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO);
+        OAuth2Util.validateRequestTenantDomain(tenantDomainOfApp, tokenReqDTO);
 
         tokenReqDTO.setTenantDomain(tenantDomainOfApp);
 
@@ -1364,6 +1372,11 @@ public class AccessTokenIssuer {
 
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
+        try {
+            triggerPostIssueTokenEvent(tokenReqDTO, tokenRespDTO, tokReqMsgCtx);
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error while triggering post issue token event.", e);
+        }
 
         if (isRefresh) {
             if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
@@ -1392,6 +1405,64 @@ public class AccessTokenIssuer {
                 }
             }
         }
+    }
+
+    private static void triggerPostIssueTokenEvent(OAuth2AccessTokenReqDTO tokenReqDTO,
+                                                   OAuth2AccessTokenRespDTO tokenRespDTO,
+                                                   OAuthTokenReqMessageContext tokReqMsgCtx)
+            throws IdentityOAuth2Exception {
+
+        String cacheKey;
+        if (JWTUtils.isJWT(tokenRespDTO.getAccessToken())) {
+            Optional<JWTClaimsSet> jwtClaimSet;
+            try {
+                jwtClaimSet = JWTUtils.getJWTClaimSet(
+                        JWTUtils.parseJWT(tokenRespDTO.getAccessToken()));
+            } catch (ParseException e) {
+                throw new IdentityOAuth2ServerException("Error while parsing the JWT access token.", e);
+            }
+            jwtClaimSet.orElseThrow(() -> new IdentityOAuth2ServerException("Empty JWT claims set found."));
+            cacheKey = jwtClaimSet.get().getJWTID();
+        } else {
+            cacheKey = tokenRespDTO.getAccessToken();
+        }
+        if (StringUtils.isBlank(cacheKey)) {
+            throw new IdentityOAuth2ServerException("Token cache key not found.");
+        }
+        AccessTokenDO accessTokenDO = (AccessTokenDO) OAuthCache.getInstance().getValueFromCache(
+                new OAuthCacheKey(cacheKey));
+        if (accessTokenDO == null) {
+            throw new IdentityOAuth2ServerException("Access token not found in the cache");
+        }
+        String tokenType = accessTokenDO.getTokenType();
+        int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
+        String issuedTime = accessTokenDO.getIssuedTime() != null ?
+                accessTokenDO.getIssuedTime().toString() : StringUtils.EMPTY;
+        String authorizedOrganizationId = accessTokenDO.getAuthorizedOrganizationId();
+        if (!existingTokenUsed(tokReqMsgCtx)) {
+            OAuth2TokenUtil.postIssueToken(new TokenIssuanceDO.Builder().
+                    tokenId(tokenRespDTO.getTokenId()).
+                    tokenType(tokenType).
+                    tenantDomain(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain()).
+                    tokenType(accessTokenDO.getTokenType()).
+                    clientId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId()).
+                    grantType(tokenReqDTO.getGrantType()).
+                    tokenBillingCategory(OIDCConstants.TokenBillingCategory.M2M_ACCESS_TOKEN).
+                    appResidentTenantId(appResidentTenantId).
+                    issuedTime(issuedTime).
+                    authorizedOrganizationId(authorizedOrganizationId).
+                    build()
+            );
+        }
+    }
+
+    private static Boolean existingTokenUsed(OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        Boolean existingTokenUsed = (Boolean) tokReqMsgCtx.getProperty(EXISTING_TOKEN_USED);
+        if (existingTokenUsed == null) {
+            existingTokenUsed = false;
+        }
+        return existingTokenUsed;
     }
 
     /**

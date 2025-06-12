@@ -33,12 +33,14 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuanceDO;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
 import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.Event.NEW_ACCESS_TOKEN;
@@ -80,6 +82,48 @@ public class OAuth2TokenUtil {
             throw new IdentityOAuth2Exception("Error while invoking the request object persistance handler when " +
                     "issuing the access token id: " + tokenId);
         }
+    }
+
+    /**
+     * Uses to publish token issuance details.
+     *
+     * @param tokenIssuanceDO Data object containing token issuance details.
+     * @throws IdentityOAuth2Exception when an error occurs while publishing the event.
+     */
+    public static void postIssueToken(TokenIssuanceDO tokenIssuanceDO)
+            throws IdentityOAuth2Exception {
+
+        String eventName = OIDCConstants.Event.POST_ISSUE_TOKEN;
+        Event requestObjectPersistanceEvent = buildPostIssueTokenEvent(tokenIssuanceDO, eventName);
+        IdentityEventService identityEventService = OpenIDConnectServiceComponentHolder.getIdentityEventService();
+        try {
+            if (identityEventService != null) {
+                identityEventService.handleEvent(requestObjectPersistanceEvent);
+                if (log.isDebugEnabled()) {
+                    log.debug("The event " + eventName + " triggered after the token "
+                            + tokenIssuanceDO.getTokenId() + " is issued.");
+                }
+            }
+        } catch (IdentityEventException e) {
+            throw new IdentityOAuth2Exception("Error while invoking the request object persistence handler when " +
+                    "issuing the access token id: " + tokenIssuanceDO.getTokenId());
+        }
+    }
+
+    private static Event buildPostIssueTokenEvent(TokenIssuanceDO tokenIssuanceDO, String eventName) {
+
+        Map<String, Object> tokenIssuanceData = new HashMap<>();
+        tokenIssuanceData.put(OIDCConstants.Event.TOKEN_ID, tokenIssuanceDO.getTokenId());
+        tokenIssuanceData.put(OIDCConstants.Event.GRANT_TYPE, tokenIssuanceDO.getGrantType());
+        tokenIssuanceData.put(OIDCConstants.Event.CLIENT_ID, tokenIssuanceDO.getClientId());
+        tokenIssuanceData.put(OIDCConstants.Event.TENANT_DOMAIN, tokenIssuanceDO.getTenantDomain());
+        tokenIssuanceData.put(OIDCConstants.Event.TOKEN_TYPE, tokenIssuanceDO.getTokenType());
+        tokenIssuanceData.put(OIDCConstants.Event.TOKEN_CATEGORY, tokenIssuanceDO.getTokenBillingCategory());
+        tokenIssuanceData.put(OIDCConstants.Event.APP_RESIDENT_TENANT_ID, tokenIssuanceDO.getAppResidentTenantId());
+        tokenIssuanceData.put(OIDCConstants.Event.ISSUED_TIME, tokenIssuanceDO.getIssuedTime());
+        tokenIssuanceData.put(OIDCConstants.Event.AUTHORIZED_ORGANIZATION_ID,
+                tokenIssuanceDO.getAuthorizedOrganizationId());
+        return new Event(eventName, tokenIssuanceData);
     }
 
     /**
