@@ -101,7 +101,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
         if (authzHeaderInfo.length < 2) {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "No valid Authorization header provided"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
             );
         }
 
@@ -121,7 +121,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
             return authzHeaderInfo[1];
         } else {
             throw new UserInfoEndpointException(
-                    OAuthError.ResourceResponse.INVALID_REQUEST, "No valid Authorization header provided"
+                    OAuthError.ResourceResponse.INVALID_REQUEST, "Bearer token missing"
             );
         }
     }

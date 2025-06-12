@@ -151,7 +151,7 @@ public class UserInfoISAccessTokenValidatorTest {
                         "DPoP header is required with DPoP tokens"},
                 // Unsupported token scheme
                 {"Basic " + token, contentTypeHeaderValue, null,
-                        "No valid Authorization header provided"},
+                        "Bearer token missing"},
         };
     }
 
