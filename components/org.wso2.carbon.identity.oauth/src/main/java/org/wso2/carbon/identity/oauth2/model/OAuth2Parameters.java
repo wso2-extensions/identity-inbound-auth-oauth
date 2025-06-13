@@ -58,6 +58,7 @@ public class OAuth2Parameters implements Serializable {
     private boolean isMtlsRequest;
     private String requestedSubjectId;
     private AuthorizationDetails authorizationDetails;
+    private String requestedActor;
 
     public String getRequestedSubjectId() {
 
@@ -352,5 +353,15 @@ public class OAuth2Parameters implements Serializable {
     public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
         this.authorizationDetails = authorizationDetails;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }
