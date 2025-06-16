@@ -38,6 +38,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authcontext.AuthorizationContextTokenGenerator;
@@ -347,13 +348,7 @@ public class TokenValidationHandler {
                 }
                 return introResp;
             } else if (exception != null) {
-                // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
-                if (diagnosticLogBuilder != null) {
-                    diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, exception.getMessage())
-                            .resultMessage("System error occurred.");
-                    LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
-                }
-                throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
+                handleTokenValidationException(diagnosticLogBuilder, exception);
             } else {
                 // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
                 if (diagnosticLogBuilder != null) {
@@ -381,6 +376,26 @@ public class TokenValidationHandler {
 
         introResp.getProperties().put(OAuth2Util.OAUTH2_VALIDATION_MESSAGE_CONTEXT, messageContext);
         return introResp;
+    }
+
+    private static void handleTokenValidationException(DiagnosticLog.DiagnosticLogBuilder diagnosticLogBuilder,
+                                                       Exception exception) throws IdentityOAuth2Exception {
+
+        boolean isIdentityOAuth2ClientException = exception instanceof IdentityOAuth2ClientException;
+
+        // diagnosticLogBuilder is not null only if diagnostic logs are enabled.
+        if (diagnosticLogBuilder != null) {
+            String resultMessage =
+                    isIdentityOAuth2ClientException ? "Client error occurred." : "System error occurred.";
+            diagnosticLogBuilder.inputParam(LogConstants.InputKeys.ERROR_MESSAGE, exception.getMessage())
+                    .resultMessage(resultMessage);
+            LoggerUtils.triggerDiagnosticLogEvent(diagnosticLogBuilder);
+        }
+
+        if (isIdentityOAuth2ClientException) {
+            throw new IdentityOAuth2ClientException("Error occurred while validating token.", exception);
+        }
+        throw new IdentityOAuth2Exception("Error occurred while validating token.", exception);
     }
 
     private OAuth2IntrospectionResponseDTO validateRefreshToken(OAuth2TokenValidationMessageContext messageContext,

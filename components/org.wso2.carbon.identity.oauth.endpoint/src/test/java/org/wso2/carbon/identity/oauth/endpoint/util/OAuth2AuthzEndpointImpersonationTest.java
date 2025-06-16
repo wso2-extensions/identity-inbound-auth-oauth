@@ -61,6 +61,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUESTED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SUBJECT_TOKEN;
@@ -74,23 +75,28 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
         return new Object[][]{
                 // response type, existingImpersonatedUserId, impersonatedUserIdInReq,
                 // rejectImpersonation, ssoImpersonation, validImpersonation
-                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", false, false, true, true},
-                {SUBJECT_TOKEN, null, "impersonatedUserId", false, false, true, true},
-                {SUBJECT_TOKEN, "impersonatedUserId", "otherImpersonatedUserId", true, false, false, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", null, null, false, false, true, true},
+                {SUBJECT_TOKEN, null, "impersonatedUserId", null, null, false, false, true, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", "otherImpersonatedUserId", null, null, true, false, false, true},
                 // Invalid impersonation request
-                {SUBJECT_TOKEN, "impersonatedUserId", null, false, false, false, true},
-                {SUBJECT_TOKEN, null, null, false, false, false, true},
+                {SUBJECT_TOKEN, "impersonatedUserId", null, null, null, false, false, false, true},
+                {SUBJECT_TOKEN, null, null, null, null, false, false, false, true},
                 // SSO cases.
-                {CODE, "impersonatedUserId", "impersonatedUserId", false, true, true, true},
-                {CODE, "impersonatedUserId", "OtherImpersonatedUserId", false, true, false, true},
+                {CODE, "impersonatedUserId", "impersonatedUserId", null, null, false, true, true, true},
+                {CODE, "impersonatedUserId", "OtherImpersonatedUserId", null, null, false, true, false, true},
                 // Disabled.
-                {CODE, "impersonatedUserId", "impersonatedUserId", false, true, false, false},
+                {CODE, "impersonatedUserId", "impersonatedUserId", null, null, false, true, false, false},
+                {SUBJECT_TOKEN, "impersonatedUserId", "impersonatedUserId", "dummyOrg1", "dummyOrg1", false, false,
+                        true, true},
+                {CODE, "impersonatedUserId", "impersonatedUserId", "dummyOrg1", "dummyOrg1", false, true, true, true},
         };
     }
 
     @Test(dataProvider = "getHandleSessionImpersonationData")
     public void testHandleSessionImpersonation(String responseType, String existingImpersonatedUserId,
-                                     String impersonatedUserIdInReq, boolean rejectImpersonation,
+                                               String impersonatedUserIdInReq,
+                                               String residentOrg, String accessingOrg,
+                                               boolean rejectImpersonation,
                                      boolean ssoImpersonation, boolean validImpersonation,
                                                boolean isUserSessionImpersonationEnabled) throws Exception {
 
@@ -139,6 +145,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             when(oAuth2Parameters.getClientId()).thenReturn(dummyClientId);
             when(oAuth2Parameters.getScopes()).thenReturn(new HashSet<String>(Collections.singletonList(
                     IMPERSONATION_SCOPE_NAME)));
+            when(oAuth2Parameters.getRequestedSubjectId()).thenReturn(impersonatedUserIdInReq);
 
             // IdentityTenantUtil.getTenantId
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString())).thenReturn(1234);
@@ -155,6 +162,17 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             when(impersonator.getTenantDomain()).thenReturn("carbon.super");
             when(impersonator.getUserStoreDomain()).thenReturn("PRIMARY");
             when(impersonator.getAuthenticatedSubjectIdentifier()).thenReturn("impersonatingActor");
+            if (residentOrg != null) {
+                when(impersonator.getUserResidentOrganization()).thenReturn(residentOrg);
+            }
+            if (accessingOrg != null) {
+                when(impersonator.getAccessingOrganization()).thenReturn(accessingOrg);
+            }
+            if (residentOrg != null && accessingOrg != null) {
+                when(impersonator.isFederatedUser()).thenReturn(true);
+                when(impersonator.getFederatedIdPName()).thenReturn(ORGANIZATION_LOGIN_IDP_NAME);
+            }
+
             // Set impersonating user.as AuthenticationResult subject.
             authenticationResult.setSubject(impersonator);
 
@@ -185,6 +203,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             when(resultContext.getImpersonationRequestDTO()).thenReturn(impersonationRequestDTO);
             when(resultContext.isValidated()).thenReturn(validImpersonation);
             when(impersonationRequestDTO.getoAuthAuthzReqMessageContext()).thenReturn(authzReqMessageContext);
+            when(impersonationRequestDTO.getImpersonator()).thenReturn(impersonator);
 
             // Mock ImpersonationMgtService.
             ImpersonationMgtService impersonationMgtService = mock(ImpersonationMgtServiceImpl.class);
@@ -195,9 +214,18 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             try (MockedStatic<OAuth2Util> mockedOAuth2Util = mockStatic(OAuth2Util.class);) {
                 // Invoke impersonation validation.
                 when(impersonatedUser.getUserId()).thenReturn(impersonatedUserIdInReq);
-                mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
-                        impersonatedUserIdInReq, impersonator.getTenantDomain(),
-                        dummyClientId)).thenReturn(impersonatedUser);
+
+                if (residentOrg != null && accessingOrg != null) {
+                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                            impersonatedUserIdInReq, impersonator.getTenantDomain(), accessingOrg, residentOrg,
+                            dummyClientId)).thenReturn(impersonatedUser);
+                } else {
+                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                            impersonatedUserIdInReq, impersonator.getTenantDomain(),
+                            dummyClientId)).thenReturn(impersonatedUser);
+                }
+
+
 
                 // Invoke handleSessionImpersonation method.
                 Method handleSessionImpersonation = AuthzUtil.class.getDeclaredMethod(

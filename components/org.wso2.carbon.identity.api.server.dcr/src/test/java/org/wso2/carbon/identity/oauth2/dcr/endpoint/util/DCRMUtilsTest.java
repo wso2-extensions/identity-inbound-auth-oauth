@@ -117,12 +117,15 @@ public class DCRMUtilsTest {
                 new DCRMException("BAD_REQUEST_INVALID_REDIRECT_URI", "error code for invalid redirect URI");
         DCRMException dcrmException4 = new DCRMException("NOT_FOUND_", "error code start with not found");
         DCRMException dcrmException5 = new DCRMException("BAD_REQUEST_", "error code start with bad request");
+        DCRMException dcrmException6 =
+                new DCRMException("invalid_redirect_uri", "error code for invalid redirect URI");
         return new Object[][]{
                 {dcrmException1},
                 {dcrmException2},
                 {dcrmException3},
                 {dcrmException4},
-                {dcrmException5}
+                {dcrmException5},
+                {dcrmException6}
         };
     }
 

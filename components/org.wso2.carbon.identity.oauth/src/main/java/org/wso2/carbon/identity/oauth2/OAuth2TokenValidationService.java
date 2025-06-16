@@ -116,10 +116,16 @@ public class OAuth2TokenValidationService extends AbstractAdmin {
         try {
             oAuth2IntrospectionResponseDTO = validationHandler.buildIntrospectionResponse(validationReq);
         } catch (IdentityOAuth2Exception e) {
-            log.error("Error occurred while building the introspection response", e);
             oAuth2IntrospectionResponseDTO = new OAuth2IntrospectionResponseDTO();
             oAuth2IntrospectionResponseDTO.setActive(false);
-            oAuth2IntrospectionResponseDTO.setError("Server error occurred while building the introspection response");
+            if (e instanceof IdentityOAuth2ClientException) {
+                oAuth2IntrospectionResponseDTO.setError(
+                        "Client error occurred while building the introspection response");
+            } else {
+                log.error("Error occurred while building the introspection response", e);
+                oAuth2IntrospectionResponseDTO.setError(
+                        "Server error occurred while building the introspection response");
+            }
         }
         triggerPostIntrospectionValidationListeners(validationReq, oAuth2IntrospectionResponseDTO,
                 oAuth2IntrospectionResponseDTO.getProperties());

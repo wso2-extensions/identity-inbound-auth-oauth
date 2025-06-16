@@ -2153,6 +2153,30 @@ public class OAuthAdminServiceImpl {
         return allowedGrants.toArray(new String[allowedGrants.size()]);
     }
 
+    /**
+     * Get the list of grant types that supports public clients.
+     *
+     * @return Array of grant types that supports public clients.
+     */
+    public String[] getPublicClientSupportedGrantTypes() {
+
+        return PublicClientSupportedGrantTypeHolder.PUBLIC_CLIENT_SUPPORTED_GRANTS;
+    }
+
+    private static class PublicClientSupportedGrantTypeHolder {
+
+        static final String[] PUBLIC_CLIENT_SUPPORTED_GRANTS;
+        static {
+            List<String> publicClientSupportedGrantTypes =
+                    OAuthServerConfiguration.getInstance().getPublicClientSupportedGrantTypesList();
+            if (publicClientSupportedGrantTypes == null || publicClientSupportedGrantTypes.isEmpty()) {
+                PUBLIC_CLIENT_SUPPORTED_GRANTS = new String[0];
+            } else {
+                PUBLIC_CLIENT_SUPPORTED_GRANTS = publicClientSupportedGrantTypes.toArray(new String[0]);
+            }
+        }
+    }
+
     boolean isImplicitGrantEnabled() {
 
         Map<String, ResponseTypeHandler> responseTypeHandlers =

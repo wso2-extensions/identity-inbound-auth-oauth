@@ -60,6 +60,10 @@ public class RequestObjectValidatorUtil {
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
 
+    // These constants are based on error messages from the Nimbus JOSE + JWT library.
+    public static final String NIMBUS_ERROR_JWT_BEFORE_USE_TIME = "JWT before use time";
+    public static final String NIMBUS_ERROR_JWT_EXPIRED = "Expired JWT";
+
     /**
      * Validate the signature of the request object
      * @param requestObject Request Object
@@ -192,6 +196,14 @@ public class RequestObjectValidatorUtil {
                 return new JWKSBasedJWTValidator().validateSignature(jwtString, jwksUri, alg, MapUtils.EMPTY_MAP);
             } catch (IdentityOAuth2Exception e) {
                 String errorMessage = "Error occurred while validating request object signature using jwks endpoint";
+                String causeMessage = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                if (causeMessage != null) {
+                    if (causeMessage.contains(NIMBUS_ERROR_JWT_BEFORE_USE_TIME)) {
+                        errorMessage += ": request object is not valid yet.";
+                    } else if (causeMessage.contains(NIMBUS_ERROR_JWT_EXPIRED)) {
+                        errorMessage += ": request object is expired.";
+                    }
+                }
                 throw new RequestObjectException(OAuth2ErrorCodes.SERVER_ERROR, errorMessage, e);
             }
         } else {

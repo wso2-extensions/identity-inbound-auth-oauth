@@ -18,6 +18,7 @@
 
 package org.wso2.carbon.identity.oauth.endpoint.user.impl;
 
+import org.apache.commons.lang.StringUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
@@ -61,6 +62,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.openMocks;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 @Listeners(MockitoTestNGListener.class)
 public class UserInfoISAccessTokenValidatorTest {
@@ -83,8 +85,7 @@ public class UserInfoISAccessTokenValidatorTest {
     private UserInforRequestDefaultValidator userInforRequestDefaultValidator;
     private UserInfoISAccessTokenValidator userInfoISAccessTokenValidator;
     private final String token = "ZWx1c3VhcmlvOnlsYWNsYXZl";
-    private final String basicAuthHeader = "Bearer " + token;
-    private static String contentTypeHeaderValue = "application/x-www-form-urlencoded";
+    private static final String contentTypeHeaderValue = "application/x-www-form-urlencoded";
 
     @BeforeClass
     public void setup() {
@@ -129,9 +130,52 @@ public class UserInfoISAccessTokenValidatorTest {
     @Test
     public void testValidateToken() throws Exception {
 
-        prepareHttpServletRequest(basicAuthHeader, null);
-        assertEquals(basicAuthHeader.split(" ")[1], userInforRequestDefaultValidator.validateRequest
+        String bearerAuthHeader = "Bearer " + token;
+        prepareHttpServletRequest(bearerAuthHeader, null);
+        assertEquals(bearerAuthHeader.split(" ")[1], userInforRequestDefaultValidator.validateRequest
                 (httpServletRequest));
+    }
+
+    @DataProvider
+    public Object[][] getAuthorizationScenarios() {
+        String dpopAuthHeaderWithToken = "DPoP " + token;
+        return new Object[][]{
+                // Valid DPoP token with proof header
+                {dpopAuthHeaderWithToken, contentTypeHeaderValue, "mocked-dpop-proof", null},
+                // Missing DPoP proof header
+                {dpopAuthHeaderWithToken, contentTypeHeaderValue, null,
+                        "DPoP header is required with DPoP tokens"},
+                {dpopAuthHeaderWithToken, contentTypeHeaderValue, "",
+                        "DPoP header is required with DPoP tokens"},
+                {dpopAuthHeaderWithToken, contentTypeHeaderValue, " ",
+                        "DPoP header is required with DPoP tokens"},
+                // Unsupported token scheme
+                {"Basic " + token, contentTypeHeaderValue, null,
+                        "Bearer token missing"},
+        };
+    }
+
+    @Test(dataProvider = "getAuthorizationScenarios")
+    public void testAuthorizationScenarios(String authHeader, String contentType, String dpopHeader,
+                                           String expectedExceptionMessage) {
+
+        prepareHttpServletRequest(authHeader, contentType);
+        if (StringUtils.isNotBlank(dpopHeader)) {
+            when(httpServletRequest.getHeader("DPoP")).thenReturn(dpopHeader);
+        }
+
+        try {
+            String validatedToken = userInforRequestDefaultValidator.validateRequest(httpServletRequest);
+            if (expectedExceptionMessage != null) {
+                fail("Expected exception with message: " + expectedExceptionMessage);
+            }
+            assertEquals(validatedToken, token);
+        } catch (UserInfoEndpointException userInfoEndpointException) {
+            if (expectedExceptionMessage == null) {
+                fail("Did not expect exception, but got: " + userInfoEndpointException.getMessage());
+            }
+            assertEquals(userInfoEndpointException.getMessage(), expectedExceptionMessage);
+        }
     }
 
     @DataProvider
