@@ -19,7 +19,6 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -27,7 +26,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
@@ -68,20 +66,9 @@ public class SubjectScopeValidator implements ImpersonationValidator {
         ImpersonationRequestDTO impersonationRequestDTO = impersonationContext.getImpersonationRequestDTO();
         OAuthAuthzReqMessageContext authzReqMessageContext = impersonationRequestDTO.getoAuthAuthzReqMessageContext();
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
-
-        String subjectUserId = impersonationRequestDTO.getSubject();
         AuthenticatedUser impersonator = impersonationRequestDTO.getImpersonator();
-        String tenantDomain = impersonator.getTenantDomain();
-        String userAccessingOrg = impersonator.getAccessingOrganization();
-        String userResidentOrg = impersonator.getUserResidentOrganization();
-        AuthenticatedUser subjectUser;
-        if (StringUtils.isNotBlank(userAccessingOrg) && StringUtils.isNotBlank(userResidentOrg)) {
-            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
-                    userAccessingOrg, userResidentOrg, impersonationRequestDTO.getClientId());
-        } else {
-            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
-                    impersonationRequestDTO.getClientId());
-        }
+        AuthenticatedUser subjectUser = impersonator.getImpersonatedUser();
+
         // Switching end-user as authenticated user to validate scopes.
         authzReqMessageContext.getAuthorizationReqDTO().setUser(subjectUser);
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
