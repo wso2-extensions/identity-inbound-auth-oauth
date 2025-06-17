@@ -197,6 +197,22 @@ public class UserInfoISAccessTokenValidatorTest {
     }
 
     @DataProvider
+    public Object[][] getValidBearerTokenAuthorizations() {
+
+        return new Object[][]{
+                {"Bearer" + " " + token},
+                {"bearer" + " " + token},
+                {"bEARER" + " " + token},
+        };
+    }
+
+    @Test(dataProvider = "getValidBearerTokenAuthorizations")
+    public void testValidateTokenAuthorization(String authorization) throws Exception {
+
+        when(httpServletRequest.getHeader(HttpHeaders.AUTHORIZATION)).thenReturn(authorization);
+        userInforRequestDefaultValidator.validateRequest(httpServletRequest);
+    }
+    @DataProvider
     public Object[][] requestBodyWithNonASCII() {
 
         return new Object[][]{
