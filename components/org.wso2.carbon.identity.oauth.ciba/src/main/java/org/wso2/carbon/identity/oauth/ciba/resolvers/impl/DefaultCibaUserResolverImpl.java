@@ -21,10 +21,13 @@ package org.wso2.carbon.identity.oauth.ciba.resolvers.impl;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.ResolvedUserResult;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
+import org.wso2.carbon.identity.oauth.ciba.internal.CibaServiceComponentHolder;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 import org.wso2.carbon.identity.oauth.ciba.resolvers.CibaUserResolver;
+import org.wso2.carbon.user.core.common.User;
 
 /**
  * Default implementation of the CibaUserResolver interface.
@@ -41,6 +44,7 @@ public class DefaultCibaUserResolverImpl implements CibaUserResolver {
             log.debug("Validating the user for the authentication request.");
         }
         String userHint = cibaAuthCodeRequest.getUserHint();
+
         if (StringUtils.isBlank(userHint)) {
             throw new CibaClientException("User hint is not provided in the authentication request.");
         }
@@ -48,4 +52,20 @@ public class DefaultCibaUserResolverImpl implements CibaUserResolver {
         return cibaAuthCodeRequest.getUserHint();
     }
 
+    @Override
+    public User getUser(String userLoginIdentifier, String tenantDomain) throws CibaCoreException, CibaClientException {
+
+        ResolvedUserResult resolvedUserResult = CibaServiceComponentHolder.getMultiAttributeLoginService()
+                .resolveUser(userLoginIdentifier, tenantDomain);
+        if (resolvedUserResult.getResolvedStatus() == ResolvedUserResult.UserResolvedStatus.SUCCESS) {
+            User user = resolvedUserResult.getUser();
+            if (user != null) {
+                return user;
+            } else {
+                throw new CibaCoreException("Unable to resolve user from the login identifier.");
+            }
+        } else {
+            throw new CibaClientException("Invalid user login hint.");
+        }
+    }
 }

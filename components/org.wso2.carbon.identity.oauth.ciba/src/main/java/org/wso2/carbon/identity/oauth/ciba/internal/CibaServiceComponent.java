@@ -29,7 +29,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannelManager;
-import org.wso2.carbon.identity.notification.push.device.handler.DeviceHandlerService;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthService;
 import org.wso2.carbon.identity.oauth.ciba.api.CibaAuthServiceImpl;
 import org.wso2.carbon.identity.oauth.ciba.handlers.CibaResponseTypeRequestValidator;
@@ -127,21 +127,19 @@ public class CibaServiceComponent {
     }
 
     @Reference(
-            name = "org.wso2.carbon.identity.notification.push.device.handler",
-            service = DeviceHandlerService.class,
+            name = "org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService",
+            service = MultiAttributeLoginService.class,
             cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetDeviceHandlerService"
+            unbind = "unsetMultiAttributeLoginService"
     )
-    protected void setDeviceHandlerService(
-            DeviceHandlerService deviceHandlerService) {
+    protected void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
 
-        CibaServiceComponentHolder.getInstance().setDeviceHandlerService(deviceHandlerService);
+        CibaServiceComponentHolder.setMultiAttributeLoginService(multiAttributeLoginService);
     }
 
-    protected void unsetDeviceHandlerService(
-            DeviceHandlerService deviceHandlerService) {
+    protected void unsetMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
 
-        CibaServiceComponentHolder.getInstance().setDeviceHandlerService(null);
+        CibaServiceComponentHolder.setMultiAttributeLoginService(null);
     }
 }

@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientExcepti
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.user.core.common.User;
 
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -48,7 +49,7 @@ import java.util.UUID;
 public class CibaAuthServiceImpl implements CibaAuthService {
 
     private static Log log = LogFactory.getLog(CibaAuthServiceImpl.class);
-    private static CibaUserNotificationHandler cibaUserNotificationHandler = new CibaUserNotificationHandler();
+    private static final CibaUserNotificationHandler cibaUserNotificationHandler = new CibaUserNotificationHandler();
 
     @Override
     public CibaAuthCodeResponse generateAuthCodeResponse(CibaAuthCodeRequest cibaAuthCodeRequest)
@@ -66,16 +67,15 @@ public class CibaAuthServiceImpl implements CibaAuthService {
     }
 
     @Override
-    public void triggerNotification(CibaUserNotificationContext cibaUserNotificationContext) throws CibaCoreException {
+    public User getUser(String userLoginIdentifier, String tenantDomain) throws CibaCoreException, CibaClientException {
 
-        cibaUserNotificationHandler.sendNotification(cibaUserNotificationContext);
+        return CibaServiceComponentHolder.getCibaUserResolver().getUser(userLoginIdentifier, tenantDomain);
     }
 
     @Override
-    public void updateStatus(String authCodeKey, Enum authenticationStatus) throws CibaCoreException {
+    public void triggerNotification(CibaUserNotificationContext cibaUserNotificationContext) throws CibaCoreException {
 
-        CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
-                .updateStatus(authCodeKey, authenticationStatus);
+        cibaUserNotificationHandler.sendNotification(cibaUserNotificationContext);
     }
 
     /**

@@ -23,8 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.cxf.interceptor.InInterceptors;
 import org.apache.oltu.oauth2.common.error.OAuthError;
-import org.wso2.carbon.context.CarbonContext;
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
@@ -50,6 +48,7 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectBuilder;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestObject;
+import org.wso2.carbon.user.core.common.User;
 
 import java.util.HashMap;
 import java.util.List;
@@ -127,7 +126,7 @@ public class OAuth2CibaEndpoint {
             }
 
             // Resolve user from the login hint. The default user resolver uses the username as the login hint.
-            String userSubjectIdentifier = CibaAuthServiceFactory.getCibaAuthService()
+            String userLoginIdentifier = CibaAuthServiceFactory.getCibaAuthService()
                     .resolveUser(cibaAuthCodeRequest);
 
             // Obtain Response from service layer of CIBA.
@@ -136,7 +135,7 @@ public class OAuth2CibaEndpoint {
             // Send a user login request to the user (authorization device). Here we send the CIBA user authentication
             // endpoint (/ciba_auth) with other parameters to the user to complete the authentication.
             CibaAuthServiceFactory.getCibaAuthService()
-                    .triggerNotification(getNotificationContext(cibaAuthCodeResponse, userSubjectIdentifier));
+                    .triggerNotification(getNotificationContext(cibaAuthCodeResponse, userLoginIdentifier));
 
             // Create and return Ciba Authentication Response.
             return getAuthResponse(response, cibaAuthCodeResponse);
@@ -150,23 +149,24 @@ public class OAuth2CibaEndpoint {
     }
 
     private CibaUserNotificationContext getNotificationContext(CibaAuthCodeResponse cibaAuthCodeResponse,
-                                                               String userSubjectIdentifier) throws CibaCoreException {
+                                                               String userLoginIdentifier)
+            throws CibaCoreException, CibaClientException {
+
 
         CibaUserNotificationContext cibaUserNotificationContext = new CibaUserNotificationContext();
-        AuthenticatedUser user  = AuthenticatedUser
-                .createLocalAuthenticatedUserFromSubjectIdentifier(userSubjectIdentifier);
         try {
-            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(cibaAuthCodeResponse.getClientId(),
-                    CarbonContext.getThreadLocalCarbonContext().getTenantDomain());
+            String tenantDomain = getSpTenantDomain(cibaAuthCodeResponse.getClientId());
+            User user = CibaAuthServiceFactory.getCibaAuthService().getUser(userLoginIdentifier, tenantDomain);
+            OAuthAppDO appDO = OAuth2Util.getAppInformationByClientId(cibaAuthCodeResponse.getClientId(), tenantDomain);
             cibaUserNotificationContext.setApplicationName(appDO.getApplicationName());
+            cibaUserNotificationContext.setUser(user);
+            cibaUserNotificationContext.setAuthCodeKey(cibaAuthCodeResponse.getAuthCodeKey());
+            cibaUserNotificationContext.setBindingMessage(cibaAuthCodeResponse.getBindingMessage());
         } catch (IdentityOAuth2Exception e) {
             throw new CibaCoreException("Error while retrieving app information.", e);
-        } catch (InvalidOAuthClientException e) {
-            throw new CibaCoreException("Invalid client ID.", e);
+        } catch (InvalidOAuthClientException | InvalidRequestException e) {
+            throw new CibaAuthFailureException(OAuth2ErrorCodes.INVALID_REQUEST, e.getMessage());
         }
-        cibaUserNotificationContext.setAuthenticatedUser(user);
-        cibaUserNotificationContext.setAuthCodeKey(cibaAuthCodeResponse.getAuthCodeKey());
-        cibaUserNotificationContext.setBindingMessage(cibaAuthCodeResponse.getBindingMessage());
         return cibaUserNotificationContext;
     }
 

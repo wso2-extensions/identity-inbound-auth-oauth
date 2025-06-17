@@ -355,8 +355,7 @@ public class OAuth2CibaEndpointTest {
 
         try (MockedStatic<LoggerUtils> loggerUtils = mockStatic(LoggerUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory =
-                     mockStatic(CibaAuthServiceFactory.class);) {
+             MockedStatic<CibaAuthServiceFactory> cibaAuthServiceFactory = mockStatic(CibaAuthServiceFactory.class)) {
             loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
             identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(anyString()))
                     .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
@@ -368,12 +367,14 @@ public class OAuth2CibaEndpointTest {
                     oAuthClientAuthnContext);
 
             oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn("super");
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("super");
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("super"))
                     .thenReturn("https://localhost:9443/oauth2/ciba");
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("scope1 scope2 openid");
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                     .thenReturn(oAuthAppDO);
             when(oAuthAppDO.getGrantTypes()).thenReturn(CibaConstants.OAUTH_CIBA_GRANT_TYPE);
+            when(oAuthAppDO.getApplicationName()).thenReturn("test-app");
 
             OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
             oAuthServerConfiguration.when(
@@ -426,11 +427,13 @@ public class OAuth2CibaEndpointTest {
                     oAuthClientAuthnContext);
 
             oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO)).thenReturn("super");
+            oAuth2Util.when(() -> OAuth2Util.getTenantDomainOfOauthApp(anyString())).thenReturn("super");
             oAuth2Util.when(() -> OAuth2Util.getIdTokenIssuer("super"))
                     .thenReturn("https://localhost:9443/oauth2/ciba");
             oAuth2Util.when(() -> OAuth2Util.buildScopeString(any())).thenReturn("scope1 scope2 openid");
             oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                     .thenReturn(oAuthAppDO);
+            when(oAuthAppDO.getApplicationName()).thenReturn("test-app");
 
             OAuthServerConfiguration oauthServerConfigurationMock = mock(OAuthServerConfiguration.class);
             oAuthServerConfiguration.when(

@@ -21,6 +21,7 @@ package org.wso2.carbon.identity.oauth.ciba.resolvers;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaClientException;
 import org.wso2.carbon.identity.oauth.ciba.exceptions.CibaCoreException;
 import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
+import org.wso2.carbon.user.core.common.User;
 
 /**
  * Interface for resolving the user based on the authentication request.
@@ -28,13 +29,21 @@ import org.wso2.carbon.identity.oauth.ciba.model.CibaAuthCodeRequest;
 public interface CibaUserResolver {
 
     /**
-     * Resolve the user based on the authentication request and returns the user’s subject identifier.
+     * Resolve the user based on the login hint and returns the user’s login identifier.
      *
      * @param cibaAuthCodeRequest Authentication request.
-     * @return User’s “sub” claim.
+     * @return User's login identifier,.
      * @throws CibaCoreException   Error while validating the user.
      * @throws CibaClientException Error while validating the user.
      */
-    String resolveUser(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException,
-            CibaClientException;
+    String resolveUser(CibaAuthCodeRequest cibaAuthCodeRequest) throws CibaCoreException, CibaClientException;
+
+    /**
+     * Get the user based on the user login identifier.
+     *
+     * @param userLoginIdentifier User login identifier.
+     * @return User object.
+     * @throws CibaCoreException Error while retrieving the user.
+     */
+    User getUser(String userLoginIdentifier, String tenantDomain) throws CibaCoreException, CibaClientException;
 }

@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.oauth.ciba.internal;
 
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.governance.service.notification.NotificationChannelManager;
-import org.wso2.carbon.identity.notification.push.device.handler.DeviceHandlerService;
+import org.wso2.carbon.identity.multi.attribute.login.mgt.MultiAttributeLoginService;
 import org.wso2.carbon.identity.oauth.ciba.resolvers.CibaUserResolver;
 import org.wso2.carbon.identity.oauth.ciba.resolvers.impl.DefaultCibaUserResolverImpl;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -36,7 +36,7 @@ public class CibaServiceComponentHolder {
     private static RealmService realmService;
     private static CibaUserResolver cibaUserResolver;
     private static NotificationChannelManager notificationChannelManager;
-    private static DeviceHandlerService deviceHandlerService;
+    private static MultiAttributeLoginService multiAttributeLoginService;
 
     private CibaServiceComponentHolder() {
 
@@ -78,14 +78,13 @@ public class CibaServiceComponentHolder {
         CibaServiceComponentHolder.notificationChannelManager = notificationChannelManager;
     }
 
-    public DeviceHandlerService getDeviceHandlerService() {
+    public static MultiAttributeLoginService getMultiAttributeLoginService() {
 
-        return deviceHandlerService;
+        return multiAttributeLoginService;
     }
+    public static void setMultiAttributeLoginService(MultiAttributeLoginService multiAttributeLoginService) {
 
-    public static void setDeviceHandlerService(DeviceHandlerService deviceHandlerService) {
-
-        CibaServiceComponentHolder.deviceHandlerService = deviceHandlerService;
+        CibaServiceComponentHolder.multiAttributeLoginService = multiAttributeLoginService;
     }
 
     public static CibaUserResolver getCibaUserResolver() {

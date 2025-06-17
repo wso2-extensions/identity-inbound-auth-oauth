@@ -1,13 +1,13 @@
 package org.wso2.carbon.identity.oauth.ciba.model;
 
-import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.user.core.common.User;
 
 /**
  * This class holds the context of the user notification.
  */
 public class CibaUserNotificationContext {
 
-    private AuthenticatedUser authenticatedUser;
+    private User user;
     private String authCodeKey;
     private String bindingMessage;
     private String applicationName;
@@ -16,24 +16,23 @@ public class CibaUserNotificationContext {
 
     }
 
-    public CibaUserNotificationContext(AuthenticatedUser authenticatedUser, String authCodeKey, String bindingMessage,
+    public CibaUserNotificationContext(User user, String authCodeKey, String bindingMessage,
                                        String applicationName) {
 
-        this.authenticatedUser = authenticatedUser;
+        this.user = user;
         this.authCodeKey = authCodeKey;
         this.bindingMessage = bindingMessage;
         this.applicationName = applicationName;
     }
 
-    public AuthenticatedUser getAuthenticatedUser() {
+    public User getUser() {
 
-        return authenticatedUser;
+        return user;
     }
 
-    public void setAuthenticatedUser(
-            AuthenticatedUser authenticatedUser) {
+    public void setUser(User user) {
 
-        this.authenticatedUser = authenticatedUser;
+        this.user = user;
     }
 
     public String getAuthCodeKey() {

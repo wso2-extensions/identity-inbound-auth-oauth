@@ -51,10 +51,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.BINDING_MESSAGE;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_AUTH_CODE_KEY;
 import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_SUCCESS_ENDPOINT_PATH;
-import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.LOGIN_HINT;
 
 /**
  * Rest implementation for ciba user authentication flow.
@@ -77,8 +75,6 @@ public class UserAuthenticationEndpoint {
         // The user (authorization device) has invoked this endpoint to authenticate with their received notification.
         // Here we directly call the framework after validation to continue the authentication flow.
         String authCodeKey = request.getParameter(CIBA_AUTH_CODE_KEY);
-        String loginHint = request.getParameter(LOGIN_HINT);
-        String bindingMessage = request.getParameter(BINDING_MESSAGE);
 
         try {
             if (StringUtils.isBlank(authCodeKey)) {
@@ -91,6 +87,7 @@ public class UserAuthenticationEndpoint {
             }
             CibaAuthCodeDO cibaAuthCodeDO = CibaDAOFactory.getInstance().getCibaAuthMgtDAO()
                     .getCibaAuthCode(authCodeKey);
+
             if (!isExpiredCibaAuthCode(cibaAuthCodeDO)) {
                 CommonAuthRequestWrapper commonAuthRequestWrapper = new CommonAuthRequestWrapper(request);
                 commonAuthRequestWrapper.setParameter(
@@ -102,11 +99,6 @@ public class UserAuthenticationEndpoint {
                         cibaAuthCodeDO.getAuthReqId());
                 commonAuthRequestWrapper.setParameter(org.wso2.carbon.identity.openidconnect.model.Constants.CLIENT_ID,
                         cibaAuthCodeDO.getConsumerKey());
-                commonAuthRequestWrapper.setParameter(CibaConstants.USER_IDENTITY, loginHint);
-                commonAuthRequestWrapper.setParameter(CibaConstants.LOGIN_HINT, loginHint);
-                if (!StringUtils.isBlank(bindingMessage)) {
-                    commonAuthRequestWrapper.setParameter(CibaConstants.BINDING_MESSAGE, bindingMessage);
-                }
                 commonAuthRequestWrapper.setAttribute(OAuthConstants.PKCE_UNSUPPORTED_FLOW, true);
                 return oAuth2AuthzEndpoint.authorize(commonAuthRequestWrapper, response);
             } else {
