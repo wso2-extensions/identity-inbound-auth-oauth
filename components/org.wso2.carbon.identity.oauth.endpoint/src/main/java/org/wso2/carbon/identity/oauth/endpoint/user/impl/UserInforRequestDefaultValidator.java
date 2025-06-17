@@ -107,7 +107,7 @@ public class UserInforRequestDefaultValidator implements UserInfoRequestValidato
 
         String authScheme = authzHeaderInfo[0];
 
-        if (BEARER.equals(authScheme)) {
+        if (BEARER.equalsIgnoreCase(authScheme)) {
             // Bearer token. For a Bearer token no additional DPoP header is expected.
             return authzHeaderInfo[1];
         } else if (DPOP.equals(authScheme)) {
