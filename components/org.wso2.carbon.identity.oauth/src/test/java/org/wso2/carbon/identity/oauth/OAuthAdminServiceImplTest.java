@@ -100,6 +100,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
@@ -161,6 +162,7 @@ public class OAuthAdminServiceImplTest {
     TokenManagementDAO mockTokenManagementDAO;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     @AfterClass
     public void tearDownClass() throws Exception {
@@ -185,12 +187,16 @@ public class OAuthAdminServiceImplTest {
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(() -> LoggerUtils.triggerAuditLogEvent(any(), anyBoolean())).thenAnswer(invocation -> null);
+
     }
 
     @AfterMethod
     public void tearDown() {
 
         identityTenantUtil.close();
+        loggerUtils.close();
     }
 
     private void initConfigsAndRealm() throws Exception {
