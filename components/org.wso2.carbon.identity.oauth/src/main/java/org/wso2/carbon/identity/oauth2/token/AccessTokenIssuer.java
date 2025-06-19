@@ -76,6 +76,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotif
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
+import org.wso2.carbon.identity.oauth2.model.TokenIssuanceDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
@@ -128,6 +129,7 @@ import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.EXTENDED_REFRESH_TOKEN_DEFAULT_TIME;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.INTERNAL_LOGIN_SCOPE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.validateRequestTenantDomain;
+import static org.wso2.carbon.identity.openidconnect.OIDCConstants.EXISTING_TOKEN_USED;
 import static org.wso2.carbon.identity.openidconnect.OIDCConstants.ID_TOKEN_USER_CLAIMS_PROP_KEY;
 
 /**
@@ -1360,10 +1362,18 @@ public class AccessTokenIssuer {
 
     private void triggerPostListeners(OAuth2AccessTokenReqDTO tokenReqDTO,
                                       OAuth2AccessTokenRespDTO tokenRespDTO, OAuthTokenReqMessageContext tokReqMsgCtx,
-                                      boolean isRefresh) {
+                                      boolean isRefresh) throws IdentityOAuth2Exception {
 
         OAuthEventInterceptor oAuthEventInterceptorProxy = OAuthComponentServiceHolder.getInstance()
                 .getOAuthEventInterceptorProxy();
+        if ((Boolean) tokReqMsgCtx.getProperty(EXISTING_TOKEN_USED)) {
+            OAuth2TokenUtil.postIssueAccessToken(new TokenIssuanceDO(
+                    tokenRespDTO.getTokenId(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain(),
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(),
+                    tokenReqDTO.getGrantType()
+            ));
+        }
 
         if (isRefresh) {
             if (oAuthEventInterceptorProxy != null && oAuthEventInterceptorProxy.isEnabled()) {
