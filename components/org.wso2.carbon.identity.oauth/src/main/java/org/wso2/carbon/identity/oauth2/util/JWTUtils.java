@@ -522,4 +522,26 @@ public class JWTUtils {
         }
         return true;
     }
+
+    /**
+     * Validates mandatory claims in the JWT Claims Set.
+     *
+     * @param claimsSet JWTClaimsSet to validate
+     * @throws IdentityOAuth2Exception if any mandatory claim is missing or invalid
+     */
+    public static void validateMandatoryClaims(JWTClaimsSet claimsSet) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isEmpty(claimsSet.getIssuer())) {
+            throw new IdentityOAuth2Exception("Mandatory field - Issuer is empty in the given JWT");
+        }
+        if (claimsSet.getExpirationTime() == null) {
+            throw new IdentityOAuth2Exception("Mandatory field - Expiration time is empty in the given JWT");
+        }
+        if (StringUtils.isEmpty(claimsSet.getSubject())) {
+            throw new IdentityOAuth2Exception("Mandatory field - Subject is empty in the given JWT");
+        }
+        if (claimsSet.getAudience() == null) {
+            throw new IdentityOAuth2Exception("Mandatory field - Audience is empty in the given JWT");
+        }
+    }
 }

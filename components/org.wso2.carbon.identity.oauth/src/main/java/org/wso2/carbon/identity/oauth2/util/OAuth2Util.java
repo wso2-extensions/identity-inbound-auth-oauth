@@ -407,6 +407,9 @@ public class OAuth2Util {
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
             ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
 
+    private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
+    private static final String DEFAULT_IDP_NAME = "default";
+
     private OAuth2Util() {
 
     }
@@ -6149,5 +6152,87 @@ public class OAuth2Util {
                             identityProvider.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
         }
         return x509Certificate;
+    }
+
+    /**
+     * Get Identity Provider with JWT issuer.
+     *
+     * @param jwtIssuer    JWT issuer.
+     * @param tenantDomain Tenant domain.
+     * @return Identity Provider.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static IdentityProvider getIdentityProviderWithJWTIssuer(String jwtIssuer, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return getIDP(jwtIssuer, tenantDomain);
+    }
+
+    /**
+     * Get Identity Provider with JWT issuer.
+     *
+     * @param jwtIssuer    JWT issuer.
+     * @param tenantDomain Tenant domain.
+     * @return Identity Provider.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private static IdentityProvider getIDP(String jwtIssuer, String tenantDomain) throws IdentityOAuth2Exception {
+
+        IdentityProvider identityProvider = null;
+        try {
+            identityProvider =
+                    IdentityProviderManager.getInstance()
+                            .getIdPByMetadataProperty(IdentityApplicationConstants.IDP_ISSUER_NAME, jwtIssuer,
+                                    tenantDomain, true);
+            if (identityProvider == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP not found when retrieving for IDP using property: " +
+                            IdentityApplicationConstants.IDP_ISSUER_NAME + " with value: " + jwtIssuer +
+                            ". Attempting to retrieve IDP using IDP Name as issuer.");
+                }
+                identityProvider = IdentityProviderManager.getInstance().getIdPByName(jwtIssuer, tenantDomain, true);
+            }
+            if (identityProvider == null || DEFAULT_IDP_NAME.equals(identityProvider.getIdentityProviderName())) {
+                identityProvider = getResidentIDPForIssuer(tenantDomain, jwtIssuer);
+            }
+        } catch (IdentityProviderManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting the Federated Identity Provider", e);
+        }
+        if (identityProvider == null) {
+            throw new IdentityOAuth2Exception("No Registered IDP found for the JWT with issuer name: " + jwtIssuer);
+        }
+        if (!identityProvider.isEnable()) {
+            throw new IdentityOAuth2Exception("No active IDP found for the JWT with issuer name: " + jwtIssuer);
+        }
+        return identityProvider;
+    }
+
+    /**
+     * Get the resident Identity Provider for the given JWT issuer.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param jwtIssuer    JWT issuer.
+     * @return Resident Identity Provider if exists, else null.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private static IdentityProvider getResidentIDPForIssuer(String tenantDomain, String jwtIssuer)
+            throws IdentityOAuth2Exception {
+
+        String issuer = StringUtils.EMPTY;
+        IdentityProvider residentIdentityProvider;
+        try {
+            residentIdentityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting the resident Identity Provider", e);
+        }
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = residentIdentityProvider.getFederatedAuthenticatorConfigs();
+        FederatedAuthenticatorConfig oauthAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        if (oauthAuthenticatorConfig != null) {
+            issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
+                    OIDC_IDP_ENTITY_ID).getValue();
+        }
+        return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
     }
 }
