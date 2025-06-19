@@ -61,7 +61,7 @@ import static org.wso2.carbon.user.core.UserCoreConstants.PRIMARY_DEFAULT_DOMAIN
  */
 public class CibaUserNotificationHandler {
 
-    private static final Log log = LogFactory.getLog(CibaUserNotificationHandler.class);
+    private static final Log LOG = LogFactory.getLog(CibaUserNotificationHandler.class);
 
     /**
      * Send the login request notification to the user.
@@ -106,8 +106,8 @@ public class CibaUserNotificationHandler {
     private void sendEmailNotification(CibaUserNotificationContext cibaUserNotificationContext,
                                        String userLoginRequestUrl) throws CibaCoreException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Sending email notification to the user.");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Sending email notification for CIBA user login request.");
         }
         User user = cibaUserNotificationContext.getUser();
         Map<String, Object> properties = new HashMap<>();
@@ -144,8 +144,8 @@ public class CibaUserNotificationHandler {
                                      String userLoginRequestUrl)
             throws CibaCoreException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Sending sms notification to the user.");
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Sending sms notification for CIBA user login request.");
         }
         User user = cibaUserNotificationContext.getUser();
         Map<String, Object> properties = new HashMap<>();

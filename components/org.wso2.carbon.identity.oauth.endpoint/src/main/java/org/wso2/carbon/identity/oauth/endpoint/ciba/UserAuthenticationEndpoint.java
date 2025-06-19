@@ -110,6 +110,8 @@ public class UserAuthenticationEndpoint {
             return handleCibaCoreException(e);
         } catch (URISyntaxException e) {
             return handleURISyntaxException(e);
+        } catch (URLBuilderException e) {
+            return handleURLBuilderException(e);
         }
     }
 
