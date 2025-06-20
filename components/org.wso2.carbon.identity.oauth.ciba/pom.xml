@@ -58,8 +58,46 @@
             <artifactId>servlet-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.httpcomponents.wso2</groupId>
+            <artifactId>httpcore</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.orbit.org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.inbound.auth.oauth2</groupId>
             <artifactId>org.wso2.carbon.identity.oauth</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.event</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.governance</groupId>
+            <artifactId>org.wso2.carbon.identity.governance</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.multi.attribute.login.mgt</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.wso2.carbon.identity.framework</groupId>
+            <artifactId>org.wso2.carbon.identity.application.authentication.framework</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>log4j-over-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!--Test Dependencies-->
         <dependency>
@@ -115,6 +153,7 @@
                             javax.servlet.*;version ="${imp.pkg.version.javax.servlet}",
 
                             org.apache.commons.logging.* ; version="${commons-logging.osgi.version.range}",
+                            org.apache.http.client.utils; version="${httpcomponents-httpclient.wso2.version}",
                             org.apache.felix.scr; version = "${apache.felix.scr.ds.annotations.version}",
                             org.apache.oltu.oauth2.* ; version = "${oltu.package.import.version.range}",
 
@@ -139,6 +178,15 @@
                             ="${carbon.identity.framework.imp.pkg.version.range}",
                             org.wso2.carbon.identity.core.*; version =
                             "${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.event.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.utils.multitenancy; version="${carbon.kernel.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.governance.*;
+                            version="${identity.governance.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.application.authentication.framework.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
+                            org.wso2.carbon.identity.multi.attribute.login.mgt.*;
+                            version="${carbon.identity.framework.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
                             !org.wso2.carbon.identity.oauth.ciba.internal,
