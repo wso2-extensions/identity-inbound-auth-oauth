@@ -26,6 +26,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.ImpersonatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -78,9 +79,13 @@ public class SubjectTokenIssuerTest {
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockOAuthServerConfiguration);
         OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(impersonationMgtService);
 
+        ImpersonatedUser impersonatedUser = new ImpersonatedUser();
+        impersonatedUser.setUserId("dummySubjectId");
+
+        when(impersonator.getImpersonatedUser()).thenReturn(impersonatedUser);
+        lenient().when(impersonator.getUserId()).thenReturn("123456789");
         lenient().when(impersonator.getLoggableMaskedUserId()).thenReturn("123456789");
 
-        when(oAuth2AuthorizeReqDTO.getRequestedSubjectId()).thenReturn("dummySubjectId");
         when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(impersonator);
         when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn("dummyConsumerKey");
         when(oAuth2AuthorizeReqDTO.getScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
