@@ -20,6 +20,7 @@
 package org.wso2.carbon.identity.oauth2.impersonation.models;
 
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.ImpersonatedUser;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 
 /**
@@ -27,19 +28,19 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
  */
 public class ImpersonationRequestDTO {
 
-    private String subject;
+    private ImpersonatedUser subject;
     private AuthenticatedUser impersonator;
     private String clientId;
     private String[] scopes;
     private String tenantDomain;
     private OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext;
 
-    public String getSubject() {
+    public ImpersonatedUser getSubject() {
 
         return subject;
     }
 
-    public void setSubject(String subject) {
+    public void setSubject(ImpersonatedUser subject) {
 
         this.subject = subject;
     }

@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.error.OAuthError;
 import org.wso2.carbon.identity.application.authentication.framework.exception.FrameworkException;
+import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.handler.approles.exception.ApplicationRolesException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
@@ -72,6 +73,7 @@ import java.util.regex.Pattern;
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 
 /**
@@ -285,6 +287,162 @@ public class ClaimUtil {
         } catch (IdentityOAuth2Exception e) {
             throw new UserInfoEndpointException("Error while retrieving claims for user: " +
                     tokenResponse.getAuthorizedUser(), e);
+        }
+    }
+
+    public static Map<String, String> getClaimsFromUserStore(AuthenticatedUser authenticatedUser, String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            UserRealm realm;
+            List<String> claimURIList = new ArrayList<>();
+            Map<String, String> mappedAppClaims = new HashMap<>();
+            String subjectClaimValue = null;
+            String userId = authenticatedUser.getUserId();
+            String userTenantDomain = authenticatedUser.getTenantDomain();
+            if (authenticatedUser.isFederatedUser()
+                    && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())) {
+                userTenantDomain = authenticatedUser.getUserResidentOrganization();
+            }
+
+            try {
+                Map<String, String> spToLocalClaimMappings;
+                String spTenantDomain;
+                String appResidentTenantDomain = OAuth2Util.getAppResidentTenantDomain();
+                if (StringUtils.isNotEmpty(appResidentTenantDomain)) {
+                    spTenantDomain = appResidentTenantDomain;
+                } else {
+                    OAuthAppDO oAuthAppDO = OAuth2Util.getAppInformationByClientId(clientId);
+                    spTenantDomain = OAuth2Util.getTenantDomainOfOauthApp(oAuthAppDO);
+                }
+
+                ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(clientId, spTenantDomain);
+                ClaimMapping[] requestedLocalClaimMappings = serviceProvider.getClaimConfig().getClaimMappings();
+                String subjectClaimURI = getSubjectClaimUri(serviceProvider, requestedLocalClaimMappings);
+
+                if (StringUtils.isNotBlank(subjectClaimURI)) {
+                    claimURIList.add(subjectClaimURI);
+                }
+
+                boolean isSubjectClaimInRequested = false;
+                if (StringUtils.isNotBlank(subjectClaimURI) || ArrayUtils.isNotEmpty(requestedLocalClaimMappings)) {
+                    if (requestedLocalClaimMappings != null) {
+                        for (ClaimMapping claimMapping : requestedLocalClaimMappings) {
+                            if (claimMapping.isRequested()) {
+                                claimURIList.add(claimMapping.getLocalClaim().getClaimUri());
+                                if (claimMapping.getLocalClaim().getClaimUri().equals(subjectClaimURI)) {
+                                    isSubjectClaimInRequested = true;
+                                }
+                            }
+                        }
+                    }
+                    if (log.isDebugEnabled()) {
+                        log.debug("Requested number of local claims: " + claimURIList.size());
+                    }
+
+                    spToLocalClaimMappings = ClaimMetadataHandler.getInstance().getMappingsMapFromOtherDialectToCarbon
+                            (SP_DIALECT, null, userTenantDomain, true);
+
+                    Map<String, String> userClaims;
+                    if (!StringUtils.equals(authenticatedUser.getUserResidentOrganization(),
+                            authenticatedUser.getAccessingOrganization()) &&
+                            StringUtils.isNotEmpty(AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser))) {
+                        authenticatedUser.setSharedUserId(AuthzUtil.getUserIdOfAssociatedUser(authenticatedUser));
+                        authenticatedUser.setUserSharedOrganizationId(authenticatedUser
+                                .getAccessingOrganization());
+                    }
+                    if (OIDCClaimUtil.isSharedUserProfileResolverEnabled() &&
+                            OIDCClaimUtil.isSharedUserAccessingSharedOrg(authenticatedUser) &&
+                            StringUtils.isNotEmpty(authenticatedUser.getSharedUserId())) {
+                        String userAccessingTenantDomain =
+                                OIDCClaimUtil.resolveTenantDomain(authenticatedUser.getAccessingOrganization());
+                        String sharedUserId = authenticatedUser.getSharedUserId();
+                        realm = getUserRealm(null, userAccessingTenantDomain);
+                        try {
+                            FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
+                            userClaims = getUserClaimsFromUserStoreWithResolvedRoles(authenticatedUser, serviceProvider,
+                                    sharedUserId, realm, claimURIList);
+                        } finally {
+                            FrameworkUtils.endTenantFlow();
+                        }
+                    } else {
+                        realm = getUserRealm(null, userTenantDomain);
+                        userClaims = getUserClaimsFromUserStoreWithResolvedRoles(authenticatedUser, serviceProvider,
+                                userId, realm, claimURIList);
+                    }
+
+                    if (isNotEmpty(userClaims)) {
+                        for (Map.Entry<String, String> entry : userClaims.entrySet()) {
+                            //set local2sp role mappings
+                            if (IdentityUtil.getRoleGroupClaims().stream().anyMatch(roleGroupClaimURI ->
+                                    roleGroupClaimURI.equals(entry.getKey()))) {
+                                String claimSeparator = getMultiAttributeSeparator(userId, realm);
+                                entry.setValue(getSpMappedRoleClaim(serviceProvider, entry, claimSeparator));
+                            }
+
+                            String oidcClaimUri = spToLocalClaimMappings.get(entry.getKey());
+                            String claimValue = entry.getValue();
+                            if (oidcClaimUri != null) {
+                                if (entry.getKey().equals(subjectClaimURI)) {
+                                    subjectClaimValue = claimValue;
+                                    if (!isSubjectClaimInRequested) {
+                                        if (log.isDebugEnabled()) {
+                                            log.debug("Subject claim: " + entry.getKey() + " is not a requested " +
+                                                    "claim. Not adding to claim map.");
+                                        }
+                                        continue;
+                                    }
+                                }
+
+                                mappedAppClaims.put(oidcClaimUri, claimValue);
+
+                                if (log.isDebugEnabled() &&
+                                        isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                                    log.debug("Mapped claim: key -  " + oidcClaimUri + " value -" + claimValue);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (StringUtils.isBlank(subjectClaimValue)) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("No subject claim found. Defaulting to username as the sub claim.");
+                    }
+                    subjectClaimValue = authenticatedUser.getUserId();
+                }
+
+                if (log.isDebugEnabled() && isTokenLoggable(IdentityConstants.IdentityTokens.USER_CLAIMS)) {
+                    log.debug("Subject claim(sub) value: " + subjectClaimValue + " set in returned claims.");
+                }
+                mappedAppClaims.put(OAuth2Util.SUB, subjectClaimValue);
+            } catch (InvalidOAuthClientException e) {
+                if (log.isDebugEnabled()) {
+                    log.debug(" Error while retrieving App information with provided client id.", e);
+                }
+                throw new IdentityOAuth2Exception(e.getMessage());
+            } catch (Exception e) {
+                String authorizedUserName = authenticatedUser.getUserName();
+                if (e instanceof UserStoreException) {
+                    if (e.getMessage().contains("UserNotFound")) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(StringUtils.isNotEmpty(authorizedUserName) ? "User with username: "
+                                    + authorizedUserName + ", cannot be found in user store" : "User cannot " +
+                                    "found in user store");
+                        }
+                    }
+                } else {
+                    String errMsg = StringUtils.isNotEmpty(authorizedUserName) ? "Error while retrieving the claims " +
+                            "from user store for the username: " + authorizedUserName : "Error while retrieving the " +
+                            "claims from user store";
+                    log.error(errMsg, e);
+                    throw new IdentityOAuth2Exception(errMsg);
+                }
+            }
+            return mappedAppClaims;
+        } catch (IdentityOAuth2Exception | UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving claims for user: " +
+                    authenticatedUser.getUserName(), e);
         }
     }
 
