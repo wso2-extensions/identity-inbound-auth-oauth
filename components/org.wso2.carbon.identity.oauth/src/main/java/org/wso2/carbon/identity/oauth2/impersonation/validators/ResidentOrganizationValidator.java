@@ -63,38 +63,41 @@ public class ResidentOrganizationValidator implements ImpersonationValidator {
             AuthenticatedUser impersonatingActor = impersonationContext.getImpersonationRequestDTO().getImpersonator();
             ImpersonatedUser impersonatedUser = impersonatingActor.getImpersonatedUser();
             String impersonatedUserResidentOrg = impersonatingActor.getUserResidentOrganization();
-            String impersonatedUserId = impersonatedUser.getUserId();
+            String userId = impersonatedUser.getUserId();
 
             if (impersonatedUserResidentOrg != null) {
-                UserAssociation association = getUserAssociation(impersonatedUserId, impersonatedUserResidentOrg);
+                UserAssociation association = getUserAssociation(userId, impersonatedUserResidentOrg);
                 if (association != null) {
                     // User from a different org.
-                    impersonatedUserResidentOrg = association.getUserResidentOrganizationId();
-                    impersonatedUserId = association.getAssociatedUserId();
                     try {
-                        if (OrganizationManagementUtil.isOrganization(impersonatedUserResidentOrg)) {
+                        if (OrganizationManagementUtil.isOrganization(association.getUserResidentOrganizationId())) {
                             // Org is another sub org.
-                            impersonatedUser.setUserId(impersonatedUserId);
-                            impersonatedUser.setUserResidentOrganization(impersonatedUserResidentOrg);
                             impersonationContext.setValidated(false);
                         } else {
                             // Org is a parent org.
-                            impersonatedUser.setUserId(impersonatedUserId);
+                            impersonatedUser.setUserId(association.getAssociatedUserId());
+                            impersonatedUser.setSharedUserId(userId);
                             impersonatedUser.setUserResidentOrganization(null);
+                            impersonatedUser.setUserSharedOrganizationId(association.getOrganizationId());
+                            impersonatedUser.setFederatedUser(false);
+                            impersonatedUser.setFederatedIdPName(null);
+
                             // Restrict support for this case until a requirement comes.
                             impersonationContext.setValidated(false);
                         }
                     } catch (OrganizationManagementException e) {
                         throw new IdentityOAuth2ClientException(INVALID_REQUEST.getCode(),
                                 "Invalid User Id provided for the request. Unable to find the user for given " +
-                                        "user id : " + impersonatedUserId + " organization : "
+                                        "user id : " + userId + " organization : "
                                         + impersonatedUserResidentOrg, e);
                     }
                 } else {
                     // User from the same sub org.
-                    impersonatedUser.setUserResidentOrganization(impersonatedUserResidentOrg);
                     impersonationContext.setValidated(true);
                 }
+            } else {
+                // Not a sub org impersonator request.
+                impersonationContext.setValidated(true);
             }
             impersonationContext.getImpersonationRequestDTO().getImpersonator()
                     .setImpersonatedUser(impersonatedUser);

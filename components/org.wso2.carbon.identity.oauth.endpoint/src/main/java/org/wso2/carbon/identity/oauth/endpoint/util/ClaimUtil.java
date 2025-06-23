@@ -73,7 +73,6 @@ import java.util.regex.Pattern;
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
-import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 
 /**
