@@ -6235,4 +6235,21 @@ public class OAuth2Util {
         }
         return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
     }
+
+    public static boolean isAgentIdentityEnabled() {
+
+        if (IdentityUtil.getProperty(OAuth2Constants.AGENT_IDENTITY_ENABLE) != null) {
+            return Boolean.parseBoolean(IdentityUtil.getProperty(OAuth2Constants.AGENT_IDENTITY_ENABLE));
+        }
+        return false;
+    }
+
+    public static String getAgentIdentityUserstoreName() {
+
+        String userStoreName = IdentityUtil.getProperty(OAuth2Constants.AGENT_IDENTITY_USERSTORE_NAME);
+        if (StringUtils.isBlank(userStoreName)) {
+            userStoreName = IdentityUtil.getProperty(OAuth2Constants.DEFAULT_AGENT_IDENTITY_USERSTORE_NAME);
+        }
+        return userStoreName;
+    }
 }

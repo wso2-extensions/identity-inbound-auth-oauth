@@ -22,6 +22,7 @@ import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +49,8 @@ public class OIDCAgentClaimProviderImpl implements ClaimProvider {
                                                    OAuth2AccessTokenRespDTO tokenRespDTO)
             throws IdentityOAuth2Exception {
 
-        if (AGENT.equalsIgnoreCase(tokenReqMessageContext.getAuthorizedUser().getUserStoreDomain())) {
+        if (OAuth2Util.getAgentIdentityUserstoreName().equalsIgnoreCase(tokenReqMessageContext.getAuthorizedUser()
+                .getUserStoreDomain())) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
             return agentMap;

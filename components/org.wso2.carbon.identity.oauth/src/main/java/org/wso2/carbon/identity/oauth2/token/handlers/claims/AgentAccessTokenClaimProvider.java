@@ -4,6 +4,7 @@ import org.apache.oltu.oauth2.common.message.types.GrantType;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,7 +29,8 @@ public class AgentAccessTokenClaimProvider implements JWTAccessTokenClaimProvide
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthTokenReqMessageContext context) throws IdentityOAuth2Exception {
 
-        if (AGENT.equalsIgnoreCase(context.getAuthorizedUser().getUserStoreDomain())) {
+        if (OAuth2Util.getAgentIdentityUserstoreName().equalsIgnoreCase(context.getAuthorizedUser()
+                .getUserStoreDomain())) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
             return agentMap;

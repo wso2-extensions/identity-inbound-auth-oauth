@@ -616,6 +616,9 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private void validateRequestedActor(AuthzCodeDO authzCodeBean, OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
+        if (!OAuth2Util.isAgentIdentityEnabled()) {
+            return;
+        }
         String actorToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getActorToken();
         String requestedActor = authzCodeBean.getRequestedActor();
         // If the requested actor is not available, we should not allow the request to proceed.
@@ -794,4 +797,6 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
                     ", Received: " + jwtIssuer);
         }
     }
+
+
 }
