@@ -1220,18 +1220,27 @@ public class AuthzUtil {
             oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
             authzReqMsgCtx.setImpersonationRequest(true);
             // Set AuthenticationResult authenticated user as impersonatee.
-            String clientId = oauth2Params.getClientId();
             AuthenticatedUser impersonatedUser = authnResult.getSubject().getImpersonatedUser();
             if (impersonatedUser.isFederatedUser() &&
                     ORGANIZATION_LOGIN_IDP_NAME.equals(impersonatedUser.getFederatedIdPName())) {
-                Map<String, String> attr = ClaimUtil.getClaimsFromUserStore(impersonatedUser, clientId);
-                impersonatedUser.setUserAttributes(FrameworkUtils.buildClaimMappings(attr));
+                // If the impersonated user is a federated user, we need to retrieve the claims from the user store.
+                setUserAttributesFromUserStore(impersonatedUser, impersonatedSubject, oauth2Params.getClientId());
             }
             authnResult.setSubject(impersonatedUser);
         } else {
             removeImpersonationScope(impersonationContext);
             authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
         }
+    }
+
+    private static void setUserAttributesFromUserStore(AuthenticatedUser impersonatedUser,
+                                                       String impersonatedSubject, String clientId)
+            throws IdentityOAuth2Exception {
+
+        Map<String, Object> attributes = ClaimUtil.getClaimsFromUserStore(impersonatedUser.getUserName(),
+                impersonatedSubject, impersonatedUser.getTenantDomain(), impersonatedUser, clientId, true);
+        impersonatedUser.setUserAttributes(FrameworkUtils.buildClaimMappings(attributes.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue())))));
     }
 
     private static void handleInitImpersonationRequest(String impersonatedSubject, OAuth2Parameters oAuth2Parameters)

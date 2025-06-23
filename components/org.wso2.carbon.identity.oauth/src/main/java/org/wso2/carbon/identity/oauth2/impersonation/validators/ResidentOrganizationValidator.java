@@ -86,13 +86,13 @@ public class ResidentOrganizationValidator implements ImpersonationValidator {
                     // User from the same sub org.
                     impersonatedUser.setUserResidentOrganization(impersonatedUserResidentOrg);
                 }
-            } else {
                 // User from parent org.
-                impersonatedUser.setUserResidentOrganization(null);
                 impersonatedUser.setUserId(impersonatedUserId);
+                impersonatedUser.setUserResidentOrganization(null);
+
+                impersonationContext.getImpersonationRequestDTO().getImpersonator()
+                        .setImpersonatedUser(impersonatedUser);
             }
-            impersonationContext.getImpersonationRequestDTO().getImpersonator()
-                    .setImpersonatedUser(impersonatedUser);
             impersonationContext.setValidated(true);
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("Error while retrieving impersonated user information for user.", e);

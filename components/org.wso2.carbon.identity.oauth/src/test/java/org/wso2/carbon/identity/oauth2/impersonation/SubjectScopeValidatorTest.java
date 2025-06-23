@@ -26,7 +26,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.authentication.framework.model.ImpersonatedUser;
 import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
@@ -114,8 +113,7 @@ public class SubjectScopeValidatorTest {
         impersonationRequestDTO = new ImpersonationRequestDTO();
         impersonationRequestDTO.setoAuthAuthzReqMessageContext(oAuthAuthzReqMessageContext);
         impersonationRequestDTO.setImpersonator(impersonator);
-        ImpersonatedUser impersonatedUser = new ImpersonatedUser();
-        impersonationRequestDTO.setSubject(impersonatedUser);
+        impersonationRequestDTO.setSubject("dummySubjectId");
         lenient().when(impersonator.getTenantDomain()).thenReturn("carbon.super");
         lenient().when(impersonator.getUserStoreDomain()).thenReturn("PRIMARY");
 
