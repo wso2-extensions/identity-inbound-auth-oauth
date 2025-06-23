@@ -74,7 +74,15 @@ public class ResidentOrganizationValidator implements ImpersonationValidator {
                     try {
                         if (OrganizationManagementUtil.isOrganization(impersonatedUserResidentOrg)) {
                             // Org is another sub org.
+                            impersonatedUser.setUserId(impersonatedUserId);
                             impersonatedUser.setUserResidentOrganization(impersonatedUserResidentOrg);
+                            impersonationContext.setValidated(false);
+                        } else {
+                            // Org is a parent org.
+                            impersonatedUser.setUserId(impersonatedUserId);
+                            impersonatedUser.setUserResidentOrganization(null);
+                            // Restrict support for this case until a requirement comes.
+                            impersonationContext.setValidated(false);
                         }
                     } catch (OrganizationManagementException e) {
                         throw new IdentityOAuth2ClientException(INVALID_REQUEST.getCode(),
@@ -85,15 +93,11 @@ public class ResidentOrganizationValidator implements ImpersonationValidator {
                 } else {
                     // User from the same sub org.
                     impersonatedUser.setUserResidentOrganization(impersonatedUserResidentOrg);
+                    impersonationContext.setValidated(true);
                 }
-                // User from parent org.
-                impersonatedUser.setUserId(impersonatedUserId);
-                impersonatedUser.setUserResidentOrganization(null);
-
-                impersonationContext.getImpersonationRequestDTO().getImpersonator()
-                        .setImpersonatedUser(impersonatedUser);
             }
-            impersonationContext.setValidated(true);
+            impersonationContext.getImpersonationRequestDTO().getImpersonator()
+                    .setImpersonatedUser(impersonatedUser);
         } catch (UserIdNotFoundException e) {
             throw new IdentityOAuth2Exception("Error while retrieving impersonated user information for user.", e);
         }
