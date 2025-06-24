@@ -28,9 +28,9 @@ import java.util.Map;
 
 import javax.script.ScriptException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 public class OpenJdkJSEngineImplTest {
 

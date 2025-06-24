@@ -61,8 +61,8 @@ public class RequestObjectValidatorUtil {
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
 
     // These constants are based on error messages from the Nimbus JOSE + JWT library.
-    private static final String NIMBUS_ERROR_JWT_BEFORE_USE_TIME = "JWT before use time";
-    private static final String NIMBUS_ERROR_JWT_EXPIRED = "Expired JWT";
+    public static final String NIMBUS_ERROR_JWT_BEFORE_USE_TIME = "JWT before use time";
+    public static final String NIMBUS_ERROR_JWT_EXPIRED = "Expired JWT";
 
     /**
      * Validate the signature of the request object

@@ -19,6 +19,7 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.validators;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -66,15 +67,22 @@ public class SubjectScopeValidator implements ImpersonationValidator {
 
         ImpersonationRequestDTO impersonationRequestDTO = impersonationContext.getImpersonationRequestDTO();
         OAuthAuthzReqMessageContext authzReqMessageContext = impersonationRequestDTO.getoAuthAuthzReqMessageContext();
+        authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
 
         String subjectUserId = impersonationRequestDTO.getSubject();
         AuthenticatedUser impersonator = impersonationRequestDTO.getImpersonator();
-
-        authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
-
+        String tenantDomain = impersonator.getTenantDomain();
+        String userAccessingOrg = impersonator.getAccessingOrganization();
+        String userResidentOrg = impersonator.getUserResidentOrganization();
+        AuthenticatedUser subjectUser;
+        if (StringUtils.isNotBlank(userAccessingOrg) && StringUtils.isNotBlank(userResidentOrg)) {
+            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
+                    userAccessingOrg, userResidentOrg, impersonationRequestDTO.getClientId());
+        } else {
+            subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, tenantDomain,
+                    impersonationRequestDTO.getClientId());
+        }
         // Switching end-user as authenticated user to validate scopes.
-        AuthenticatedUser subjectUser = OAuth2Util.getAuthenticatedUser(subjectUserId, impersonator.getTenantDomain(),
-                impersonationRequestDTO.getClientId());
         authzReqMessageContext.getAuthorizationReqDTO().setUser(subjectUser);
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
         authzReqMessageContext.setApprovedScope(authorizedScopes.toArray(new String[0]));

@@ -40,11 +40,11 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_AUTHORIZATION_CODE;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_CODE_ID;
 import static org.wso2.carbon.identity.oauth.rar.util.TestConstants.TEST_CONSENT_ID;

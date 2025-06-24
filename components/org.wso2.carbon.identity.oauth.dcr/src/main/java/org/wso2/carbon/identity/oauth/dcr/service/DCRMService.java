@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -973,6 +974,9 @@ public class DCRMService {
             }
             DCRDataHolder.getInstance().getApplicationManagementService()
                     .createApplicationWithTemplate(serviceProvider, tenantDomain, username, templateName);
+        } catch (IdentityApplicationManagementClientException e) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_APPLICATION_CREATION,
+                        e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             String errorMessage =
                     "Error while creating service provider: " + serviceProvider.getApplicationName() +

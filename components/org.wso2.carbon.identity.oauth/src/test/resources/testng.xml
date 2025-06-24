@@ -27,6 +27,7 @@
         <parameter name="log-levels" value="debug, info" />
         <classes>
             <class name="org.wso2.carbon.identity.oauth.OAuthUtilTest"/>
+            <class name="org.wso2.carbon.identity.oauth.RequestObjectValidatorUtilTest"/>
             <class name="org.wso2.carbon.identity.oauth2.token.handlers.grant.AbstractAuthorizationGrantHandlerTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.JDBCScopeValidatorTest"/>
             <class name="org.wso2.carbon.identity.oauth2.validators.OIDCScopeHandlerTest"/>

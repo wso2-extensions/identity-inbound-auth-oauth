@@ -203,7 +203,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.InputKeys.RESPONSE_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
-import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REQUESTED_SUBJECT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
@@ -220,6 +219,7 @@ import static org.wso2.carbon.identity.oauth.endpoint.util.factory.SSOConsentSer
 import static org.wso2.carbon.identity.oauth2.OAuth2Constants.TokenBinderType.CLIENT_REQUEST;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.SYSTEM_SCOPE;
 import static org.wso2.carbon.identity.oauth2.authz.AuthorizationHandlerManager.OAUTH_APP_PROPERTY;
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_VALIDATION_REQUEST;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.ACCESS_TOKEN_JS_OBJECT;
@@ -1185,9 +1185,9 @@ public class AuthzUtil {
                         OAuthConstants.SUBJECT_TOKEN);
                 boolean isImpersonationSSORequest = impersonatingActor != null && impersonatedSubject != null;
                 if (isImpersonationInitRequest) {
-                    handleInitImpersonationRequest(impersonatedSubject, oAuthMessage);
+                    handleInitImpersonationRequest(impersonatedSubject, oauth2Params);
                 } else if (isImpersonationSSORequest) {
-                    handleSSOImpersonationRequest(impersonatingActor, impersonatedSubject, oAuthMessage, oauth2Params,
+                    handleSSOImpersonationRequest(impersonatedSubject, oAuthMessage, oauth2Params,
                             sessionContext, authnResult);
                 }
             } catch (IdentityOAuth2Exception | InvalidOAuthClientException e) {
@@ -1200,7 +1200,7 @@ public class AuthzUtil {
         }
     }
 
-    private static void handleSSOImpersonationRequest(String impersonatingActor, String impersonatedSubject,
+    private static void handleSSOImpersonationRequest(String impersonatedSubject,
                                                OAuthMessage oAuthMessage, OAuth2Parameters oauth2Params,
                                                SessionContext sessionContext, AuthenticationResult authnResult)
             throws IdentityOAuth2Exception, InvalidOAuthClientException, UserIdNotFoundException {
@@ -1219,9 +1219,22 @@ public class AuthzUtil {
             oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
             authzReqMsgCtx.setImpersonationRequest(true);
             // Set AuthenticationResult authenticated user as impersonatee.
-            AuthenticatedUser impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject,
-                    impersonationContext.getImpersonationRequestDTO().getTenantDomain(),
-                    impersonationContext.getImpersonationRequestDTO().getClientId());
+            boolean isFederatedUser = impersonationContext.getImpersonationRequestDTO().getImpersonator()
+                    .isFederatedUser();
+            String subjectAccessingOrganization = impersonationContext.getImpersonationRequestDTO()
+                    .getImpersonator().getAccessingOrganization();
+            String subjectResidentOrganization = impersonationContext.getImpersonationRequestDTO()
+                    .getImpersonator().getUserResidentOrganization();
+            String tenantDomain = impersonationContext.getImpersonationRequestDTO().getTenantDomain();
+            AuthenticatedUser impersonatedUser = null;
+            if (isFederatedUser && subjectAccessingOrganization != null && subjectResidentOrganization != null) {
+                impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject, tenantDomain,
+                        subjectAccessingOrganization, subjectResidentOrganization,
+                        impersonationContext.getImpersonationRequestDTO().getClientId());
+            } else {
+                impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject, tenantDomain,
+                        impersonationContext.getImpersonationRequestDTO().getClientId());
+            }
             authnResult.setSubject(impersonatedUser);
         } else {
             removeImpersonationScope(impersonationContext);
@@ -1229,14 +1242,13 @@ public class AuthzUtil {
         }
     }
 
-    private static void handleInitImpersonationRequest(String impersonatedSubject, OAuthMessage oAuthMessage)
+    private static void handleInitImpersonationRequest(String impersonatedSubject, OAuth2Parameters oAuth2Parameters)
             throws IdentityOAuth2Exception {
 
         // Block performing impersonation for an impersonated session.
-        if (StringUtils.isNotBlank(impersonatedSubject)
-                && oAuthMessage.getRequest().getParameterMap() != null) {
-            String requestedSubject = oAuthMessage.getRequest().getParameterMap().get(REQUESTED_SUBJECT)[0];
-            if (requestedSubject != null && !Objects.equals(requestedSubject, impersonatedSubject)) {
+        String requestedSubject = oAuth2Parameters.getRequestedSubjectId();
+        if (StringUtils.isNotBlank(impersonatedSubject) && requestedSubject != null) {
+            if (!Objects.equals(requestedSubject, impersonatedSubject)) {
                 String errorMsg = "Cannot perform impersonation on more than one user in the same session.";
                 log.debug(errorMsg);
                 throw new IdentityOAuth2Exception(errorMsg);
@@ -1336,7 +1348,14 @@ public class AuthzUtil {
 
         String[] initialRequestedScopes = authzReqMessageContext.getAuthorizationReqDTO().getScopes();
         List<String> updatedRequestedScopes = new ArrayList<>(Arrays.asList(initialRequestedScopes));
-        if (!updatedRequestedScopes.contains(IMPERSONATION_SCOPE_NAME) &&
+
+        boolean isOrgRequest = authzReqMessageContext.getAuthorizationReqDTO().getUser().isFederatedUser() &&
+                StringUtils.isNotBlank(authzReqMessageContext.getAuthorizationReqDTO().getUser()
+                        .getAccessingOrganization());
+        if (isOrgRequest && !updatedRequestedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME) &&
+                !updatedRequestedScopes.contains(SYSTEM_SCOPE)) {
+            updatedRequestedScopes.add(IMPERSONATION_ORG_SCOPE_NAME);
+        } else if (!updatedRequestedScopes.contains(IMPERSONATION_SCOPE_NAME) &&
                 !updatedRequestedScopes.contains(SYSTEM_SCOPE)) {
             updatedRequestedScopes.add(IMPERSONATION_SCOPE_NAME);
         }
