@@ -1333,15 +1333,22 @@ public class AuthzUtil {
         }
     }
 
-    private static ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext authzReqMsgCxt) {
+    private static ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext authzReqMsgCxt)
+            throws IdentityOAuth2Exception {
 
         ImpersonationRequestDTO impersonationRequestDTO = new ImpersonationRequestDTO();
-        impersonationRequestDTO.setoAuthAuthzReqMessageContext(authzReqMsgCxt);
-        impersonationRequestDTO.setSubject(authzReqMsgCxt.getAuthorizationReqDTO().getUser().getImpersonatedUser());
-        impersonationRequestDTO.setImpersonator(authzReqMsgCxt.getAuthorizationReqDTO().getUser());
-        impersonationRequestDTO.setClientId(authzReqMsgCxt.getAuthorizationReqDTO().getConsumerKey());
-        impersonationRequestDTO.setScopes(getScopesBeforeValidation(authzReqMsgCxt));
-        impersonationRequestDTO.setTenantDomain(authzReqMsgCxt.getAuthorizationReqDTO().getTenantDomain());
+        try {
+            impersonationRequestDTO.setoAuthAuthzReqMessageContext(authzReqMsgCxt);
+            impersonationRequestDTO.setSubject(authzReqMsgCxt.getAuthorizationReqDTO().getUser()
+                    .getImpersonatedUser().getUserId());
+            impersonationRequestDTO.setImpersonator(authzReqMsgCxt.getAuthorizationReqDTO().getUser());
+            impersonationRequestDTO.setClientId(authzReqMsgCxt.getAuthorizationReqDTO().getConsumerKey());
+            impersonationRequestDTO.setScopes(getScopesBeforeValidation(authzReqMsgCxt));
+            impersonationRequestDTO.setTenantDomain(authzReqMsgCxt.getAuthorizationReqDTO().getTenantDomain());
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving impersonated user ID from the authentication result.", e);
+        }
         return impersonationRequestDTO;
     }
 

@@ -132,15 +132,21 @@ public class SubjectTokenIssuer {
      * @param context the OAuth authorization request message context
      * @return the impersonation request DTO containing information about the impersonation request
      */
-    private ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext context) {
+    private ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext context)
+            throws IdentityOAuth2Exception {
 
         ImpersonationRequestDTO impersonationRequestDTO = new ImpersonationRequestDTO();
-        impersonationRequestDTO.setoAuthAuthzReqMessageContext(context);
-        impersonationRequestDTO.setSubject(context.getAuthorizationReqDTO().getUser().getImpersonatedUser());
-        impersonationRequestDTO.setImpersonator(context.getAuthorizationReqDTO().getUser());
-        impersonationRequestDTO.setClientId(context.getAuthorizationReqDTO().getConsumerKey());
-        impersonationRequestDTO.setScopes(context.getAuthorizationReqDTO().getScopes());
-        impersonationRequestDTO.setTenantDomain(context.getAuthorizationReqDTO().getTenantDomain());
+        try {
+            impersonationRequestDTO.setoAuthAuthzReqMessageContext(context);
+            impersonationRequestDTO.setSubject(context.getAuthorizationReqDTO().getUser()
+                    .getImpersonatedUser().getUserId());
+            impersonationRequestDTO.setImpersonator(context.getAuthorizationReqDTO().getUser());
+            impersonationRequestDTO.setClientId(context.getAuthorizationReqDTO().getConsumerKey());
+            impersonationRequestDTO.setScopes(context.getAuthorizationReqDTO().getScopes());
+            impersonationRequestDTO.setTenantDomain(context.getAuthorizationReqDTO().getTenantDomain());
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving the impersonated user ID.", e);
+        }
         return impersonationRequestDTO;
     }
 }
