@@ -94,11 +94,11 @@ public class OAuth2TokenUtil {
             throws IdentityOAuth2Exception {
 
         String eventName = OIDCConstants.Event.POST_ISSUE_TOKEN;
-        Event requestObjectPersistanceEvent = buildPostIssueTokenEvent(tokenIssuanceDO, eventName);
+        Event postIssueTokenEvent = buildPostIssueTokenEvent(tokenIssuanceDO, eventName);
         IdentityEventService identityEventService = OpenIDConnectServiceComponentHolder.getIdentityEventService();
         try {
             if (identityEventService != null) {
-                identityEventService.handleEvent(requestObjectPersistanceEvent);
+                identityEventService.handleEvent(postIssueTokenEvent);
                 if (log.isDebugEnabled()) {
                     log.debug("The event " + eventName + " triggered after the token "
                             + tokenIssuanceDO.getTokenId() + " is issued.");
