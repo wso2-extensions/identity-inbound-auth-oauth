@@ -16,8 +16,13 @@
 
 package org.wso2.carbon.identity.oauth2.dcr.endpoint.impl;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.dcr.DCRMConstants;
 import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMClientException;
@@ -29,6 +34,7 @@ import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.RegistrationRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.dto.UpdateRequestDTO;
 import org.wso2.carbon.identity.oauth2.dcr.endpoint.util.DCRMUtils;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
@@ -75,7 +81,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.OK);
     }
 
     @Override
@@ -103,7 +109,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.CREATED).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.CREATED);
     }
 
     @Override
@@ -131,7 +137,7 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Throwable throwable) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, throwable, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.OK);
     }
 
     @Override
@@ -149,6 +155,29 @@ public class RegisterApiServiceImpl extends RegisterApiService {
         } catch (Exception e) {
             DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
         }
-        return Response.status(Response.Status.OK).entity(applicationDTO).build();
+        return buildResponseWithOptionalNullExclusion(applicationDTO, Response.Status.OK);
+    }
+
+    private Response buildResponseWithOptionalNullExclusion(ApplicationDTO applicationDTO, Response.Status status) {
+
+        boolean returnNullFieldsInDcrResponse =
+                Boolean.parseBoolean(IdentityUtil.getProperty(OAuthConstants.RETURN_NULL_FIELDS_IN_DCR_RESPONSE));
+
+        if (returnNullFieldsInDcrResponse) {
+            return Response.status(status).entity(applicationDTO).build();
+        } else {
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            try {
+                String applicationDTOString = mapper.writeValueAsString(applicationDTO);
+                return Response.status(status).entity(applicationDTOString).type(MediaType.APPLICATION_JSON).build();
+            } catch (JsonProcessingException e) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Error serializing ApplicationDTO with null exclusion", e);
+                }
+                DCRMUtils.handleErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e, true, LOG);
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+            }
+        }
     }
 }
