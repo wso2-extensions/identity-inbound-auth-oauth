@@ -120,11 +120,12 @@ public class ClaimUtil {
     public static Map<String, Object> getClaimsFromUserStore(OAuth2TokenValidationResponseDTO tokenResponse)
             throws UserInfoEndpointException {
 
+        String authorizedUserName = StringUtils.EMPTY;
         try {
             AccessTokenDO accessTokenDO = OAuth2ServiceComponentHolder.getInstance().getTokenProvider()
                     .getVerifiedAccessToken(tokenResponse.getAuthorizationContextToken().getTokenString(),
                             false);
-            String authorizedUserName = tokenResponse.getAuthorizedUser();
+            authorizedUserName = tokenResponse.getAuthorizedUser();
             String userId = accessTokenDO.getAuthzUser().getUserId();
             String userTenantDomain = accessTokenDO.getAuthzUser().getTenantDomain();
             AuthenticatedUser authenticatedUser = accessTokenDO.getAuthzUser();
@@ -135,6 +136,12 @@ public class ClaimUtil {
         } catch (IdentityOAuth2Exception | UserIdNotFoundException e) {
             throw new UserInfoEndpointException("Error while retrieving claims for user: " +
                     tokenResponse.getAuthorizedUser(), e);
+        } catch (Exception e) {
+            String errMsg = StringUtils.isNotEmpty(authorizedUserName) ? "Error while retrieving the claims " +
+                    "from user store for the username: " + authorizedUserName : "Error while retrieving the " +
+                    "claims from user store";
+            log.error(errMsg, e);
+            throw new UserInfoEndpointException(errMsg);
         }
     }
 
