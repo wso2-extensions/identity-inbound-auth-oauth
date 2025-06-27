@@ -26,7 +26,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
-import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -131,15 +130,6 @@ public class SubjectScopeValidatorTest {
         authenticatedImpersonatingUser.setUserStoreDomain("dummyUserStore");
         authenticatedImpersonatingUser.setTenantDomain("carbon.super");
         return authenticatedImpersonatingUser;
-    }
-
-    private User getDummyUser() {
-
-        User user = new User();
-        user.setUserName("dummmyUserName");
-        user.setUserStoreDomain("dummyUserStore");
-        user.setTenantDomain("carbon.super");
-        return user;
     }
 
     @AfterMethod
