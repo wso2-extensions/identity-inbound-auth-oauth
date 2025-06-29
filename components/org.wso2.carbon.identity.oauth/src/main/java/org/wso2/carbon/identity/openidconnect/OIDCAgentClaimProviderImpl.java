@@ -15,6 +15,7 @@
  */
 package org.wso2.carbon.identity.openidconnect;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -49,8 +50,9 @@ public class OIDCAgentClaimProviderImpl implements ClaimProvider {
                                                    OAuth2AccessTokenRespDTO tokenRespDTO)
             throws IdentityOAuth2Exception {
 
-        if (OAuth2Util.getAgentIdentityUserstoreName().equalsIgnoreCase(tokenReqMessageContext.getAuthorizedUser()
-                .getUserStoreDomain())) {
+        String agentIdentityUserstoreName = OAuth2Util.getAgentIdentityUserstoreName();
+        if (StringUtils.isNotEmpty(agentIdentityUserstoreName) && agentIdentityUserstoreName
+                .equalsIgnoreCase(tokenReqMessageContext.getAuthorizedUser().getUserStoreDomain())) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
             return agentMap;
