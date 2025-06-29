@@ -67,6 +67,7 @@ public class OAuthTokenReqMessageContext {
     private Map<String, Object> additionalAccessTokenClaims;
 
     private AuthorizationDetails authorizationDetails;
+    private String requestedActor;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
@@ -266,5 +267,15 @@ public class OAuthTokenReqMessageContext {
     public void setRefreshTokenValidityPeriodInMillis(long refreshTokenValidityPeriodInMillis) {
 
         this.refreshTokenValidityPeriodInMillis = refreshTokenValidityPeriodInMillis;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }
