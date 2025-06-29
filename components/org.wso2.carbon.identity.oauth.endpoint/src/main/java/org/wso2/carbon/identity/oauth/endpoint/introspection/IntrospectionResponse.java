@@ -91,6 +91,11 @@ public final class IntrospectionResponse {
 
     public static final String AUT = "aut";
 
+    // OPTIONAL
+    // Step-up authentication claims
+    public static final String ACR = "acr";
+    public static final String AUTH_TIME = "auth_time";
+
     class Error {
 
         public static final String INVALID_REQUEST = "invalid_request";

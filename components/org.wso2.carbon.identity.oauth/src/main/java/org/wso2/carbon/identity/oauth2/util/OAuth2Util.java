@@ -101,6 +101,9 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -2189,6 +2192,8 @@ public class OAuth2Util {
 
         // check the cache, if caching is enabled.
         OAuthCacheKey cacheKey = new OAuthCacheKey(accessTokenIdentifier);
+        AuthorizationGrantCacheKey authorizationGrantCacheKey =
+                new AuthorizationGrantCacheKey(accessTokenIdentifier);
         CacheEntry result = OAuthCache.getInstance().getValueFromCache(cacheKey);
         // cache hit, do the type check.
         if (result != null && result instanceof AccessTokenDO) {
@@ -2207,6 +2212,16 @@ public class OAuth2Util {
         if (accessTokenDO == null) {
             accessTokenDO = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                     .getAccessToken(accessTokenIdentifier, includeExpired);
+            AuthorizationGrantCacheEntry cacheEntry =
+                    AuthorizationGrantCache.getInstance().getValueFromCacheByToken(authorizationGrantCacheKey);
+            if (cacheEntry != null) {
+                if (cacheEntry.getAcrValue() != null) {
+                    accessTokenDO.setAcr(cacheEntry.getSelectedAcrValue());
+                }
+                if (cacheEntry.getMaxAge() != 0) {
+                    accessTokenDO.setAuthTime(cacheEntry.getAuthTime());
+                }
+            }
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Retrieved active access token from OAuthCache for token Identifier: " +
@@ -6051,7 +6066,7 @@ public class OAuth2Util {
         // Set authorized user tenant domain to the tenant domain of the application.
         authenticatedUser.setTenantDomain(appTenantDomain);
     }
-  
+
     public static boolean isPairwiseSubEnabledForAccessTokens() {
 
         return Boolean.parseBoolean(IdentityUtil.getProperty(ENABLE_PPID_FOR_ACCESS_TOKENS));

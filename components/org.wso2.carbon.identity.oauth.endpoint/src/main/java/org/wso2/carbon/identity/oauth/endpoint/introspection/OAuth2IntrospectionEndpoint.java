@@ -36,6 +36,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
@@ -145,8 +146,9 @@ public class OAuth2IntrospectionEndpoint {
                 .setIssuedAt(introspectionResponse.getIat())
                 .setExpiration(introspectionResponse.getExp())
                 .setAuthorizedUserType(introspectionResponse.getAut())
-                .setAudience(introspectionResponse.getAud());;
-
+                .setAudience(introspectionResponse.getAud())
+                .setSelectedAcr(introspectionResponse.getAcr())
+                .setAuthTime(TimeUnit.MILLISECONDS.toSeconds(introspectionResponse.getAuthTime()));
 
         boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
                 .isUserSessionImpersonationEnabled();

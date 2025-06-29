@@ -70,6 +70,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCConfigProperties.SUBJECT_TOKEN_EXPIRY_TIME_VALUE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ENABLE_CONFIG;
@@ -109,6 +110,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
     private static final String JWT_TYP_HEADER_VALUE = "jwt";
     private static final String MAY_ACT = "may_act";
     private static final String SUB = "sub";
+    private static final String ACR = "acr";
+    private static final String AUTH_TIME = "auth_time";
 
     public JWTTokenIssuer() throws IdentityOAuth2Exception {
 
@@ -666,6 +669,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
+        }
+
+        if (tokenReqMessageContext != null) {
+            if (tokenReqMessageContext.getSelectedAcr() != null) {
+                jwtClaimsSetBuilder.claim(ACR, tokenReqMessageContext.getSelectedAcr());
+            }
+            if (tokenReqMessageContext.getAuthTime() != 0) {
+                jwtClaimsSetBuilder.claim(AUTH_TIME,
+                        TimeUnit.MILLISECONDS.toSeconds(tokenReqMessageContext.getAuthTime()));
+            }
         }
 
         jwtClaimsSetBuilder.claim(OAuthConstants.AUTHORIZED_USER_TYPE,
