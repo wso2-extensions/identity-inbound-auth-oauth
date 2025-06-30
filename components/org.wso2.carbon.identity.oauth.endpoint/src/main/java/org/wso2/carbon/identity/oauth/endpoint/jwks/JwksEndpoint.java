@@ -48,6 +48,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 
 import javax.jws.WebService;
 import javax.ws.rs.GET;
@@ -135,7 +136,10 @@ public class JwksEndpoint {
                 List<Base64> encodedCertList = generateEncodedCertList(certChain, alias);
                 RSAKey.Builder jwk = getJWK(algorithm, encodedCertList, cert,
                         hashingAlgorithm, alias);
-                jwksArray.add(jwk.build().toJSONObject());
+                Map<String, Object> jwkMap = jwk.build().toJSONObject();
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.putAll(jwkMap);
+                jwksArray.add(jsonObject);
             }
         }
     }
