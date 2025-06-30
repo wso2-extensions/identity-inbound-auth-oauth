@@ -1413,6 +1413,9 @@ public class AccessTokenIssuer {
                                                    OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
+        if (tokenRespDTO == null || StringUtils.isBlank(tokenRespDTO.getAccessToken())) {
+            return;
+        }
         String cacheKey;
         if (JWTUtils.isJWT(tokenRespDTO.getAccessToken())) {
             Optional<JWTClaimsSet> jwtClaimSet;
