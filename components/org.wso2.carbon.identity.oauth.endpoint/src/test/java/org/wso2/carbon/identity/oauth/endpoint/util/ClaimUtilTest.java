@@ -28,6 +28,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.application.common.model.Claim;
 import org.wso2.carbon.identity.application.common.model.ClaimConfig;
@@ -48,11 +49,13 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.tokenprocessor.DefaultTokenProvider;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.core.UserRealm;
@@ -69,6 +72,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -504,7 +508,7 @@ public class ClaimUtilTest {
     }
 
     private AccessTokenDO getAccessTokenDO(String clientId, AuthenticatedUser authenticatedUser) {
-    
+
         AccessTokenDO accessTokenDO = new AccessTokenDO();
         accessTokenDO.setConsumerKey(clientId);
         accessTokenDO.setAuthzUser(authenticatedUser);
@@ -555,5 +559,59 @@ public class ClaimUtilTest {
         String returned = ClaimUtil.getServiceProviderMappedUserRoles(mockedServiceProvider,
                 locallyMappedUserRoles, claimSeparator);
         Assert.assertEquals(returned, expected, "Invalid returned value");
+    }
+
+    @Test
+    public void testResolveRoleClaimForImpersonatedSubOrgUser() throws Exception {
+
+        try (MockedStatic<SharedAppResolveDAO> sharedAppResolveDAO = mockStatic(SharedAppResolveDAO.class);
+             MockedStatic<OIDCClaimUtil> oidcClaimUtil = mockStatic(OIDCClaimUtil.class);
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
+
+            String orgId = "org123";
+            String appResideOrgId = "appOrg456";
+            String sharedAppId = "sharedApp789";
+            String appResourceId = "appResId";
+            String userId = "userId1";
+            String userName = "userName1";
+            String userResidentOrg = "residentOrg";
+            String tenantDomain = "tenantDomain";
+            String[] appAssociatedRoles = new String[]{"roleA", "roleB"};
+            String multiAttrSeparator = ",";
+
+            AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+            authenticatedUser.setUserId(userId);
+            authenticatedUser.setUserName(userName);
+            authenticatedUser.setAccessingOrganization(orgId);
+            authenticatedUser.setUserResidentOrganization(userResidentOrg);
+
+            ServiceProvider serviceProvider = mock(ServiceProvider.class);
+            when(serviceProvider.getTenantDomain()).thenReturn(tenantDomain);
+            when(serviceProvider.getApplicationResourceId()).thenReturn(appResourceId);
+
+            Map<String, String> userClaims = new HashMap<>();
+
+            OrganizationManager orgManager = mock(OrganizationManager.class);
+            OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(orgManager);
+            when(orgManager.resolveOrganizationId(tenantDomain)).thenReturn(appResideOrgId);
+            sharedAppResolveDAO.when(
+                            () -> SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appResourceId, orgId))
+                    .thenReturn(sharedAppId);
+            oidcClaimUtil.when(
+                    () -> OIDCClaimUtil.getAppAssociatedRolesOfUser(any(AuthenticatedUser.class), eq(sharedAppId)))
+                    .thenReturn(appAssociatedRoles);
+            frameworkUtils.when(FrameworkUtils::getMultiAttributeSeparator).thenReturn(multiAttrSeparator);
+
+            // Act.
+            java.lang.reflect.Method method = ClaimUtil.class.getDeclaredMethod(
+                    "resolveRoleClaimForImpersonatedSubOrgUser",
+                    AuthenticatedUser.class, ServiceProvider.class, Map.class);
+            method.setAccessible(true);
+            method.invoke(null, authenticatedUser, serviceProvider, userClaims);
+
+            // Assert.
+            Assert.assertTrue(userClaims.containsKey(FrameworkConstants.ROLES_CLAIM));
+            Assert.assertEquals(userClaims.get(FrameworkConstants.ROLES_CLAIM), "roleA,roleB");
+        }
     }
 }
