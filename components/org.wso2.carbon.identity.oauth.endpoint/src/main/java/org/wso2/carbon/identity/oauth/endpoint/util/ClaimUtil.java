@@ -48,6 +48,7 @@ import org.wso2.carbon.identity.oauth.endpoint.user.impl.UserInfoEndpointConfig;
 import org.wso2.carbon.identity.oauth.user.UserInfoClaimRetriever;
 import org.wso2.carbon.identity.oauth.user.UserInfoEndpointException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dao.SharedAppResolveDAO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -73,6 +74,7 @@ import java.util.regex.Pattern;
 import static org.apache.commons.collections.MapUtils.isEmpty;
 import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.apache.commons.lang.StringUtils.isNotEmpty;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.core.util.IdentityUtil.isTokenLoggable;
 
 /**
@@ -235,14 +237,20 @@ public class ClaimUtil {
                     try {
                         FrameworkUtils.startTenantFlow(userAccessingTenantDomain);
                         userClaims = getUserClaimsFromUserStoreWithResolvedRoles(authenticatedUser, serviceProvider,
-                                sharedUserId, realm, claimURIList);
+                                sharedUserId, realm, claimURIList, isImpersonatedUser);
                     } finally {
                         FrameworkUtils.endTenantFlow();
                     }
                 } else {
-                    realm = getUserRealm(null, userTenantDomain);
+                    // For claim resolving during sub organization impersonation.
+                    if (isImpersonatedUser && authenticatedUser.isFederatedUser()
+                            && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())) {
+                        realm = getUserRealm(null, authenticatedUser.getUserResidentOrganization());
+                    } else {
+                        realm = getUserRealm(null, userTenantDomain);
+                    }
                     userClaims = getUserClaimsFromUserStoreWithResolvedRoles(authenticatedUser, serviceProvider,
-                            userId, realm, claimURIList);
+                            userId, realm, claimURIList, isImpersonatedUser);
                 }
 
                 if (isNotEmpty(userClaims)) {
@@ -380,7 +388,8 @@ public class ClaimUtil {
                                                                                    ServiceProvider serviceProvider,
                                                                                    String resolvedUserId,
                                                                                    UserRealm realm,
-                                                                                   List<String> claimURIList)
+                                                                                   List<String> claimURIList,
+                                                                                   boolean isSubOrgImpersonatedUser)
             throws UserStoreException {
 
         Map<String, String> userClaims = getUserClaimsFromUserStore(resolvedUserId, realm, claimURIList);
@@ -391,6 +400,10 @@ public class ClaimUtil {
             String appTenantDomain = serviceProvider.getTenantDomain();
             // Check whether the application is a shared app or an application created in sub org.
             boolean isSubOrgApp = OrganizationManagementUtil.isOrganization(appTenantDomain);
+            // Resolve roles claim value for impersonated sub org users.
+            if (isSubOrgImpersonatedUser) {
+                resolveRoleClaimForImpersonatedSubOrgUser(authenticatedUser, serviceProvider, userClaims);
+            }
             // Resolving roles claim for sub org apps and shared apps since backward compatibility is not needed.
             if (isRoleClaimRequested && isSubOrgApp) {
                 String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(authenticatedUser,
@@ -408,8 +421,41 @@ public class ClaimUtil {
             throw new UserStoreException("Error while retrieving application associated roles for user.", e);
         } catch (OrganizationManagementException e) {
             throw new UserStoreException("Error while checking whether application tenant domain is an organization.");
+        } catch (IdentityOAuth2Exception | UserIdNotFoundException e) {
+            throw new UserStoreException("Error while getting sub org user claims.");
         }
         return userClaims;
+    }
+
+    private static void resolveRoleClaimForImpersonatedSubOrgUser(AuthenticatedUser authenticatedUser,
+                                                                  ServiceProvider serviceProvider,
+                                                                  Map<String, String> userClaims)
+            throws OrganizationManagementException, IdentityOAuth2Exception, UserIdNotFoundException,
+            ApplicationRolesException {
+
+        // Get sub org shared app id.
+        String orgId = authenticatedUser.getAccessingOrganization();
+        String appResideOrgId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                .resolveOrganizationId(serviceProvider.getTenantDomain());
+        String sharedAppId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId,
+                serviceProvider.getApplicationResourceId(), orgId);
+
+        // Create sub org local user.
+        AuthenticatedUser subOrgAuthenticatedUser = new AuthenticatedUser();
+        subOrgAuthenticatedUser.setUserId(authenticatedUser.getUserId());
+        subOrgAuthenticatedUser.setUserName(authenticatedUser.getUserName());
+        subOrgAuthenticatedUser.setTenantDomain(authenticatedUser.getUserResidentOrganization());
+
+        // Get app associated roles.
+        String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(subOrgAuthenticatedUser, sharedAppId);
+        if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {
+            // If application associated roles are returned, set the roles claim using resolved roles.
+            userClaims.put(FrameworkConstants.ROLES_CLAIM,
+                    String.join(FrameworkUtils.getMultiAttributeSeparator(), appAssociatedRoles));
+        } else {
+            // If no roles are returned, remove the roles claim from user claims.
+            userClaims.remove(FrameworkConstants.ROLES_CLAIM);
+        }
     }
 
     private static UserRealm getUserRealm(String username,
