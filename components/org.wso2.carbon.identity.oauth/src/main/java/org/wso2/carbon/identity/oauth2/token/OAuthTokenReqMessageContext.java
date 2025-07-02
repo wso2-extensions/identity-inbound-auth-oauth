@@ -68,6 +68,10 @@ public class OAuthTokenReqMessageContext {
 
     private AuthorizationDetails authorizationDetails;
 
+    private String selectedAcr;
+
+    private long authTime;
+
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
         this.oauth2AccessTokenReqDTO = oauth2AccessTokenReqDTO;
@@ -266,5 +270,25 @@ public class OAuthTokenReqMessageContext {
     public void setRefreshTokenValidityPeriodInMillis(long refreshTokenValidityPeriodInMillis) {
 
         this.refreshTokenValidityPeriodInMillis = refreshTokenValidityPeriodInMillis;
+    }
+
+    public long getAuthTime() {
+
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+
+        this.authTime = authTime;
+    }
+
+    public String getSelectedAcr() {
+
+        return selectedAcr;
+    }
+
+    public void setSelectedAcr(String selectedAcr) {
+
+        this.selectedAcr = selectedAcr;
     }
 }

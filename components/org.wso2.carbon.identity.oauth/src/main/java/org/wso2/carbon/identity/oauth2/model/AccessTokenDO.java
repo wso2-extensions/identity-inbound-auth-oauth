@@ -79,6 +79,10 @@ public class AccessTokenDO extends CacheEntry {
 
     private int appResidentTenantId = MultitenantConstants.INVALID_TENANT_ID;
 
+    private String acr;
+
+    private long authTime;
+
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope, Timestamp issuedTime,
                          Timestamp refreshTokenIssuedTime, long validityPeriodInMillis,
                          long refreshTokenValidityPeriodInMillis, String tokenType) {
@@ -105,8 +109,8 @@ public class AccessTokenDO extends CacheEntry {
     }
 
     public AccessTokenDO(String consumerKey, AuthenticatedUser authzUser, String[] scope,
-            TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
-            long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
+                         TokenBinding tokenBinding, Timestamp issuedTime, Timestamp refreshTokenIssuedTime,
+                         long validityPeriodInMillis, long refreshTokenValidityPeriodInMillis, String tokenType) {
 
         this.consumerKey = consumerKey;
         this.authzUser = authzUser;
@@ -147,6 +151,8 @@ public class AccessTokenDO extends CacheEntry {
         newTokenDO.setIsConsentedToken(tokenDO.isConsentedToken());
         newTokenDO.setAppResidentTenantId(tokenDO.getAppResidentTenantId());
         newTokenDO.setAccessTokenExtendedAttributes(tokenDO.getAccessTokenExtendedAttributes());
+        newTokenDO.setAcr(tokenDO.getAcr());
+        newTokenDO.setAuthTime(tokenDO.getAuthTime());
 
         return newTokenDO;
     }
@@ -358,5 +364,25 @@ public class AccessTokenDO extends CacheEntry {
     public void setAppResidentTenantId(int appResidentTenantId) {
 
         this.appResidentTenantId = appResidentTenantId;
+    }
+
+    public String getAcr() {
+
+        return acr;
+    }
+
+    public void setAcr(String acr) {
+
+        this.acr = acr;
+    }
+
+    public long getAuthTime() {
+
+        return authTime;
+    }
+
+    public void setAuthTime(long authTime) {
+
+        this.authTime = authTime;
     }
 }

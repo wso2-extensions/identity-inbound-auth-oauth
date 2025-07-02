@@ -608,6 +608,8 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         newTokenBean.setTokenBinding(tokReqMsgCtx.getTokenBinding());
         newTokenBean.setAccessTokenExtendedAttributes(
                 getAccessTokenExtendedAttributes(tokenReq.getAccessTokenExtendedAttributes(), tokReqMsgCtx));
+        newTokenBean.setAcr(tokReqMsgCtx.getSelectedAcr());
+        newTokenBean.setAuthTime(tokReqMsgCtx.getAuthTime());
         setRefreshTokenDetails(tokReqMsgCtx, existingTokenBean, newTokenBean, oauthTokenIssuer);
 
         return newTokenBean;
@@ -620,7 +622,7 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
         if (tokReqMsgCtx.isImpersonationRequest()) {
             accessTokenExtendedAttributes =
                     addExtendedAttribute(IMPERSONATING_ACTOR, tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR).toString(),
-                    accessTokenExtendedAttributes);
+                            accessTokenExtendedAttributes);
         }
         // Add any new extended attributes here using @addExtendedAttribute.
         return accessTokenExtendedAttributes;
@@ -1150,6 +1152,12 @@ public abstract class AbstractAuthorizationGrantHandler implements Authorization
                     log.debug("Retrieved latest access token for client Id: " + tokenReq.getClientId() + " user: " +
                             tokenMsgCtx.getAuthorizedUser() + " and scope: " + scope + " from db");
                 }
+            }
+            if (tokenMsgCtx.getSelectedAcr() != null) {
+                existingToken.setAcr(tokenMsgCtx.getSelectedAcr());
+            }
+            if (tokenMsgCtx.getAuthTime() != 0) {
+                existingToken.setAuthTime(tokenMsgCtx.getAuthTime());
             }
             long expireTime = getAccessTokenExpiryTimeMillis(existingToken);
             if (TOKEN_STATE_ACTIVE.equals(existingToken.getTokenState()) &&

@@ -205,15 +205,23 @@ public class AccessTokenIssuer {
             AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(getAuthorizationCode(tokenReqDTO));
             AuthorizationGrantCacheEntry authorizationGrantCacheEntry =
                     AuthorizationGrantCache.getInstance().getValueFromCacheByCode(cacheKey);
-            if (authorizationGrantCacheEntry != null &&
-                    authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
-                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
-                        EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
-                    tokReqMsgCtx.setRefreshTokenvalidityPeriod(
-                            authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod());
+            if (authorizationGrantCacheEntry != null) {
+                if (authorizationGrantCacheEntry.getAccessTokenExtensionDO() != null) {
+                    if (authorizationGrantCacheEntry.getAccessTokenExtensionDO().getRefreshTokenValidityPeriod() >
+                            EXTENDED_REFRESH_TOKEN_DEFAULT_TIME) {
+                        tokReqMsgCtx.setRefreshTokenvalidityPeriod(
+                                authorizationGrantCacheEntry.getAccessTokenExtensionDO()
+                                        .getRefreshTokenValidityPeriod());
+                    }
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
+                            authorizationGrantCacheEntry.getAccessTokenExtensionDO());
                 }
-                tokReqMsgCtx.getOauth2AccessTokenReqDTO().setAccessTokenExtendedAttributes(
-                        authorizationGrantCacheEntry.getAccessTokenExtensionDO());
+                if (authorizationGrantCacheEntry.getAcrValue() != null) {
+                    tokReqMsgCtx.setSelectedAcr(authorizationGrantCacheEntry.getSelectedAcrValue());
+                }
+                if (authorizationGrantCacheEntry.getMaxAge() > 0) {
+                    tokReqMsgCtx.setAuthTime(authorizationGrantCacheEntry.getAuthTime());
+                }
             }
             persistImpersonationInfoToTokenReqCtx(authorizationGrantCacheEntry, tokReqMsgCtx);
         }
