@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -2979,11 +2980,11 @@ public class AuthzUtil {
             replaceIfPresent(requestObject, ID_TOKEN_HINT, params::setIDTokenHint, ignoreClaimsOutsideRequestObject);
             replaceIfPresent(requestObject, PROMPT, params::setPrompt, ignoreClaimsOutsideRequestObject);
 
-            if (requestObject.getClaim(CLAIMS) instanceof net.minidev.json.JSONObject) {
+            if (requestObject.getClaim(CLAIMS) instanceof Map) {
                 // Claims in the request object is in the type of net.minidev.json.JSONObject,
                 // hence retrieving claims as a JSONObject
-                net.minidev.json.JSONObject claims = (net.minidev.json.JSONObject) requestObject.getClaim(CLAIMS);
-                params.setEssentialClaims(claims.toJSONString());
+                Map<String, Object>  claims = (Map<String, Object>) requestObject.getClaim(CLAIMS);
+                params.setEssentialClaims(JSONObjectUtils.toJSONString(claims));
             }
 
             if (isPkceSupportEnabled()) {
