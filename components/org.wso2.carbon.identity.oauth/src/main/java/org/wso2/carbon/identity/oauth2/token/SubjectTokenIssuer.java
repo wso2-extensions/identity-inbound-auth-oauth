@@ -22,6 +22,7 @@ package org.wso2.carbon.identity.oauth2.token;
 import org.apache.commons.lang.StringUtils;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.ImpersonatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -70,10 +71,10 @@ public class SubjectTokenIssuer {
             oauthAuthzMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
             String client = impersonationContext.getImpersonationRequestDTO().getClientId();
             AuthenticatedUser impersonator = impersonationContext.getImpersonationRequestDTO().getImpersonator();
-            String subject = impersonationContext.getImpersonationRequestDTO().getSubject();
+            ImpersonatedUser subject = impersonator.getImpersonatedUser();
             String errorMsg = "Impersonation request rejected for client : " + client +
-                    " impersonator : " + impersonator.getLoggableMaskedUserId() + " subject : " + subject;
-
+                    " impersonator : " + impersonator.getLoggableMaskedUserId() + " subject : " 
+                    + subject.getLoggableMaskedUserId();
             if (StringUtils.isNotBlank(impersonationContext.getValidationFailureErrorCode()) ||
                     StringUtils.isNotBlank(impersonationContext.getValidationFailureErrorMessage())) {
                 throw new IdentityOAuth2Exception(impersonationContext.getValidationFailureErrorCode(),
@@ -131,15 +132,21 @@ public class SubjectTokenIssuer {
      * @param context the OAuth authorization request message context
      * @return the impersonation request DTO containing information about the impersonation request
      */
-    private ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext context) {
+    private ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext context)
+            throws IdentityOAuth2Exception {
 
         ImpersonationRequestDTO impersonationRequestDTO = new ImpersonationRequestDTO();
-        impersonationRequestDTO.setoAuthAuthzReqMessageContext(context);
-        impersonationRequestDTO.setSubject(context.getAuthorizationReqDTO().getRequestedSubjectId());
-        impersonationRequestDTO.setImpersonator(context.getAuthorizationReqDTO().getUser());
-        impersonationRequestDTO.setClientId(context.getAuthorizationReqDTO().getConsumerKey());
-        impersonationRequestDTO.setScopes(context.getAuthorizationReqDTO().getScopes());
-        impersonationRequestDTO.setTenantDomain(context.getAuthorizationReqDTO().getTenantDomain());
+        try {
+            impersonationRequestDTO.setoAuthAuthzReqMessageContext(context);
+            impersonationRequestDTO.setSubject(context.getAuthorizationReqDTO().getUser()
+                    .getImpersonatedUser().getUserId());
+            impersonationRequestDTO.setImpersonator(context.getAuthorizationReqDTO().getUser());
+            impersonationRequestDTO.setClientId(context.getAuthorizationReqDTO().getConsumerKey());
+            impersonationRequestDTO.setScopes(context.getAuthorizationReqDTO().getScopes());
+            impersonationRequestDTO.setTenantDomain(context.getAuthorizationReqDTO().getTenantDomain());
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving the impersonated user ID.", e);
+        }
         return impersonationRequestDTO;
     }
 }

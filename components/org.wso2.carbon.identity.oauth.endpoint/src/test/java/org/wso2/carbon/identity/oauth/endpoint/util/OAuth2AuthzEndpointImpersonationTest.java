@@ -25,6 +25,7 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.context.SessionContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticationResult;
+import org.wso2.carbon.identity.application.authentication.framework.model.ImpersonatedUser;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
@@ -123,7 +124,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             AuthenticationResult authenticationResult = new AuthenticationResult();
             HttpServletRequest mockRequest = mock(HttpServletRequest.class);
             SessionDataCacheEntry mockSessionDataCacheEntry = mock(SessionDataCacheEntry.class);
-            AuthenticatedUser impersonatedUser = mock(AuthenticatedUser.class);
+            ImpersonatedUser impersonatedUser = mock(ImpersonatedUser.class);
             AuthenticatedUser impersonator = mock(AuthenticatedUser.class);
             ImpersonationRequestDTO impersonationRequestDTO = mock(ImpersonationRequestDTO.class);
             when(impersonationRequestDTO.getClientId()).thenReturn(dummyClientId);
@@ -172,6 +173,7 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
                 when(impersonator.isFederatedUser()).thenReturn(true);
                 when(impersonator.getFederatedIdPName()).thenReturn(ORGANIZATION_LOGIN_IDP_NAME);
             }
+            when(impersonator.getImpersonatedUser()).thenReturn(impersonatedUser);
 
             // Set impersonating user.as AuthenticationResult subject.
             authenticationResult.setSubject(impersonator);
