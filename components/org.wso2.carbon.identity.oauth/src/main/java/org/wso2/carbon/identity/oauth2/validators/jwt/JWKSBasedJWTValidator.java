@@ -58,9 +58,7 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
@@ -79,7 +77,11 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
         (bounded by the "iat", "nbf" and "exp" claims). */
         this.jwtProcessor = new DefaultJWTProcessor<>();
-        jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier<>(new JOSEObjectType("at+jwt")));
+        jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier<>(
+                JOSEObjectType.JWT,
+                new JOSEObjectType("at+jwt"),
+                null
+        ));
     }
 
     @Override
