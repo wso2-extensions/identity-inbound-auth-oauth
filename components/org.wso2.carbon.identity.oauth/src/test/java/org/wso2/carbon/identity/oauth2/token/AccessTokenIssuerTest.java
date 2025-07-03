@@ -87,7 +87,6 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 @WithCarbonHome
 public class AccessTokenIssuerTest {
 
-    private Map<String, AuthorizationGrantHandler> supportedGrantTypes;
     private AutoCloseable mocks;
 
     @Mock
@@ -135,7 +134,6 @@ public class AccessTokenIssuerTest {
         setSystemProperties();
         clearAccessTokenIssuerInstance();
         mocks = openMocks(this);
-        supportedGrantTypes = new HashMap<>();
     }
 
     @AfterMethod
@@ -207,6 +205,7 @@ public class AccessTokenIssuerTest {
             when(grantHandler.validateScope(any())).thenReturn(true);
             when(grantHandler.issue(any())).thenReturn(tokenResp);
 
+            Map<String, AuthorizationGrantHandler> supportedGrantTypes = new HashMap<>();
             supportedGrantTypes.put(OAuthConstants.GrantTypes.CLIENT_CREDENTIALS, grantHandler);
             when(mockedOAuthServerConfig.getSupportedGrantTypes()).thenReturn(supportedGrantTypes);
             oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
