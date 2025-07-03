@@ -85,8 +85,9 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
-            processClaimObject(claims);
+            Map<String, Object> claims = this.claimsSet.toJSONObject();
+            JSONObject jsonClaims = new JSONObject(claims);
+            processClaimObject(jsonClaims);
         }
     }
 
@@ -118,8 +119,9 @@ public class RequestObject implements Serializable {
                     "the Request Object.");
         }
         if (this.claimsSet.getClaim(CLAIMS) != null) {
-            JSONObject claims = this.claimsSet.toJSONObject();
-            processClaimObject(claims);
+            Map<String, Object> claims = this.claimsSet.toJSONObject();
+            JSONObject jsonClaims = new JSONObject(claims);
+            processClaimObject(jsonClaims);
         }
     }
 
@@ -142,7 +144,7 @@ public class RequestObject implements Serializable {
         try {
             Map<String, List<RequestedClaim>> claimsforClaimRequestor = new HashMap<>();
             if (jsonObjectRequestedClaims.get(CLAIMS) != null) {
-                JSONObject jsonObjectClaim = (JSONObject) jsonObjectRequestedClaims.get(CLAIMS);
+                Map<String, Object> jsonObjectClaim = (Map<String, Object>) jsonObjectRequestedClaims.get(CLAIMS);
 
                 //To iterate the claims json object to fetch the claim requestor and all requested claims.
                 for (Map.Entry<String, Object> requesterClaimsMap : jsonObjectClaim.entrySet()) {
@@ -152,16 +154,17 @@ public class RequestObject implements Serializable {
                         // Get requested claim object
                         Object requestedClaimObject = jsonObjectClaim.get(requesterClaimsMap.getKey());
                         // Extract all requested claims if attribute is an JSONObject
-                        if (requestedClaimObject instanceof JSONObject) {
-                            JSONObject jsonObjectAllRequestedClaims  = (JSONObject)
+                        if (requestedClaimObject instanceof Map) {
+                            Map<String, Object> jsonObjectAllRequestedClaims  = (Map<String, Object>)
                                     jsonObjectClaim.get(requesterClaimsMap.getKey());
                             if (jsonObjectAllRequestedClaims != null) {
                                 for (Map.Entry<String, Object> requestedClaims : jsonObjectAllRequestedClaims
                                         .entrySet()) {
-                                    JSONObject jsonObjectClaimAttributes = null;
+                                    Map<String, Object> jsonObjectClaimAttributes = null;
                                     if (jsonObjectAllRequestedClaims.get(requestedClaims.getKey()) != null) {
                                         jsonObjectClaimAttributes =
-                                                (JSONObject) jsonObjectAllRequestedClaims.get(requestedClaims.getKey());
+                                                (Map<String, Object>) jsonObjectAllRequestedClaims.get(
+                                                        requestedClaims.getKey());
                                     }
                                     populateRequestedClaimValues(requestedClaimsList, jsonObjectClaimAttributes,
                                             requestedClaims.getKey(), requesterClaimsMap.getKey());
@@ -180,7 +183,7 @@ public class RequestObject implements Serializable {
     }
 
     private void populateRequestedClaimValues(List<RequestedClaim> requestedClaims,
-                                              JSONObject jsonObjectClaimAttributes, String claimName,
+                                              Map<String, Object> jsonObjectClaimAttributes, String claimName,
                                               String claimType) {
 
         RequestedClaim claim = new RequestedClaim();
@@ -198,13 +201,16 @@ public class RequestObject implements Serializable {
                     } else if (VALUE.equals(claimAttributes.getKey())) {
                         claim.setValue((String) value);
                     } else if (VALUES.equals(claimAttributes.getKey())) {
-                        JSONArray jsonArray = (JSONArray) value;
-                        if (jsonArray != null && jsonArray.size() > 0) {
-                            List<String> values = new ArrayList<>();
-                            for (Object aJsonArray : jsonArray) {
-                                values.add(aJsonArray.toString());
+                        Object valuesObj = value;
+                        if (valuesObj instanceof List<?>) {
+                            List<?> jsonArray = (List<?>) valuesObj;
+                            if (!jsonArray.isEmpty()) {
+                                List<String> values = new ArrayList<>();
+                                for (Object item : jsonArray) {
+                                    values.add(item.toString());
+                                }
+                                claim.setValues(values);
                             }
-                            claim.setValues(values);
                         }
                     }
                 }
