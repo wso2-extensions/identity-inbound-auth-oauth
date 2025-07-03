@@ -121,8 +121,9 @@ public class OAuth2TokenUtil {
         tokenIssuanceData.put(OIDCConstants.Event.TOKEN_CATEGORY, tokenIssuanceDO.getTokenBillingCategory());
         tokenIssuanceData.put(OIDCConstants.Event.APP_RESIDENT_TENANT_ID, tokenIssuanceDO.getAppResidentTenantId());
         tokenIssuanceData.put(OIDCConstants.Event.ISSUED_TIME, tokenIssuanceDO.getIssuedTime());
-        tokenIssuanceData.put(OIDCConstants.Event.AUTHORIZED_ORGANIZATION_ID,
-                tokenIssuanceDO.getAuthorizedOrganizationId());
+        tokenIssuanceData.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, tokenIssuanceDO.getIssuerOrganizationId());
+        tokenIssuanceData.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID,
+                tokenIssuanceDO.getAccessingOrganizationId());
         return new Event(eventName, tokenIssuanceData);
     }
 

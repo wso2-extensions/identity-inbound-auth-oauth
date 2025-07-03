@@ -60,6 +60,8 @@ import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
+import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
 import org.wso2.carbon.user.core.common.AbstractUserStoreManager;
@@ -119,6 +121,7 @@ public class AccessTokenIssuerTest {
 
     private final String testTenantDomain = "carbon.super";
     private final String testClientId = "dExLASaD1Flb_fx7ZecfAA3n1HRka";
+    private final String testOrganizationId = "exLASaD1Flb_fx7ZecfAA3n1HRkaf";
 
     @AfterClass
     public void cleanUp() throws Exception {
@@ -175,7 +178,7 @@ public class AccessTokenIssuerTest {
 
     @Test(dataProvider = "oAuth2AccessTokenReqDTODataProvider")
     public void testTriggerPostIssueTokenEvent(OAuth2AccessTokenReqDTO dto, String token) throws IdentityException,
-            IdentityApplicationManagementException, UserStoreException {
+            IdentityApplicationManagementException, UserStoreException, OrganizationManagementException {
 
         try (
                 MockedStatic<LoggerUtils> loggerUtilsMockedStatic = mockStatic(LoggerUtils.class);
@@ -223,13 +226,16 @@ public class AccessTokenIssuerTest {
 
                 AccessTokenDO tokenDO = mock(AccessTokenDO.class);
                 when(tokenDO.getAppResidentTenantId()).thenReturn(-1);
-                when(tokenDO.getAuthorizedOrganizationId()).thenReturn("wso2");
 
                 OAuthCache cache = mock(OAuthCache.class);
                 oAuthCache.when(OAuthCache::getInstance).thenReturn(cache);
                 when(cache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(tokenDO);
                 when(oAuthComponentServiceHolderMock.getOAuthEventInterceptorProxy())
                         .thenReturn(mock(OAuthEventInterceptor.class));
+
+                OrganizationManager organizationManager = mock(OrganizationManager.class);
+                when(oAuthComponentServiceHolderMock.getOrganizationManager()).thenReturn(organizationManager);
+                when(organizationManager.resolveOrganizationId(testTenantDomain)).thenReturn(testOrganizationId);
 
                 OAuth2ServiceComponentHolder componentHolder = mock(OAuth2ServiceComponentHolder.class);
                 when(componentHolder.getAuthorizationDetailsService())

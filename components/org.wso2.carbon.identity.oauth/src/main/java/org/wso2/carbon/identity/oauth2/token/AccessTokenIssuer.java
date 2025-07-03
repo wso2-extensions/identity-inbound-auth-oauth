@@ -426,7 +426,7 @@ public class AccessTokenIssuer {
     }
 
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
-                                                     OAuthTokenReqMessageContext tokReqMsgCtx) {
+                                                       OAuthTokenReqMessageContext tokReqMsgCtx) {
 
         boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
                 .isUserSessionImpersonationEnabled();
@@ -1375,7 +1375,7 @@ public class AccessTokenIssuer {
                 .getOAuthEventInterceptorProxy();
         try {
             triggerPostIssueTokenEvent(tokenReqDTO, tokenRespDTO, tokReqMsgCtx);
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | OrganizationManagementException e) {
             log.error("Error while triggering post issue token event.", e);
         }
 
@@ -1411,7 +1411,7 @@ public class AccessTokenIssuer {
     private static void triggerPostIssueTokenEvent(OAuth2AccessTokenReqDTO tokenReqDTO,
                                                    OAuth2AccessTokenRespDTO tokenRespDTO,
                                                    OAuthTokenReqMessageContext tokReqMsgCtx)
-            throws IdentityOAuth2Exception {
+            throws IdentityOAuth2Exception, OrganizationManagementException {
 
         if (tokenRespDTO == null || StringUtils.isBlank(tokenRespDTO.getAccessToken())) {
             return;
@@ -1441,7 +1441,9 @@ public class AccessTokenIssuer {
         int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
         String issuedTime = accessTokenDO.getIssuedTime() != null ?
                 accessTokenDO.getIssuedTime().toString() : StringUtils.EMPTY;
-        String authorizedOrganizationId = accessTokenDO.getAuthorizedOrganizationId();
+        String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                .resolveOrganizationId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
+        String accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
         if (!existingTokenUsed(tokReqMsgCtx)) {
             OAuth2TokenUtil.postIssueToken(new TokenIssuanceDO.Builder().
                     tokenId(tokenRespDTO.getTokenId()).
@@ -1452,7 +1454,8 @@ public class AccessTokenIssuer {
                     tokenBillingCategory(OIDCConstants.TokenBillingCategory.M2M_ACCESS_TOKEN).
                     appResidentTenantId(appResidentTenantId).
                     issuedTime(issuedTime).
-                    authorizedOrganizationId(authorizedOrganizationId).
+                    issuerOrganizationId(organizationId).
+                    accessingOrganization(accessingOrganizationId).
                     build()
             );
         }
@@ -1547,8 +1550,8 @@ public class AccessTokenIssuer {
             AuthorizationGrantCache.getInstance().addToCacheByToken(newCacheKey, authorizationGrantCacheEntry);
 
             log.debug("Customized audience list and access token attributes from pre issue access token actions " +
-                            "are persisted in the AuthorizationGrantCache against the token id: " +
-                            tokenRespDTO.getTokenId());
+                    "are persisted in the AuthorizationGrantCache against the token id: " +
+                    tokenRespDTO.getTokenId());
         }
     }
 

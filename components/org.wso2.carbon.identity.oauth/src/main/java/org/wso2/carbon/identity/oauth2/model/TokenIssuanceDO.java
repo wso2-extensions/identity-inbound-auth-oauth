@@ -32,7 +32,8 @@ public class TokenIssuanceDO {
     private final OIDCConstants.TokenBillingCategory tokenBillingCategory;
     private final int appResidentTenantId;
     private final String issuedTime;
-    private final String authorizedOrganizationId;
+    private final String accessingOrganizationId;
+    private final String issuerOrganizationId;
 
     private TokenIssuanceDO(Builder builder) {
 
@@ -44,7 +45,8 @@ public class TokenIssuanceDO {
         this.tokenBillingCategory = builder.tokenBillingCategory;
         this.appResidentTenantId = builder.appResidentTenantId;
         this.issuedTime = builder.issuedTime;
-        this.authorizedOrganizationId = builder.authorizedOrganizationId;
+        this.accessingOrganizationId = builder.accessingOrganizationId;
+        this.issuerOrganizationId = builder.issuerOrganizationId;
     }
 
     public String getTokenId() {
@@ -87,9 +89,14 @@ public class TokenIssuanceDO {
         return issuedTime;
     }
 
-    public String getAuthorizedOrganizationId() {
+    public String getAccessingOrganizationId() {
 
-        return authorizedOrganizationId;
+        return accessingOrganizationId;
+    }
+
+    public String getIssuerOrganizationId() {
+
+        return issuerOrganizationId;
     }
 
     /**
@@ -105,7 +112,8 @@ public class TokenIssuanceDO {
         private OIDCConstants.TokenBillingCategory tokenBillingCategory;
         private int appResidentTenantId;
         private String issuedTime;
-        private String authorizedOrganizationId;
+        private String accessingOrganizationId;
+        private String issuerOrganizationId;
 
         public Builder tokenId(String tokenId) {
 
@@ -155,9 +163,15 @@ public class TokenIssuanceDO {
             return this;
         }
 
-        public Builder authorizedOrganizationId(String authorizedOrganizationId) {
+        public Builder issuerOrganizationId(String issuerOrganizationId) {
 
-            this.authorizedOrganizationId = authorizedOrganizationId;
+            this.issuerOrganizationId = issuerOrganizationId;
+            return this;
+        }
+
+        public Builder accessingOrganization(String accessingOrganization) {
+
+            this.accessingOrganizationId = accessingOrganization;
             return this;
         }
 

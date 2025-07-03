@@ -60,7 +60,7 @@ public class OAuth2TokenUtilTest {
                     .tokenBillingCategory(OIDCConstants.TokenBillingCategory.M2M_ACCESS_TOKEN)
                     .appResidentTenantId(1)
                     .issuedTime("2023-10-01T12:00:00Z")
-                    .authorizedOrganizationId("org123").build()
+                    .accessingOrganization("org123").build()
                 }
         };
     }

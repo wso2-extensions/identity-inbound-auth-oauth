@@ -60,7 +60,8 @@ public class OIDCConstants {
         public static final String TOKEN_CATEGORY = "TOKEN_CATEGORY";
         public static final String APP_RESIDENT_TENANT_ID = "APP_RESIDENT_TENANT_ID";
         public static final String ISSUED_TIME = "ISSUED_TIME";
-        public static final String AUTHORIZED_ORGANIZATION_ID = "AUTHORIZED_ORGANIZATION_ID";
+        public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
+        public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
     }
 
     /**
