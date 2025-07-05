@@ -132,7 +132,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
             addAuthorizationCodeScopes(authzCodeDO, connection, tenantId);
             // Add the requested actor against the authorization code if it is available.
-            if (StringUtils.isNotEmpty(authzCodeDO.getRequestedActor()) && OAuth2Util.isAgentIdentityEnabled()) {
+            if (StringUtils.isNotEmpty(authzCodeDO.getRequestedActor()) && IdentityUtil.isAgentIdentityEnabled()) {
                 addAuthorizationCodeActor(authzCodeDO, connection, tenantId);
             }
             IdentityDatabaseUtil.commitTransaction(connection);
@@ -286,7 +286,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     List<String> scopes = getAuthorizationCodeScopes(connection, codeId, tenantId);
                     scopeString = OAuth2Util.buildScopeString(scopes.toArray(new String[0]));
                 }
-                if (OAuth2Util.isAgentIdentityEnabled()) {
+                if (IdentityUtil.isAgentIdentityEnabled()) {
                     requestedActor = getAuthorizationCodeActor(connection, codeId, tenantId);
                 }
                 AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,

@@ -616,7 +616,7 @@ public class AuthorizationCodeGrantHandler extends AbstractAuthorizationGrantHan
     private void validateRequestedActor(AuthzCodeDO authzCodeBean, OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        if (!OAuth2Util.isAgentIdentityEnabled()) {
+        if (!IdentityUtil.isAgentIdentityEnabled()) {
             return;
         }
         String actorToken = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getActorToken();

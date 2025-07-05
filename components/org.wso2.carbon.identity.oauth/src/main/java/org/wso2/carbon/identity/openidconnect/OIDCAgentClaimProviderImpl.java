@@ -18,12 +18,12 @@ package org.wso2.carbon.identity.openidconnect;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,8 +50,8 @@ public class OIDCAgentClaimProviderImpl implements ClaimProvider {
                                                    OAuth2AccessTokenRespDTO tokenRespDTO)
             throws IdentityOAuth2Exception {
 
-        String agentIdentityUserstoreName = OAuth2Util.getAgentIdentityUserstoreName();
-        if (StringUtils.isNotEmpty(agentIdentityUserstoreName) && agentIdentityUserstoreName
+        String agentIdentityUserStoreName = IdentityUtil.getAgentIdentityUserstoreName();
+        if (StringUtils.isNotEmpty(agentIdentityUserStoreName) && agentIdentityUserStoreName
                 .equalsIgnoreCase(tokenReqMessageContext.getAuthorizedUser().getUserStoreDomain())) {
             Map<String, Object> agentMap = new HashMap<>();
             agentMap.put(AUT, AGENT);
