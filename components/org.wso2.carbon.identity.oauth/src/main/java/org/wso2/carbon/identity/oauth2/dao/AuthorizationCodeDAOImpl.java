@@ -131,6 +131,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             prepStmt.execute();
 
             addAuthorizationCodeScopes(authzCodeDO, connection, tenantId);
+            // Add the requested actor against the authorization code if it is available.
+            if (StringUtils.isNotEmpty(authzCodeDO.getRequestedActor()) && IdentityUtil.isAgentIdentityEnabled()) {
+                addAuthorizationCodeActor(authzCodeDO, connection, tenantId);
+            }
             IdentityDatabaseUtil.commitTransaction(connection);
         } catch (SQLException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
@@ -140,6 +144,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             IdentityDatabaseUtil.closeAllConnections(connection, null, prepStmt);
         }
     }
+
 
     @Override
     public void deactivateAuthorizationCodes(List<AuthzCodeDO> authzCodeDOs) throws IdentityOAuth2Exception {
@@ -221,6 +226,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             String subjectIdentifier = null;
             String pkceCodeChallenge = null;
             String pkceCodeChallengeMethod = null;
+            String requestedActor = null;
 
             Timestamp issuedTime = null;
             long validityPeriod = 0;
@@ -280,9 +286,12 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                     List<String> scopes = getAuthorizationCodeScopes(connection, codeId, tenantId);
                     scopeString = OAuth2Util.buildScopeString(scopes.toArray(new String[0]));
                 }
+                if (IdentityUtil.isAgentIdentityEnabled()) {
+                    requestedActor = getAuthorizationCodeActor(connection, codeId, tenantId);
+                }
                 AuthzCodeDO codeDo = createAuthzCodeDo(consumerKey, authorizationKey, user, codeState,
                         scopeString, callbackUrl, codeId, pkceCodeChallenge, pkceCodeChallengeMethod, issuedTime,
-                        validityPeriod, tokenBindingReference);
+                        validityPeriod, tokenBindingReference, requestedActor);
                 result = new AuthorizationCodeValidationResult(codeDo, tokenId);
             }
 
@@ -830,6 +839,18 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
         }
     }
 
+    private void addAuthorizationCodeActor(AuthzCodeDO authzCodeDO, Connection connection, int tenantId)
+            throws SQLException {
+
+        try (PreparedStatement addActorPrepStmt = connection.prepareStatement(SQLQueries.ADD_OAUTH2_CODE_ACTOR)) {
+            String authzCodeId = authzCodeDO.getAuthzCodeId();
+            addActorPrepStmt.setString(1, authzCodeId);
+            addActorPrepStmt.setString(2, authzCodeDO.getRequestedActor());
+            addActorPrepStmt.setInt(3, tenantId);
+            addActorPrepStmt.execute();
+        }
+    }
+
     private List<String> getAuthorizationCodeScopes(Connection connection, String codeId, int tenantId)
             throws SQLException {
 
@@ -845,6 +866,22 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
             }
         }
         return scopes;
+    }
+
+    private String getAuthorizationCodeActor(Connection connection, String codeId, int tenantId)
+            throws SQLException {
+
+        String requestedActor = null;
+        try (PreparedStatement actorPrepStmt = connection.prepareStatement(SQLQueries.GET_OAUTH2_CODE_ACTOR)) {
+            actorPrepStmt.setString(1, codeId);
+            actorPrepStmt.setInt(2, tenantId);
+            try (ResultSet actorResultSet = actorPrepStmt.executeQuery()) {
+                if (actorResultSet.next()) {
+                    requestedActor = actorResultSet.getString(1);
+                }
+            }
+        }
+        return requestedActor;
     }
 
     private String getAuthorizationCodeByCodeId(String codeId) throws IdentityOAuth2Exception {
@@ -913,11 +950,12 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
     private AuthzCodeDO createAuthzCodeDo(String consumerKey, String authorizationKey, AuthenticatedUser user,
                                           String codeState, String scopeString, String callbackUrl, String codeId,
                                           String pkceCodeChallenge, String pkceCodeChallengeMethod,
-                                          Timestamp issuedTime, long validityPeriod, String tokenBindingReference) {
+                                          Timestamp issuedTime, long validityPeriod, String tokenBindingReference,
+                                          String requestedActor) {
 
         return new AuthzCodeDO(user, OAuth2Util.buildScopeArray(scopeString), issuedTime, validityPeriod, callbackUrl,
                 consumerKey, authorizationKey, codeId, codeState, pkceCodeChallenge, pkceCodeChallengeMethod,
-                tokenBindingReference);
+                tokenBindingReference, requestedActor);
     }
 
     private boolean isActiveAuthzCodeIssuedForOidcFlow(String[] scope, long issuedTimeInMillis,

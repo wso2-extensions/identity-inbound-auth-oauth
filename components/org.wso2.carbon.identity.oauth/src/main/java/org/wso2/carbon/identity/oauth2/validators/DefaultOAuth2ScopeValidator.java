@@ -107,7 +107,8 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
-                        .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
+                        .getAuthorizationReqDTO().getUser(), appId, null, null,
+                tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         handleImpersonationScope(authzReqMessageContext, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
