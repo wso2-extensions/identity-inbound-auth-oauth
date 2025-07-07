@@ -29,9 +29,11 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.model.TokenIssuanceDO;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -50,23 +52,25 @@ public class OAuth2TokenUtilTest {
     @DataProvider
     public static Object[][] postTokenDataProvider() {
 
+        Map<String, Object> eventProperties = new HashMap<>();
+        eventProperties.put(OIDCConstants.Event.TOKEN_ID, "12345");
+        eventProperties.put(OIDCConstants.Event.TOKEN_TYPE, "Bearer");
+        eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN, "carbon.super");
+        eventProperties.put(OIDCConstants.Event.CLIENT_ID, "client123");
+        eventProperties.put(OIDCConstants.Event.GRANT_TYPE, "client_credentials");
+        eventProperties.put(OIDCConstants.Event.APP_RESIDENT_TENANT_ID, 1);
+        eventProperties.put(OIDCConstants.Event.ISSUED_TIME, "2023-10-01T12:00:00Z");
+        eventProperties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, "org123");
+
         return new Object[][] {
-                { new TokenIssuanceDO.Builder()
-                    .tokenId("12345")
-                    .tokenType("Bearer")
-                    .tenantDomain("carbon.super")
-                    .clientId("client123")
-                    .grantType("client_credentials")
-                    .tokenBillingCategory(OIDCConstants.TokenBillingCategory.M2M_ACCESS_TOKEN)
-                    .appResidentTenantId(1)
-                    .issuedTime("2023-10-01T12:00:00Z")
-                    .accessingOrganization("org123").build()
+                {
+                        eventProperties
                 }
         };
     }
 
     @Test(dataProvider = "postTokenDataProvider")
-    public void testPostIssueToken(TokenIssuanceDO tokenIssuanceDO) throws Exception {
+    public void testPostIssueToken(Map<String, Object>  eventProperties) throws Exception {
 
         try (
                 MockedStatic<OpenIDConnectServiceComponentHolder> openIDConnectServiceComponentHolder
@@ -74,12 +78,12 @@ public class OAuth2TokenUtilTest {
         ) {
             openIDConnectServiceComponentHolder.when(OpenIDConnectServiceComponentHolder::getIdentityEventService)
                     .thenReturn(identityEventService);
-            OAuth2TokenUtil.postIssueToken(tokenIssuanceDO);
+            OAuth2TokenUtil.postIssueToken(eventProperties);
         }
     }
 
     @Test(dataProvider = "postTokenDataProvider")
-    public void testPostIssueTokenWithException(TokenIssuanceDO tokenIssuanceDO) throws Exception {
+    public void testPostIssueTokenWithException(Map<String, Object> eventProperties) throws Exception {
 
         try (
                 MockedStatic<OpenIDConnectServiceComponentHolder> openIDConnectServiceComponentHolder
@@ -89,11 +93,12 @@ public class OAuth2TokenUtilTest {
                     .thenReturn(identityEventService);
             doThrow(new IdentityEventException("Error posting token issuance event"))
                     .when(identityEventService).handleEvent(any(Event.class));
-            OAuth2TokenUtil.postIssueToken(tokenIssuanceDO);
+            OAuth2TokenUtil.postIssueToken(eventProperties);
         } catch (IdentityOAuth2Exception e) {
             // Expected exception, test should pass.
             Assert.assertEquals(e.getMessage(), "Error while invoking the request object " +
-                    "persistence handler when issuing the access token id: " + tokenIssuanceDO.getTokenId());
+                    "persistence handler when issuing the access token id: " +
+                    eventProperties.get(OIDCConstants.Event.TOKEN_ID));
         }
     }
 }

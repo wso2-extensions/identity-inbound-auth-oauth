@@ -80,7 +80,6 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotif
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
-import org.wso2.carbon.identity.oauth2.model.TokenIssuanceDO;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
 import org.wso2.carbon.identity.oauth2.rar.validator.DefaultAuthorizationDetailsValidator;
@@ -1438,26 +1437,23 @@ public class AccessTokenIssuer {
         if (accessTokenDO == null) {
             throw new IdentityOAuth2ServerException("Access token not found in the cache");
         }
-        int appResidentTenantId = accessTokenDO.getAppResidentTenantId();
         String issuedTime = accessTokenDO.getIssuedTime() != null ?
                 accessTokenDO.getIssuedTime().toString() : StringUtils.EMPTY;
         String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                 .resolveOrganizationId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
         String accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
         if (!existingTokenUsed(tokReqMsgCtx)) {
-            OAuth2TokenUtil.postIssueToken(new TokenIssuanceDO.Builder().
-                    tokenId(tokenRespDTO.getTokenId()).
-                    tenantDomain(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain()).
-                    tokenType(accessTokenDO.getTokenType()).
-                    clientId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId()).
-                    grantType(tokenReqDTO.getGrantType()).
-                    tokenBillingCategory(OIDCConstants.TokenBillingCategory.M2M_ACCESS_TOKEN).
-                    appResidentTenantId(appResidentTenantId).
-                    issuedTime(issuedTime).
-                    issuerOrganizationId(organizationId).
-                    accessingOrganization(accessingOrganizationId).
-                    build()
-            );
+            Map<String, Object> eventProperties = new HashMap<>();
+            eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenRespDTO.getTokenId());
+            eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN,
+                    tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
+            eventProperties.put(OIDCConstants.Event.TOKEN_TYPE, accessTokenDO.getTokenType());
+            eventProperties.put(OIDCConstants.Event.CLIENT_ID, tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+            eventProperties.put(OIDCConstants.Event.GRANT_TYPE, tokenReqDTO.getGrantType());
+            eventProperties.put(OIDCConstants.Event.ISSUED_TIME, issuedTime);
+            eventProperties.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, organizationId);
+            eventProperties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+            OAuth2TokenUtil.postIssueToken(eventProperties);
         }
     }
 

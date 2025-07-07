@@ -225,7 +225,6 @@ public class AccessTokenIssuerTest {
                         .thenReturn(mock(AuthorizationDetailsProcessorFactory.class));
 
                 AccessTokenDO tokenDO = mock(AccessTokenDO.class);
-                when(tokenDO.getAppResidentTenantId()).thenReturn(-1);
 
                 OAuthCache cache = mock(OAuthCache.class);
                 oAuthCache.when(OAuthCache::getInstance).thenReturn(cache);
@@ -283,13 +282,13 @@ public class AccessTokenIssuerTest {
                 AccessTokenIssuer.getInstance().issue(dto);
 
                 oAuth2TokenUtil.verify(() -> OAuth2TokenUtil.postIssueToken(
-                                argThat((tokenIssuanceDO) -> {
-                                            Assert.assertEquals(tokenIssuanceDO.getTenantDomain(), testTenantDomain);
-                                            Assert.assertEquals(tokenIssuanceDO.getClientId(), testClientId);
-                                            Assert.assertEquals(tokenIssuanceDO.getGrantType(),
+                                argThat((eventProperties) -> {
+                                            Assert.assertEquals(eventProperties.get(OIDCConstants.Event.TENANT_DOMAIN),
+                                                    testTenantDomain);
+                                            Assert.assertEquals(eventProperties.get(OIDCConstants.Event.CLIENT_ID),
+                                                    testClientId);
+                                            Assert.assertEquals(eventProperties.get(OIDCConstants.Event.GRANT_TYPE),
                                                     OAuthConstants.GrantTypes.CLIENT_CREDENTIALS);
-                                            Assert.assertEquals(tokenIssuanceDO.getTokenBillingCategory(),
-                                                    OIDCConstants.TokenBillingCategory.M2M_ACCESS_TOKEN);
                                             return true;
                                         }
                                 )),
