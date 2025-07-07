@@ -103,20 +103,20 @@ public class AccessTokenIssuerTest {
     @Mock
     private OAuthAppDO appDO;
 
-    private final String jwt = "eyJ4NXQiOiJ4WFJRdkZUOFNtLUpQUEFrY0loNHlUTlhKTkkiLCJraWQiOiJNREExWXpKbU0yWmxZV1E1TldN"
-            + "NE9EVXpaRFk1Wm1WaE5UazJOVEE0TURReFltRmlOakE0TkRKbVlqVXdNemd3TldSbE9XVmtZV0UxTUdFMFpU"
-            + "ZzFNd19SUzI1NiIsInR5cCI6ImF0K2p3dCIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJkRXhMQVNhRDFGbGJf"
-            + "eDdaZWNmQUEzbjFIUmthIiwiYXV0IjoiQVBQTElDQVRJT04iLCJpc3MiOiJodHRwczovL2xvY2FsaG9zdDo5"
-            + "NDQzL3Qvd3NvMi9vYXV0aDIvdG9rZW4iLCJjbGllbnRfaWQiOiJkRXhMQVNhRDFGbGJfeDdaZWNmQUEzbjFI"
-            + "UmthIiwiYXVkIjoiZEV4TEFTYUQxRmxiX3g3WmVjZkFBM24xSFJrYSIsIm5iZiI6MTc1MTIxODUzNiwiYXpw"
-            + "IjoiZEV4TEFTYUQxRmxiX3g3WmVjZkFBM24xSFJrYSIsIm9yZ19pZCI6IjA5MDdhNGEyLTZlZDktNDhlNC1h"
-            + "YTZjLTc5NDkzNmE3OTgxYSIsInNjb3BlIjoicHJvZmlsZSIsImV4cCI6MTc1MTIyMjEzNiwib3JnX25hbWUi"
-            + "OiJ3c28yIiwiaWF0IjoxNzUxMjE4NTM2LCJqdGkiOiI2YTFhOGQ0MS02YzRlLTRiNmYtYjkwNS00MDVhZTA0"
-            + "MWVjYjAiLCJvcmdfaGFuZGxlIjoid3NvMiJ9.qiwViNy659M9hdqNWSCXoR7XP0e-1ZTFnuQOK-lbO6qfv-s"
-            + "3PTwqwTLIEjFPXCXeFcrHA_UL5_41Klm12YbvodF87TtbLLqa1P50HHUxGUD9az6mLiJgdUHZeGrjrLFcGyf"
-            + "HvADa3CmdDyXuKZw91Cos5fSE2DI1XuqfJXMExj3XYV5YNS_PURiLQjueFsZxaQF94qwAgPeIYJeXWLTBMya"
-            + "8APTVJa5SIn_vkpepJ-lSBMKaOMphHvotoc1COZg6D8uUI2tvyRuY6U9G8_TuKVJ3sz1Yw7a00pdd1DnpPf4"
-            + "QYUodY0IF2AJc0caspZahZnCJBK2YrqP8-P3RsJ1dJA";
+    private final String testJWT = "eyJ4NXQiOiJ4WFJRdkZUOFNtLUpQUEFrY0loNHlUTlhKTkkiLCJraWQiOiJNREEx" +
+            "WXpKbU0yWmxZV1E1TldNNE9EVXpaRFk1Wm1WaE5UazJOVEE0TURReFltRmlOakE0TkRKbVlqVXdNemd3TldSbE9" +
+            "XVmtZV0UxTUdFMFpUZzFNd19SUzI1NiIsInR5cCI6ImF0K2p3dCIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJkRX" +
+            "hMQVNhRDFGbGJfeDdaZWNmQUEzbjFIUmthIiwiYXV0IjoiQVBQTElDQVRJT04iLCJpc3MiOiJodHRwczovL2xvY" +
+            "2FsaG9zdDo5NDQzL3Qvd3NvMi9vYXV0aDIvdG9rZW4iLCJjbGllbnRfaWQiOiJkRXhMQVNhRDFGbGJfeDdaZWNm" +
+            "QUEzbjFIUmthIiwiYXVkIjoiZEV4TEFTYUQxRmxiX3g3WmVjZkFBM24xSFJrYSIsIm5iZiI6MTc1MTIxODUzNiw" +
+            "iYXpwIjoiZEV4TEFTYUQxRmxiX3g3WmVjZkFBM24xSFJrYSIsIm9yZ19pZCI6IjA5MDdhNGEyLTZlZDktNDhlNC" +
+            "1hYTZjLTc5NDkzNmE3OTgxYSIsInNjb3BlIjoicHJvZmlsZSIsImV4cCI6MTc1MTIyMjEzNiwib3JnX25hbWUiO" +
+            "iJ3c28yIiwiaWF0IjoxNzUxMjE4NTM2LCJqdGkiOiI2YTFhOGQ0MS02YzRlLTRiNmYtYjkwNS00MDVhZTA0MWVj" +
+            "YjAiLCJvcmdfaGFuZGxlIjoid3NvMiJ9.qiwViNy659M9hdqNWSCXoR7XP0e-1ZTFnuQOK-lbO6qfv-s3PTwqwT" +
+            "LIEjFPXCXeFcrHA_UL5_41Klm12YbvodF87TtbLLqa1P50HHUxGUD9az6mLiJgdUHZeGrjrLFcGyfHvADa3CmdD" +
+            "yXuKZw91Cos5fSE2DI1XuqfJXMExj3XYV5YNS_PURiLQjueFsZxaQF94qwAgPeIYJeXWLTBMya8APTVJa5SIn_v" +
+            "kpepJ-lSBMKaOMphHvotoc1COZg6D8uUI2tvyRuY6U9G8_TuKVJ3sz1Yw7a00pdd1DnpPf4QYUodY0IF2AJc0ca" +
+            "spZahZnCJBK2YrqP8-P3RsJ1dJA";
     private final String opaqueToken = "9f6a3e0b0c1f4676ad6d87e4f03de1727b49c8960bc983d163a6ed238fe5cccf";
 
     private final String testTenantDomain = "carbon.super";
@@ -173,7 +173,7 @@ public class AccessTokenIssuerTest {
         when(dto.getoAuthClientAuthnContext()).thenReturn(context);
         when(context.isMultipleAuthenticatorsEngaged()).thenReturn(false);
         when(context.isAuthenticated()).thenReturn(true);
-        return new Object[][]{{dto, jwt}, {dto, opaqueToken}};
+        return new Object[][]{{dto, testJWT}, {dto, opaqueToken}};
     }
 
     @Test(dataProvider = "oAuth2AccessTokenReqDTODataProvider")
