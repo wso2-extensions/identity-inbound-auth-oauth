@@ -41,7 +41,6 @@ import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
@@ -52,7 +51,6 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.rar.AuthorizationDetailsService;
 import org.wso2.carbon.identity.oauth2.rar.core.AuthorizationDetailsProcessorFactory;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
@@ -102,22 +100,6 @@ public class AccessTokenIssuerTest {
 
     @Mock
     private OAuthAppDO appDO;
-
-    private final String testJWT = "eyJ4NXQiOiJ4WFJRdkZUOFNtLUpQUEFrY0loNHlUTlhKTkkiLCJraWQiOiJNREEx" +
-            "WXpKbU0yWmxZV1E1TldNNE9EVXpaRFk1Wm1WaE5UazJOVEE0TURReFltRmlOakE0TkRKbVlqVXdNemd3TldSbE9" +
-            "XVmtZV0UxTUdFMFpUZzFNd19SUzI1NiIsInR5cCI6ImF0K2p3dCIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJkRX" +
-            "hMQVNhRDFGbGJfeDdaZWNmQUEzbjFIUmthIiwiYXV0IjoiQVBQTElDQVRJT04iLCJpc3MiOiJodHRwczovL2xvY" +
-            "2FsaG9zdDo5NDQzL3Qvd3NvMi9vYXV0aDIvdG9rZW4iLCJjbGllbnRfaWQiOiJkRXhMQVNhRDFGbGJfeDdaZWNm" +
-            "QUEzbjFIUmthIiwiYXVkIjoiZEV4TEFTYUQxRmxiX3g3WmVjZkFBM24xSFJrYSIsIm5iZiI6MTc1MTIxODUzNiw" +
-            "iYXpwIjoiZEV4TEFTYUQxRmxiX3g3WmVjZkFBM24xSFJrYSIsIm9yZ19pZCI6IjA5MDdhNGEyLTZlZDktNDhlNC" +
-            "1hYTZjLTc5NDkzNmE3OTgxYSIsInNjb3BlIjoicHJvZmlsZSIsImV4cCI6MTc1MTIyMjEzNiwib3JnX25hbWUiO" +
-            "iJ3c28yIiwiaWF0IjoxNzUxMjE4NTM2LCJqdGkiOiI2YTFhOGQ0MS02YzRlLTRiNmYtYjkwNS00MDVhZTA0MWVj" +
-            "YjAiLCJvcmdfaGFuZGxlIjoid3NvMiJ9.qiwViNy659M9hdqNWSCXoR7XP0e-1ZTFnuQOK-lbO6qfv-s3PTwqwT" +
-            "LIEjFPXCXeFcrHA_UL5_41Klm12YbvodF87TtbLLqa1P50HHUxGUD9az6mLiJgdUHZeGrjrLFcGyfHvADa3CmdD" +
-            "yXuKZw91Cos5fSE2DI1XuqfJXMExj3XYV5YNS_PURiLQjueFsZxaQF94qwAgPeIYJeXWLTBMya8APTVJa5SIn_v" +
-            "kpepJ-lSBMKaOMphHvotoc1COZg6D8uUI2tvyRuY6U9G8_TuKVJ3sz1Yw7a00pdd1DnpPf4QYUodY0IF2AJc0ca" +
-            "spZahZnCJBK2YrqP8-P3RsJ1dJA";
-    private final String opaqueToken = "9f6a3e0b0c1f4676ad6d87e4f03de1727b49c8960bc983d163a6ed238fe5cccf";
 
     private final String testTenantDomain = "carbon.super";
     private final String testClientId = "dExLASaD1Flb_fx7ZecfAA3n1HRka";
@@ -173,11 +155,11 @@ public class AccessTokenIssuerTest {
         when(dto.getoAuthClientAuthnContext()).thenReturn(context);
         when(context.isMultipleAuthenticatorsEngaged()).thenReturn(false);
         when(context.isAuthenticated()).thenReturn(true);
-        return new Object[][]{{dto, testJWT}, {dto, opaqueToken}};
+        return new Object[][]{{dto}, {dto}};
     }
 
     @Test(dataProvider = "oAuth2AccessTokenReqDTODataProvider")
-    public void testTriggerPostIssueTokenEvent(OAuth2AccessTokenReqDTO dto, String token) throws IdentityException,
+    public void testTriggerPostIssueTokenEvent(OAuth2AccessTokenReqDTO dto) throws IdentityException,
             IdentityApplicationManagementException, UserStoreException, OrganizationManagementException {
 
         try (
@@ -199,7 +181,6 @@ public class AccessTokenIssuerTest {
                 MockedStatic<OAuth2TokenUtil> oAuth2TokenUtil = mockStatic(OAuth2TokenUtil.class)
         ) {
             OAuth2AccessTokenRespDTO tokenResp = mock(OAuth2AccessTokenRespDTO.class);
-            when(tokenResp.getAccessToken()).thenReturn(token);
 
             AuthorizationGrantHandler grantHandler = mock(AuthorizationGrantHandler.class);
             when(grantHandler.isAuthorizedClient(any())).thenReturn(true);
@@ -224,11 +205,8 @@ public class AccessTokenIssuerTest {
                 authorizationDetailsProcessorFactoryMockedStatic.when(AuthorizationDetailsProcessorFactory::getInstance)
                         .thenReturn(mock(AuthorizationDetailsProcessorFactory.class));
 
-                AccessTokenDO tokenDO = mock(AccessTokenDO.class);
-
                 OAuthCache cache = mock(OAuthCache.class);
                 oAuthCache.when(OAuthCache::getInstance).thenReturn(cache);
-                when(cache.getValueFromCache(any(OAuthCacheKey.class))).thenReturn(tokenDO);
                 when(oAuthComponentServiceHolderMock.getOAuthEventInterceptorProxy())
                         .thenReturn(mock(OAuthEventInterceptor.class));
 

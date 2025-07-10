@@ -52,12 +52,11 @@ public class OIDCConstants {
         public static final String GRANT_TYPE = "GRANT_TYPE";
         public static final String CLIENT_ID = "CLIENT_ID";
         public static final String TENANT_DOMAIN = "TENANT_DOMAIN";
-        public static final String TOKEN_TYPE = "TOKEN_TYPE";
+        public static final String USER_TYPE = "USER_TYPE";
         public static final String NEW_ACCESS_TOKEN = "NEW_ACCESS_TOKEN";
         public static final String OLD_ACCESS_TOKEN = "OLD_ACCESS_TOKEN";
         public static final String POST_REFRESH_TOKEN = "POST_REFRESH_TOKEN";
         public static final String IS_REQUEST_OBJECT_FLOW = "IS_REQUEST_OBJECT_FLOW";
-        public static final String TOKEN_CATEGORY = "TOKEN_CATEGORY";
         public static final String APP_RESIDENT_TENANT_ID = "APP_RESIDENT_TENANT_ID";
         public static final String ISSUED_TIME = "ISSUED_TIME";
         public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";

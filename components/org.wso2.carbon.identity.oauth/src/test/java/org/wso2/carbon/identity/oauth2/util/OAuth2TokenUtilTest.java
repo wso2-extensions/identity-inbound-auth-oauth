@@ -47,14 +47,14 @@ import static org.mockito.Mockito.mockStatic;
 public class OAuth2TokenUtilTest {
 
     @Mock
-    private IdentityEventService identityEventService;;
+    private IdentityEventService identityEventService;
 
     @DataProvider
     public static Object[][] postTokenDataProvider() {
 
         Map<String, Object> eventProperties = new HashMap<>();
         eventProperties.put(OIDCConstants.Event.TOKEN_ID, "12345");
-        eventProperties.put(OIDCConstants.Event.TOKEN_TYPE, "Bearer");
+        eventProperties.put(OIDCConstants.Event.USER_TYPE, "Bearer");
         eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN, "carbon.super");
         eventProperties.put(OIDCConstants.Event.CLIENT_ID, "client123");
         eventProperties.put(OIDCConstants.Event.GRANT_TYPE, "client_credentials");

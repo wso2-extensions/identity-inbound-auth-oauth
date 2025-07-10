@@ -49,8 +49,6 @@ import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
-import org.wso2.carbon.identity.oauth.cache.OAuthCache;
-import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -64,7 +62,6 @@ import org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailsConstants;
 import org.wso2.carbon.identity.oauth2.IDTokenValidationFailureException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.ResponseHeader;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -78,7 +75,6 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationNotific
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtService;
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.rar.util.AuthorizationDetailsUtils;
 import org.wso2.carbon.identity.oauth2.rar.validator.AuthorizationDetailsValidator;
@@ -88,7 +84,6 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
-import org.wso2.carbon.identity.oauth2.util.JWTUtils;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
@@ -104,7 +99,8 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.text.ParseException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1412,33 +1408,13 @@ public class AccessTokenIssuer {
                                                    OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception, OrganizationManagementException {
 
-        if (tokenRespDTO == null || StringUtils.isBlank(tokenRespDTO.getAccessToken())) {
-            return;
+        long issuedTimeMillis = tokReqMsgCtx.getAccessTokenIssuedTime();
+        String issuedTime = DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(issuedTimeMillis));
+        String userType = StringUtils.EMPTY;
+        Object userTypeObject = tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE);
+        if (userTypeObject instanceof String) {
+            userType = (String) userTypeObject;
         }
-        String cacheKey;
-        if (JWTUtils.isJWT(tokenRespDTO.getAccessToken())) {
-            Optional<JWTClaimsSet> jwtClaimSet;
-            try {
-                jwtClaimSet = JWTUtils.getJWTClaimSet(
-                        JWTUtils.parseJWT(tokenRespDTO.getAccessToken()));
-            } catch (ParseException e) {
-                throw new IdentityOAuth2ServerException("Error while parsing the JWT access token.", e);
-            }
-            jwtClaimSet.orElseThrow(() -> new IdentityOAuth2ServerException("Empty JWT claims set found."));
-            cacheKey = jwtClaimSet.get().getJWTID();
-        } else {
-            cacheKey = tokenRespDTO.getAccessToken();
-        }
-        if (StringUtils.isBlank(cacheKey)) {
-            throw new IdentityOAuth2ServerException("Token cache key not found.");
-        }
-        AccessTokenDO accessTokenDO = (AccessTokenDO) OAuthCache.getInstance().getValueFromCache(
-                new OAuthCacheKey(cacheKey));
-        if (accessTokenDO == null) {
-            throw new IdentityOAuth2ServerException("Access token not found in the cache");
-        }
-        String issuedTime = accessTokenDO.getIssuedTime() != null ?
-                accessTokenDO.getIssuedTime().toString() : StringUtils.EMPTY;
         String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                 .resolveOrganizationId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
         String accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
@@ -1447,7 +1423,7 @@ public class AccessTokenIssuer {
             eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenRespDTO.getTokenId());
             eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN,
                     tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
-            eventProperties.put(OIDCConstants.Event.TOKEN_TYPE, accessTokenDO.getTokenType());
+            eventProperties.put(OIDCConstants.Event.USER_TYPE, userType);
             eventProperties.put(OIDCConstants.Event.CLIENT_ID, tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
             eventProperties.put(OIDCConstants.Event.GRANT_TYPE, tokenReqDTO.getGrantType());
             eventProperties.put(OIDCConstants.Event.ISSUED_TIME, issuedTime);
