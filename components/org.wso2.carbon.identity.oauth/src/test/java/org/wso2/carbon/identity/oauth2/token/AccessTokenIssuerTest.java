@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
+import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -104,6 +105,7 @@ public class AccessTokenIssuerTest {
     private final String testTenantDomain = "carbon.super";
     private final String testClientId = "dExLASaD1Flb_fx7ZecfAA3n1HRka";
     private final String testOrganizationId = "exLASaD1Flb_fx7ZecfAA3n1HRkaf";
+    private static final String ENABLE_POST_TOKEN_ISSUE_EVENT = "PostTokenIssueEvent.Enable";
 
     @AfterClass
     public void cleanUp() throws Exception {
@@ -178,7 +180,8 @@ public class AccessTokenIssuerTest {
                 MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
                 MockedStatic<AuthzUtil> authzUtil = mockStatic(AuthzUtil.class);
                 MockedStatic<OAuthCache> oAuthCache = mockStatic(OAuthCache.class);
-                MockedStatic<OAuth2TokenUtil> oAuth2TokenUtil = mockStatic(OAuth2TokenUtil.class)
+                MockedStatic<OAuth2TokenUtil> oAuth2TokenUtil = mockStatic(OAuth2TokenUtil.class);
+                MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)
         ) {
             OAuth2AccessTokenRespDTO tokenResp = mock(OAuth2AccessTokenRespDTO.class);
 
@@ -256,7 +259,7 @@ public class AccessTokenIssuerTest {
                 identityTenantUtil.when(() -> IdentityTenantUtil.getRealm(any(), any())).thenReturn(userRealm);
 
                 authzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
-
+                identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_POST_TOKEN_ISSUE_EVENT)).thenReturn("true");
                 AccessTokenIssuer.getInstance().issue(dto);
 
                 oAuth2TokenUtil.verify(() -> OAuth2TokenUtil.postIssueToken(
