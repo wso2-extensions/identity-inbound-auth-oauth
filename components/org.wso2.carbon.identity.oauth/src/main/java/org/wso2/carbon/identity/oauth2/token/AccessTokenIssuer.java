@@ -99,8 +99,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.DiagnosticLog;
 
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1428,6 +1426,12 @@ public class AccessTokenIssuer {
             }
             return;
         }
+        if (existingTokenUsed(tokReqMsgCtx)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Existing token is used. Hence skipping the post issue token event.");
+            }
+            return;
+        }
         String userType = StringUtils.EMPTY;
         String organizationId = StringUtils.EMPTY;
         String tenantDomain = StringUtils.EMPTY;
@@ -1435,10 +1439,8 @@ public class AccessTokenIssuer {
         String accessingOrganizationId = StringUtils.EMPTY;
         String tokenId = StringUtils.EMPTY;
         String grantType = StringUtils.EMPTY;
-        String issuedTime;
+        String issuedTime = String.valueOf(tokReqMsgCtx.getAccessTokenIssuedTime());
 
-        issuedTime = DateTimeFormatter.ISO_INSTANT.format(
-                Instant.ofEpochMilli(tokReqMsgCtx.getAccessTokenIssuedTime()));
         Object userTypeObject = tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE);
         if (userTypeObject instanceof String) {
             userType = (String) userTypeObject;
@@ -1463,18 +1465,17 @@ public class AccessTokenIssuer {
         if (tokenReqDTO.getGrantType() != null) {
             grantType = tokenReqDTO.getGrantType();
         }
-        if (!existingTokenUsed(tokReqMsgCtx)) {
-            Map<String, Object> eventProperties = new HashMap<>();
-            eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
-            eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN, tenantDomain);
-            eventProperties.put(OIDCConstants.Event.USER_TYPE, userType);
-            eventProperties.put(OIDCConstants.Event.CLIENT_ID, clientId);
-            eventProperties.put(OIDCConstants.Event.GRANT_TYPE, grantType);
-            eventProperties.put(OIDCConstants.Event.ISSUED_TIME, issuedTime);
-            eventProperties.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, organizationId);
-            eventProperties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
-            OAuth2TokenUtil.postIssueToken(eventProperties);
-        }
+
+        Map<String, Object> eventProperties = new HashMap<>();
+        eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
+        eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN, tenantDomain);
+        eventProperties.put(OIDCConstants.Event.USER_TYPE, userType);
+        eventProperties.put(OIDCConstants.Event.CLIENT_ID, clientId);
+        eventProperties.put(OIDCConstants.Event.GRANT_TYPE, grantType);
+        eventProperties.put(OIDCConstants.Event.ISSUED_TIME, issuedTime);
+        eventProperties.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, organizationId);
+        eventProperties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+        OAuth2TokenUtil.postIssueToken(eventProperties);
     }
 
     private static Boolean existingTokenUsed(OAuthTokenReqMessageContext tokReqMsgCtx) {

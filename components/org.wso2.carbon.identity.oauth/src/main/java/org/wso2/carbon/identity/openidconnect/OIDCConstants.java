@@ -62,13 +62,4 @@ public class OIDCConstants {
         public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
         public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
     }
-
-    /**
-     * This enum is used to define the token types used in OIDC.
-     */
-    public enum TokenBillingCategory {
-
-        M2M_ACCESS_TOKEN
-    }
 }
-
