@@ -26,6 +26,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.model.ImpersonatedUser;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -54,10 +55,13 @@ import static org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration.JWT
  */
 @Listeners(MockitoTestNGListener.class)
 public class SubjectTokenIssuerTest {
+
     @Mock
     private OAuthServerConfiguration mockOAuthServerConfiguration;
     @Mock
     private AuthenticatedUser impersonator;
+    @Mock
+    private ImpersonatedUser impersonatedUser;
     @Mock
     private OAuth2AuthorizeReqDTO oAuth2AuthorizeReqDTO;
     @Mock
@@ -67,7 +71,6 @@ public class SubjectTokenIssuerTest {
     private static final String[] SCOPES_WITHOUT_OPENID = new String[]{"scope1", "scope2"};
     private static final String OAUTH_APP_DO = "OAuthAppDO";
     private ImpersonationMgtServiceImpl impersonationMgtService = new ImpersonationMgtServiceImpl();
-
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
     private MockedStatic<LoggerUtils> loggerUtils;
 
@@ -79,8 +82,10 @@ public class SubjectTokenIssuerTest {
         OAuth2ServiceComponentHolder.getInstance().setImpersonationMgtService(impersonationMgtService);
 
         lenient().when(impersonator.getLoggableMaskedUserId()).thenReturn("123456789");
+        when(impersonator.getImpersonatedUser()).thenReturn(impersonatedUser);
+        lenient().when(impersonatedUser.getLoggableMaskedUserId()).thenReturn("dummySubjectId");
 
-        when(oAuth2AuthorizeReqDTO.getRequestedSubjectId()).thenReturn("dummySubjectId");
+        when(oAuthAuthzReqMessageContext.getAuthorizationReqDTO()).thenReturn(oAuth2AuthorizeReqDTO);
         when(oAuth2AuthorizeReqDTO.getUser()).thenReturn(impersonator);
         when(oAuth2AuthorizeReqDTO.getConsumerKey()).thenReturn("dummyConsumerKey");
         when(oAuth2AuthorizeReqDTO.getScopes()).thenReturn(SCOPES_WITHOUT_OPENID);
@@ -96,6 +101,7 @@ public class SubjectTokenIssuerTest {
 
     @AfterMethod
     public void tearDown() {
+
         // Validator is removed based on the class name.
         OAuth2ServiceComponentHolder.getInstance()
                 .removeImpersonationValidator(new DummyErrornusImpersonationValidator());

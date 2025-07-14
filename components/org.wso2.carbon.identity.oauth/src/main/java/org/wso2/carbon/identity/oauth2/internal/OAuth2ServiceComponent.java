@@ -86,6 +86,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotif
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationNotificationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonationValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.ImpersonatorPermissionValidator;
+import org.wso2.carbon.identity.oauth2.impersonation.validators.ResidentOrganizationValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.SubjectScopeValidator;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.UserAccountStatusValidator;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
@@ -106,6 +107,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.impl.ClientRequestTokenBin
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.CookieBasedTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.DeviceFlowTokenBinder;
 import org.wso2.carbon.identity.oauth2.token.bindings.impl.SSOSessionBasedTokenBinder;
+import org.wso2.carbon.identity.oauth2.token.handlers.claims.AgentAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.ImpersonatedAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.claims.JWTAccessTokenClaimProvider;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
@@ -285,6 +287,8 @@ public class OAuth2ServiceComponent {
                     null);
             bundleContext.registerService(JWTAccessTokenClaimProvider.class.getName(),
                     new ImpersonatedAccessTokenClaimProvider(), null);
+            bundleContext.registerService(JWTAccessTokenClaimProvider.class.getName(),
+                    new AgentAccessTokenClaimProvider(), null);
 
             // Register cookie based access token binder.
             CookieBasedTokenBinder cookieBasedTokenBinder = new CookieBasedTokenBinder();
@@ -415,6 +419,7 @@ public class OAuth2ServiceComponent {
             bundleContext.registerService(ImpersonationValidator.class, new SubjectScopeValidator(), null);
             bundleContext.registerService(ImpersonationValidator.class, new ImpersonatorPermissionValidator(), null);
             bundleContext.registerService(ImpersonationValidator.class, new UserAccountStatusValidator(), null);
+            bundleContext.registerService(ImpersonationValidator.class, new ResidentOrganizationValidator(), null);
             bundleContext.registerService(ImpersonationConfigMgtService.class, new ImpersonationConfigMgtServiceImpl(),
                     null);
             bundleContext.registerService(ImpersonationNotificationMgtService.class,

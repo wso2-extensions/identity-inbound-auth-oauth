@@ -107,7 +107,8 @@ public class DefaultOAuth2ScopeValidator {
             appId = SharedAppResolveDAO.resolveSharedApplication(appResideOrgId, appId, orgId);
         }
         List<String> authorizedScopes = getAuthorizedScopes(requestedScopes, authzReqMessageContext
-                        .getAuthorizationReqDTO().getUser(), appId, null, null, tenantDomain);
+                        .getAuthorizationReqDTO().getUser(), appId, null, null,
+                tenantDomain);
         handleInternalLoginScope(requestedScopes, authorizedScopes);
         handleImpersonationScope(authzReqMessageContext, authorizedScopes);
         removeRegisteredScopes(authzReqMessageContext);
@@ -189,10 +190,16 @@ public class DefaultOAuth2ScopeValidator {
                 authzReqMessageContext.getAuthorizationReqDTO().getUser().getAccessingOrganization(),
                 impersonationRequest);
 
-        if (isOrgImpersonationRequest && !authorizedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME)) {
-            authorizedScopes.add(IMPERSONATION_ORG_SCOPE_NAME);
-        } else if (impersonationRequest && !authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
-            authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
+        if (isOrgImpersonationRequest) {
+            if (!authorizedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME)) {
+                authorizedScopes.add(IMPERSONATION_ORG_SCOPE_NAME);
+            }
+            authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
+        } else if (impersonationRequest) {
+            if (!authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+                authorizedScopes.add(IMPERSONATION_SCOPE_NAME);
+            }
+            authorizedScopes.remove(IMPERSONATION_ORG_SCOPE_NAME);
         } else {
             authorizedScopes.remove(IMPERSONATION_SCOPE_NAME);
             authorizedScopes.remove(IMPERSONATION_ORG_SCOPE_NAME);

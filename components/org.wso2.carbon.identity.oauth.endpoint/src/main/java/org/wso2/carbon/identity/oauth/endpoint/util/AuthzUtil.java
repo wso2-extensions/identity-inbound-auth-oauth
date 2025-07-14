@@ -197,6 +197,7 @@ import javax.ws.rs.core.Response;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.MANDATORY_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.REQUESTED_CLAIMS;
 import static org.wso2.carbon.identity.application.authentication.endpoint.util.Constants.USER_CLAIMS_CONSENT_ONLY;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.REQUEST_PARAM_SP;
 import static org.wso2.carbon.identity.client.attestation.mgt.utils.Constants.CLIENT_ATTESTATION_CONTEXT;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.IMPERSONATING_ACTOR;
@@ -204,6 +205,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.LogConstants.
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.CLIENT_ID;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.REDIRECT_URI;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Params.USERINFO;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUESTED_ACTOR;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.AUTHENTICATION_RESPONSE;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.INITIAL_REQUEST;
 import static org.wso2.carbon.identity.oauth.endpoint.state.OAuthAuthorizeState.PASSTHROUGH_TO_COMMONAUTH;
@@ -1219,27 +1221,27 @@ public class AuthzUtil {
             oAuthMessage.setProperty(IMPERSONATING_ACTOR, impersonator);
             authzReqMsgCtx.setImpersonationRequest(true);
             // Set AuthenticationResult authenticated user as impersonatee.
-            boolean isFederatedUser = impersonationContext.getImpersonationRequestDTO().getImpersonator()
-                    .isFederatedUser();
-            String subjectAccessingOrganization = impersonationContext.getImpersonationRequestDTO()
-                    .getImpersonator().getAccessingOrganization();
-            String subjectResidentOrganization = impersonationContext.getImpersonationRequestDTO()
-                    .getImpersonator().getUserResidentOrganization();
-            String tenantDomain = impersonationContext.getImpersonationRequestDTO().getTenantDomain();
-            AuthenticatedUser impersonatedUser = null;
-            if (isFederatedUser && subjectAccessingOrganization != null && subjectResidentOrganization != null) {
-                impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject, tenantDomain,
-                        subjectAccessingOrganization, subjectResidentOrganization,
-                        impersonationContext.getImpersonationRequestDTO().getClientId());
-            } else {
-                impersonatedUser = OAuth2Util.getAuthenticatedUser(impersonatedSubject, tenantDomain,
-                        impersonationContext.getImpersonationRequestDTO().getClientId());
+            AuthenticatedUser impersonatedUser = authnResult.getSubject().getImpersonatedUser();
+            if (impersonatedUser.isFederatedUser() &&
+                    ORGANIZATION_LOGIN_IDP_NAME.equals(impersonatedUser.getFederatedIdPName())) {
+                // If the impersonated user is a federated user, we need to retrieve the claims from the user store.
+                setUserAttributesFromUserStore(impersonatedUser, impersonatedSubject, oauth2Params.getClientId());
             }
             authnResult.setSubject(impersonatedUser);
         } else {
             removeImpersonationScope(impersonationContext);
             authzReqMsgCtx.addProperty(IMPERSONATION_VALIDATION_REQUEST, false);
         }
+    }
+
+    private static void setUserAttributesFromUserStore(AuthenticatedUser impersonatedUser,
+                                                       String impersonatedSubject, String clientId)
+            throws IdentityOAuth2Exception {
+
+        Map<String, Object> attributes = ClaimUtil.getClaimsFromUserStore(impersonatedUser.getUserName(),
+                impersonatedSubject, impersonatedUser.getTenantDomain(), impersonatedUser, clientId, true);
+        impersonatedUser.setUserAttributes(FrameworkUtils.buildClaimMappings(attributes.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue())))));
     }
 
     private static void handleInitImpersonationRequest(String impersonatedSubject, OAuth2Parameters oAuth2Parameters)
@@ -1332,15 +1334,22 @@ public class AuthzUtil {
         }
     }
 
-    private static ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext authzReqMsgCxt) {
+    private static ImpersonationRequestDTO buildImpersonationRequestDTO(OAuthAuthzReqMessageContext authzReqMsgCxt)
+            throws IdentityOAuth2Exception {
 
         ImpersonationRequestDTO impersonationRequestDTO = new ImpersonationRequestDTO();
-        impersonationRequestDTO.setoAuthAuthzReqMessageContext(authzReqMsgCxt);
-        impersonationRequestDTO.setSubject(authzReqMsgCxt.getAuthorizationReqDTO().getRequestedSubjectId());
-        impersonationRequestDTO.setImpersonator(authzReqMsgCxt.getAuthorizationReqDTO().getUser());
-        impersonationRequestDTO.setClientId(authzReqMsgCxt.getAuthorizationReqDTO().getConsumerKey());
-        impersonationRequestDTO.setScopes(getScopesBeforeValidation(authzReqMsgCxt));
-        impersonationRequestDTO.setTenantDomain(authzReqMsgCxt.getAuthorizationReqDTO().getTenantDomain());
+        try {
+            impersonationRequestDTO.setoAuthAuthzReqMessageContext(authzReqMsgCxt);
+            impersonationRequestDTO.setSubject(authzReqMsgCxt.getAuthorizationReqDTO().getUser()
+                    .getImpersonatedUser().getUserId());
+            impersonationRequestDTO.setImpersonator(authzReqMsgCxt.getAuthorizationReqDTO().getUser());
+            impersonationRequestDTO.setClientId(authzReqMsgCxt.getAuthorizationReqDTO().getConsumerKey());
+            impersonationRequestDTO.setScopes(getScopesBeforeValidation(authzReqMsgCxt));
+            impersonationRequestDTO.setTenantDomain(authzReqMsgCxt.getAuthorizationReqDTO().getTenantDomain());
+        } catch (UserIdNotFoundException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while retrieving impersonated user ID from the authentication result.", e);
+        }
         return impersonationRequestDTO;
     }
 
@@ -2818,6 +2827,8 @@ public class AuthzUtil {
         }
         params.setRequestedSubjectId(oAuthMessage.getRequestedSubjectId());
 
+        params.setRequestedActor(oauthRequest.getParam(REQUESTED_ACTOR));
+
         return null;
     }
 
@@ -4007,6 +4018,7 @@ public class AuthzUtil {
         authzReqDTO.setMappedRemoteClaims(sessionDataCacheEntry.getMappedRemoteClaims());
         authzReqDTO.setAuthorizationDetails(oauth2Params.getAuthorizationDetails());
         authzReqDTO.setImpersonationRequest(isImpersonationRequest);
+        authzReqDTO.setRequestedActor(oauth2Params.getRequestedActor());
 
         if (sessionDataCacheEntry.getParamMap() != null && sessionDataCacheEntry.getParamMap().get(OAuthConstants
                 .AMR) != null) {
