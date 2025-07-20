@@ -1426,55 +1426,29 @@ public class AccessTokenIssuer {
             }
             return;
         }
-        if (existingTokenUsed(tokReqMsgCtx)) {
-            if (log.isDebugEnabled()) {
-                log.debug("Existing token is used. Hence skipping the post issue token event.");
-            }
-            return;
-        }
-        String userType = StringUtils.EMPTY;
-        String organizationId = StringUtils.EMPTY;
-        String tenantDomain = StringUtils.EMPTY;
-        String clientId = StringUtils.EMPTY;
-        String accessingOrganizationId = StringUtils.EMPTY;
-        String tokenId = StringUtils.EMPTY;
-        String grantType = StringUtils.EMPTY;
-        String issuedTime = String.valueOf(tokReqMsgCtx.getAccessTokenIssuedTime());
 
-        Object userTypeObject = tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE);
-        if (userTypeObject instanceof String) {
-            userType = (String) userTypeObject;
-        }
-        if (tokReqMsgCtx.getOauth2AccessTokenReqDTO() != null &&
-                tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain() != null) {
-            organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                    .resolveOrganizationId(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain());
-        }
-        if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain() != null) {
-            tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
-        }
-        if (tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId() != null) {
-            clientId = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
-        }
-        if (tokReqMsgCtx.getAuthorizedUser() != null) {
+        String tenantDomain = tokReqMsgCtx.getOauth2AccessTokenReqDTO().getTenantDomain();
+        String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                .resolveOrganizationId(tenantDomain);
+        String accessingOrganizationId = StringUtils.EMPTY;
+        if (tokReqMsgCtx.getAuthorizedUser() != null
+                && tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization() != null) {
             accessingOrganizationId = tokReqMsgCtx.getAuthorizedUser().getAccessingOrganization();
-        }
-        if (tokenRespDTO.getTokenId() != null) {
-            tokenId = tokenRespDTO.getTokenId();
-        }
-        if (tokenReqDTO.getGrantType() != null) {
-            grantType = tokenReqDTO.getGrantType();
         }
 
         Map<String, Object> eventProperties = new HashMap<>();
-        eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenId);
+        eventProperties.put(OIDCConstants.Event.TOKEN_ID, tokenRespDTO.getTokenId());
         eventProperties.put(OIDCConstants.Event.TENANT_DOMAIN, tenantDomain);
-        eventProperties.put(OIDCConstants.Event.USER_TYPE, userType);
-        eventProperties.put(OIDCConstants.Event.CLIENT_ID, clientId);
-        eventProperties.put(OIDCConstants.Event.GRANT_TYPE, grantType);
-        eventProperties.put(OIDCConstants.Event.ISSUED_TIME, issuedTime);
+        eventProperties.put(OIDCConstants.Event.USER_TYPE, tokReqMsgCtx.getProperty(OAuthConstants.UserType.USER_TYPE));
+        eventProperties.put(OIDCConstants.Event.CLIENT_ID, tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId());
+        eventProperties.put(OIDCConstants.Event.GRANT_TYPE, tokenReqDTO.getGrantType());
+        eventProperties.put(OIDCConstants.Event.ISSUED_TIME, String.valueOf(tokReqMsgCtx.getAccessTokenIssuedTime()));
         eventProperties.put(OIDCConstants.Event.ISSUER_ORGANIZATION_ID, organizationId);
         eventProperties.put(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID, accessingOrganizationId);
+        eventProperties.put(OIDCConstants.Event.APP_RESIDENT_TENANT_ID, IdentityTenantUtil.getLoginTenantId());
+        eventProperties.put(OIDCConstants.Event.EXISTING_TOKEN_USED, String.valueOf(existingTokenUsed(tokReqMsgCtx)));
+        eventProperties.put(OIDCConstants.Event.SERVICE_PROVIDER, OAuth2Util.getServiceProvider(
+                tokReqMsgCtx.getOauth2AccessTokenReqDTO().getClientId(), tenantDomain).getApplicationName());
         OAuth2TokenUtil.postIssueToken(eventProperties);
     }
 

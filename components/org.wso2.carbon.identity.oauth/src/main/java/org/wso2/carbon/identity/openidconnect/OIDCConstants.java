@@ -40,7 +40,7 @@ public class OIDCConstants {
         public static final String SESSION_DATA_KEY = "SESSION_DATA_KEY";
         public static final String POST_ISSUE_CODE = "POST_ISSUE_CODE";
         public static final String POST_ISSUE_ACCESS_TOKEN = "POST_ISSUE_ACCESS_TOKEN";
-        public static final String POST_ISSUE_TOKEN = "POST_ISSUE_TOKEN";
+        public static final String POST_ISSUE_ACCESS_TOKEN_V2 = "POST_ISSUE_ACCESS_TOKEN_V2";
         public static final String HANDLE_REQUEST_OBJECT = "handleRequestObject";
         public static final String POST_REVOKE_ACESS_TOKEN = "POST_REVOKE_ACESS_TOKEN";
         public static final String POST_REVOKE_ACESS_TOKEN_BY_ID = "POST_REVOKE_ACESS_TOKEN_BY_ID";
@@ -61,5 +61,7 @@ public class OIDCConstants {
         public static final String ISSUED_TIME = "ISSUED_TIME";
         public static final String ISSUER_ORGANIZATION_ID = "ISSUER_ORGANIZATION_ID";
         public static final String ACCESSING_ORGANIZATION_ID = "ACCESSING_ORGANIZATION_ID";
+        public static final String EXISTING_TOKEN_USED = "EXISTING_TOKEN_USED";
+        public static final String SERVICE_PROVIDER = "SERVICE_PROVIDER";
     }
 }

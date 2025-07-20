@@ -88,24 +88,23 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OauthAppState
 @WithCarbonHome
 public class AccessTokenIssuerTest {
 
-    private AutoCloseable mocks;
-
-    @Mock
-    private IdentityConfigParser identityConfigParserMock;
-
-    @Mock
-    private OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
-
-    @Mock
-    private OAuthServerConfiguration mockedOAuthServerConfig;
-
-    @Mock
-    private OAuthAppDO appDO;
-
+    private static final String ENABLE_POST_TOKEN_ISSUE_EVENT = "PostTokenIssueEvent.Enable";
+    private final int testAppResidentTenantId = 1;
+    private final String testAccessingOrganizationId = "dExLASaD1Flb_fx7ZecfAA3n1HRka";
     private final String testTenantDomain = "carbon.super";
     private final String testClientId = "dExLASaD1Flb_fx7ZecfAA3n1HRka";
     private final String testOrganizationId = "exLASaD1Flb_fx7ZecfAA3n1HRkaf";
-    private static final String ENABLE_POST_TOKEN_ISSUE_EVENT = "PostTokenIssueEvent.Enable";
+    private final String testTokenId = "dExLASaD1Flb_fx7ZecfAA3n1HRka12345";
+    private final String testApplicationName = "TestApplication";
+    private AutoCloseable mocks;
+    @Mock
+    private IdentityConfigParser identityConfigParserMock;
+    @Mock
+    private OAuthComponentServiceHolder oAuthComponentServiceHolderMock;
+    @Mock
+    private OAuthServerConfiguration mockedOAuthServerConfig;
+    @Mock
+    private OAuthAppDO appDO;
 
     @AfterClass
     public void cleanUp() throws Exception {
@@ -184,6 +183,7 @@ public class AccessTokenIssuerTest {
                 MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)
         ) {
             OAuth2AccessTokenRespDTO tokenResp = mock(OAuth2AccessTokenRespDTO.class);
+            when(tokenResp.getTokenId()).thenReturn(testTokenId);
 
             AuthorizationGrantHandler grantHandler = mock(AuthorizationGrantHandler.class);
             when(grantHandler.isAuthorizedClient(any())).thenReturn(true);
@@ -226,19 +226,22 @@ public class AccessTokenIssuerTest {
                         .thenReturn(componentHolder);
 
                 AppInfoCache appInfoCache = mock(AppInfoCache.class);
-                when(appDO.getState()).thenReturn(APP_STATE_ACTIVE);
                 appInfoCacheMockedStatic.when(AppInfoCache::getInstance).thenReturn(appInfoCache);
 
-                AuthenticatedUser user = mock(AuthenticatedUser.class);
-                when(user.getUserId()).thenReturn("12345");
-                when(user.getTenantDomain()).thenReturn(testTenantDomain);
-                when(user.getUserStoreDomain()).thenReturn("PRIMARY");
-                when(user.toFullQualifiedUsername()).thenReturn("PRIMARY/testUser@carbon.super");
-                when(appDO.getAppOwner()).thenReturn(user);
+                AuthenticatedUser appOwner = mock(AuthenticatedUser.class);
+                when(appOwner.getUserId()).thenReturn("12345");
+                when(appOwner.getTenantDomain()).thenReturn(testTenantDomain);
+                when(appOwner.getUserStoreDomain()).thenReturn("PRIMARY");
+                when(appOwner.toFullQualifiedUsername()).thenReturn("PRIMARY/testUser@carbon.super");
+                when(appOwner.getAccessingOrganization()).thenReturn(testAccessingOrganizationId);
 
+                when(appDO.getState()).thenReturn(APP_STATE_ACTIVE);
+                when(appDO.getAppOwner()).thenReturn(appOwner);
+
+                ServiceProvider sp = mock(ServiceProvider.class);
+                when(sp.getApplicationName()).thenReturn(testApplicationName);
 
                 ApplicationManagementService appMgtService = mock(ApplicationManagementService.class);
-                ServiceProvider sp = mock(ServiceProvider.class);
                 LocalAndOutboundAuthenticationConfig authConfig = mock(LocalAndOutboundAuthenticationConfig.class);
                 when(authConfig.getSubjectClaimUri()).thenReturn("test.subject.claim.uri");
                 when(sp.getLocalAndOutBoundAuthenticationConfig()).thenReturn(authConfig);
@@ -249,6 +252,7 @@ public class AccessTokenIssuerTest {
                 oAuth2Util.when(() -> OAuth2Util.isAppVersionAllowed(anyString(), anyString())).thenReturn(true);
                 oAuth2Util.when(() -> OAuth2Util.getAppInformationByClientId(anyString(), anyString()))
                         .thenReturn(appDO);
+                oAuth2Util.when(() -> OAuth2Util.getServiceProvider(testClientId, testTenantDomain)).thenReturn(sp);
 
                 UserRealm userRealm = mock(UserRealm.class);
                 AbstractUserStoreManager userStore = mock(AbstractUserStoreManager.class);
@@ -257,6 +261,7 @@ public class AccessTokenIssuerTest {
                 when(userRealm.getUserStoreManager()).thenReturn(userStore);
 
                 identityTenantUtil.when(() -> IdentityTenantUtil.getRealm(any(), any())).thenReturn(userRealm);
+                identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(testAppResidentTenantId);
 
                 authzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_POST_TOKEN_ISSUE_EVENT)).thenReturn("true");
@@ -264,12 +269,27 @@ public class AccessTokenIssuerTest {
 
                 oAuth2TokenUtil.verify(() -> OAuth2TokenUtil.postIssueToken(
                                 argThat((eventProperties) -> {
+                                            Assert.assertEquals(eventProperties.get(OIDCConstants.Event.TOKEN_ID),
+                                                    testTokenId);
                                             Assert.assertEquals(eventProperties.get(OIDCConstants.Event.TENANT_DOMAIN),
                                                     testTenantDomain);
+                                            Assert.assertEquals(eventProperties.get(OIDCConstants.Event.USER_TYPE),
+                                                    OAuthConstants.UserType.APPLICATION);
                                             Assert.assertEquals(eventProperties.get(OIDCConstants.Event.CLIENT_ID),
                                                     testClientId);
                                             Assert.assertEquals(eventProperties.get(OIDCConstants.Event.GRANT_TYPE),
                                                     OAuthConstants.GrantTypes.CLIENT_CREDENTIALS);
+                                            Assert.assertEquals(eventProperties.get(
+                                                    OIDCConstants.Event.ISSUER_ORGANIZATION_ID), testOrganizationId);
+                                            Assert.assertEquals(
+                                                    eventProperties.get(OIDCConstants.Event.APP_RESIDENT_TENANT_ID),
+                                                    testAppResidentTenantId);
+                                            Assert.assertEquals(
+                                                    eventProperties.get(OIDCConstants.Event.ACCESSING_ORGANIZATION_ID),
+                                                    testAccessingOrganizationId);
+                                            Assert.assertEquals(eventProperties.get(
+                                                    OIDCConstants.Event.SERVICE_PROVIDER),
+                                                    testApplicationName);
                                             return true;
                                         }
                                 )),
