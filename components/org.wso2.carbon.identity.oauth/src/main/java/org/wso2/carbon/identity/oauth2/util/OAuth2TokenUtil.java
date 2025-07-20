@@ -91,7 +91,7 @@ public class OAuth2TokenUtil {
      */
     public static void postIssueToken(Map<String, Object> eventProperties) throws IdentityOAuth2Exception {
 
-        String eventName = OIDCConstants.Event.POST_ISSUE_TOKEN;
+        String eventName = OIDCConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2;
         Event postIssueTokenEvent = new Event(eventName, eventProperties);
         IdentityEventService identityEventService = OpenIDConnectServiceComponentHolder.getIdentityEventService();
         try {
