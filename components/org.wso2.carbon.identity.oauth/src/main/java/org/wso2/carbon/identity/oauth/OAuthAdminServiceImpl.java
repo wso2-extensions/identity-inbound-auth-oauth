@@ -49,6 +49,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataExcept
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
@@ -84,6 +85,12 @@ import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.MergeAllAggregationStrategy;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.AuditLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -100,8 +107,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.TARGET_APPLICATION;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
@@ -1135,9 +1144,24 @@ public class OAuthAdminServiceImpl {
     public ScopeDTO[] getScopes() throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        List<ScopeDTO> scopeDTOList;
         try {
-            List<ScopeDTO> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getScopes(tenantId);
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                OrgResourceResolverService orgResourceManagementService =
+                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
+                scopeDTOList = orgResourceManagementService.getResourcesFromOrgHierarchy(
+                        organizationId,
+                        LambdaExceptionUtils.rethrowFunction(this::retrieveScopesFromHierarchy),
+                        new MergeAllAggregationStrategy<>(this::mergeScopesInHierarchy)
+                );
+            } else {
+                scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                        getScopes(tenantId);
+            }
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new ScopeDTO[scopeDTOList.size()]);
             } else {
@@ -1146,9 +1170,53 @@ public class OAuthAdminServiceImpl {
                 }
                 return new ScopeDTO[0];
             }
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
             throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
         }
+    }
+
+    /**
+     * Retrieves scopes for an organization in the hierarchy during sub-organization scope aggregation.
+     *
+     * @param orgId The organization id of the tenant for which the scopes need to be retrieved.
+     * @return The scopes of the given tenant.
+     * @throws IdentityOAuth2Exception If an error occurs when getting the tenant id or the scopes.
+     * @throws IdentityOAuthAdminException If an error occurs when getting the tenant domain.
+     */
+    private Optional<List<ScopeDTO>> retrieveScopesFromHierarchy(String orgId)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
+
+        String tenantDomain = getTenantDomain(orgId);
+        int tenantId = getTenantId(tenantDomain);
+        List<ScopeDTO> scopeDTOs = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                getScopes(tenantId);
+        return Optional.ofNullable(scopeDTOs);
+    }
+
+    /**
+     * Merges scopes in the hierarchy and removes duplicates found at higher levels as priority is given
+     * to the lower levels.
+     * <p>
+     * Currently, creating scopes at the sub-organization level is not supported, therefore, the scopes
+     * will be picked up from the root organization, however, this method is expected to support scopes
+     * created by sub-organizations if and when this is introduced.
+     *
+     * @param aggregatedScopeDTOs The scopes aggregated from the child organizations so far.
+     * @param tenantScopeDTOs     The scopes of the current tenant being considered.
+     * @return The merged list of scopes up to the specific tenant being considered.
+     */
+    private List<ScopeDTO> mergeScopesInHierarchy(
+            List<ScopeDTO> aggregatedScopeDTOs, List<ScopeDTO> tenantScopeDTOs) {
+
+        Map<String, ScopeDTO> existingScopeDTOs = aggregatedScopeDTOs.stream()
+                .collect(Collectors.toMap(ScopeDTO::getName, Function.identity()));
+        for (ScopeDTO tenantScopeDTO: tenantScopeDTOs) {
+            String scopeDTOName = tenantScopeDTO.getName();
+            if (!existingScopeDTOs.containsKey(scopeDTOName)) {
+                aggregatedScopeDTOs.add(tenantScopeDTO);
+            }
+        }
+        return aggregatedScopeDTOs;
     }
 
     /**
@@ -1162,10 +1230,24 @@ public class OAuthAdminServiceImpl {
         validateScopeName(scopeName);
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        ScopeDTO scopeDTO;
         try {
-            ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getScope(scopeName, tenantId);
-
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                OrgResourceResolverService orgResourceManagementService =
+                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
+                scopeDTO = orgResourceManagementService.getResourcesFromOrgHierarchy(
+                        organizationId,
+                        LambdaExceptionUtils.rethrowFunction(orgId -> retrieveScopeFromHierarchy(scopeName, orgId)),
+                        new FirstFoundAggregationStrategy<>()
+                );
+            } else {
+                scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                        getScope(scopeName, tenantId);
+            }
             // If scopeDTO is null then the requested scope is not exist.
             if (scopeDTO == null) {
                 throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
@@ -1173,10 +1255,35 @@ public class OAuthAdminServiceImpl {
                                 scopeName));
             }
             return scopeDTO;
-        } catch (IdentityOAuth2Exception e) {
-            throw handleErrorWithExceptionType(String.format("Error while loading OIDC scope: %s for tenant %s",
-                    scopeName, tenantId), e);
+        } catch (IdentityOAuth2Exception | OrgResourceHierarchyTraverseException | OrganizationManagementException e) {
+            String errorMessage = String.format("Error while loading OIDC scope: %s for tenant %s",
+                    scopeName, tenantId);
+            if (e instanceof IdentityOAuth2Exception) {
+                throw handleErrorWithExceptionType(errorMessage, (IdentityOAuth2Exception) e);
+            }
+            throw handleError(errorMessage, e);
         }
+    }
+
+    /**
+     * Retrieves a given scope from an organization in the hierarchy
+     * during sub-organization scope aggregation if it exists.
+     *
+     * @param scopeName The name of the scope to be retrieved.
+     * @param orgId     The organization id of the tenant for which the scope needs to be retrieved.
+     * @return The scope in the given tenant, if it exists.
+     *
+     * @throws IdentityOAuth2Exception If an error occurs when getting the tenant id or the scope.
+     * @throws IdentityOAuthAdminException If an error occurs when getting the tenant domain.
+     */
+    private Optional<ScopeDTO> retrieveScopeFromHierarchy(String scopeName, String orgId)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
+
+        String tenantDomain = getTenantDomain(orgId);
+        int tenantId = getTenantId(tenantDomain);
+        ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                getScope(scopeName, tenantId);
+        return Optional.ofNullable(scopeDTO);
     }
 
     /**
@@ -1211,9 +1318,24 @@ public class OAuthAdminServiceImpl {
     public String[] getScopeNames() throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        List<String> scopeDTOList;
         try {
-            List<String> scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getScopeNames(tenantId);
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                OrgResourceResolverService orgResourceManagementService =
+                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
+                scopeDTOList = orgResourceManagementService.getResourcesFromOrgHierarchy(
+                        organizationId,
+                        LambdaExceptionUtils.rethrowFunction(this::retrieveScopeNamesFromHierarchy),
+                        new MergeAllAggregationStrategy<>(this::mergeScopeNamesInHierarchy)
+                );
+            } else {
+                scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                        getScopeNames(tenantId);
+            }
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new String[scopeDTOList.size()]);
             } else {
@@ -1222,9 +1344,50 @@ public class OAuthAdminServiceImpl {
                 }
                 return new String[0];
             }
-        } catch (IdentityOAuth2Exception e) {
+        } catch (IdentityOAuth2Exception | OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
             throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
         }
+    }
+
+    /**
+     * Retrieves scope names for an organization in the hierarchy during sub-organization scope aggregation.
+     *
+     * @param orgId The organization id of the tenant for which the scopes need to be retrieved.
+     * @return The scopes of the given tenant.
+     * @throws IdentityOAuth2Exception If an error occurs when getting the tenant id or the scopes.
+     * @throws IdentityOAuthAdminException If an error occurs when getting the tenant domain.
+     */
+    private Optional<List<String>> retrieveScopeNamesFromHierarchy(String orgId)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
+
+        String tenantDomain = getTenantDomain(orgId);
+        int tenantId = getTenantId(tenantDomain);
+        List<String> scopeNames = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                getScopeNames(tenantId);
+        return Optional.ofNullable(scopeNames);
+    }
+
+    /**
+     * Merges scope names in the hierarchy and removes duplicates found at higher levels as priority is given
+     * to the lower levels.
+     * <p>
+     * Currently, creating scopes at the sub-organization level is not supported, therefore, the scope names
+     * will be picked up from the root organization, however, this method is expected to support scopes created
+     * by sub-organizations if and when this is introduced.
+     *
+     * @param aggregatedScopeNames The scope names aggregated from the child organizations so far.
+     * @param tenantScopeNames     The scope names of the current tenant being considered.
+     * @return The merged list of scope names up to the specific tenant being considered.
+     */
+    private List<String> mergeScopeNamesInHierarchy(
+            List<String> aggregatedScopeNames, List<String> tenantScopeNames) {
+
+        for (String tenantScopeName: tenantScopeNames) {
+            if (!aggregatedScopeNames.contains(tenantScopeName)) {
+                aggregatedScopeNames.add(tenantScopeName);
+            }
+        }
+        return aggregatedScopeNames;
     }
 
     /**
@@ -1237,9 +1400,24 @@ public class OAuthAdminServiceImpl {
     public String[] getClaims(String scope) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        ScopeDTO scopeDTO;
         try {
-            ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                    getClaims(scope, tenantId);
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                OrgResourceResolverService orgResourceManagementService =
+                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
+                scopeDTO = orgResourceManagementService.getResourcesFromOrgHierarchy(
+                        organizationId,
+                        LambdaExceptionUtils.rethrowFunction(orgId ->  retrieveScopeClaimsFromHierarchy(scope, orgId)),
+                        new MergeAllAggregationStrategy<>(this::mergeScopeClaimsInHierarchy)
+                );
+            } else {
+                scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                        getClaims(scope, tenantId);
+            }
             if (scopeDTO != null && ArrayUtils.isNotEmpty(scopeDTO.getClaim())) {
                 return scopeDTO.getClaim();
             } else {
@@ -1248,9 +1426,52 @@ public class OAuthAdminServiceImpl {
                 }
                 return new String[0];
             }
-        } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC claims for the scope: " + scope + " in tenant: " + tenantId, e);
+        } catch (IdentityOAuth2Exception | OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
+            throw handleError("Error while loading OIDC claims for the scope: "
+                    + scope + " in tenant: " + tenantId, e);
         }
+    }
+
+    /**
+     * Retrieves scope names for an organization in the hierarchy during sub-organization scope aggregation.
+     *
+     * @param scope The scope for which the claims need to be retrieved.
+     * @param orgId The organization id of the tenant for which the scopes need to be retrieved.
+     * @return The claims of the given tenant.
+     * @throws IdentityOAuth2Exception If an error occurs when getting the tenant id or the scope claims.
+     * @throws IdentityOAuthAdminException If an error occurs when getting the tenant domain.
+     */
+    private Optional<ScopeDTO> retrieveScopeClaimsFromHierarchy(String scope, String orgId)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
+
+        String tenantDomain = getTenantDomain(orgId);
+        int tenantId = getTenantId(tenantDomain);
+        ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                getClaims(scope, tenantId);
+        return Optional.ofNullable(scopeDTO);
+    }
+
+    /**
+     * Merges scope claims in the hierarchy and removes duplicates found at higher levels as priority is given
+     * to the lower levels.
+     * <p>
+     * Currently, creating scopes at the sub-organization level is not supported, therefore, the scope claims
+     * will be picked up from the root organization, however, this method is expected to support scopes created
+     * by sub-organizations if and when this is introduced.
+     *
+     * @param aggregatedScopeClaims The scope claims aggregated from the child organizations so far.
+     * @param tenantScopeClaims     The scope claims of the current tenant being considered.
+     * @return The merged list of scope names up to the specific tenant being considered.
+     */
+    private ScopeDTO mergeScopeClaimsInHierarchy(
+            ScopeDTO aggregatedScopeClaims, ScopeDTO tenantScopeClaims) {
+
+        for (String claim: tenantScopeClaims.getClaim()) {
+            if (!Arrays.asList(aggregatedScopeClaims.getClaim()).contains(claim)) {
+                aggregatedScopeClaims.addNewClaimToExistingClaims(claim);
+            }
+        }
+        return aggregatedScopeClaims;
     }
 
     /**
@@ -1322,11 +1543,49 @@ public class OAuthAdminServiceImpl {
     public boolean isScopeExist(String scope) throws IdentityOAuthAdminException {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        Boolean scopeExists;
         try {
-            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
-        } catch (IdentityOAuth2Exception e) {
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .resolveOrganizationId(tenantDomain);
+                OrgResourceResolverService orgResourceManagementService =
+                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
+                scopeExists = orgResourceManagementService.getResourcesFromOrgHierarchy(
+                        organizationId,
+                        LambdaExceptionUtils.rethrowFunction(orgId -> retrieveScopeExistenceInHierarchy(scope, orgId)),
+                        new FirstFoundAggregationStrategy<>()
+                );
+                return scopeExists != null && scopeExists;
+            } else {
+                return OAuthTokenPersistenceFactory.getInstance().
+                        getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
+            }
+        } catch (IdentityOAuth2Exception | OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
             throw handleError("Error while inserting the scopes.", e);
         }
+    }
+
+    /**
+     * Checks whether a scope exists in the given organization in the hierarchy.
+     * @param scope The name of the scope to be retrieved.
+     * @param orgId The organization id of the tenant for which the scope needs to be retrieved.
+     * @return an optional containing true if it exists and an empty optional if it doesn't.
+     * @throws IdentityOAuth2Exception If an error occurs when getting the tenant id or checking the scope existence.
+     * @throws IdentityOAuthAdminException If an error occurs when getting the tenant domain.
+     */
+    private Optional<Boolean> retrieveScopeExistenceInHierarchy(String scope, String orgId)
+            throws IdentityOAuth2Exception, IdentityOAuthAdminException {
+
+        String tenantDomain = getTenantDomain(orgId);
+        int tenantId = getTenantId(tenantDomain);
+        boolean scopeExists = OAuthTokenPersistenceFactory.getInstance().
+                getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
+        if (scopeExists) {
+            return Optional.of(true);
+        }
+        return Optional.empty();
     }
 
     /**
