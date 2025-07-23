@@ -317,6 +317,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
+        request.setJWTID(jwtClaimsSet.getJWTID());
         return signJWT(jwtClaimsSet, request, null);
     }
 

@@ -395,13 +395,20 @@ public class AccessTokenIssuer {
 
         String syncLockString = authzGrantHandler.buildSyncLockString(tokReqMsgCtx);
         if (StringUtils.isBlank(syncLockString)) {
-            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+            tokenRespDTO = validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
                     tenantDomainOfApp, oAuthAppDO);
+        } else {
+            synchronized (syncLockString.intern()) {
+                tokenRespDTO = validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
+                        tenantDomainOfApp, oAuthAppDO);
+            }
         }
-        synchronized (syncLockString.intern()) {
-            return validateGrantAndIssueToken(tokenReqDTO, tokReqMsgCtx, tokenRespDTO, authzGrantHandler,
-                    tenantDomainOfApp, oAuthAppDO);
+
+        if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
+            OAuth2TokenUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
         }
+
+        return tokenRespDTO;
     }
 
     private AuthorizationGrantCacheEntry getAuthzGrantCacheEntryFromDeviceCode(OAuth2AccessTokenReqDTO tokenReqDTO) {
