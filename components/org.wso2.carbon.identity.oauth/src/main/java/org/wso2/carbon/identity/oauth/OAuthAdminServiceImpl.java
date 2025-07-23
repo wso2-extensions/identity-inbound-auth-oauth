@@ -87,7 +87,6 @@ import org.wso2.carbon.identity.openidconnect.OIDCClaimUtil;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
-import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
 import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.MergeAllAggregationStrategy;
@@ -1151,10 +1150,8 @@ public class OAuthAdminServiceImpl {
                     Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
                 String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
-                OrgResourceResolverService orgResourceManagementService =
-                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
-                scopeDTOList = orgResourceManagementService.getResourcesFromOrgHierarchy(
-                        organizationId,
+                scopeDTOList = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+                        .getResourcesFromOrgHierarchy(organizationId,
                         LambdaExceptionUtils.rethrowFunction(this::retrieveScopesFromHierarchy),
                         new MergeAllAggregationStrategy<>(this::mergeScopesInHierarchy)
                 );
@@ -1237,10 +1234,8 @@ public class OAuthAdminServiceImpl {
                     Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
                 String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
-                OrgResourceResolverService orgResourceManagementService =
-                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
-                scopeDTO = orgResourceManagementService.getResourcesFromOrgHierarchy(
-                        organizationId,
+                scopeDTO = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+                        .getResourcesFromOrgHierarchy(organizationId,
                         LambdaExceptionUtils.rethrowFunction(orgId -> retrieveScopeFromHierarchy(scopeName, orgId)),
                         new FirstFoundAggregationStrategy<>()
                 );
@@ -1325,10 +1320,8 @@ public class OAuthAdminServiceImpl {
                     Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
                 String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
-                OrgResourceResolverService orgResourceManagementService =
-                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
-                scopeDTOList = orgResourceManagementService.getResourcesFromOrgHierarchy(
-                        organizationId,
+                scopeDTOList = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+                        .getResourcesFromOrgHierarchy(organizationId,
                         LambdaExceptionUtils.rethrowFunction(this::retrieveScopeNamesFromHierarchy),
                         new MergeAllAggregationStrategy<>(this::mergeScopeNamesInHierarchy)
                 );
@@ -1407,10 +1400,8 @@ public class OAuthAdminServiceImpl {
                     Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
                 String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
-                OrgResourceResolverService orgResourceManagementService =
-                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
-                scopeDTO = orgResourceManagementService.getResourcesFromOrgHierarchy(
-                        organizationId,
+                scopeDTO = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+                        .getResourcesFromOrgHierarchy(organizationId,
                         LambdaExceptionUtils.rethrowFunction(orgId ->  retrieveScopeClaimsFromHierarchy(scope, orgId)),
                         new MergeAllAggregationStrategy<>(this::mergeScopeClaimsInHierarchy)
                 );
@@ -1550,10 +1541,8 @@ public class OAuthAdminServiceImpl {
                     Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
                 String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
                         .resolveOrganizationId(tenantDomain);
-                OrgResourceResolverService orgResourceManagementService =
-                        OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService();
-                scopeExists = orgResourceManagementService.getResourcesFromOrgHierarchy(
-                        organizationId,
+                scopeExists = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+                        .getResourcesFromOrgHierarchy(organizationId,
                         LambdaExceptionUtils.rethrowFunction(orgId -> retrieveScopeExistenceInHierarchy(scope, orgId)),
                         new FirstFoundAggregationStrategy<>()
                 );
