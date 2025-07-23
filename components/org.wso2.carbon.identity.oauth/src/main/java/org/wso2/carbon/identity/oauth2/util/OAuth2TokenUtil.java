@@ -381,6 +381,14 @@ public class OAuth2TokenUtil {
         triggerEvent(eventName, properties);
     }
 
+    /**
+     * Publishes an event when a token is issued.
+     *
+     * @param tokReqMsgCtx            The token request message context containing information about the token request.
+     * @param oAuth2AccessTokenReqDTO The OAuth2 access token request DTO containing details about the access token
+     *                                request.
+     * @throws UserIdNotFoundException If the user ID cannot be found in the context.
+     */
     public static void publishTokenIssueEvent(OAuthTokenReqMessageContext tokReqMsgCtx,
                                               OAuth2AccessTokenReqDTO oAuth2AccessTokenReqDTO)
             throws UserIdNotFoundException {
@@ -434,7 +442,7 @@ public class OAuth2TokenUtil {
         try {
             OAuth2ServiceComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
-            log.error("Error occurred publishing event " +  IdentityEventConstants.Event.TOKEN_ISSUED, e);
+            log.error("Error occurred publishing event " + IdentityEventConstants.Event.TOKEN_ISSUED, e);
         }
     }
 
