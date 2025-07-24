@@ -45,6 +45,8 @@ import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -1222,6 +1224,70 @@ public final class OAuthUtil {
                     LOG.error(errorMsg, e);
                     throw new UserStoreException(e);
                 }
+            }
+        }
+    }
+
+    /**
+     * This method will remove the authorization grant caches for the user associated tokens and auth codes.
+     *
+     * @param userName          Username of the user.
+     * @param userStoreManager  UserStoreManager of the user.
+     * @throws UserStoreException If an error occurred while removing the caches.
+     */
+    public static void removeAuthzGrantCacheForUser(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        Set<AccessTokenDO> accessTokenDOSet;
+        List<AuthzCodeDO> authorizationCodeDOSet;
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setTenantDomain(tenantDomain);
+        authenticatedUser.setUserName(userName);
+        try {
+            /*
+             Only the tokens and auth codes issued for openid scope should be removed from the cache, since no
+             claims are usually cached against tokens or auth codes, otherwise.
+             */
+            accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
+            authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
+            clearAuthzCodeGrantCachesForTokens(accessTokenDOSet);
+            clearAuthzCodeGrantCachesForCodes(authorizationCodeDOSet);
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = "Error occurred while retrieving access tokens issued for user : " +
+                    LoggerUtils.getMaskedContent(userName);
+            LOG.error(errorMsg, e);
+        }
+    }
+
+    private static void clearAuthzCodeGrantCachesForCodes(List<AuthzCodeDO> authorizationCodeDOSet) {
+
+        if (CollectionUtils.isNotEmpty(authorizationCodeDOSet)) {
+            for (AuthzCodeDO authorizationCodeDO : authorizationCodeDOSet) {
+                String authorizationCode = authorizationCodeDO.getAuthorizationCode();
+                String authzCodeId = authorizationCodeDO.getAuthzCodeId();
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId);
+            }
+        }
+    }
+
+    private static void clearAuthzCodeGrantCachesForTokens(Set<AccessTokenDO> accessTokenDOSet) {
+
+        if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
+            for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
+                if (StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
+                        accessTokenDO.getGrantType())) {
+                    continue;
+                }
+                String accessToken = accessTokenDO.getAccessToken();
+                String tokenId = accessTokenDO.getTokenId();
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId);
             }
         }
     }
