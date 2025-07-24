@@ -150,6 +150,7 @@ public class OAuthServerConfiguration {
     private boolean isTokenRenewalPerRequestEnabled = false;
     private boolean isRefreshTokenRenewalEnabled = true;
     private boolean isExtendRenewedTokenExpiryTimeEnabled = true;
+    private boolean isValidateAuthenticatedUserForRefreshGrantEnabled = false;
     private boolean assertionsUserNameEnabled = false;
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
@@ -372,6 +373,9 @@ public class OAuthServerConfiguration {
 
         // read refresh token renewal config
         parseRefreshTokenRenewalConfiguration(oauthElem);
+
+        // Read the authenticated user validation config for refresh grant.
+        parseRefreshTokenGrantValidationConfiguration(oauthElem);
 
         // read token persistence processor config
         parseTokenPersistenceProcessorConfig(oauthElem);
@@ -821,6 +825,16 @@ public class OAuthServerConfiguration {
 
     public boolean isExtendRenewedTokenExpiryTimeEnabled() {
         return isExtendRenewedTokenExpiryTimeEnabled;
+    }
+
+    /**
+     * Check if the authenticated user validation is enabled for refresh token grant flow.
+     *
+     * @return Returns true if the config is enabled.
+     */
+    public boolean isValidateAuthenticatedUserForRefreshGrantEnabled() {
+
+        return isValidateAuthenticatedUserForRefreshGrantEnabled;
     }
 
     public Map<String, OauthTokenIssuer> getOauthTokenIssuerMap() {
@@ -2020,6 +2034,20 @@ public class OAuthServerConfiguration {
         }
         if (log.isDebugEnabled()) {
             log.debug("ExtendRenewedRefreshTokenExpiryTime was set to : " + isExtendRenewedTokenExpiryTimeEnabled);
+        }
+    }
+
+    private void parseRefreshTokenGrantValidationConfiguration(OMElement oauthConfigElem) {
+
+        OMElement validateAuthenticatedUserForRefreshGrantElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.VALIDATE_AUTHENTICATED_USER_FOR_REFRESH_GRANT));
+        if (validateAuthenticatedUserForRefreshGrantElem != null) {
+            isValidateAuthenticatedUserForRefreshGrantEnabled =
+                    Boolean.parseBoolean(validateAuthenticatedUserForRefreshGrantElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("ValidateAuthenticatedUserForRefreshGrant was set to : " +
+                    isValidateAuthenticatedUserForRefreshGrantEnabled);
         }
     }
 
@@ -3426,6 +3454,9 @@ public class OAuthServerConfiguration {
         private static final String ENABLE_CACHE = "EnableOAuthCache";
         // Enable/Disable refresh token renewal on each refresh_token grant request
         private static final String RENEW_REFRESH_TOKEN_FOR_REFRESH_GRANT = "RenewRefreshTokenForRefreshGrant";
+        // Enable/Disable Authenticated user validation on refresh_token grant request.
+        private static final String VALIDATE_AUTHENTICATED_USER_FOR_REFRESH_GRANT =
+                "ValidateAuthenticatedUserForRefreshGrant";
         // Enable/Disable extend the lifetime of the new refresh token
         private static final String EXTEND_RENEWED_REFRESH_TOKEN_EXPIRY_TIME = "ExtendRenewedRefreshTokenExpiryTime";
         // TokenPersistenceProcessor

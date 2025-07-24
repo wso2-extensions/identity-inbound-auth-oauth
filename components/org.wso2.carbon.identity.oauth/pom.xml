@@ -112,6 +112,24 @@
             <artifactId>org.wso2.carbon.identity.event</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.wso2.carbon.identity.event.handler.accountlock</groupId>
+            <artifactId>org.wso2.carbon.identity.handler.event.account.lock</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml1</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.opensaml</groupId>
+                    <artifactId>opensaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.wso2.carbon.identity.framework</groupId>
+                    <artifactId>org.wso2.carbon.identity.mgt</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
             <groupId>org.wso2.carbon.identity.framework</groupId>
             <artifactId>org.wso2.carbon.identity.core</artifactId>
             <exclusions>
@@ -397,6 +415,7 @@
                             org.wso2.carbon.identity.oauth.common.token.bindings.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.oauth.common.*;version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                             org.wso2.carbon.identity.saml.common.util.*; version="${saml.common.util.version.range}",
+                            org.wso2.carbon.identity.handler.event.account.lock.service.*;version="${account.lock.service.imp.pkg.version.range}",
                             org.wso2.carbon.identity.organization.management.service; version="${carbon.identity.organization.management.core.version.range}",
                             org.wso2.carbon.identity.organization.management.service.exception; version="${carbon.identity.organization.management.core.version.range}",
                             org.wso2.carbon.identity.organization.management.role.management.service; version="${carbon.identity.organization.management.version.range}",
