@@ -537,16 +537,17 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
 
                 for (String userId : userIDList) {
                     try {
-                        String userName = FrameworkUtils.resolveUserNameFromUserId(userStoreManager, userId);
-                        if (userName == null) {
-                            log.warn("User name is null for user id: " + userId + ". Hence skipping " +
+                        User user = ((AbstractUserStoreManager) userStoreManager).getUser(userId, null);
+                        if (user == null) {
+                            log.warn("User not found for user id: " + userId + ". Hence skipping " +
                                     "authorization grant cache clearance.");
                             continue;
                         }
-                        UserStoreManager userStoreManagerOfUser = getUserStoreManagerOfUser(
-                                userStoreManager, userName);
+                        String userName = user.getUsername();
+                        String domain = user.getUserStoreDomain();
+                        UserStoreManager userStoreManagerOfUser = getUserStoreManager(userStoreManager, domain);
                         OAuthUtil.removeAuthzGrantCacheForUser(userName, userStoreManagerOfUser);
-                    } catch (UserSessionException e) {
+                    } catch (UserStoreException e) {
                         log.error("Error occurred while clearing authorization grant cache for user: " + userId, e);
                     }
                 }
@@ -568,6 +569,15 @@ public class IdentityOauthEventHandler extends AbstractEventHandler {
         String userStoreDomainOfUser = IdentityUtil.extractDomainFromName(userName);
         UserStoreManager secondaryUserStoreManager = userStoreManager.getSecondaryUserStoreManager(
                 userStoreDomainOfUser);
+        if (secondaryUserStoreManager == null) {
+            return userStoreManager;
+        }
+        return secondaryUserStoreManager;
+    }
+
+    private UserStoreManager getUserStoreManager(UserStoreManager userStoreManager, String domainName) {
+
+        UserStoreManager secondaryUserStoreManager = userStoreManager.getSecondaryUserStoreManager(domainName);
         if (secondaryUserStoreManager == null) {
             return userStoreManager;
         }
