@@ -86,6 +86,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenRespon
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2TokenUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.util.OAuthEventPublishingUtil;
 import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
 import org.wso2.carbon.identity.oauth2.validators.RoleBasedInternalScopeValidator;
@@ -405,7 +406,7 @@ public class AccessTokenIssuer {
         }
 
         if (tokenRespDTO != null && !tokenRespDTO.isError() && tokenRespDTO.getAccessToken() != null) {
-            OAuth2TokenUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
+            OAuthEventPublishingUtil.publishTokenIssueEvent(tokReqMsgCtx, tokenReqDTO);
         }
 
         return tokenRespDTO;
