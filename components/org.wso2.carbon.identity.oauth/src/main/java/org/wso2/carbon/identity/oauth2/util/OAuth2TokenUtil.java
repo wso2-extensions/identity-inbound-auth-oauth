@@ -370,6 +370,5 @@ public class OAuth2TokenUtil {
         properties.put(OIDCConstants.Event.IS_REQUEST_OBJECT_FLOW, isRequestObjectFlow);
         triggerEvent(eventName, properties);
     }
-
 }
 
