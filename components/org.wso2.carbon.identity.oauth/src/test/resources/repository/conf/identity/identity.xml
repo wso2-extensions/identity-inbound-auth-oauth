@@ -286,6 +286,10 @@
                 <SupportedTokenEndpointSigningAlgorithm>ES256</SupportedTokenEndpointSigningAlgorithm>
                 <SupportedTokenEndpointSigningAlgorithm>SHA256withRSA</SupportedTokenEndpointSigningAlgorithm>
             </SupportedTokenEndpointSigningAlgorithms>
+            <SupportedDPoPSigningAlgorithms>
+                <SupportedDPoPSigningAlgorithm>ES256</SupportedDPoPSigningAlgorithm>
+                <SupportedDPoPSigningAlgorithm>SHA256withRSA</SupportedDPoPSigningAlgorithm>
+            </SupportedDPoPSigningAlgorithms>
         </OpenIDConnect>
         <DeviceCodeGrant>
             <KeyLength>6</KeyLength>

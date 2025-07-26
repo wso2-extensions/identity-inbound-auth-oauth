@@ -518,5 +518,15 @@ public class OAuthServerConfigurationTest {
                 .replace("${carbon.host}", "localhost")
                 .replace("${carbon.management.port}", "9443");
     }
+
+    @Test
+    public void testGetSupportedDPoPSigningAlgorithms() {
+
+            List<String> supportedDPoPSigningAlgorithms = OAuthServerConfiguration.getInstance()
+                    .getSupportedDPoPSigningAlgorithms();
+            Assert.assertTrue(supportedDPoPSigningAlgorithms.contains("ES256"));
+            Assert.assertTrue(supportedDPoPSigningAlgorithms.contains("RS256"));
+            Assert.assertEquals(supportedDPoPSigningAlgorithms.size(), 2);
+    }
 }
 
