@@ -132,8 +132,7 @@ public class RoleBasedScopeValidationHandler implements ScopeValidationHandler {
 
         return authenticatedUser.isFederatedUser()
                 && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())
-                && (authenticatedUser.getUserAttributes() == null
-                || authenticatedUser.getUserAttributes().isEmpty());
+                && authenticatedUser.getImpersonatedUser() == null;
     }
 
     /**
