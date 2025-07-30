@@ -183,41 +183,32 @@ public class UserAccountStatusValidatorTest {
                     ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY, impersonationRequestDTO.getTenantDomain()))
                     .thenReturn(accountDisableConfigProperty);
 
-            try (MockedStatic<OAuth2Util> mockedOAuth2Util = mockStatic(OAuth2Util.class);) {
-                // Invoke impersonation validation.
-                mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
-                        "dummySubjectId", "carbon.super",
-                        "dummyConsumerKey")).thenReturn(impersonatedUser);
-
-                if (ORGANIZATION_LOGIN_IDP_NAME.equals(impersonator.getFederatedIdPName())) {
-                    lenient().when(mockAccountLockService.isAccountLocked(
-                            impersonatedUser.getUserName(),
-                                    residentOrgHandle,
-                                    impersonatedUser.getUserStoreDomain()))
-                            .thenReturn(accountLocked);
-                    lenient().when(mockAccountDisableService.isAccountDisabled(
-                            impersonatedUser.getUserName(),
-                                    residentOrgHandle,
-                                    impersonatedUser.getUserStoreDomain()))
-                            .thenReturn(accountDisabled && isDisableFeatureEnabled);
-                    accountDisableConfigProperty.setValue(String.valueOf(isDisableFeatureEnabled));
-                    frameworkUtils.when(() -> FrameworkUtils.getResidentIdpConfiguration(
-                                    ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY,
-                                    residentOrgHandle))
-                            .thenReturn(accountDisableConfigProperty);
-                } else {
-                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
-                            "dummySubjectId", "carbon.super",
-                            "dummyConsumerKey")).thenReturn(impersonatedUser);
-                }
-
-                ImpersonationContext impersonationContext = new ImpersonationContext();
-                impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
-                UserAccountStatusValidator userAccountStatusValidator = new UserAccountStatusValidator();
-                impersonationContext = userAccountStatusValidator.validateImpersonation(impersonationContext);
-                // Validate results.
-                assertEquals(impersonationContext.isValidated(), expected, "Impersonation validation failed.");
+            // Invoke impersonation validation.
+            if (ORGANIZATION_LOGIN_IDP_NAME.equals(impersonator.getFederatedIdPName())) {
+                lenient().when(mockAccountLockService.isAccountLocked(
+                                impersonatedUser.getUserName(),
+                                residentOrgHandle,
+                                impersonatedUser.getUserStoreDomain()))
+                        .thenReturn(accountLocked);
+                lenient().when(mockAccountDisableService.isAccountDisabled(
+                                impersonatedUser.getUserName(),
+                                residentOrgHandle,
+                                impersonatedUser.getUserStoreDomain()))
+                        .thenReturn(accountDisabled && isDisableFeatureEnabled);
+                accountDisableConfigProperty.setValue(String.valueOf(isDisableFeatureEnabled));
+                frameworkUtils.when(() -> FrameworkUtils.getResidentIdpConfiguration(
+                                ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY,
+                                residentOrgHandle))
+                        .thenReturn(accountDisableConfigProperty);
             }
+
+            ImpersonationContext impersonationContext = new ImpersonationContext();
+            impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
+            UserAccountStatusValidator userAccountStatusValidator = new UserAccountStatusValidator();
+            impersonationContext = userAccountStatusValidator.validateImpersonation(impersonationContext);
+            // Validate results.
+            assertEquals(impersonationContext.isValidated(), expected, "Impersonation validation failed.");
+
         }
     }
 }
