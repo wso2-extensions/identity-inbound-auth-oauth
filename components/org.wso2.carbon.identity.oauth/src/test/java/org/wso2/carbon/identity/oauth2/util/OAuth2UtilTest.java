@@ -91,7 +91,6 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.HashingPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.PlainTextPersistenceProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenPersistenceProcessor;
-import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
@@ -3379,10 +3378,13 @@ public class OAuth2UtilTest {
     @DataProvider(name = "getOrgAuthenticatedUserDataProvider")
     public Object[][] getOrgAuthenticatedUserDataProvider() {
         return new Object[][]{
-                // userId, tenantDomain, userAccessingOrg, userResidentOrg, clientId, expectedException, mockUserExists, mockResolveOrgSuccessful
+                // userId, tenantDomain, userAccessingOrg, userResidentOrg, clientId, expectedException,
+                // mockUserExists, mockResolveOrgSuccessful
                 {"testuser123", "carbon.super", "org1", "org2", "testclientid", null, true, true},
-                {"testuser123", "carbon.super", "org1", "org2", "testclientid", IdentityOAuth2Exception.class, false, true},
-                {"testuser123", "carbon.super", "org1", "org2", "testclientid", IdentityOAuth2Exception.class, true, false},
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid",
+                        IdentityOAuth2Exception.class, false, true},
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid",
+                        IdentityOAuth2Exception.class, true, false},
                 {null, "carbon.super", "org1", "org2", "testclientid", IdentityOAuth2Exception.class, true, true}
         };
     }

@@ -550,11 +550,9 @@ public class AuthzUtil {
 
         Map<String, String> mainAppUserRolesMappings = null;
         try {
-            String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                    .resolveTenantDomain(accessingOrganization);
             String accessingOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveTenantDomain(accessingOrganization);
-            List<String> sharedUserRoles = AuthzUtil.getRoles(userId, userResidentOrgHandle);
+            List<String> sharedUserRoles = AuthzUtil.getRoles(userId, accessingOrgHandle);
             mainAppUserRolesMappings = OAuth2ServiceComponentHolder.getInstance()
                     .getRoleManagementServiceV2()
                     .getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, accessingOrgHandle);

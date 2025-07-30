@@ -43,7 +43,6 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtSe
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
-import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
