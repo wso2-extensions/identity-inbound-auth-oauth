@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtSe
 import org.wso2.carbon.identity.oauth2.impersonation.services.ImpersonationMgtServiceImpl;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -212,34 +213,48 @@ public class OAuth2AuthzEndpointImpersonationTest extends TestOAuthEndpointBase 
             when(impersonationMgtService.validateImpersonationRequest(any(ImpersonationRequestDTO.class)))
                     .thenReturn(resultContext);
 
-            // Invoke impersonation validation.
-            when(impersonatedUser.getUserId()).thenReturn(impersonatedUserIdInReq);
+            try (MockedStatic<OAuth2Util> mockedOAuth2Util = mockStatic(OAuth2Util.class);) {
+                // Invoke impersonation validation.
+                when(impersonatedUser.getUserId()).thenReturn(impersonatedUserIdInReq);
 
-            // Invoke handleSessionImpersonation method.
-            Method handleSessionImpersonation = AuthzUtil.class.getDeclaredMethod(
-                    "handleSessionImpersonation", OAuthMessage.class, String.class, OAuth2Parameters.class,
-                    AuthenticationResult.class);
-            handleSessionImpersonation.setAccessible(true);
+                if (residentOrg != null && accessingOrg != null) {
+                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                            impersonatedUserIdInReq, impersonator.getTenantDomain(), accessingOrg, residentOrg,
+                            dummyClientId)).thenReturn(impersonatedUser);
+                } else {
+                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                            impersonatedUserIdInReq, impersonator.getTenantDomain(),
+                            dummyClientId)).thenReturn(impersonatedUser);
+                }
 
-            if (!isUserSessionImpersonationEnabled) {
-                handleSessionImpersonation.invoke(null,
-                        oAuthMessage, "", oAuth2Parameters, authenticationResult);
-                assertEquals("Impersonation should not be allowed when impersonation is disabled.",
-                        authenticationResult.getSubject().getUserId(), impersonator.getUserId());
-                return;
-            }
 
-            if (rejectImpersonation) {
-                assertThrows(Exception.class, () -> {
+
+                // Invoke handleSessionImpersonation method.
+                Method handleSessionImpersonation = AuthzUtil.class.getDeclaredMethod(
+                        "handleSessionImpersonation", OAuthMessage.class, String.class, OAuth2Parameters.class,
+                        AuthenticationResult.class);
+                handleSessionImpersonation.setAccessible(true);
+
+                if (!isUserSessionImpersonationEnabled) {
                     handleSessionImpersonation.invoke(null,
-                            oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
-                });
-            } else {
-                if (ssoImpersonation) {
-                    handleSessionImpersonation.invoke(null,
-                            oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
-                    assertEquals(Objects.equals(authenticationResult.getSubject().getUserId(),
-                            impersonatedUser.getUserId()), validImpersonation);
+                            oAuthMessage, "", oAuth2Parameters, authenticationResult);
+                    assertEquals("Impersonation should not be allowed when impersonation is disabled.",
+                            authenticationResult.getSubject().getUserId(), impersonator.getUserId());
+                    return;
+                }
+
+                if (rejectImpersonation) {
+                    assertThrows(Exception.class, () -> {
+                        handleSessionImpersonation.invoke(null,
+                                oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
+                    });
+                } else {
+                    if (ssoImpersonation) {
+                        handleSessionImpersonation.invoke(null,
+                                oAuthMessage, "carbon.super", oAuth2Parameters, authenticationResult);
+                        assertEquals(Objects.equals(authenticationResult.getSubject().getUserId(),
+                                impersonatedUser.getUserId()), validImpersonation);
+                    }
                 }
             }
         }

@@ -548,18 +548,14 @@ public class AuthzUtil {
     public static List<String> getSubOrgUserRoles(String userId, String accessingOrganization)
             throws IdentityOAuth2Exception {
 
+        List<String> sharedUserRoles = AuthzUtil.getRoles(userId, accessingOrganization);
         Map<String, String> mainAppUserRolesMappings = null;
         try {
-            String accessingOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                    .resolveTenantDomain(accessingOrganization);
-            List<String> sharedUserRoles = AuthzUtil.getRoles(userId, accessingOrgHandle);
             mainAppUserRolesMappings = OAuth2ServiceComponentHolder.getInstance()
                     .getRoleManagementServiceV2()
-                    .getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, accessingOrgHandle);
+                    .getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, accessingOrganization);
         } catch (IdentityRoleManagementException e) {
             throw new IdentityOAuth2Exception("Error occurred while getting mapped main app roles.", e);
-        } catch (OrganizationManagementException e) {
-            throw new IdentityOAuth2Exception("Error occurred while getting tenant domain from org ids.");
         }
         return new ArrayList<>(mainAppUserRolesMappings.values());
     }

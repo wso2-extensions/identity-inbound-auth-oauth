@@ -245,10 +245,7 @@ public class ClaimUtil {
                     // For claim resolving during sub organization impersonation.
                     if (isImpersonatedUser && authenticatedUser.isFederatedUser()
                             && ORGANIZATION_LOGIN_IDP_NAME.equals(authenticatedUser.getFederatedIdPName())) {
-                        String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance()
-                                .getOrganizationManager()
-                                .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-                        realm = getUserRealm(null, userResidentOrgHandle);
+                        realm = getUserRealm(null, authenticatedUser.getUserResidentOrganization());
                     } else {
                         realm = getUserRealm(null, userTenantDomain);
                     }
@@ -447,9 +444,7 @@ public class ClaimUtil {
         AuthenticatedUser subOrgAuthenticatedUser = new AuthenticatedUser();
         subOrgAuthenticatedUser.setUserId(authenticatedUser.getUserId());
         subOrgAuthenticatedUser.setUserName(authenticatedUser.getUserName());
-        String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                .resolveTenantDomain(authenticatedUser.getUserResidentOrganization());
-        subOrgAuthenticatedUser.setTenantDomain(userResidentOrgHandle);
+        subOrgAuthenticatedUser.setTenantDomain(authenticatedUser.getUserResidentOrganization());
 
         // Get app associated roles.
         String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(subOrgAuthenticatedUser, sharedAppId);

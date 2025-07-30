@@ -30,7 +30,6 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext;
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ResidentIdpPropertyName.ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.ERROR_WHILE_CHECKING_ACCOUNT_DISABLE_STATUS;
@@ -67,13 +66,7 @@ public class UserAccountStatusValidator implements ImpersonationValidator {
         AuthenticatedUser subjectUser = impersonator.getImpersonatedUser();
         String subjectTenantDomain = subjectUser.getTenantDomain();
         if (impersonator.getUserResidentOrganization() != null) {
-            try {
-                subjectTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(impersonator.getUserResidentOrganization());
-            } catch (OrganizationManagementException e) {
-                throw new IdentityOAuth2Exception("Error while resolving organization handle for the impersonated " +
-                        "user.", e);
-            }
+            subjectTenantDomain = impersonator.getUserResidentOrganization();
         }
         String subjectUserName = subjectUser.getUserName();
         String domainName = subjectUser.getUserStoreDomain();

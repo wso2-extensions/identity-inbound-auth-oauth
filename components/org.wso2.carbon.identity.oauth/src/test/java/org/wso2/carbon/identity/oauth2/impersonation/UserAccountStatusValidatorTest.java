@@ -40,8 +40,7 @@ import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationContext
 import org.wso2.carbon.identity.oauth2.impersonation.models.ImpersonationRequestDTO;
 import org.wso2.carbon.identity.oauth2.impersonation.validators.UserAccountStatusValidator;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -71,8 +70,6 @@ public class UserAccountStatusValidatorTest {
     private AccountLockService mockAccountLockService;
     @Mock
     private AccountDisableService mockAccountDisableService;
-    @Mock
-    private OrganizationManager organizationManager;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -130,7 +127,7 @@ public class UserAccountStatusValidatorTest {
     public void testValidateImpersonation(boolean accountLocked, boolean accountDisabled,
                                           boolean isDisableFeatureEnabled, String residentOrg, String accessingOrg,
                                           boolean expected)
-            throws IdentityException, OrganizationManagementException {
+            throws IdentityException {
 
         try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration = mockStatic(
                         OAuthServerConfiguration.class);
@@ -138,24 +135,10 @@ public class UserAccountStatusValidatorTest {
                      mockStatic(OAuth2ServiceComponentHolder.class, Mockito.CALLS_REAL_METHODS);
              MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);) {
 
-            // Prepare OAuthServerConfiguration.
-            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockOAuthServerConfiguration);
-            lenient().when(mockOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
-
-            // Prepare services.
-            OAuth2ServiceComponentHolder.setAccountLockService(mockAccountLockService);
-            OAuth2ServiceComponentHolder.setAccountDisableService(mockAccountDisableService);
-            OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManager);
-
             // Prepare impersonator.
-            String residentOrgHandle = residentOrg + ".com";
             if (residentOrg != null) {
                 lenient().when(impersonator.getUserResidentOrganization()).thenReturn(residentOrg);
                 lenient().when(impersonatedUser.getUserResidentOrganization()).thenReturn(residentOrg);
-                lenient().when(organizationManager.resolveTenantDomain(residentOrg))
-                        .thenReturn(residentOrgHandle);
             }
             if (accessingOrg != null) {
                 lenient().when(impersonator.getAccessingOrganization()).thenReturn(accessingOrg);
@@ -169,6 +152,15 @@ public class UserAccountStatusValidatorTest {
             }
             when(impersonatedUser.getTenantDomain()).thenReturn("carbon.super");
 
+            // Prepare OAuthServerConfiguration.
+            OAuthServerConfiguration mockOAuthServerConfiguration = mock(OAuthServerConfiguration.class);
+            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockOAuthServerConfiguration);
+            lenient().when(mockOAuthServerConfiguration.getTimeStampSkewInSeconds()).thenReturn(3600L);
+
+            // Prepare Account lock & disable services.
+            OAuth2ServiceComponentHolder.setAccountLockService(mockAccountLockService);
+            OAuth2ServiceComponentHolder.setAccountDisableService(mockAccountDisableService);
             // Mock service output.
             lenient().when(mockAccountLockService.isAccountLocked(impersonatedUser.getUserName(),
                     impersonationRequestDTO.getTenantDomain(), impersonatedUser.getUserStoreDomain()))
@@ -182,32 +174,46 @@ public class UserAccountStatusValidatorTest {
                     ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY, impersonationRequestDTO.getTenantDomain()))
                     .thenReturn(accountDisableConfigProperty);
 
-            // Invoke impersonation validation.
-            if (ORGANIZATION_LOGIN_IDP_NAME.equals(impersonator.getFederatedIdPName())) {
-                lenient().when(mockAccountLockService.isAccountLocked(
-                                impersonatedUser.getUserName(),
-                                residentOrgHandle,
-                                impersonatedUser.getUserStoreDomain()))
-                        .thenReturn(accountLocked);
-                lenient().when(mockAccountDisableService.isAccountDisabled(
-                                impersonatedUser.getUserName(),
-                                residentOrgHandle,
-                                impersonatedUser.getUserStoreDomain()))
-                        .thenReturn(accountDisabled && isDisableFeatureEnabled);
-                accountDisableConfigProperty.setValue(String.valueOf(isDisableFeatureEnabled));
-                frameworkUtils.when(() -> FrameworkUtils.getResidentIdpConfiguration(
-                                ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY,
-                                residentOrgHandle))
-                        .thenReturn(accountDisableConfigProperty);
+            try (MockedStatic<OAuth2Util> mockedOAuth2Util = mockStatic(OAuth2Util.class);) {
+                // Invoke impersonation validation.
+                mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                        "dummySubjectId", "carbon.super",
+                        "dummyConsumerKey")).thenReturn(impersonatedUser);
+
+                if (ORGANIZATION_LOGIN_IDP_NAME.equals(impersonator.getFederatedIdPName())) {
+                    // (String userId, String tenantDomain, String userAccessingOrg,
+                    // String userResidentOrg, String clientId)
+                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                            "dummySubjectId", "carbon.super", "dummyOrg1", "dummyOrg1",
+                            "dummyConsumerKey")).thenReturn(impersonatedUser);
+                    lenient().when(mockAccountLockService.isAccountLocked(
+                            impersonatedUser.getUserName(),
+                                    impersonatedUser.getUserResidentOrganization(),
+                                    impersonatedUser.getUserStoreDomain()))
+                            .thenReturn(accountLocked);
+                    lenient().when(mockAccountDisableService.isAccountDisabled(
+                            impersonatedUser.getUserName(),
+                                    impersonatedUser.getUserResidentOrganization(),
+                                    impersonatedUser.getUserStoreDomain()))
+                            .thenReturn(accountDisabled && isDisableFeatureEnabled);
+                    accountDisableConfigProperty.setValue(String.valueOf(isDisableFeatureEnabled));
+                    frameworkUtils.when(() -> FrameworkUtils.getResidentIdpConfiguration(
+                                    ACCOUNT_DISABLE_HANDLER_ENABLE_PROPERTY,
+                                    impersonatedUser.getUserResidentOrganization()))
+                            .thenReturn(accountDisableConfigProperty);
+                } else {
+                    mockedOAuth2Util.when(() -> OAuth2Util.getAuthenticatedUser(
+                            "dummySubjectId", "carbon.super",
+                            "dummyConsumerKey")).thenReturn(impersonatedUser);
+                }
+
+                ImpersonationContext impersonationContext = new ImpersonationContext();
+                impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
+                UserAccountStatusValidator userAccountStatusValidator = new UserAccountStatusValidator();
+                impersonationContext = userAccountStatusValidator.validateImpersonation(impersonationContext);
+                // Validate results.
+                assertEquals(impersonationContext.isValidated(), expected, "Impersonation validation failed.");
             }
-
-            ImpersonationContext impersonationContext = new ImpersonationContext();
-            impersonationContext.setImpersonationRequestDTO(impersonationRequestDTO);
-            UserAccountStatusValidator userAccountStatusValidator = new UserAccountStatusValidator();
-            impersonationContext = userAccountStatusValidator.validateImpersonation(impersonationContext);
-            // Validate results.
-            assertEquals(impersonationContext.isValidated(), expected, "Impersonation validation failed.");
-
         }
     }
 }
