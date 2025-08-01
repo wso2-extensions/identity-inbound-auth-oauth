@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -58,6 +58,7 @@ import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenRespon
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.identity.rule.evaluation.api.provider.RuleEvaluationDataProvider;
 import org.wso2.carbon.idp.mgt.IdpManager;
@@ -600,5 +601,24 @@ public class OAuthServiceComponent {
 
         log.debug("Unregistering the ActionExecutorService in OAuthServiceComponent.");
         OAuthComponentServiceHolder.getInstance().setActionExecutorService(null);
+    }
+
+    @Reference(
+            name = "org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service",
+            service = OrgResourceResolverService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetOrgResourceResolverService")
+    protected void setOrgResourceResolverService(OrgResourceResolverService orgResourceResolverService) {
+
+        OAuthComponentServiceHolder.getInstance()
+                .setOrgResourceResolverService(orgResourceResolverService);
+        log.debug("OrgResourceResolverService set in Claim Management bundle");
+    }
+
+    protected void unsetOrgResourceResolverService(OrgResourceResolverService orgResourceResolverService) {
+
+        OAuthComponentServiceHolder.getInstance().setOrgResourceResolverService(null);
+        log.debug("OrgResourceResolverService unset in Claim Management bundle");
     }
 }
