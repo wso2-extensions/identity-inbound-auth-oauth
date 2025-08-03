@@ -3869,9 +3869,11 @@ public class OAuth2Util {
 
         try {
             RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
-            int userResidentOrgId = realmService.getTenantManager().getTenantId(userResidentOrg);
+            String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(userResidentOrg);
+            int userResidentOrgTenantId = realmService.getTenantManager().getTenantId(userResidentOrgHandle);
 
-            User user = OAuthUtil.getUserFromTenant(userId, userResidentOrgId);
+            User user = OAuthUtil.getUserFromTenant(userId, userResidentOrgTenantId);
             if (user == null) {
                 throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
                         "Invalid User Id provided for the request. Unable to find the user for given " +
@@ -3882,6 +3884,9 @@ public class OAuth2Util {
         } catch (UserStoreException | IdentityOAuth2Exception e) {
             throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
                     "Use mapped local subject is mandatory but a local user couldn't be found");
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while resolving tenant domain for user resident organization: " + userResidentOrg, e);
         }
     }
 
@@ -4057,9 +4062,11 @@ public class OAuth2Util {
             String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
                     .getSubjectClaimUri();
             if (subjectClaimUri != null) {
+                String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(userResidentOrg);
                 String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
                         OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
-                                        IdentityTenantUtil.getTenantId(userResidentOrg))
+                                        IdentityTenantUtil.getTenantId(userResidentOrgHandle))
                                 .getUserStoreManager(), subjectClaimUri);
 
                 if (subjectClaimValue != null) {
@@ -4085,6 +4092,9 @@ public class OAuth2Util {
             }
         } catch (IdentityApplicationManagementException | UserStoreException e) {
             throw new IdentityOAuth2Exception("Error while obtaining subject identifier for user: " + userName, e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while resolving tenant domain for user resident organization: " + userResidentOrg, e);
         }
         return authenticatedSubjectIdentifier;
     }
