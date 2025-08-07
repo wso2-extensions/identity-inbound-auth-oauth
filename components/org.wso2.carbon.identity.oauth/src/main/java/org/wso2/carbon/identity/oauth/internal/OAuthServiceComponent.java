@@ -613,12 +613,12 @@ public class OAuthServiceComponent {
 
         OAuthComponentServiceHolder.getInstance()
                 .setOrgResourceResolverService(orgResourceResolverService);
-        log.debug("OrgResourceResolverService set in Claim Management bundle");
+        log.debug("OrgResourceResolverService set in OAuthServiceComponent");
     }
 
     protected void unsetOrgResourceResolverService(OrgResourceResolverService orgResourceResolverService) {
 
         OAuthComponentServiceHolder.getInstance().setOrgResourceResolverService(null);
-        log.debug("OrgResourceResolverService unset in Claim Management bundle");
+        log.debug("OrgResourceResolverService unset in OAuthServiceComponent");
     }
 }

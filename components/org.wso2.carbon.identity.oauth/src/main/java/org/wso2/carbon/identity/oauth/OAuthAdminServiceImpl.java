@@ -1207,7 +1207,7 @@ public class OAuthAdminServiceImpl {
 
         Map<String, ScopeDTO> existingScopeDTOs = aggregatedScopeDTOs.stream()
                 .collect(Collectors.toMap(ScopeDTO::getName, Function.identity()));
-        for (ScopeDTO tenantScopeDTO: tenantScopeDTOs) {
+        for (ScopeDTO tenantScopeDTO : tenantScopeDTOs) {
             String scopeDTOName = tenantScopeDTO.getName();
             if (!existingScopeDTOs.containsKey(scopeDTOName)) {
                 aggregatedScopeDTOs.add(tenantScopeDTO);
@@ -1314,21 +1314,8 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
-        List<String> scopeDTOList;
         try {
-            if (OrganizationManagementUtil.isOrganization(tenantId) &&
-                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
-                String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
-                        .resolveOrganizationId(tenantDomain);
-                scopeDTOList = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
-                        .getResourcesFromOrgHierarchy(organizationId,
-                        LambdaExceptionUtils.rethrowFunction(this::retrieveScopeNamesFromHierarchy),
-                        new MergeAllAggregationStrategy<>(this::mergeScopeNamesInHierarchy)
-                );
-            } else {
-                scopeDTOList = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                        getScopeNames(tenantId);
-            }
+            List<String> scopeDTOList = getScopeNamesFromDAO(tenantId, tenantDomain);
             if (CollectionUtils.isNotEmpty(scopeDTOList)) {
                 return scopeDTOList.toArray(new String[scopeDTOList.size()]);
             } else {
@@ -1339,6 +1326,36 @@ public class OAuthAdminServiceImpl {
             }
         } catch (IdentityOAuth2Exception | OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
             throw handleError("Error while loading OIDC scopes and claims for tenant: " + tenantId, e);
+        }
+    }
+
+    /**
+     * Retrieves the scope names from the DAO layer based on whether OIDC scope inheritance is enabled or not.
+     *
+     * @param tenantId     The tenant id of the tenant for which the scope names need to be retrieved.
+     * @param tenantDomain The tenant domain of the tenant for which the scopes need to be retrieved.
+     * @return The scope names for the given tenant.
+     * @throws OrganizationManagementException If an error occurs when checking whether OIDC scope inheritance is
+     *                                         enabled.
+     * @throws OrgResourceHierarchyTraverseException If an error occurs when merging the resources in the hierarchy
+     *                                               when inheritance is enabled.
+     * @throws IdentityOAuth2Exception If an error occurs when getting the tenant id or the scopes.
+     */
+    private List<String> getScopeNamesFromDAO(int tenantId, String tenantDomain) throws OrganizationManagementException,
+            OrgResourceHierarchyTraverseException, IdentityOAuth2Exception {
+
+        if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            return OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+                    .getResourcesFromOrgHierarchy(organizationId,
+                            LambdaExceptionUtils.rethrowFunction(this::retrieveScopeNamesFromHierarchy),
+                            new MergeAllAggregationStrategy<>(this::mergeScopeNamesInHierarchy)
+                    );
+        } else {
+            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
+                    getScopeNames(tenantId);
         }
     }
 
@@ -1375,12 +1392,9 @@ public class OAuthAdminServiceImpl {
     private List<String> mergeScopeNamesInHierarchy(
             List<String> aggregatedScopeNames, List<String> tenantScopeNames) {
 
-        for (String tenantScopeName: tenantScopeNames) {
-            if (!aggregatedScopeNames.contains(tenantScopeName)) {
-                aggregatedScopeNames.add(tenantScopeName);
-            }
-        }
-        return aggregatedScopeNames;
+        Set<String> scopeSet = new HashSet<>(aggregatedScopeNames);
+        scopeSet.addAll(tenantScopeNames);
+        return new ArrayList<>(scopeSet);
     }
 
     /**
@@ -1457,8 +1471,10 @@ public class OAuthAdminServiceImpl {
     private ScopeDTO mergeScopeClaimsInHierarchy(
             ScopeDTO aggregatedScopeClaims, ScopeDTO tenantScopeClaims) {
 
-        for (String claim: tenantScopeClaims.getClaim()) {
-            if (!Arrays.asList(aggregatedScopeClaims.getClaim()).contains(claim)) {
+        Set<String> existingClaims = new HashSet<>(Arrays.asList(aggregatedScopeClaims.getClaim()));
+
+        for (String claim : tenantScopeClaims.getClaim()) {
+            if (!existingClaims.contains(claim)) {
                 aggregatedScopeClaims.addNewClaimToExistingClaims(claim);
             }
         }
@@ -2842,8 +2858,8 @@ public class OAuthAdminServiceImpl {
 
         try {
             int tenantId = getTenantId(tenantDomain);
-            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().getScopeNames(tenantId);
-        } catch (IdentityOAuth2Exception e) {
+            return getScopeNamesFromDAO(tenantId, tenantDomain);
+        } catch (IdentityOAuth2Exception | OrganizationManagementException | OrgResourceHierarchyTraverseException e) {
             throw handleError("Error while loading OIDC scopes of tenant: " + tenantDomain, e);
         }
     }
