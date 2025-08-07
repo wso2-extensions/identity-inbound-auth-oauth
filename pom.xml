@@ -882,8 +882,8 @@
         <saml.common.util.version.range>[1.0.0,2.0.0)</saml.common.util.version.range>
 
         <!-- Account lock service versions -->
-        <account.lock.service.version>1.4.0.16</account.lock.service.version>
-        <account.lock.service.imp.pkg.version.range>[1.4.0.16, 2.0.0)</account.lock.service.imp.pkg.version.range>
+        <account.lock.service.version>1.8.14</account.lock.service.version>
+        <account.lock.service.imp.pkg.version.range>[1.8.14, 2.0.0)</account.lock.service.imp.pkg.version.range>
 
         <!-- Commons -->
         <commons-lang.wso2.version>2.6.0.wso2v1</commons-lang.wso2.version>
