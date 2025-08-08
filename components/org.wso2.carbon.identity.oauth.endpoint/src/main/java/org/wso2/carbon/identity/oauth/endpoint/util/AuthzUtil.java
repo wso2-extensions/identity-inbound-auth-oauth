@@ -1173,11 +1173,6 @@ public class AuthzUtil {
                                             OAuth2Parameters oauth2Params, AuthenticationResult authnResult)
             throws OAuthProblemException {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         SessionContext sessionContext = getSessionContextFromCache(oAuthMessage, tenantDomain);
         if (sessionContext != null) {
             try {
@@ -1790,11 +1785,6 @@ public class AuthzUtil {
     private static void setImpersonationDetailsToAuthzRequestContext(OAuthMessage oAuthMessage,
                                                               OAuthAuthzReqMessageContext oAuthAuthzReqMessageContext) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             String impersonator = oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString();
             oAuthAuthzReqMessageContext.setImpersonationRequest(true);
@@ -2151,11 +2141,6 @@ public class AuthzUtil {
 
     private static void setImpersonationDetailsToAuthGrantCache(OAuthMessage oAuthMessage) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         AuthorizationGrantCacheEntry authorizationGrantCacheEntry = oAuthMessage.getAuthorizationGrantCacheEntry();
         if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             authorizationGrantCacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
@@ -4757,10 +4742,8 @@ public class AuthzUtil {
             cacheEntry.setMappedRemoteClaims(sessionDataCacheEntry
                     .getMappedRemoteClaims());
         }
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
         // Add impersonation to the session data cache entry.
-        if (isUserSessionImpersonationEnabled && oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
+        if (oAuthMessage.getProperty(IMPERSONATING_ACTOR) != null) {
             cacheEntry.setImpersonator(oAuthMessage.getProperty(IMPERSONATING_ACTOR).toString());
         }
 

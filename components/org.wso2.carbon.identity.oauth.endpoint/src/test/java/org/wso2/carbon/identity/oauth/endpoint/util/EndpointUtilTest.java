@@ -382,7 +382,6 @@ public class EndpointUtilTest {
                 oAuthServerConfigurationFactory.when(OAuthServerConfigurationFactory::getOAuthServerConfiguration)
                         .thenReturn(mockedOAuthServerConfiguration);
                 lenient().when(mockedOAuthServerConfiguration.isDropUnregisteredScopes()).thenReturn(false);
-                lenient().when(mockedOAuthServerConfiguration.isUserSessionImpersonationEnabled()).thenReturn(true);
                 oauth2ScopeServiceFactory.when(Oauth2ScopeServiceFactory::getOAuth2ScopeService)
                         .thenReturn(oAuth2ScopeService);
                 lenient().when(oAuth2ScopeService.getUserConsentForApp(anyString(), anyString(), anyInt()))
@@ -1045,36 +1044,25 @@ public class EndpointUtilTest {
     public Object[][] providePersistImpersonationInfoToSessionDataCache() {
 
         return new Object[][]{
-                {true, "dummyImpersonator", true},
-                {true, "", true},
-                {true, null, false},
-                {false, "dummyImpersonator", false}
+                {"dummyImpersonator", true},
+                {"", true},
+                {null, false}
         };
     }
 
     @Test(dataProvider = "providePersistImpersonationInfoToSessionDataCache")
-    public void testPersistImpersonationInfoToSessionDataCache(boolean isUserSessionImpersonationEnabled,
-                                                               String impersonatingActor, boolean expected) {
+    public void testPersistImpersonationInfoToSessionDataCache(String impersonatingActor, boolean expected) {
 
-        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration
-                     = mockStatic(OAuthServerConfiguration.class);) {
-            oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance)
-                    .thenReturn(mockedOAuthServerConfiguration);
+        SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
+        OAuth2AuthorizeReqDTO authorizationReqDTO = new OAuth2AuthorizeReqDTO();
+        OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizationReqDTO);
+        sessionDataCacheEntry.setAuthzReqMsgCtx(authzReqMsgCtx);
+        OAuthMessage oAuthMessage = mock(OAuthMessage.class);
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(IMPERSONATING_ACTOR, impersonatingActor);
+        lenient().when(oAuthMessage.getProperties()).thenReturn(properties);
 
-            when(mockedOAuthServerConfiguration.isUserSessionImpersonationEnabled()).thenReturn(
-                    isUserSessionImpersonationEnabled);
-
-            SessionDataCacheEntry sessionDataCacheEntry = new SessionDataCacheEntry();
-            OAuth2AuthorizeReqDTO authorizationReqDTO = new OAuth2AuthorizeReqDTO();
-            OAuthAuthzReqMessageContext authzReqMsgCtx = new OAuthAuthzReqMessageContext(authorizationReqDTO);
-            sessionDataCacheEntry.setAuthzReqMsgCtx(authzReqMsgCtx);
-            OAuthMessage oAuthMessage = mock(OAuthMessage.class);
-            Map<String, Object> properties = new HashMap<>();
-            properties.put(IMPERSONATING_ACTOR, impersonatingActor);
-            lenient().when(oAuthMessage.getProperties()).thenReturn(properties);
-
-            EndpointUtil.persistImpersonationInfoToSessionDataCache(sessionDataCacheEntry, oAuthMessage);
-            assertEquals(authzReqMsgCtx.isImpersonationRequest(), expected);
-        }
+        EndpointUtil.persistImpersonationInfoToSessionDataCache(sessionDataCacheEntry, oAuthMessage);
+        assertEquals(authzReqMsgCtx.isImpersonationRequest(), expected);
     }
 }
