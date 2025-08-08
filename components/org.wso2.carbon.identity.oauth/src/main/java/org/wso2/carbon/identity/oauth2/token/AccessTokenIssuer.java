@@ -759,12 +759,8 @@ public class AccessTokenIssuer {
         impersonationNotificationRequestDTO.setTokenReqMessageContext(tokReqMsgCtx);
         String impersonatorUserId = (String) tokReqMsgCtx.getProperty(IMPERSONATING_ACTOR);
         impersonationNotificationRequestDTO.setImpersonator(impersonatorUserId);
-        try {
-            String impersonatedUserId = tokReqMsgCtx.getAuthorizedUser().getUserId();
-            impersonationNotificationRequestDTO.setSubject(impersonatedUserId);
-        } catch (UserIdNotFoundException e) {
-            throw new IdentityOAuth2Exception("User ID not found in the token request context.", e);
-        }
+        AuthenticatedUser impersonatedUser = tokReqMsgCtx.getAuthorizedUser();
+        impersonationNotificationRequestDTO.setSubject(impersonatedUser);
         impersonationNotificationRequestDTO.setTenantDomain(tokReqMsgCtx.getAuthorizedUser().getTenantDomain());
         ImpersonationNotificationMgtService notificationMgtService = new ImpersonationNotificationMgtServiceImpl();
         notificationMgtService.notifyImpersonation(impersonationNotificationRequestDTO);
