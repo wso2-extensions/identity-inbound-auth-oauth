@@ -2125,6 +2125,17 @@ public class OAuth2Util {
      */
     public static void initiateOIDCScopes(int tenantId) {
 
+        try {
+            if (OrganizationManagementUtil.isOrganization(tenantId)) {
+                return;
+            }
+        } catch (OrganizationManagementException e) {
+            log.error(e.getMessage());
+        }
+        populateOIDCScopes(tenantId);
+    }
+
+    public static void populateOIDCScopes(int tenantId) {
         List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
