@@ -326,6 +326,10 @@ public class OAuthServerConfiguration {
 
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
+
+    // Property to determine whether the SP ID should be returned to the application.
+    private boolean returnSpIdToApplication = false;
+
     // Property to define the allowed scopes.
     private List<String> allowedScopes = new ArrayList<>();
     // Property to define the default requested scopes.
@@ -576,6 +580,9 @@ public class OAuthServerConfiguration {
 
         // Read config for user session impersonation feature.
         parseUserSessionImpersonation(oauthElem);
+
+        // Read config for returning spId to application.
+        parseReturnSpIdToApplicationConfig(oauthElem);
     }
 
     /**
@@ -649,6 +656,15 @@ public class OAuthServerConfiguration {
         if (skipOIDCClaimsForClientCredentialGrantElement != null) {
             skipOIDCClaimsForClientCredentialGrant = Boolean.parseBoolean(
                     skipOIDCClaimsForClientCredentialGrantElement.getText().trim());
+        }
+    }
+
+    private void parseReturnSpIdToApplicationConfig(OMElement oauthElem) {
+
+        OMElement returnSpIdToApplicationElement = oauthElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.RETURN_SP_ID_TO_APPLICATION));
+        if (returnSpIdToApplicationElement != null) {
+            returnSpIdToApplication = Boolean.parseBoolean(returnSpIdToApplicationElement.getText().trim());
         }
     }
 
@@ -901,6 +917,18 @@ public class OAuthServerConfiguration {
 
         return skipOIDCClaimsForClientCredentialGrant;
     }
+
+    /**
+     * Returns the value of returnSpIdToApplication configuration. By configuring this, apps can receive spId in
+     * the query param.
+     *
+     * @return boolean value of returnSpIdToApplication configuration.
+     */
+    public boolean returnSpIdToApps() {
+
+        return returnSpIdToApplication;
+    }
+
     /**
      * instantiate the OAuth token generator. to override the default implementation, one can specify the custom class
      * in the identity.xml.
@@ -4132,6 +4160,7 @@ public class OAuthServerConfiguration {
         return isUserSessionImpersonationEnabled;
     }
 
+
     /**
      * Get JWTAccessTokenOIDCClaimsHandler
      *
@@ -4434,6 +4463,7 @@ public class OAuthServerConfiguration {
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
+        private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSPIdToApplication";
     }
 
 }
