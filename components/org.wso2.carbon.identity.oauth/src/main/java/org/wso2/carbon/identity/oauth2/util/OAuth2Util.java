@@ -6245,4 +6245,13 @@ public class OAuth2Util {
         }
         return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
     }
+
+    public static boolean isExistingUser(String userName, String tenantDomain) throws UserStoreException {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+        AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
+                realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+        return userStoreManager.isExistingUser(userName.split("@")[0]);
+    }
 }
