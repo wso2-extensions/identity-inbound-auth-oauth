@@ -48,6 +48,13 @@ public class OAuth2TokenValidationService extends AbstractAdmin {
      */
     public OAuth2TokenValidationResponseDTO validate(OAuth2TokenValidationRequestDTO validationReqDTO) {
 
+        if (validationReqDTO == null) {
+            OAuth2TokenValidationResponseDTO response = new OAuth2TokenValidationResponseDTO();
+            response.setValid(false);
+            response.setErrorMsg("Invalid token validation request");
+            return response;
+        }
+
         TokenValidationHandler validationHandler = TokenValidationHandler.getInstance();
         //trigger pre listeners
         try {
