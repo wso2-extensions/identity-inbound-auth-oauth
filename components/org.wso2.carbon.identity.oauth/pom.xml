@@ -605,7 +605,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <configuration>
-                    <excludes>**/IdentityOathEventListenerTest.java,**/AccessTokenIssuerTest.java,
+                    <excludes>**/IdentityOathEventListenerTest.java,**/DeprecatedAccessTokenIssuerTest.java,
                         **/OAuthUserStoreConfigListenerImplTest.java,**/NTLMAuthenticationGrantHandlerWithHandshakeTest.java,
                         **/AuthorizationCodeGrantHandlerTest.java,**/OAuthTenantMgtListenerImplTest.java</excludes>
                 </configuration>
