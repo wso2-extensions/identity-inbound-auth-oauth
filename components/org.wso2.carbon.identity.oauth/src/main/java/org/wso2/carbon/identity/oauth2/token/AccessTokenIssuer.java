@@ -427,11 +427,6 @@ public class AccessTokenIssuer {
     private void persistImpersonationInfoToTokenReqCtx(AuthorizationGrantCacheEntry authorizationGrantCacheEntry,
                                                      OAuthTokenReqMessageContext tokReqMsgCtx) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         // Set impersonation details into the token context before triggeringPreListeners.
         if (authorizationGrantCacheEntry != null && authorizationGrantCacheEntry.getImpersonator() != null) {
             tokReqMsgCtx.setImpersonationRequest(true);
@@ -729,12 +724,6 @@ public class AccessTokenIssuer {
                                                           OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            notifyImpersonation(tokReqMsgCtx);
-            return;
-        }
         RequestParameter[] params = tokenReqDTO.getRequestParameters();
         Map<String, String> requestParams = Arrays.stream(params).collect(Collectors.toMap(RequestParameter::getKey,
                 requestParam -> requestParam.getValue()[0]));
@@ -805,11 +794,6 @@ public class AccessTokenIssuer {
                                                                 AuthorizationGrantCacheEntry
                                                                         authorizationGrantCacheEntry) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         if (cacheEntry.getImpersonator() != null) {
             authorizationGrantCacheEntry.setImpersonator(cacheEntry.getImpersonator());
         }

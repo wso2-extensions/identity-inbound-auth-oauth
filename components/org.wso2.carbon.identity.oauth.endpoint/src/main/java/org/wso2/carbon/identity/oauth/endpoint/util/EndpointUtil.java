@@ -774,11 +774,6 @@ public class EndpointUtil {
     protected static void persistImpersonationInfoToSessionDataCache(SessionDataCacheEntry entry,
                                                                    OAuthMessage oAuthMessage) {
 
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         String impersonatingActor = null;
         if (oAuthMessage != null && oAuthMessage.getProperties() != null &&
                 oAuthMessage.getProperties().get(IMPERSONATING_ACTOR) != null) {
