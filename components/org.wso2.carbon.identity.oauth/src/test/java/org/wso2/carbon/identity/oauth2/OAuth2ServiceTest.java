@@ -77,6 +77,7 @@ import org.wso2.carbon.identity.oauth2.token.AccessTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreManager;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
@@ -162,6 +163,7 @@ public class OAuth2ServiceTest {
         setPrivateField(OAuthServerConfiguration.getInstance(), "timeStampSkewInSeconds", 3600L);
         loggerUtils = mockStatic(LoggerUtils.class);
         loggerUtils.when(LoggerUtils::isDiagnosticLogsEnabled).thenReturn(true);
+        OpenIDConnectServiceComponentHolder.setIdentityEventService(mockIdentityEventService);
     }
 
     @AfterMethod

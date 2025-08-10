@@ -39,6 +39,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.common.testng.WithRealmService;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -52,6 +53,7 @@ import org.wso2.carbon.identity.oauth2.dao.TokenManagementDAO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
@@ -132,6 +134,9 @@ public class OAuthUtilTest {
     @Mock
     ApplicationManagementService applicationManagementService;
 
+    @Mock
+    private IdentityEventService identityEventService;
+
     private AutoCloseable closeable;
     private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
     private MockedStatic<OAuth2Util> oAuth2Util;
@@ -154,6 +159,7 @@ public class OAuthUtilTest {
         identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
         oAuthTokenPersistenceFactory = mockStatic(OAuthTokenPersistenceFactory.class);
         authorizationGrantCache = mockStatic(AuthorizationGrantCache.class);
+        OpenIDConnectServiceComponentHolder.setIdentityEventService(identityEventService);
     }
 
     @AfterMethod
@@ -341,11 +347,20 @@ public class OAuthUtilTest {
         accessTokenDO.setAccessToken(accessToken);
         accessTokenDO.setConsumerKey(clientId);
         accessTokenDO.setScope(new String[]{"default"});
-        accessTokenDO.setAuthzUser(new AuthenticatedUser());
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserId("testUserId");
+        authenticatedUser.setUserName(username);
+        authenticatedUser.setUserStoreDomain("PRIMARY");
+        authenticatedUser.setTenantDomain("carbon.super");
+
+        accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokens.add(accessTokenDO);
         when(mockAccessTokenDAO.getAccessTokens(anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
 
+        when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
+                any())).thenReturn("someCacheKey");
         boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
         verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
         assertTrue(result, "Token revocation failed.");
@@ -403,7 +418,13 @@ public class OAuthUtilTest {
         accessTokenDO.setAccessToken(accessToken);
         accessTokenDO.setConsumerKey(clientId);
         accessTokenDO.setScope(new String[]{"default"});
-        accessTokenDO.setAuthzUser(new AuthenticatedUser());
+
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserId("testUserId");
+        authenticatedUser.setUserName(username);
+        authenticatedUser.setUserStoreDomain("PRIMARY");
+        authenticatedUser.setTenantDomain("carbon.super");
+        accessTokenDO.setAuthzUser(authenticatedUser);
         accessTokens.add(accessTokenDO);
         when(mockAccessTokenDAO.getAccessTokens(anyString(),
                 any(AuthenticatedUser.class), nullable(String.class), anyBoolean())).thenReturn(accessTokens);
@@ -413,6 +434,8 @@ public class OAuthUtilTest {
         clientIds.add(clientId);
         when(tokenManagementDAO.getAllTimeAuthorizedClientIds(any())).thenReturn(clientIds);
 
+        when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
+                any())).thenReturn("someCacheKey");
         boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
         verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
         assertTrue(result, "Token revocation failed.");
