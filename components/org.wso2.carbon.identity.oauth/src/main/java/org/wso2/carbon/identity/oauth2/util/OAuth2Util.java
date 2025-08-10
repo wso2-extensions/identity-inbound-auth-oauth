@@ -4179,6 +4179,45 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Get authenticated user from subject identifier.
+     *
+     * @param claimValue          Subject identifier value.
+     * @param tenantDomain        Tenant domain.
+     * @param userAccessingOrgId  Organization id of the user accessing the resource.
+     * @param userResidentOrgId   Organization id of the user resident organization.
+     * @param clientId            Client id of the application.
+     * @return Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUserFromSubjectIdentifier(String claimValue, String tenantDomain,
+                                                                              String userAccessingOrgId,
+                                                                              String userResidentOrgId,
+                                                                              String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            String userResidentOrgTenantDomain = OAuth2ServiceComponentHolder.getInstance()
+                    .getOrganizationManager().resolveTenantDomain(userResidentOrgId);
+            String subjectClaimValue = getSubjectClaimFromSubjectIdentifier(claimValue, clientId,
+                    tenantDomain);
+            org.wso2.carbon.user.core.common.User user = getUserFromSubjectIdentifier(subjectClaimValue,
+                    subjectClaimUri != null ? subjectClaimUri : USER_ID_CLAIM, userResidentOrgTenantDomain);
+            return getAuthenticatedUser(user.getUserID(), user.getUsername(), tenantDomain,
+                    userAccessingOrgId, userResidentOrgId, user.getUserStoreDomain(),
+                    clientId, claimValue);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving application for client id: " + clientId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while resolving tenant domain for user resident organization: " + userResidentOrgId, e);
+        }
+    }
+
     private static org.wso2.carbon.user.core.common.User getUserFromSubjectIdentifier(String claimValue,
                                                                                       String claimUri,
                                                                                       String tenantDomain)
