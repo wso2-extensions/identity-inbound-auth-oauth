@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.TokenProvider;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
@@ -50,6 +51,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementServerException;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 
@@ -539,20 +541,46 @@ public class TokenValidationHandler {
                  then getting the tenant domain from the token.
                 */
                 String appTenantDomain = IdentityTenantUtil.getTenantDomain(accessTokenDO.getTenantID());
+                boolean isFragmentApp = false;
                 if (OrganizationManagementUtil.isOrganization(appTenantDomain)) {
                     ServiceProviderProperty[] serviceProviderProperties = OAuth2Util.getServiceProvider(
                             accessTokenDO.getConsumerKey(), appTenantDomain).getSpProperties();
-                    if (!isFragmentApp(serviceProviderProperties)) {
+                    isFragmentApp = isFragmentApp(serviceProviderProperties);
+                    // If not a fragment app, set tenantDomain to the application's tenant domain
+                    if (!isFragmentApp) {
                         tenantDomain = appTenantDomain;
                     }
                 }
+
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
+                boolean isCrossSubOrgTokenIntrospectionAllowed
+                        = OAuthServerConfiguration.getInstance().isCrossSubOrgTokenIntrospectionAllowed();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
                         !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
                         StringUtils.isEmpty(accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
                 }
+                // Handle sub-org token introspection scenarios.
+                if (!isCrossTenantTokenIntrospectionAllowed || !isCrossSubOrgTokenIntrospectionAllowed) {
+                    if (!isFragmentApp &&
+                            tenantDomain.equalsIgnoreCase(appTenantDomain) &&
+                            OrganizationManagementUtil.isOrganization(appTenantDomain)) {
+                        validateTokenIntrospectionForSubOrgs(
+                                OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                                        .resolveOrganizationId(accessTokenDO.getAuthzUser().getTenantDomain()));
+                    } else if (!tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
+                            !StringUtils.equalsIgnoreCase(accessTokenDO.getAuthzUser().getUserResidentOrganization(),
+                                    accessTokenDO.getAuthzUser().getAccessingOrganization()) &&
+                            OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                                    .getAncestorOrganizationIds(
+                                            accessTokenDO.getAuthzUser().getAccessingOrganization()).contains(
+                                                    accessTokenDO.getAuthzUser().getUserResidentOrganization())
+                            ) {
+                        validateTokenIntrospectionForSubOrgs(accessTokenDO.getAuthzUser().getAccessingOrganization());
+                    }
+                }
+
                 List<String> allowedScopes = OAuthServerConfiguration.getInstance().getAllowedScopes();
                 String[] requestedScopes = accessTokenDO.getScope();
                 List<String> scopesToBeValidated = new ArrayList<>();
@@ -991,6 +1019,21 @@ public class TokenValidationHandler {
         } catch (InvalidOAuthClientException e) {
             log.warn("Unable to set the audience in the introspection response. Failed to retrieve the " +
                     "application for client id: " + accessTokenDO.getConsumerKey() + " in tenant: " + tenantDomain);
+        }
+    }
+
+    private void validateTokenIntrospectionForSubOrgs(String accessingOrganization)
+            throws OrganizationManagementServerException {
+
+        String introspectingTenant = IdentityTenantUtil.getTenant(
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId()).getAssociatedOrganizationUUID();
+        if (introspectingTenant != null && introspectingTenant.equals(accessingOrganization)) {
+            return;
+        }
+        if (introspectingTenant != null && !introspectingTenant.equalsIgnoreCase(
+                OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+                        .getPrimaryOrganizationId(accessingOrganization))) {
+            throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
         }
     }
 }
