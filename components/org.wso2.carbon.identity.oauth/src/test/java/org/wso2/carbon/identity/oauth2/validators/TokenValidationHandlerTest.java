@@ -74,6 +74,7 @@ import org.wso2.carbon.identity.organization.management.service.util.Organizatio
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.user.api.RealmConfiguration;
+import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.tenant.TenantManager;
 
@@ -278,6 +279,7 @@ public class TokenValidationHandlerTest {
                 lenient().doReturn(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME).when(tenantManager)
                         .getDomain(Mockito.anyInt());
                 OAuthComponentServiceHolder.getInstance().setRealmService(realmService);
+                OAuthComponentServiceHolder.getInstance().setOrganizationManager(organizationManager);
                 IdentityTenantUtil.setRealmService(realmService);
                 lenient().when(realmService.getBootstrapRealmConfiguration()).thenReturn(realmConfiguration);
                 identityUtil.when(IdentityUtil::getPrimaryDomainName).thenReturn("PRIMARY");
@@ -299,7 +301,16 @@ public class TokenValidationHandlerTest {
                 tokenBinding.setBindingValue("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
                 accessTokenDO.setTokenBinding(tokenBinding);
 
+                String testUUID = "testUUID";
+                Tenant tenant = new Tenant();
+                tenant.setId(MultitenantConstants.SUPER_TENANT_ID);
+                tenant.setAssociatedOrganizationUUID(testUUID);
+                tenantManager.addTenant(tenant);
+                when(tenantManager.getTenant(anyInt())).thenReturn(tenant);
+                when(organizationManager.getPrimaryOrganizationId(any())).thenReturn(testUUID);
+
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain("carbon.super");
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantId(MultitenantConstants.SUPER_TENANT_ID);
                 TokenProvider tokenProvider = Mockito.mock(TokenProvider.class);
                 when(oAuth2ServiceComponentHolderInstance.getTokenProvider()).thenReturn(tokenProvider);
                 when(tokenProvider.getVerifiedAccessToken(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(
