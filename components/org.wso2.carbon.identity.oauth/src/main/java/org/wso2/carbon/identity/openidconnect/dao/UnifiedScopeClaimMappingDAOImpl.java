@@ -20,11 +20,9 @@ package org.wso2.carbon.identity.openidconnect.dao;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.wso2.carbon.identity.claim.metadata.mgt.internal.IdentityClaimManagementServiceDataHolder;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
-import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -48,7 +46,7 @@ import java.util.stream.Collectors;
  * Unified implementation of {@link ScopeClaimMappingDAO}.
  * This handles {@link ScopeDTO} related merging and inheritance operations.
  */
-public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
+public class UnifiedScopeClaimMappingDAOImpl extends CacheBackedScopeClaimMappingDAOImpl {
 
     private static final Log log = LogFactory.getLog(UnifiedScopeClaimMappingDAOImpl.class);
 
@@ -58,9 +56,9 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         List<ScopeDTO> scopeDTOList = null;
         try {
-            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            scopeDTOList = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+            scopeDTOList = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
                     .getResourcesFromOrgHierarchy(organizationId,
                             LambdaExceptionUtils.rethrowFunction(this::retrieveScopesFromHierarchy),
                             new MergeAllAggregationStrategy<>(this::mergeScopesInHierarchy)
@@ -124,9 +122,9 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         ScopeDTO scopeDTO = null;
         try {
-            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            scopeDTO = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+            scopeDTO = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
                     .getResourcesFromOrgHierarchy(organizationId, LambdaExceptionUtils.rethrowFunction(orgId ->
                                     retrieveScopeClaimsFromHierarchy(scope, orgId)),
                             new MergeAllAggregationStrategy<>(this::mergeScopeClaimsInHierarchy)
@@ -185,9 +183,9 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         Boolean scopeExists = null;
         try {
-            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            scopeExists = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+            scopeExists = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
                     .getResourcesFromOrgHierarchy(organizationId,
                             LambdaExceptionUtils.rethrowFunction(this::retrieveHasScopesPopulatedInHierarchy),
                             new FirstFoundAggregationStrategy<>()
@@ -223,9 +221,9 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         Boolean scopeExists = null;
         try {
-            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            scopeExists = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+            scopeExists = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
                     .getResourcesFromOrgHierarchy(organizationId, LambdaExceptionUtils.rethrowFunction(orgId ->
                                     retrieveScopeExistenceInHierarchy(scope, orgId)),
                             new FirstFoundAggregationStrategy<>()
@@ -269,9 +267,9 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         ScopeDTO scopeDTO = null;
         try {
-            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            scopeDTO = OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+            scopeDTO = OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
                     .getResourcesFromOrgHierarchy(organizationId, LambdaExceptionUtils.rethrowFunction(orgId ->
                                     retrieveScopeFromHierarchy(scopeName, orgId)),
                             new FirstFoundAggregationStrategy<>()
@@ -313,9 +311,9 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
         List<String> scopeList = null;
         try {
-            String organizationId = OAuthComponentServiceHolder.getInstance().getOrganizationManager()
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
                     .resolveOrganizationId(tenantDomain);
-            scopeList =  OAuthComponentServiceHolder.getInstance().getOrgResourceResolverService()
+            scopeList =  OAuth2ServiceComponentHolder.getInstance().getOrgResourceResolverService()
                     .getResourcesFromOrgHierarchy(organizationId,
                             LambdaExceptionUtils.rethrowFunction(this::retrieveScopeNamesFromHierarchy),
                             new MergeAllAggregationStrategy<>(this::mergeScopeNamesInHierarchy)
@@ -378,7 +376,7 @@ public class UnifiedScopeClaimMappingDAOImpl extends ScopeClaimMappingDAOImpl {
         try {
             String tenantDomain = OAuth2ServiceComponentHolder.getInstance()
                     .getOrganizationManager().resolveTenantDomain(orgId);
-            return IdentityClaimManagementServiceDataHolder.getInstance().getRealmService()
+            return OAuth2ServiceComponentHolder.getInstance().getRealmService()
                     .getTenantManager().getTenantId(tenantDomain);
         } catch (OrganizationManagementException | UserStoreException e) {
             throw new IdentityOAuth2Exception(String.format("Error occurred while resolving the tenant id for" +

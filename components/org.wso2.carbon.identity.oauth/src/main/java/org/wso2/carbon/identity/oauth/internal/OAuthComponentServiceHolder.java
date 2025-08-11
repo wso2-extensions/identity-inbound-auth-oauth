@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -41,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.validators.validationhandler.ScopeValidat
 import org.wso2.carbon.identity.organization.management.organization.user.sharing.OrganizationUserSharingService;
 import org.wso2.carbon.identity.organization.management.service.OrganizationManager;
 import org.wso2.carbon.identity.organization.management.service.OrganizationUserResidentResolverService;
-import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.OrgResourceResolverService;
 import org.wso2.carbon.identity.role.mgt.core.RoleManagementService;
 import org.wso2.carbon.idp.mgt.IdpManager;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -73,7 +72,6 @@ public class OAuthComponentServiceHolder {
     private org.wso2.carbon.identity.role.v2.mgt.core.RoleManagementService roleV2ManagementService;
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private OrganizationManager organizationManager;
-    private OrgResourceResolverService orgResourceResolverService;
     private List<AccessTokenResponseHandler> accessTokenResponseHandlers = new ArrayList<>();
     private AccessTokenDAO accessTokenDAOService;
     private TokenManagementDAO tokenManagementDAOService;
@@ -555,25 +553,5 @@ public class OAuthComponentServiceHolder {
     public void setConfigurationManager(ConfigurationManager configurationManager) {
 
         this.configurationManager = configurationManager;
-    }
-
-    /**
-     * Get the organization resource resolver service.
-     *
-     * @return Organization resource resolver service.
-     */
-    public OrgResourceResolverService getOrgResourceResolverService() {
-
-        return orgResourceResolverService;
-    }
-
-    /**
-     * Set the organization resource resolver service.
-     *
-     * @param orgResourceResolverService Organization resource resolver service instance.
-     */
-    public void setOrgResourceResolverService(OrgResourceResolverService orgResourceResolverService) {
-
-        this.orgResourceResolverService = orgResourceResolverService;
     }
 }

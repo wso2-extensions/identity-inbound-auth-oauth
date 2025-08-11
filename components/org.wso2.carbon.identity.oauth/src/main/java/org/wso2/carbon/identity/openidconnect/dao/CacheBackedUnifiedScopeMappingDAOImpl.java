@@ -23,11 +23,14 @@ import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.cache.OIDCScopeClaimCacheEntry;
 import org.wso2.carbon.identity.openidconnect.cache.UnifiedOIDCScopeClaimCache;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.management.service.model.BasicOrganization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.organization.management.service.util.Utils;
+import org.wso2.carbon.user.api.UserStoreException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,11 +64,9 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
 
         super.addScopes(tenantId, scopeClaimsMap);
         if (resolveWithHierarchicalMode(tenantId)) {
-            OIDCScopeClaimCacheEntry oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
-            oidcScopeClaimCacheEntry.setScopeClaimMapping(scopeClaimsMap);
-            unifiedOIDCScopeClaimCache.addScopeClaimMap(tenantId, oidcScopeClaimCacheEntry);
+            invalidateCacheForTenants(tenantId);
             if (log.isDebugEnabled()) {
-                log.debug("The cache unifiedOIDCScopeClaimCache is added for the tenant : " + tenantId);
+                log.debug("The cache unifiedOIDCScopeClaimCache is added for the tenant: " + tenantId);
             }
         }
     }
@@ -75,10 +76,7 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
 
         super.addScope(tenantId, scope, claimsList);
         if (resolveWithHierarchicalMode(tenantId)) {
-            unifiedOIDCScopeClaimCache.clearScopeClaimMap(tenantId);
-            if (log.isDebugEnabled()) {
-                log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant : " + tenantId);
-            }
+            invalidateCacheForTenants(tenantId);
         }
     }
 
@@ -87,9 +85,9 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
 
         super.addScope(scope, tenantId);
         if (resolveWithHierarchicalMode(tenantId)) {
-            unifiedOIDCScopeClaimCache.clearScopeClaimMap(tenantId);
+            invalidateCacheForTenants(tenantId);
             if (log.isDebugEnabled()) {
-                log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant : " + tenantId);
+                log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant: " + tenantId);
             }
         }
     }
@@ -128,7 +126,7 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
 
         super.deleteScope(scope, tenantId);
         if (resolveWithHierarchicalMode(tenantId)) {
-            unifiedOIDCScopeClaimCache.clearScopeClaimMap(tenantId);
+            invalidateCacheForTenants(tenantId);
             if (log.isDebugEnabled()) {
                 log.debug("OIDC scope claims mapping deleted from the unifiedOIDCScopeClaimCache for tenant: "
                         + tenantId);
@@ -142,9 +140,9 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
 
         super.updateScope(scope, tenantId, addClaims, deleteClaims);
         if (resolveWithHierarchicalMode(tenantId)) {
-            unifiedOIDCScopeClaimCache.clearScopeClaimMap(tenantId);
+            invalidateCacheForTenants(tenantId);
             if (log.isDebugEnabled()) {
-                log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant : " + tenantId);
+                log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant: " + tenantId);
             }
         }
     }
@@ -154,7 +152,7 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
 
         super.updateScope(scope, tenantId);
         if (resolveWithHierarchicalMode(tenantId)) {
-            unifiedOIDCScopeClaimCache.clearScopeClaimMap(tenantId);
+            invalidateCacheForTenants(tenantId);
             if (log.isDebugEnabled()) {
                 log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant : " + tenantId);
             }
@@ -182,7 +180,7 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
     @Override
     public boolean hasScopesPopulated(int tenantId) throws IdentityOAuth2Exception {
 
-        if (resolveWithHierarchicalMode(tenantId)) {
+        if (resolveWithHierarchicalMode(tenantId) && isOrganization(tenantId)) {
             return super.hasScopesPopulated(tenantId);
         } else {
             return scopeClaimMappingDAOImpl.hasScopesPopulated(tenantId);
@@ -192,7 +190,7 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
     @Override
     public boolean isScopeExist(String scope, int tenantId) throws IdentityOAuth2Exception {
 
-        if (resolveWithHierarchicalMode(tenantId)) {
+        if (resolveWithHierarchicalMode(tenantId) && isOrganization(tenantId)) {
             return super.isScopeExist(scope, tenantId);
         } else {
             return scopeClaimMappingDAOImpl.isScopeExist(scope, tenantId);
@@ -213,7 +211,10 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
                     }
                 }
             }
-            return super.getScope(scopeName, tenantId);
+            if (isOrganization(tenantId)) {
+                return super.getScope(scopeName, tenantId);
+            }
+            return scopeClaimMappingDAOImpl.getScope(scopeName, tenantId);
         } else {
             return scopeClaimMappingDAOImpl.getScope(scopeName, tenantId);
         }
@@ -227,13 +228,17 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
                 log.debug("Cache miss for OIDC scopes claims mapping for tenant: " + tenantId);
             }
             oidcScopeClaimCacheEntry = new OIDCScopeClaimCacheEntry();
-            List<ScopeDTO> scopeClaims = super.getScopes(tenantId);
-
+            List<ScopeDTO> scopeClaims;
+            if (isOrganization(tenantId)) {
+                scopeClaims = super.getScopes(tenantId);
+            } else {
+                scopeClaims = scopeClaimMappingDAOImpl.getScopes(tenantId);
+            }
             oidcScopeClaimCacheEntry.setScopeClaimMapping(scopeClaims);
             unifiedOIDCScopeClaimCache.addScopeClaimMap(tenantId, oidcScopeClaimCacheEntry);
             if (log.isDebugEnabled()) {
-                log.debug("OIDC scopes and mapped claims are loaded from the database and inserted to the cache for " +
-                        "the tenant : " + tenantId);
+                log.debug("OIDC scopes and mapped claims are loaded from the database and inserted to the cache" +
+                        " for the tenant: " + tenantId);
             }
         }
         return oidcScopeClaimCacheEntry;
@@ -279,6 +284,45 @@ public class CacheBackedUnifiedScopeMappingDAOImpl extends UnifiedScopeClaimMapp
         } catch (OrganizationManagementException e) {
             throw new IdentityOAuth2Exception("Error while checking whether tenant: " + tenantId
                     + " is an organization", e);
+        }
+    }
+
+    /**
+     * Gets a list of tenants for which the cache needs to be invalidated when OIDC scope inheritance is enabled.
+     *
+     * @param tenantId The id of the current tenant.
+     * @return The list of tenants for which the cache needs to be invalidated.
+     */
+    private void invalidateCacheForTenants(int tenantId) {
+
+        unifiedOIDCScopeClaimCache.clearScopeClaimMap(tenantId);
+        if (log.isDebugEnabled()) {
+            log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant : " + tenantId);
+        }
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+        try {
+            String organizationId = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveOrganizationId(tenantDomain);
+            List<BasicOrganization> childOrganizations = OAuth2ServiceComponentHolder.getInstance()
+                    .getOrganizationManager()
+                    .getChildOrganizations(organizationId, true);
+            if (!childOrganizations.isEmpty()) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Clearing cache unifiedOIDCScopeClaimCache is for child tenants of the tenant : "
+                            + tenantId);
+                }
+            }
+            for (BasicOrganization childOrg : childOrganizations) {
+                int childTenantId = OAuth2ServiceComponentHolder.getInstance().getRealmService().
+                        getTenantManager().getTenantId(childOrg.getOrganizationHandle());
+                unifiedOIDCScopeClaimCache.clearScopeClaimMap(childTenantId);
+                if (log.isDebugEnabled()) {
+                    log.debug("The cache unifiedOIDCScopeClaimCache is cleared for the tenant : "
+                            + childTenantId);
+                }
+            }
+        } catch (OrganizationManagementException | UserStoreException e) {
+            log.error("Error occurred while obtaining the child organizations for tenant id: " + tenantId, e);
         }
     }
 }
