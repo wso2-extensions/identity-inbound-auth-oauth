@@ -154,6 +154,7 @@ import org.wso2.carbon.identity.organization.management.service.constant.Organiz
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -2125,9 +2126,13 @@ public class OAuth2Util {
      */
     public static void initiateOIDCScopes(int tenantId) {
 
-        List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                return;
+            }
+            List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
             ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
                     .getClaimMetadataManagementService();
             List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
@@ -2146,7 +2151,7 @@ public class OAuth2Util {
             if (log.isDebugEnabled()) {
                 log.debug(e.getMessage(), e);
             }
-        } catch (IdentityOAuth2Exception | ClaimMetadataException e) {
+        } catch (IdentityOAuth2Exception | ClaimMetadataException | OrganizationManagementException e) {
             log.error(e.getMessage(), e);
         }
     }

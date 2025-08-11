@@ -24,7 +24,7 @@ import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAO;
 import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailsDAOImpl;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
-import org.wso2.carbon.identity.openidconnect.dao.CacheBackedScopeClaimMappingDAOImpl;
+import org.wso2.carbon.identity.openidconnect.dao.CacheBackedUnifiedScopeMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAO;
 import org.wso2.carbon.identity.openidconnect.dao.RequestObjectDAOImpl;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
@@ -52,7 +52,7 @@ public class OAuthTokenPersistenceFactory {
         this.scopeDAO = new OAuthScopeDAOImpl();
         this.managementDAO = new TokenManagementDAOImpl();
         this.requestObjectDAO = new RequestObjectDAOImpl();
-        this.scopeClaimMappingDAO = new CacheBackedScopeClaimMappingDAOImpl();
+        this.scopeClaimMappingDAO = new CacheBackedUnifiedScopeMappingDAOImpl();
         this.tokenBindingMgtDAO = new TokenBindingMgtDAOImpl();
         this.oauthUserConsentedScopesDAO = new CacheBackedOAuthUserConsentedScopesDAOImpl();
         this.authorizationDetailsDAO = new AuthorizationDetailsDAOImpl();
