@@ -1165,6 +1165,7 @@ public class OAuthAdminServiceImpl {
         try {
             ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
                     getScope(scopeName, tenantId);
+
             // If scopeDTO is null then the requested scope is not exist.
             if (scopeDTO == null) {
                 throw handleClientError(Oauth2ScopeConstants.ErrorMessages.ERROR_CODE_NOT_FOUND_SCOPE,
@@ -1238,7 +1239,7 @@ public class OAuthAdminServiceImpl {
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
             ScopeDTO scopeDTO = OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().
-                        getClaims(scope, tenantId);
+                    getClaims(scope, tenantId);
             if (scopeDTO != null && ArrayUtils.isNotEmpty(scopeDTO.getClaim())) {
                 return scopeDTO.getClaim();
             } else {
@@ -1248,8 +1249,7 @@ public class OAuthAdminServiceImpl {
                 return new String[0];
             }
         } catch (IdentityOAuth2Exception e) {
-            throw handleError("Error while loading OIDC claims for the scope: "
-                    + scope + " in tenant: " + tenantId, e);
+            throw handleError("Error while loading OIDC claims for the scope: " + scope + " in tenant: " + tenantId, e);
         }
     }
 
@@ -1323,8 +1323,7 @@ public class OAuthAdminServiceImpl {
 
         int tenantId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId();
         try {
-            return OAuthTokenPersistenceFactory.getInstance().
-                    getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
+            return OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO().isScopeExist(scope, tenantId);
         } catch (IdentityOAuth2Exception e) {
             throw handleError("Error while inserting the scopes.", e);
         }
