@@ -19,6 +19,7 @@
 
 package org.wso2.carbon.identity.oauth2.impersonation.notifiers;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -57,12 +58,13 @@ public class ImpersonationEmailNotifier {
      * Triggers a notification event when an impersonation occurs. This method checks if email notifications are
      * enabled for the tenant domain and, if so, sends an email notification with the impersonation details.
      *
-     * @param subjectId      The ID of the user being impersonated.
+     * @param subject        The ID of the user being impersonated.
      * @param impersonatorId The ID of the impersonator.
      * @param tenantDomain   The domain of the tenant where the impersonation occurred.
      * @param clientId       The client id.
      */
-    public void triggerNotification(String subjectId, String impersonatorId, String tenantDomain, String clientId) {
+    public void triggerNotification(AuthenticatedUser subject, String impersonatorId, String tenantDomain,
+                                    String clientId) {
 
         try {
             boolean sendEmail = isSendEmail(tenantDomain);
@@ -72,26 +74,35 @@ public class ImpersonationEmailNotifier {
 
                 ZonedDateTime nowUtc = ZonedDateTime.now(ZoneId.of(UTC));
 
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT,
-                        Locale.ENGLISH);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT, Locale.ENGLISH);
 
                 String formattedDateTime = nowUtc.format(formatter);
 
-                AuthenticatedUser subject = OAuth2Util.getAuthenticatedUser(subjectId, tenantDomain, clientId);
-                AuthenticatedUser impersonator = OAuth2Util.getAuthenticatedUserFromSubjectIdentifier(impersonatorId,
-                        tenantDomain, clientId);
+                AuthenticatedUser impersonator;
+                String userResidentTenantDomain;
+                if (StringUtils.isNotBlank(subject.getAccessingOrganization()) &&
+                        StringUtils.isNotBlank(subject.getUserStoreDomain())) {
+                    impersonator = OAuth2Util.getAuthenticatedUserFromSubjectIdentifier(impersonatorId, tenantDomain,
+                            subject.getAccessingOrganization(), subject.getUserResidentOrganization(), clientId);
+                    userResidentTenantDomain = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                            .resolveTenantDomain(subject.getUserResidentOrganization());
+                } else {
+                    impersonator = OAuth2Util.getAuthenticatedUserFromSubjectIdentifier(impersonatorId, tenantDomain,
+                            clientId);
+                    userResidentTenantDomain = tenantDomain;
+                }
 
                 HashMap<String, Object> properties = new HashMap<>();
                 properties.put(USER_NAME, subject.getUserName());
                 properties.put(LOGIN_TIME, formattedDateTime);
                 properties.put(IMPERSONATION_USER_NAME, impersonator.getUserName());
-                properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, subject.getTenantDomain());
+
+                properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, userResidentTenantDomain);
                 properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, subject.getUserStoreDomain());
                 properties.put(TEMPLATE_TYPE, TEMPLATE_TYPE_IMPERSONATION);
 
                 Event identityMgtEvent = new Event(eventName, properties);
-                OAuth2ServiceComponentHolder.getIdentityEventService()
-                        .handleEvent(identityMgtEvent);
+                OAuth2ServiceComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
             }
         } catch (Exception e) {
             String errorMsg = "Error occurred while calling triggerNotification, detail : " + e.getMessage();
