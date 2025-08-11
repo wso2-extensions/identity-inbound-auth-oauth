@@ -68,6 +68,7 @@ public class OAuthTokenReqMessageContext {
 
     private AuthorizationDetails authorizationDetails;
     private String requestedActor;
+    private String jwtID;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
@@ -277,5 +278,15 @@ public class OAuthTokenReqMessageContext {
     public void setRequestedActor(String requestedActor) {
 
         this.requestedActor = requestedActor;
+    }
+
+    public void setJWTID(String jwtID) {
+
+        this.jwtID = jwtID;
+    }
+
+    public String getJWTID() {
+
+        return jwtID;
     }
 }

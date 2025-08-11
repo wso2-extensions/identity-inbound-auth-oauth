@@ -26,7 +26,6 @@ import org.wso2.carbon.identity.central.log.mgt.utils.LogConstants;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IntrospectionDataProvider;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -147,10 +146,7 @@ public class OAuth2IntrospectionEndpoint {
                 .setAuthorizedUserType(introspectionResponse.getAut())
                 .setAudience(introspectionResponse.getAud());;
 
-
-        boolean isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
-        if (isUserSessionImpersonationEnabled && introspectionResponse.getProperties() != null
+        if (introspectionResponse.getProperties() != null
                 && introspectionResponse.getProperties().get(IMPERSONATING_ACTOR) != null) {
             respBuilder.setAct(introspectionResponse.getProperties().get(IMPERSONATING_ACTOR).toString());
         }
