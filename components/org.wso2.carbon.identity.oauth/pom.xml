@@ -377,7 +377,7 @@
                             ${project.artifactId}
                         </Bundle-SymbolicName>
                         <Private-Package>
-                            org.wso2.carbon.identity.oauth.internal,
+                            org.wso2.carbon.identity.oauth.internal.*,
                         </Private-Package>
                         <Import-Package>
                             javax.cache,
@@ -481,7 +481,7 @@
                             org.wso2.carbon.identity.oauth.rar.core; version="${identity.inbound.auth.oauth.imp.pkg.version.range}",
                         </Import-Package>
                         <Export-Package>
-                            !org.wso2.carbon.identity.oauth.internal,
+                            !org.wso2.carbon.identity.oauth.internal.*,
                             !org.wso2.carbon.identity.oauth.common.*,
                             !org.wso2.carbon.identity.oauth.rar.*,
                             org.wso2.carbon.identity.oauth.*; version="${identity.inbound.auth.oauth.exp.pkg.version}",

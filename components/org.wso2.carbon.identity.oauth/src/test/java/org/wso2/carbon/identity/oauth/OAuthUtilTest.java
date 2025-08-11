@@ -45,7 +45,7 @@ import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.internal.util.EventUtil;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAOImpl;
@@ -364,10 +364,10 @@ public class OAuthUtilTest {
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
 
-        try (MockedStatic<EventUtil> mockedEventUtil = mockStatic(EventUtil.class)) {
+        try (MockedStatic<AccessTokenEventUtil> mockedEventUtil = mockStatic(AccessTokenEventUtil.class)) {
 
             mockedEventUtil
-                    .when(() -> EventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
+                    .when(() -> AccessTokenEventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
                     .thenAnswer(invocation -> null);
 
             boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
@@ -447,10 +447,10 @@ public class OAuthUtilTest {
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
 
-        try (MockedStatic<EventUtil> mockedEventUtil = mockStatic(EventUtil.class)) {
+        try (MockedStatic<AccessTokenEventUtil> mockedEventUtil = mockStatic(AccessTokenEventUtil.class)) {
 
             mockedEventUtil
-                    .when(() -> EventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
+                    .when(() -> AccessTokenEventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
                     .thenAnswer(invocation -> null);
 
             boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);

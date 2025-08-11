@@ -23,7 +23,7 @@ import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
-import org.wso2.carbon.identity.oauth.internal.util.EventUtil;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
@@ -161,7 +161,7 @@ public class TenantCreationEventListener implements TenantMgtListener {
                             .toArray(String[]::new),
                     OAuth2Util.isHashEnabled());
 
-            EventUtil.publishTokenRevokeEvent(tenantId, accessTokenDOs);
+            AccessTokenEventUtil.publishTokenRevokeEvent(tenantId, accessTokenDOs);
 
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
                     .getAuthorizationCodeDAO().getLatestAuthorizationCodesByTenant(tenantId);

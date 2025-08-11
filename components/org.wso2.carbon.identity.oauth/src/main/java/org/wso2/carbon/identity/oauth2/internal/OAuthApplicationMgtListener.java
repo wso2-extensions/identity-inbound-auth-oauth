@@ -57,7 +57,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDAO;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
-import org.wso2.carbon.identity.oauth.internal.util.EventUtil;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -756,7 +756,7 @@ public class OAuthApplicationMgtListener extends AbstractApplicationMgtListener 
                     clearCacheEntriesAgainstTokenByConsumerKey(activeDetailedTokens, oauthKey, tenantDomain);
                     OAuthTokenPersistenceFactory.getInstance().getTokenManagementDAO()
                             .revokeTokens(oauthKey, accessTokens);
-                    EventUtil.publishTokenRevokeEvent(tenantDomain, oauthKey, serviceProvider);
+                    AccessTokenEventUtil.publishTokenRevokeEvent(tenantDomain, oauthKey, serviceProvider);
                 } catch (IdentityOAuth2Exception | IdentityApplicationManagementException e) {
                     throw new IdentityApplicationManagementException("Error occurred while revoking tokens and " +
                             "authz code for client ID: " + config.getInboundAuthKey() + " and tenant domain: " +

@@ -40,9 +40,9 @@ import java.util.Set;
  * This class provides methods to publish token revoke events with various parameters.
  * It uses the Identity Event Service to handle the event publication.
  */
-public class EventUtil {
+public class AccessTokenEventUtil {
 
-    private static final Log LOG = LogFactory.getLog(EventUtil.class);
+    private static final Log LOG = LogFactory.getLog(AccessTokenEventUtil.class);
 
     /**
      * Publishes a token revoke event for a particular user.

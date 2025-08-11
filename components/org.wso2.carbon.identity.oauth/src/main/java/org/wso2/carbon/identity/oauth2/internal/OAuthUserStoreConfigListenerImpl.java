@@ -20,7 +20,7 @@ package org.wso2.carbon.identity.oauth2.internal;
 
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants.UserStoreState;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
-import org.wso2.carbon.identity.oauth.internal.util.EventUtil;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -112,7 +112,7 @@ public class OAuthUserStoreConfigListenerImpl extends AbstractUserStoreConfigLis
                 OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                         .revokeAccessTokens(tokensToRevoke.toArray(new String[tokensToRevoke.size()]),
                                 OAuth2Util.isHashEnabled());
-                EventUtil.publishTokenRevokeEvent(tenantId, userStoreName, accessTokenDOs);
+                AccessTokenEventUtil.publishTokenRevokeEvent(tenantId, userStoreName, accessTokenDOs);
             }
 
             List<AuthzCodeDO> latestAuthzCodes = OAuthTokenPersistenceFactory.getInstance()
