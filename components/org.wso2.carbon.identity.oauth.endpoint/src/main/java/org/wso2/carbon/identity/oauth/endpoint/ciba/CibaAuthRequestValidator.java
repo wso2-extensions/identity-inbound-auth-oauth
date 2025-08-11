@@ -158,8 +158,7 @@ public class CibaAuthRequestValidator {
                 // Request has no transaction_context claim.
                 return;
             }
-            Map<String, Object> claims = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
-            if (StringUtils.isBlank(new JSONObject(claims).toJSONString())) {
+            if (claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT) == null) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is with invalid  " +
