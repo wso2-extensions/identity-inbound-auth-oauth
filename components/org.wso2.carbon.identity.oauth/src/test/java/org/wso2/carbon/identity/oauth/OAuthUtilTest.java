@@ -44,6 +44,7 @@ import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
+import org.wso2.carbon.identity.oauth.internal.EventUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.dao.AccessTokenDAO;
 import org.wso2.carbon.identity.oauth2.dao.AuthorizationCodeDAO;
@@ -84,6 +85,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.nullable;
@@ -361,9 +363,17 @@ public class OAuthUtilTest {
 
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
-        boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
-        verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
-        assertTrue(result, "Token revocation failed.");
+
+        try (MockedStatic<EventUtil> mockedEventUtil = mockStatic(EventUtil.class)) {
+
+            mockedEventUtil
+                    .when(() -> EventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
+                    .thenAnswer(invocation -> null);
+
+            boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
+            verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
+            assertTrue(result, "Token revocation failed.");
+        }
     }
 
     @Test
@@ -436,9 +446,17 @@ public class OAuthUtilTest {
 
         when(OAuth2Util.buildCacheKeyStringForTokenWithUserIdOrgId(any(), any(), any(), any(), any(),
                 any())).thenReturn("someCacheKey");
-        boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
-        verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
-        assertTrue(result, "Token revocation failed.");
+
+        try (MockedStatic<EventUtil> mockedEventUtil = mockStatic(EventUtil.class)) {
+
+            mockedEventUtil
+                    .when(() -> EventUtil.publishTokenRevokeEvent(anySet(), any(AuthenticatedUser.class)))
+                    .thenAnswer(invocation -> null);
+
+            boolean result = OAuthUtil.revokeTokens(username, userStoreManager, roleId);
+            verify(mockAccessTokenDAO, times(1)).revokeAccessTokens(any(), anyBoolean());
+            assertTrue(result, "Token revocation failed.");
+        }
     }
 
     @DataProvider(name = "authenticatedSharedUserFlowDataProvider")

@@ -457,7 +457,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
         OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
-        EventUtil.publishTokenRevokeEvent(consumerKey, tokenBindingReference, user);
+        EventUtil.publishTokenRevokeEvent(consumerKey, user);
     }
 
     /**

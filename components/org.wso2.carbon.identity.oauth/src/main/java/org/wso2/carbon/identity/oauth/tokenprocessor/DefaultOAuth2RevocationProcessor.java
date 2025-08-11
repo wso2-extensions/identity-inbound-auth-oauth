@@ -141,7 +141,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
             for that particular application. This involves revoking tokens of all users who has tokens from the
             application and the scopes. Considering the size of the user count, not need to pass the user info.
              */
-            EventUtil.publishTokenRevokeEvent(appId, clientId, removedScopes, tenantDomain);
+            EventUtil.publishTokenRevokeEvent(appId, clientId, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             LOG.error("Error occurred while retrieving app by app ID : " + appId, e);
             throw new IdentityOAuth2Exception("Error occurred while retrieving app by app ID : " + appId, e);

@@ -1156,7 +1156,7 @@ public final class OAuthUtil {
 
         if (!isErrorOnRevokingTokens) {
             // Considering the root tenant revocation in current scope, will consider the sub organizations later.
-            EventUtil.publishTokenRevokeEvent(clientIds, authenticatedUser, username);
+            EventUtil.publishTokenRevokeEvent(clientIds, authenticatedUser);
         }
 
         if (authenticatedOrgUser != null) {

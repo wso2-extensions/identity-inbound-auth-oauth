@@ -14,7 +14,6 @@ import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceCompo
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,22 +24,18 @@ import java.util.Set;
  */
 public class EventUtil {
 
-    public static final Log LOG = LogFactory.getLog(EventUtil.class);
-
-    private static final String CONSUMER_KEYS = "CONSUMER_KEYS";
-    private static final String EVENT_CAUSE = "EVENT_CAUSE";
+    private static final Log LOG = LogFactory.getLog(EventUtil.class);
 
     /**
-     * Publishes a token revoke event with the specified consumer keys and user details.
+     * Publishes a token revoke event for a particular user.
      *
      * @param consumerKeys Set of consumer keys associated with the revoked tokens.
      * @param user         Authenticated user whose tokens are revoked.
-     * @param username     Username of the authenticated user.
      */
-    public static void publishTokenRevokeEvent(Set<String> consumerKeys, AuthenticatedUser user, String username) {
+    public static void publishTokenRevokeEvent(Set<String> consumerKeys, AuthenticatedUser user) {
 
         Map<String, Object> properties = baseProperties(user);
-        properties.put(CONSUMER_KEYS, consumerKeys);
+        properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEYS, consumerKeys);
         publish(properties);
     }
 
@@ -56,7 +51,8 @@ public class EventUtil {
         }
 
         Map<String, Object> properties = baseProperties(token.getAuthzUser());
-        properties.put(CONSUMER_KEYS, Collections.singletonList(token.getConsumerKey()));
+        properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEYS,
+                Collections.singletonList(token.getConsumerKey()));
         publish(properties);
     }
 
@@ -66,17 +62,14 @@ public class EventUtil {
      *
      * @param applicationResourceId Application ID associated with the revoked tokens.
      * @param consumerKey           Consumer key of the application.
-     * @param removedScopes         List of scopes that were removed.
      * @param tenantDomain          Tenant domain of the application.
      */
     public static void publishTokenRevokeEvent(String applicationResourceId, String consumerKey,
-                                               List<String> removedScopes, String tenantDomain) {
+                                               String tenantDomain) {
 
         Map<String, Object> properties = baseTenantProperties(tenantDomain);
-        properties.put(CONSUMER_KEYS, Collections.singletonList(consumerKey));
+        properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEYS, Collections.singletonList(consumerKey));
         properties.put(IdentityEventConstants.EventProperty.APPLICATION_ID, applicationResourceId);
-        properties.put(EVENT_CAUSE, "Revoking the tokens of the application " + applicationResourceId);
-        properties.put(IdentityEventConstants.EventProperty.DELETED_SCOPES, removedScopes);
         publish(properties);
     }
 
@@ -84,19 +77,18 @@ public class EventUtil {
      * Publishes a token revoke event with the specified application resource ID, application name, consumer key,
      * and tenant domain.
      *
-     * @param applciationResourceId     Resource ID of the application.
-     * @param appName      Name of the application.
-     * @param consumerKey  Consumer key of the application.
-     * @param tenantDomain Tenant domain of the application.
+     * @param applicationResourceId Resource ID of the application.
+     * @param appName               Name of the application.
+     * @param consumerKey           Consumer key of the application.
+     * @param tenantDomain          Tenant domain of the application.
      */
-    public static void publishTokenRevokeEvent(String applciationResourceId, String appName, String consumerKey,
+    public static void publishTokenRevokeEvent(String applicationResourceId, String appName, String consumerKey,
                                                String tenantDomain) {
 
         Map<String, Object> properties = baseTenantProperties(tenantDomain);
-        properties.put(CONSUMER_KEYS, Collections.singletonList(consumerKey));
-        properties.put(IdentityEventConstants.EventProperty.APPLICATION_ID, applciationResourceId);
+        properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEYS, Collections.singletonList(consumerKey));
+        properties.put(IdentityEventConstants.EventProperty.APPLICATION_ID, applicationResourceId);
         properties.put(IdentityEventConstants.EventProperty.APPLICATION_NAME, appName);
-        properties.put(EVENT_CAUSE, "Revoking the tokens of the application " + appName);
         publish(properties);
     }
 
@@ -112,12 +104,10 @@ public class EventUtil {
 
         Map<String, Object> properties = baseTenantProperties(tenantDomain);
         if (serviceProvider != null) {
-            properties.put(CONSUMER_KEYS, Collections.singletonList(consumerKey));
+            properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEYS, Collections.singletonList(consumerKey));
             properties.put(IdentityEventConstants.EventProperty.APPLICATION_ID,
                     serviceProvider.getApplicationResourceId());
             properties.put(IdentityEventConstants.EventProperty.APPLICATION_NAME, serviceProvider.getApplicationName());
-            properties.put(EVENT_CAUSE,
-                    "Revoking the tokens of the application " + serviceProvider.getApplicationName());
         }
         publish(properties);
     }
@@ -135,7 +125,6 @@ public class EventUtil {
         setFirstTokenUserProperties(properties, tokens);
         properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, userStoreName);
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID, tenantId);
-        properties.put(EVENT_CAUSE, "Revoking the tokens in the user store " + userStoreName);
         publish(properties);
     }
 
@@ -156,15 +145,13 @@ public class EventUtil {
     /**
      * Publishes a token revoke event for a specific consumer key and token binding reference.
      *
-     * @param consumerKey     Consumer key of the application.
-     * @param tokenBindingRef Token binding reference associated with the revoked tokens.
-     * @param user            Authenticated user whose tokens are revoked.
+     * @param consumerKey Consumer key of the application.
+     * @param user        Authenticated user whose tokens are revoked.
      */
-    public static void publishTokenRevokeEvent(String consumerKey, String tokenBindingRef, AuthenticatedUser user) {
+    public static void publishTokenRevokeEvent(String consumerKey, AuthenticatedUser user) {
 
         Map<String, Object> properties = baseProperties(user);
-        properties.put(EVENT_CAUSE, "Revoking the tokens for the token binding reference " + tokenBindingRef);
-        properties.put(CONSUMER_KEYS, Collections.singletonList(consumerKey));
+        properties.put(IdentityEventConstants.EventProperty.CONSUMER_KEYS, Collections.singletonList(consumerKey));
         publish(properties);
     }
 
@@ -203,7 +190,6 @@ public class EventUtil {
             if (user != null) {
                 properties.put(IdentityEventConstants.EventProperty.TENANT_DOMAIN, user.getTenantDomain());
                 properties.put(IdentityEventConstants.EventProperty.USER_STORE_DOMAIN, user.getUserStoreDomain());
-                properties.put(EVENT_CAUSE, "Revoking the tokens in the tenant " + user.getTenantDomain());
             }
         }
     }
