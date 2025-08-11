@@ -155,8 +155,10 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
-     * @param orgName Authorized user's Organization Name.
-     * @return IntrospectionResponseBuilder
+     * Sets the authorized user's organization name.
+     *
+     * @param orgName the name of the organization to be set.
+     * @return this {@link IntrospectionResponseBuilder} instance for method chaining.
      */
     public IntrospectionResponseBuilder setOrgName(String orgName) {
 
@@ -167,8 +169,10 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
-     * @param orgHandle Authorized user's Organization Handle.
-     * @return IntrospectionResponseBuilder
+     * Sets the authorized user's organization handle.
+     *
+     * @param orgHandle the handle of the organization to be set.
+     * @return this {@link IntrospectionResponseBuilder} instance for method chaining.
      */
     public IntrospectionResponseBuilder setOrgHandle(String orgHandle) {
 

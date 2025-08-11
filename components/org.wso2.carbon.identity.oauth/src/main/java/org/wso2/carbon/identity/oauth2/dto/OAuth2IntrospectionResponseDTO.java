@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -121,6 +121,16 @@ public class OAuth2IntrospectionResponseDTO {
      * OPTIONAL. Represents the resource owner who authorized this token.
      */
     private AuthenticatedUser authorizedUser;
+
+    /*
+     * OPTIONAL. Represents the organization name for which the token was issued.
+     */
+    private String organizationName;
+
+    /*
+     * OPTIONAL. Represents the organization handle for which the token was issued.
+     */
+    private String organizationHandle;
 
     /*
      * this is used for extensions.
@@ -327,5 +337,45 @@ public class OAuth2IntrospectionResponseDTO {
     public void setAuthorizedUser(AuthenticatedUser authorizedUser) {
 
         this.authorizedUser = authorizedUser;
+    }
+
+    /**
+     * Returns the name of the accessing organization.
+     *
+     * @return the accessing organization name.
+     */
+    public String getOrganizationName() {
+
+        return organizationName;
+    }
+
+    /**
+     * Sets the name of the accessing organization.
+     *
+     * @param organizationName the name to set for the accessing organization.
+     */
+    public void setOrganizationName(String organizationName) {
+
+        this.organizationName = organizationName;
+    }
+
+    /**
+     * Returns the handle of the accessing organization.
+     *
+     * @return the accessing organization handle.
+     */
+    public String getOrganizationHandle() {
+
+        return organizationHandle;
+    }
+
+    /**
+     * Sets the handle of the accessing organization.
+     *
+     * @param organizationHandle the handle to set for the accessing organization.
+     */
+    public void setOrganizationHandle(String organizationHandle) {
+
+        this.organizationHandle = organizationHandle;
     }
 }

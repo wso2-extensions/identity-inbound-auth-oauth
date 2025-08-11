@@ -33,8 +33,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
-import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.utils.DiagnosticLog;
 
 import java.util.List;
@@ -154,32 +152,9 @@ public class OAuth2IntrospectionEndpoint {
         }
 
         if (introspectionResponse.getAuthorizedUser() != null) {
-            String accessingOrganizationId = introspectionResponse.getAuthorizedUser().getAccessingOrganization();
-            respBuilder.setOrgId(accessingOrganizationId);
-            try {
-                String organizationName = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                        .getOrganizationNameById(accessingOrganizationId);
-                String organizationHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
-                        .resolveTenantDomain(accessingOrganizationId);
-                respBuilder.setOrgName(organizationName);
-                respBuilder.setOrgHandle(organizationHandle);
-            } catch (OrganizationManagementException e) {
-                if (LoggerUtils.isDiagnosticLogsEnabled()) {
-                    LoggerUtils.triggerDiagnosticLogEvent(new DiagnosticLog.DiagnosticLogBuilder(
-                            OAuthConstants.LogConstants.OAUTH_INBOUND_SERVICE,
-                            OAuthConstants.LogConstants.ActionIDs.GENERATE_INTROSPECTION_RESPONSE)
-                            .inputParam(LogConstants.InputKeys.ERROR_MESSAGE, e.getMessage())
-                            .resultMessage(SYSTEM_ERROR)
-                            .logDetailLevel(DiagnosticLog.LogDetailLevel.APPLICATION)
-                            .resultStatus(DiagnosticLog.ResultStatus.FAILED));
-                }
-                log.error("Error occurred while obtaining organization token introspection data.", e);
-
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                        .entity("{\"error\": \"Error occurred while building the introspection " +
-                                "response.\"}")
-                        .build();
-            }
+            respBuilder.setOrgId(introspectionResponse.getAuthorizedUser().getAccessingOrganization());
+            respBuilder.setOrgName(introspectionResponse.getOrganizationName());
+            respBuilder.setOrgHandle(introspectionResponse.getOrganizationHandle());
         }
 
         if (StringUtils.equalsIgnoreCase(introspectionResponse.getTokenType(), JWT_TOKEN_TYPE)) {

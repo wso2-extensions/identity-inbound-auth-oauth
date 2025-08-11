@@ -56,7 +56,7 @@ public class IntrospectionResponseBuilderTest {
 
     private IntrospectionResponseBuilder introspectionResponseBuilder2;
 
-    private static final String orgID = "10084a8d-113f-4211-a0d5-efe36b082211";
+    private static final String orgID = "3f1c9e47-2d5a-4c8a-b5e7-7a28f6e2e419";
     private static final String orgName = "ABC builders";
     private static final String orgHandle = "abcbuilders";
 
