@@ -358,6 +358,10 @@ public class TokenValidationHandler {
 
         if (introResp.getUsername() != null) {
             responseDTO.setAuthorizedUser(introResp.getUsername());
+            String accessingOrganizationId = introResp.getAuthorizedUser().getAccessingOrganization();
+            if (accessingOrganizationId != null) {
+                setAccessingOrganizationDetails(introResp, accessingOrganizationId);
+            }
         }
 
         if (tokenGenerator != null && validationRequest.getRequiredClaimURIs() != null) {
@@ -735,6 +739,29 @@ public class TokenValidationHandler {
                         IMPERSONATING_ACTOR);
                 introResp.getProperties().put(IMPERSONATING_ACTOR, impersonatingActor);
             }
+        }
+    }
+
+    /**
+     * Sets the organization details for the accessing organization in the given introspection response.
+     *
+     * @param introspectionResponse the {@link OAuth2IntrospectionResponseDTO} to populate with organization details.
+     * @param accessingOrganizationId the unique identifier of the accessing organization.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving organization details.
+     */
+    private void setAccessingOrganizationDetails(OAuth2IntrospectionResponseDTO introspectionResponse,
+                                                 String accessingOrganizationId) throws IdentityOAuth2Exception {
+
+        try {
+            String organizationName = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .getOrganizationNameById(accessingOrganizationId);
+            String organizationHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(accessingOrganizationId);
+            introspectionResponse.setOrganizationName(organizationName);
+            introspectionResponse.setOrganizationHandle(organizationHandle);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(String.format("Error occurred while obtaining token introspection data " +
+                            "for accessing organization ID: %s", accessingOrganizationId), e);
         }
     }
 
