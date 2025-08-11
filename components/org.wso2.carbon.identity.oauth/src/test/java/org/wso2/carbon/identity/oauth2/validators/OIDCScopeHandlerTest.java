@@ -19,6 +19,8 @@
 package org.wso2.carbon.identity.oauth2.validators;
 
 import org.apache.oltu.oauth2.common.message.types.GrantType;
+import org.mockito.MockedStatic;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -34,11 +36,14 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.file.Paths;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mockStatic;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -47,6 +52,7 @@ import static org.testng.Assert.assertTrue;
 @WithH2Database(files = {"dbScripts/identity.sql"})
 public class OIDCScopeHandlerTest {
 
+    private MockedStatic<Utils> utilsStaticMock;
     private OIDCScopeHandler oidcScopeHandler;
 
     @BeforeClass
@@ -54,12 +60,20 @@ public class OIDCScopeHandlerTest {
 
         setFinalField(OAuthTokenPersistenceFactory.getInstance().getScopeClaimMappingDAO(), "scopeClaimMappingDAOImpl",
                 new ScopeClaimMappingDAOImpl());
+        utilsStaticMock = mockStatic(Utils.class);
+        utilsStaticMock.when(() -> Utils.isClaimAndOIDCScopeInheritanceEnabled(anyString())).thenReturn(false);
     }
 
     @BeforeMethod
     public void setUp() throws Exception {
 
         oidcScopeHandler = new OIDCScopeHandler();
+    }
+
+    @AfterClass
+    public void tearDown() {
+
+        utilsStaticMock.close();
     }
 
     @DataProvider(name = "ValidateScopeData")

@@ -982,7 +982,7 @@
         <carbon.identity.organization.management.version.range>[1.1.14, 3.0.0)
         </carbon.identity.organization.management.version.range>
 
-        <carbon.identity.organization.management.core.version>1.1.47
+        <carbon.identity.organization.management.core.version>1.1.48
         </carbon.identity.organization.management.core.version>
         <carbon.identity.organization.management.core.version.range>[1.0.0, 2.0.0)
         </carbon.identity.organization.management.core.version.range>
