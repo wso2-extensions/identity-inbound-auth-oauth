@@ -81,6 +81,7 @@ import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAOImpl;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.identity.testutil.ReadCertStoreSampleUtil;
 import org.wso2.carbon.idp.mgt.internal.IdpMgtServiceComponentHolder;
 import org.wso2.carbon.idp.mgt.util.IdPSecretsProcessor;
@@ -136,6 +137,8 @@ public class DefaultIDTokenBuilderTest {
 
     private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
     private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
+
+    private MockedStatic<Utils> utilsStaticMock;
 
     public DefaultIDTokenBuilderTest() {
 
@@ -287,6 +290,9 @@ public class DefaultIDTokenBuilderTest {
         setPrivateField(OpenIDConnectServiceComponentHolder.getInstance(), "claimProviders", claimProviders);
         invokePrivateMethod(JDBCPersistenceManager.getInstance(), "initDataSource");
         mockKeystores();
+
+        utilsStaticMock = mockStatic(Utils.class);
+        utilsStaticMock.when(() -> Utils.isClaimAndOIDCScopeInheritanceEnabled(anyString())).thenReturn(false);
     }
 
     @AfterClass
