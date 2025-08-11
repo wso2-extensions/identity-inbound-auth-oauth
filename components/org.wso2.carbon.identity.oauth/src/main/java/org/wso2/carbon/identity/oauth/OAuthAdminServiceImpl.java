@@ -105,7 +105,6 @@ import java.util.regex.Pattern;
 
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.TARGET_APPLICATION;
 import static org.wso2.carbon.identity.application.mgt.ApplicationConstants.LogConstants.USER;
-import static org.wso2.carbon.identity.application.mgt.ApplicationMgtUtil.isEnableV2AuditLogs;
 import static org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils.triggerAuditLogEvent;
 import static org.wso2.carbon.identity.oauth.Error.AUTHENTICATED_USER_NOT_FOUND;
 import static org.wso2.carbon.identity.oauth.Error.INVALID_OAUTH_CLIENT;
@@ -573,7 +572,7 @@ public class OAuthAdminServiceImpl {
                     }
                     oidcDataMap = buildSPData(app);
                     oidcDataMap.put("allowedOrigins", application.getAllowedOrigins());
-                    if (enableAuditing && isEnableV2AuditLogs()) {
+                    if (enableAuditing) {
                         Optional<String> initiatorId = getInitiatorId();
                         if (initiatorId.isPresent()) {
                             AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -1032,7 +1031,7 @@ public class OAuthAdminServiceImpl {
         Map<String, Object> oidcDataMap = buildSPData(oAuthAppDO);
         oidcDataMap.put("allowedOrigins", consumerAppDTO.getAllowedOrigins());
         consumerAppDTO.setAuditLogData(oidcDataMap);
-        if (enableAuditing && isEnableV2AuditLogs()) {
+        if (enableAuditing) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -1360,17 +1359,15 @@ public class OAuthAdminServiceImpl {
                         "consumerKey: " + consumerKey);
             }
 
-            if (isEnableV2AuditLogs()) {
-                Optional<String> initiatorId = getInitiatorId();
-                if (initiatorId.isPresent()) {
-                    AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
-                            initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
-                            OAuthConstants.LogConstants.UPDATE_APP_STATE);
+            Optional<String> initiatorId = getInitiatorId();
+            if (initiatorId.isPresent()) {
+                AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                        initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                        OAuthConstants.LogConstants.UPDATE_APP_STATE);
 
-                    triggerAuditLogEvent(auditLogBuilder, true);
-                } else {
-                    LOG.error("Error getting the logged in userId");
-                }
+                triggerAuditLogEvent(auditLogBuilder, true);
+            } else {
+                LOG.error("Error getting the logged in userId");
             }
 
         } catch (InvalidOAuthClientException e) {
@@ -1421,9 +1418,7 @@ public class OAuthAdminServiceImpl {
         String newSecret = OAuthUtil.getRandomNumberSecure();
         OAuthConsumerAppDTO oldAppDTO = null;
 
-        if (isEnableV2AuditLogs()) {
-            oldAppDTO = getOAuthApplicationData(consumerKey);
-        }
+        oldAppDTO = getOAuthApplicationData(consumerKey);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_SECRET_KEY, newSecret);
         properties.setProperty(OAuthConstants.ACTION_PROPERTY_KEY, OAuthConstants.ACTION_REGENERATE);
         properties.setProperty(OAuthConstants.OAUTH_APP_NEW_STATE, APP_STATE_ACTIVE);
@@ -1437,24 +1432,22 @@ public class OAuthAdminServiceImpl {
 
         OAuthConsumerAppDTO updatedApplication = getOAuthApplicationData(consumerKey);
         updatedApplication.setOauthConsumerSecret(newSecret);
-        if (isEnableV2AuditLogs()) {
-            // This API is invoked when regenerating client secret and when activating the app.
-            Optional<String> initiatorId = getInitiatorId();
-            if (initiatorId.isPresent()) {
-                if (!StringUtils.equalsIgnoreCase(oldAppDTO.getState(), APP_STATE_ACTIVE)) {
-                    AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
-                            initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
-                            OAuthConstants.LogConstants.UPDATE_APP_STATE)
-                            .data(Map.of("state", APP_STATE_ACTIVE));
-                    triggerAuditLogEvent(auditLogBuilder, true);
-                }
+        // This API is invoked when regenerating client secret and when activating the app.
+        Optional<String> initiatorId = getInitiatorId();
+        if (initiatorId.isPresent()) {
+            if (!StringUtils.equalsIgnoreCase(oldAppDTO.getState(), APP_STATE_ACTIVE)) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
                         initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
-                        OAuthConstants.LogConstants.REGENERATE_CLIENT_SECRET);
+                        OAuthConstants.LogConstants.UPDATE_APP_STATE)
+                        .data(Map.of("state", APP_STATE_ACTIVE));
                 triggerAuditLogEvent(auditLogBuilder, true);
-            } else {
-                LOG.error("Error getting the logged in userId");
             }
+            AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
+                    initiatorId.get(), USER, consumerKey, TARGET_APPLICATION,
+                    OAuthConstants.LogConstants.REGENERATE_CLIENT_SECRET);
+            triggerAuditLogEvent(auditLogBuilder, true);
+        } else {
+            LOG.error("Error getting the logged in userId");
         }
         return updatedApplication;
     }
@@ -1577,7 +1570,7 @@ public class OAuthAdminServiceImpl {
                     + consumerKey);
         }
         handleInternalTokenRevocation(consumerKey, properties);
-        if (enableAuditing && isEnableV2AuditLogs()) {
+        if (enableAuditing) {
             Optional<String> initiatorId = getInitiatorId();
             if (initiatorId.isPresent()) {
                 AuditLog.AuditLogBuilder auditLogBuilder = new AuditLog.AuditLogBuilder(
@@ -2151,6 +2144,30 @@ public class OAuthAdminServiceImpl {
             }
         }
         return allowedGrants.toArray(new String[allowedGrants.size()]);
+    }
+
+    /**
+     * Get the list of grant types that supports public clients.
+     *
+     * @return Array of grant types that supports public clients.
+     */
+    public String[] getPublicClientSupportedGrantTypes() {
+
+        return PublicClientSupportedGrantTypeHolder.PUBLIC_CLIENT_SUPPORTED_GRANTS;
+    }
+
+    private static class PublicClientSupportedGrantTypeHolder {
+
+        static final String[] PUBLIC_CLIENT_SUPPORTED_GRANTS;
+        static {
+            List<String> publicClientSupportedGrantTypes =
+                    OAuthServerConfiguration.getInstance().getPublicClientSupportedGrantTypesList();
+            if (publicClientSupportedGrantTypes == null || publicClientSupportedGrantTypes.isEmpty()) {
+                PUBLIC_CLIENT_SUPPORTED_GRANTS = new String[0];
+            } else {
+                PUBLIC_CLIENT_SUPPORTED_GRANTS = publicClientSupportedGrantTypes.toArray(new String[0]);
+            }
+        }
     }
 
     boolean isImplicitGrantEnabled() {

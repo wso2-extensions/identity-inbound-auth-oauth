@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.common.IdentityApplicationManagementClientException;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.AssociatedRolesConfig;
 import org.wso2.carbon.identity.application.common.model.InboundAuthenticationConfig;
@@ -536,6 +537,12 @@ public class DCRMService {
         String spName = registrationRequest.getClientName();
         String templateName = registrationRequest.getSpTemplateName();
         boolean isManagementApp = registrationRequest.isManagementApp();
+
+        if (StringUtils.isBlank(spName)) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT,
+                    DCRMConstants.ErrorMessages.MISSING_CLIENT_NAME.getMessage());
+        }
+
         // Regex validation of the application name.
         if (!DCRMUtils.isRegexValidated(spName)) {
             throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_SP_NAME,
@@ -967,6 +974,9 @@ public class DCRMService {
             }
             DCRDataHolder.getInstance().getApplicationManagementService()
                     .createApplicationWithTemplate(serviceProvider, tenantDomain, username, templateName);
+        } catch (IdentityApplicationManagementClientException e) {
+            throw DCRMUtils.generateClientException(DCRMConstants.ErrorMessages.BAD_REQUEST_APPLICATION_CREATION,
+                        e.getMessage(), e);
         } catch (IdentityApplicationManagementException e) {
             String errorMessage =
                     "Error while creating service provider: " + serviceProvider.getApplicationName() +

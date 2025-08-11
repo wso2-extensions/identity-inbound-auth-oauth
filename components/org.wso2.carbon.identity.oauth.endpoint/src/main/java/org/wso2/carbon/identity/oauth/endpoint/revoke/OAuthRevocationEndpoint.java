@@ -102,7 +102,7 @@ public class OAuthRevocationEndpoint {
             paramMap.forEach((key, value) -> {
                 if (TOKEN_PARAM.equals(key) && CollectionUtils.isNotEmpty(value)) {
                     params.put("is token available", "true");
-                } else {
+                } else if (!OAuth.OAUTH_CLIENT_SECRET.equals(key)) {
                     params.put(key, value);
                 }
             });

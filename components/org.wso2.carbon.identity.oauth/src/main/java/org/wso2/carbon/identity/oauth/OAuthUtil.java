@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -45,6 +45,8 @@ import org.wso2.carbon.identity.core.handler.AbstractIdentityHandler;
 import org.wso2.carbon.identity.core.model.IdentityEventListenerConfig;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
+import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
 import org.wso2.carbon.identity.oauth.cache.OAuthCacheKey;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -757,9 +759,15 @@ public final class OAuthUtil {
                     authenticatedUser.setUserName(userId);
                     setOrganizationSSOUserDetails(authenticatedUser);
                 } else {
-                    Optional<String> parentUserStoreDomain = getUserStoreDomainOfParentUser(
-                            userId, accessingOrg, tenantDomain);
-                    parentUserStoreDomain.ifPresent(authenticatedUser::setUserStoreDomain);
+                    UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
+                            .getOrganizationUserSharingService()
+                            .getUserAssociation(userId, accessingOrg);
+
+                    if (userAssociation != null && userAssociation.getAssociatedUserId() != null) {
+                        String parentUserStoreDomain = getUserStoreDomainOfParentUser(
+                                userAssociation.getAssociatedUserId(), tenantDomain);
+                        authenticatedUser.setUserStoreDomain(parentUserStoreDomain);
+                    }
                 }
                 return authenticatedUser;
             }
@@ -1221,6 +1229,70 @@ public final class OAuthUtil {
     }
 
     /**
+     * This method will remove the authorization grant caches for the user associated tokens and auth codes.
+     *
+     * @param userName          Username of the user.
+     * @param userStoreManager  UserStoreManager of the user.
+     * @throws UserStoreException If an error occurred while removing the caches.
+     */
+    public static void removeAuthzGrantCacheForUser(String userName, UserStoreManager userStoreManager)
+            throws UserStoreException {
+
+        String userStoreDomain = UserCoreUtil.getDomainName(userStoreManager.getRealmConfiguration());
+        String tenantDomain = IdentityTenantUtil.getTenantDomain(userStoreManager.getTenantId());
+        Set<AccessTokenDO> accessTokenDOSet;
+        List<AuthzCodeDO> authorizationCodeDOSet;
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser();
+        authenticatedUser.setUserStoreDomain(userStoreDomain);
+        authenticatedUser.setTenantDomain(tenantDomain);
+        authenticatedUser.setUserName(userName);
+        try {
+            /*
+             Only the tokens and auth codes issued for openid scope should be removed from the cache, since no
+             claims are usually cached against tokens or auth codes, otherwise.
+             */
+            accessTokenDOSet = OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
+                    .getAccessTokensByUserForOpenidScope(authenticatedUser);
+            authorizationCodeDOSet = OAuthTokenPersistenceFactory.getInstance()
+                    .getAuthorizationCodeDAO().getAuthorizationCodesByUserForOpenidScope(authenticatedUser);
+            clearAuthzCodeGrantCachesForTokens(accessTokenDOSet);
+            clearAuthzCodeGrantCachesForCodes(authorizationCodeDOSet);
+        } catch (IdentityOAuth2Exception e) {
+            String errorMsg = "Error occurred while retrieving access tokens issued for user : " +
+                    LoggerUtils.getMaskedContent(userName);
+            LOG.error(errorMsg, e);
+        }
+    }
+
+    private static void clearAuthzCodeGrantCachesForCodes(List<AuthzCodeDO> authorizationCodeDOSet) {
+
+        if (CollectionUtils.isNotEmpty(authorizationCodeDOSet)) {
+            for (AuthzCodeDO authorizationCodeDO : authorizationCodeDOSet) {
+                String authorizationCode = authorizationCodeDO.getAuthorizationCode();
+                String authzCodeId = authorizationCodeDO.getAuthzCodeId();
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(authorizationCode);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByCodeId(cacheKey, authzCodeId);
+            }
+        }
+    }
+
+    private static void clearAuthzCodeGrantCachesForTokens(Set<AccessTokenDO> accessTokenDOSet) {
+
+        if (CollectionUtils.isNotEmpty(accessTokenDOSet)) {
+            for (AccessTokenDO accessTokenDO : accessTokenDOSet) {
+                if (StringUtils.equalsIgnoreCase(OAuthConstants.GrantTypes.PASSWORD,
+                        accessTokenDO.getGrantType())) {
+                    continue;
+                }
+                String accessToken = accessTokenDO.getAccessToken();
+                String tokenId = accessTokenDO.getTokenId();
+                AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(accessToken);
+                AuthorizationGrantCache.getInstance().clearCacheEntryByTokenId(cacheKey, tokenId);
+            }
+        }
+    }
+
+    /**
      * Resolve user.
      *
      * @param tenantDomain The tenant domain which user is trying to access.
@@ -1426,36 +1498,21 @@ public final class OAuthUtil {
     /**
      * Retrieves the user store domain of the parent user for a shared user in a specific organization.
      *
-     * @param userId         ID of the shared user.
-     * @param accessingOrgId ID of the shared user's organization.
      * @param tenantDomain   Tenant domain of the shared user.
-     * @return Optional containing the parent user's user store domain, or empty if not found.
+     * @return The parent user's user store domain.
      * @throws OrganizationManagementException If an error occurs retrieving user association.
      * @throws UserStoreException              If an error occurs retrieving the user store domain.
      */
-    private static Optional<String> getUserStoreDomainOfParentUser(String userId, String accessingOrgId,
-                                                                   String tenantDomain)
+    private static String getUserStoreDomainOfParentUser(String parentUserId, String tenantDomain)
             throws OrganizationManagementException, UserStoreException {
-
-        UserAssociation userAssociation = OAuthComponentServiceHolder.getInstance()
-                .getOrganizationUserSharingService()
-                .getUserAssociation(userId, accessingOrgId);
-
-        if (userAssociation == null || userAssociation.getAssociatedUserId() == null) {
-            return Optional.empty();
-        }
-        String parentUserId = userAssociation.getAssociatedUserId();
 
         try {
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            UserRealm userRealm = OAuthComponentServiceHolder.getInstance()
-                    .getRealmService()
+            UserRealm userRealm = OAuthComponentServiceHolder.getInstance().getRealmService()
                     .getTenantUserRealm(tenantId);
             UserStoreManager userStoreManager = (AbstractUserStoreManager) userRealm.getUserStoreManager();
 
-            return Optional.ofNullable(((AbstractUserStoreManager) userStoreManager)
-                    .getUser(parentUserId, null)
-                    .getUserStoreDomain());
+            return ((AbstractUserStoreManager) userStoreManager).getUser(parentUserId, null).getUserStoreDomain();
         } catch (org.wso2.carbon.user.api.UserStoreException e) {
             throw new UserStoreException("Failed to retrieve the user store domain for the parent user with ID: "
                     + parentUserId + " in tenant domain: " + tenantDomain, e);

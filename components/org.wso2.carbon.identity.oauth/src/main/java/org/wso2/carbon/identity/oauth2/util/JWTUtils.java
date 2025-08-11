@@ -23,6 +23,7 @@ import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -39,6 +40,7 @@ import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
@@ -51,7 +53,6 @@ import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
 import java.security.PublicKey;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
@@ -208,6 +209,10 @@ public class JWTUtils {
                     OAuth2ServiceComponentHolder.getInstance().getOrganizationManager();
             String jwtIssuerOrgId = organizationManager.resolveOrganizationId(tenantDomain);
             List<String> switchedOrgOrgAncestors = organizationManager.getAncestorOrganizationIds(switchedOrgId);
+            if (CollectionUtils.isEmpty(switchedOrgOrgAncestors)) {
+                // Client exception thrown since the organization ID (provided in JWT token) has empty ancestor list.
+                throw new IdentityOAuth2ClientException("No ancestors found for the organization ID: " + switchedOrgId);
+            }
             int depthOfRootOrg = getSubOrgStartLevel() - 1;
             String resourceResidentOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
             if (!jwtIssuerOrgId.equals(switchedOrgOrgAncestors.get(depthOfRootOrg)) ||
@@ -489,16 +494,7 @@ public class JWTUtils {
      */
     public static X509Certificate resolveSignerCertificate(IdentityProvider idp) throws IdentityOAuth2Exception {
 
-        X509Certificate x509Certificate;
-        String tenantDomain = getTenantDomain();
-        try {
-            x509Certificate = (X509Certificate) IdentityApplicationManagementUtil
-                    .decodeCertificate(idp.getCertificate());
-        } catch (CertificateException e) {
-            throw new IdentityOAuth2Exception("Error occurred while decoding public certificate of Identity Provider "
-                    + idp.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
-        }
-        return x509Certificate;
+        return OAuth2Util.resolverSignerCertificate(idp);
     }
 
     /**
@@ -525,5 +521,27 @@ public class JWTUtils {
             log.debug("Expiration Time(exp) of Token was validated successfully.");
         }
         return true;
+    }
+
+    /**
+     * Validates mandatory claims in the JWT Claims Set.
+     *
+     * @param claimsSet JWTClaimsSet to validate
+     * @throws IdentityOAuth2Exception if any mandatory claim is missing or invalid
+     */
+    public static void validateMandatoryClaims(JWTClaimsSet claimsSet) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isEmpty(claimsSet.getIssuer())) {
+            throw new IdentityOAuth2Exception("Mandatory field - Issuer is empty in the given JWT");
+        }
+        if (claimsSet.getExpirationTime() == null) {
+            throw new IdentityOAuth2Exception("Mandatory field - Expiration time is empty in the given JWT");
+        }
+        if (StringUtils.isEmpty(claimsSet.getSubject())) {
+            throw new IdentityOAuth2Exception("Mandatory field - Subject is empty in the given JWT");
+        }
+        if (claimsSet.getAudience() == null) {
+            throw new IdentityOAuth2Exception("Mandatory field - Audience is empty in the given JWT");
+        }
     }
 }

@@ -70,6 +70,18 @@ public class IntrospectionResponseBuilder {
     }
 
     /**
+     * @param impersonator Impersonator sub claim value.
+     * @return IntrospectionResponseBuilder.
+     */
+    public IntrospectionResponseBuilder setAct(String impersonator) {
+
+        if (StringUtils.isNotBlank(impersonator)) {
+            parameters.put(IntrospectionResponse.ACT, impersonator);
+        }
+        return this;
+    }
+
+    /**
      * @param issuedAt token issued time
      * @return IntrospectionResponseBuilder
      */

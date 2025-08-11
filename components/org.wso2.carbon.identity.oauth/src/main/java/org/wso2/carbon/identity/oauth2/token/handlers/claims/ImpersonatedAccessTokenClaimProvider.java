@@ -41,6 +41,14 @@ public class ImpersonatedAccessTokenClaimProvider implements JWTAccessTokenClaim
     @Override
     public Map<String, Object> getAdditionalClaims(OAuthAuthzReqMessageContext context) throws IdentityOAuth2Exception {
 
+        if (context.isImpersonationRequest()
+                && (context.getProperty(IMPERSONATING_ACTOR) != null)
+                && StringUtils.isNotBlank(context.getProperty(IMPERSONATING_ACTOR).toString())) {
+
+            Map<String, Object> actorMap = new HashMap<>();
+            actorMap.put(ACT, Collections.singletonMap(SUB, context.getProperty(IMPERSONATING_ACTOR).toString()));
+            return actorMap;
+        }
         return null;
     }
 

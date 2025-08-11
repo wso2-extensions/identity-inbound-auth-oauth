@@ -72,6 +72,17 @@ public class OAuthMessage {
             resultFromConsent = SessionDataCache.getInstance().getValueFromCache(cacheKey);
             SessionDataCache.getInstance().clearCacheEntry(cacheKey);
         }
+        preparePostConsentOAuthMessage(resultFromConsent);
+    }
+
+    private void preparePostConsentOAuthMessage(SessionDataCacheEntry resultFromConsent) {
+
+        if (resultFromConsent != null && resultFromConsent.getAuthzReqMsgCtx() != null &&
+                resultFromConsent.getAuthzReqMsgCtx().isImpersonationRequest() &&
+                resultFromConsent.getAuthzReqMsgCtx().getProperty(OAuthConstants.IMPERSONATING_ACTOR) != null) {
+            this.setProperty(OAuthConstants.IMPERSONATING_ACTOR,
+                    resultFromConsent.getAuthzReqMsgCtx().getProperty(OAuthConstants.IMPERSONATING_ACTOR));
+        }
     }
 
     public Object getProperty(String key) {

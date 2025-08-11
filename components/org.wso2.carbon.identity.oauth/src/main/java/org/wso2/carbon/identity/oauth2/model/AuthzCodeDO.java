@@ -56,6 +56,8 @@ public class AuthzCodeDO extends CacheEntry {
 
     private String tokenBindingReference;
 
+    private String requestedActor;
+
     public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
                        String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId) {
 
@@ -111,6 +113,16 @@ public class AuthzCodeDO extends CacheEntry {
         this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey, authorizationCode,
                 authzCodeId, state, pkceCodeChallenge, pkceCodeChallengeMethod);
         this.tokenBindingReference = tokenBindingReference;
+    }
+
+    public AuthzCodeDO(AuthenticatedUser authorizedUser, String[] scope, Timestamp issuedTime, long validityPeriod,
+                       String callbackUrl, String consumerKey, String authorizationCode, String authzCodeId,
+                       String state, String pkceCodeChallenge, String pkceCodeChallengeMethod,
+                       String tokenBindingReference, String requestedActor) {
+
+        this(authorizedUser, scope, issuedTime, validityPeriod, callbackUrl, consumerKey, authorizationCode,
+                authzCodeId, state, pkceCodeChallenge, pkceCodeChallengeMethod, tokenBindingReference);
+        this.requestedActor = requestedActor;
     }
 
     public AuthzCodeDO() {
@@ -196,5 +208,15 @@ public class AuthzCodeDO extends CacheEntry {
     public void setTokenBindingReference(String tokenBindingReference) {
 
         this.tokenBindingReference = tokenBindingReference;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }

@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -28,11 +30,13 @@ import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCache;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheEntry;
 import org.wso2.carbon.identity.oauth.cache.AuthorizationGrantCacheKey;
+import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.model.AuthzCodeDO;
 import org.wso2.carbon.identity.openidconnect.OIDCConstants;
 import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 
@@ -241,6 +245,72 @@ public class OAuth2TokenUtil {
         }
 
         triggerEvent(eventName, properties);
+    }
+
+    /**
+     * Get JWT claim set from the token.
+     *
+     * @param token The token string.
+     * @return JWT claim set.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while preparing the JWT claim set.
+     */
+    public static JWTClaimsSet getJWTClaimSet(String token) throws IdentityOAuth2Exception {
+
+        if (StringUtils.isNotBlank(token)) {
+            SignedJWT signedJWT = OAuth2TokenUtil.getSignedJWT(token);
+            if (signedJWT != null) {
+                return OAuth2TokenUtil.getClaimSet(signedJWT);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get signed JWT from the token.
+     *
+     * @param token token
+     * @return Signed JWT
+     * @throws IdentityOAuth2Exception Throws if an error occurred while parsing the JWT.
+     */
+    public static SignedJWT getSignedJWT(String token) throws IdentityOAuth2Exception {
+
+        SignedJWT signedJWT;
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            signedJWT = SignedJWT.parse(token);
+        } catch (ParseException e) {
+            throw new IdentityOAuth2Exception("Error while parsing the JWT", e);
+        }
+        return signedJWT;
+    }
+
+    /**
+     * Get claim set from the signed JWT.
+     *
+     * @param signedJWT signed JWT.
+     * @return JWT Claims Set.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while retrieving the claim set.
+     */
+    public static JWTClaimsSet getClaimSet(SignedJWT signedJWT) throws IdentityOAuth2Exception {
+
+        if (signedJWT == null) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "No valid JWT is found.");
+        }
+        JWTClaimsSet claimsSet = null;
+        try {
+            claimsSet = signedJWT.getJWTClaimsSet();
+            if (claimsSet == null) {
+                throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Claim values are empty in the given JSON Web Token");
+            }
+        } catch (ParseException e) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Error when retrieving claimsSet from the JWT", e);
+        }
+        return claimsSet;
     }
 
     private static void triggerEvent(String eventName, HashMap<String, Object> properties)

@@ -141,6 +141,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setOrgId(orgID);
         introspectionResponseBuilder1.setOrgName(orgName);
         introspectionResponseBuilder1.setOrgHandle(orgHandle);
+        introspectionResponseBuilder1.setAct("dummyActor");
 
         JSONObject jsonObject = new JSONObject(introspectionResponseBuilder1.build());
 
@@ -172,9 +173,12 @@ public class IntrospectionResponseBuilderTest {
                 .readValue(jsonObject.get(IntrospectionResponse.CNF).toString(), HashMap.class);
         assertEquals(cnf.get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9",
                 "CNF value is not equal");
+
         assertEquals(jsonObject.get(IntrospectionResponse.ORG_ID), orgID);
         assertEquals(jsonObject.get(IntrospectionResponse.ORG_NAME), orgName);
         assertEquals(jsonObject.get(IntrospectionResponse.ORG_HANDLE), orgHandle);
+        assertEquals(jsonObject.get(IntrospectionResponse.ACT), "dummyActor",
+                "ACT claim value is not equal");
     }
 
     /**
@@ -202,6 +206,7 @@ public class IntrospectionResponseBuilderTest {
         introspectionResponseBuilder1.setOrgId("");
         introspectionResponseBuilder1.setOrgName("");
         introspectionResponseBuilder1.setOrgHandle("");
+        introspectionResponseBuilder2.setAct("");
 
         JSONObject jsonObject2 = new JSONObject(introspectionResponseBuilder2.build());
         assertFalse(jsonObject2.has(IntrospectionResponse.EXP), "EXP already exists in the response builder");
@@ -227,6 +232,7 @@ public class IntrospectionResponseBuilderTest {
         assertFalse(jsonObject2.has(IntrospectionResponse.ORG_ID));
         assertFalse(jsonObject2.has(IntrospectionResponse.ORG_NAME));
         assertFalse(jsonObject2.has(IntrospectionResponse.ORG_HANDLE));
+        assertFalse(jsonObject2.has(IntrospectionResponse.ACT), "ACT value exists in the response builder");
     }
 
     @Test(dependsOnMethods = "testResposeBuilderWithVal")

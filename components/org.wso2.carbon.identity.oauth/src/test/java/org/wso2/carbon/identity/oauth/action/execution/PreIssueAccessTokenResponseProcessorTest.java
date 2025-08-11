@@ -52,7 +52,7 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
-import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.CLAIMS_PATH_PREFIX;
+import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.ACCESS_TOKEN_CLAIMS_PATH_PREFIX;
 import static org.wso2.carbon.identity.oauth.action.execution.PreIssueAccessTokenRequestBuilder.SCOPES_PATH_PREFIX;
 
 public class PreIssueAccessTokenResponseProcessorTest {
@@ -64,7 +64,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
     static final String ORIGINAL_ISS = "https://localhost:9443/oauth2/token";
     static final String ORIGINAL_SUB = "3da43e1c-4087-46e2-ad46-08ccc76bf616";
     static final String ORIGINAL_AUD = "k58gg864hKaeLet9v7HkrFbhqsa";
-    static final String ORIGINAL_EXPIRE_IN = "1742553132";
+    static final String ORIGINAL_EXPIRE_IN = "3600";
     static final String ORIGINAL_CLIENT_ID = "7k58gg864hKaeLet9v7HkrFbhqsa";
     static final String ORIGINAL_APPLICATION_USER = "APPLICATION_USER";
     static final String[] ORIGINAL_SCOPES = new String[]{"openid", "email", "profile"};
@@ -91,12 +91,12 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_AddScope_InvalidPath() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddScopeInvalidPath() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         List<String> customScopes = Arrays.asList("abc", "def");
         PerformableOperation addOpScopeAsClaims =
-                createPerformableOperation(Operation.ADD, CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
+                createPerformableOperation(Operation.ADD, ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER,
                         new AccessToken.Claim("scope", customScopes));
 
         operationsToPerform.add(addOpScopeAsClaims);
@@ -119,7 +119,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_AddScope_ValidPath() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddScopeValidPath() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         PerformableOperation addOpAScope =
@@ -135,11 +135,12 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_AddAud_InvalidPath() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddAudInvalidPath() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         PerformableOperation addOpAud = createPerformableOperation(Operation.ADD,
-                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", "https://example.com/resource");
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-",
+                "https://example.com/resource");
         operationsToPerform.add(addOpAud);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
@@ -151,13 +152,13 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_AddAud_InvalidObj() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddAudInvalidObj() throws ActionExecutionResponseProcessorException {
 
         List<String> newlyAddedAUD = Arrays.asList("https://example1.com/resource", "https://example2.com/resource");
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         PerformableOperation addOpInvalidAudObj = createPerformableOperation(Operation.ADD,
-                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", newlyAddedAUD);
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", newlyAddedAUD);
         operationsToPerform.add(addOpInvalidAudObj);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
@@ -171,11 +172,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_AddClaim_Valid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddClaimValid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         PerformableOperation addOpClaim = createPerformableOperation(Operation.ADD,
-                CLAIMS_PATH_PREFIX + TAIL_CHARACTER, new AccessToken.Claim("isPermanent", true));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + TAIL_CHARACTER, new AccessToken.Claim("isPermanent", true));
         operationsToPerform.add(addOpClaim);
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
@@ -183,11 +184,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_AddClaim_Invalid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseAddClaimInvalid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.ADD,
-                CLAIMS_PATH_PREFIX, new AccessToken.Claim("isPermanent", true)));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX, new AccessToken.Claim("isPermanent", true)));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
 
@@ -208,8 +209,8 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test(dataProvider = "scopeRemovalTestData")
-    void testProcessSuccessResponse_RemoveScope_Valid(String[] paths, int expectedSize, String[] expectedScopes,
-                                                      String[] removedScopes)
+    void testProcessSuccessResponseRemoveScopeValid(String[] paths, int expectedSize, String[] expectedScopes,
+                                                    String[] removedScopes)
             throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
@@ -230,7 +231,7 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_RemoveScope_Invalid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseRemoveScopeInvalid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REMOVE, SCOPES_PATH_PREFIX + TAIL_CHARACTER,
@@ -254,11 +255,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
      */
 
     @Test
-    void testProcessSuccessResponse_RemoveAud_Valid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseRemoveAudValid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
-                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/0", null));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/0", null));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         List<String> resultedAudiences = oAuthTokenReqMessageContext.getAudiences();
@@ -267,11 +268,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_RemoveAud_Invalid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseRemoveAudInvalid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
-                CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/", null));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/", null));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         List<String> resultedAudiences = oAuthTokenReqMessageContext.getAudiences();
@@ -279,11 +280,11 @@ public class PreIssueAccessTokenResponseProcessorTest {
     }
 
     @Test
-    void testProcessSuccessResponse_RemoveCustomClaim_Valid() throws ActionExecutionResponseProcessorException {
+    void testProcessSuccessResponseRemoveCustomClaimValid() throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
         operationsToPerform.add(createPerformableOperation(Operation.REMOVE,
-                CLAIMS_PATH_PREFIX + "CustomClaimName/", null));
+                ACCESS_TOKEN_CLAIMS_PATH_PREFIX + "CustomClaimName/", null));
 
         OAuthTokenReqMessageContext oAuthTokenReqMessageContext = executeProcessSuccessResponse(operationsToPerform);
         assertNull(oAuthTokenReqMessageContext.getAdditionalAccessTokenClaims().get("CustomClaimName"));
@@ -293,16 +294,17 @@ public class PreIssueAccessTokenResponseProcessorTest {
     public Object[][] replaceAudiencesTestData() {
 
         return new Object[][]{
-                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/0", "abcdefgh12345678",
+                {ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/0", "abcdefgh12345678",
                         "abcdefgh12345678"},
-                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", "abcdefgh12345678",
+                {ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/-", "abcdefgh12345678",
                         "abcdefgh12345678"},
-                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/", "abcdefgh12345678", ORIGINAL_AUD}
+                {ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.AUD.getName() + "/", "abcdefgh12345678",
+                        ORIGINAL_AUD}
         };
     }
 
     @Test(dataProvider = "replaceAudiencesTestData")
-    void testProcessSuccessResponse_ReplaceAud(String path, String replaceableAudience, String expectedAudience)
+    void testProcessSuccessResponseReplaceAud(String path, String replaceableAudience, String expectedAudience)
             throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();
@@ -318,13 +320,13 @@ public class PreIssueAccessTokenResponseProcessorTest {
     public Object[][] replaceExpireInTestData() {
 
         return new Object[][]{
-                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName(), 1000, 1000000},
-                {CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName() + "/", 1000, 1000000}
+                {ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName(), 1000, 1000000},
+                {ACCESS_TOKEN_CLAIMS_PATH_PREFIX + AccessToken.ClaimNames.EXPIRES_IN.getName() + "/", 2000, 2000000}
         };
     }
 
     @Test(dataProvider = "replaceExpireInTestData")
-    void testProcessSuccessResponse_ReplaceExpireIn_Valid(String path, long replaceableExpireIn, long expectedExpireIn)
+    void testProcessSuccessResponseReplaceExpireInValid(String path, long replaceableExpireIn, long expectedExpireIn)
             throws ActionExecutionResponseProcessorException {
 
         List<PerformableOperation> operationsToPerform = new ArrayList<>();

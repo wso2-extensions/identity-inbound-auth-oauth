@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -15,6 +15,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.wso2.carbon.identity.oauth.endpoint.jwks;
 
 import com.nimbusds.jose.JWSAlgorithm;
@@ -32,8 +33,9 @@ import org.testng.annotations.Test;
 import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.base.ServerConfiguration;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
@@ -44,7 +46,6 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.keyidprovider.DefaultKeyIDProviderImpl;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.utils.CarbonUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.FileInputStream;
 import java.lang.reflect.Field;
@@ -58,13 +59,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
 
 @Listeners(MockitoTestNGListener.class)
 public class JwksEndpointTest {
@@ -78,9 +81,6 @@ public class JwksEndpointTest {
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
-    @Mock
-    KeyStoreManager mockKeyStoreManager;
-
     private static final String CERT_THUMB_PRINT = "generatedCertThrumbPrint";
     private static final String ALG = "RS256";
     private static final String USE = "sig";
@@ -89,6 +89,8 @@ public class JwksEndpointTest {
     private static final String ENABLE_X5C_IN_RESPONSE = "JWTValidatorConfigs.JWKSEndpoint.EnableX5CInResponse";
     private JwksEndpoint jwksEndpoint;
     private Object identityUtilObj;
+
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
 
     @BeforeTest
     public void setUp() throws Exception {
@@ -129,6 +131,7 @@ public class JwksEndpointTest {
                 "Z5RKDWCCq4ZuXl6wVsUz1iE61suO5yWi8=");
         X5T_ARRAY.put("vgeji34kzLU_6u8pLs985j8kPBRFtAYnZi_-yQdktYU");
         X5T_ARRAY.put("UPDtpYmK86EVwsUIGUlW5-EU_iNHQ-nSL3Ca58uAG70");
+        mockKeystores();
     }
 
     @DataProvider(name = "provideTenantDomain")
@@ -149,18 +152,12 @@ public class JwksEndpointTest {
                 OAuthServerConfiguration.class);
              MockedStatic<CarbonUtils> carbonUtils = mockStatic(CarbonUtils.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
-             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class);
-             MockedStatic<KeystoreUtils> keystoreUtils = mockStatic(KeystoreUtils.class);) {
+             MockedStatic<FrameworkUtils> frameworkUtils = mockStatic(FrameworkUtils.class)) {
 
-            Path keystorePath =
-                    Paths.get(System.getProperty(CarbonBaseConstants.CARBON_HOME), "repository", "resources",
-                            "security", "wso2carbon.jks");
-            keystoreUtils.when(() -> KeystoreUtils.getKeyStoreFileLocation("foo.com")).thenReturn("foo-com.jks");
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
             // When the OAuth2Util is mocked, OAuthServerConfiguration instance should be available.
             try (MockedStatic<OAuth2Util> oAuth2Util = mockStatic(OAuth2Util.class);
-                 MockedStatic<KeyStoreManager> keyStoreManager = mockStatic(KeyStoreManager.class);
                  MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
 
                 carbonUtils.when(CarbonUtils::getServerConfiguration).thenReturn(serverConfiguration);
@@ -218,11 +215,6 @@ public class JwksEndpointTest {
                         .thenReturn("YmUwN2EzOGI3ZTI0Y2NiNTNmZWFlZjI5Mm" +
                                 "VjZjdjZTYzZjI0M2MxNDQ1YjQwNjI3NjYyZmZlYzkwNzY0YjU4NQ");
 
-                keyStoreManager.when(() -> KeyStoreManager.getInstance(anyInt())).thenReturn(mockKeyStoreManager);
-                lenient().when(mockKeyStoreManager.getKeyStore("foo-com.jks")).thenReturn(
-                        getKeyStoreFromFile("foo-com.jks", "foo.com"));
-                lenient().when(mockKeyStoreManager.getPrimaryKeyStore()).thenReturn(
-                        getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
                 identityUtil.when(() -> IdentityUtil.getProperty(ENABLE_X5C_IN_RESPONSE)).thenReturn("true");
 
                 String result = jwksEndpoint.jwks();
@@ -284,5 +276,20 @@ public class JwksEndpointTest {
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
         keystore.load(file, password.toCharArray());
         return keystore;
+    }
+
+    private void mockKeystores() throws Exception {
+
+        IdentityKeyStoreResolver identityKeyStoreResolver = mock(IdentityKeyStoreResolver.class);
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                getKeyStoreFromFile("wso2carbon.jks", "wso2carbon"));
+        when(identityKeyStoreResolver.getKeyStore("foo.com",
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                getKeyStoreFromFile("foo-com.jks", "foo.com"));
+
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 }

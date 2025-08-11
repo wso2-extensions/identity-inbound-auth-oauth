@@ -110,7 +110,9 @@ public class DefaultOIDCSessionStateManager implements OIDCSessionStateManager {
 
             cookie = new ServletCookie(OIDCSessionConstants.OPBS_COOKIE_ID, opbsValue);
             if (isOrganizationQualifiedRequest()) {
-                cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + loginTenantDomain + "/");
+                // Handling the cookie path for request coming with the path `/o/<org-id>`.
+                String organizationId = PrivilegedCarbonContext.getThreadLocalCarbonContext().getOrganizationId();
+                cookie.setPath(FrameworkConstants.ORGANIZATION_CONTEXT_PREFIX + organizationId + "/");
             } else {
                 if (!IdentityTenantUtil.isSuperTenantAppendInCookiePath() &&
                         MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(loginTenantDomain)) {

@@ -55,6 +55,9 @@ public class OAuth2Constants {
     public static final String CONSOLE_CALLBACK_URL_FROM_SERVER_CONFIGS = "Console.CallbackURL";
     public static final String MY_ACCOUNT_CALLBACK_URL_FROM_SERVER_CONFIGS = "MyAccount.CallbackURL";
     public static final String TENANT_DOMAIN_PLACEHOLDER = "{TENANT_DOMAIN}";
+    public static final String AGENT_IDENTITY_ENABLE = "AgentIdentity.Enabled";
+    public static final String AGENT_IDENTITY_USERSTORE_NAME = "AgentIdentity.Userstore";
+    public static final String DEFAULT_AGENT_IDENTITY_USERSTORE_NAME = "AGENT";
 
     public static final int MAX_ALLOWED_LENGTH = 256;
 

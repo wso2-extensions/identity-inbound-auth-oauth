@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth2.validators.DefaultOAuth2ScopeValidator;
 
 import java.util.List;
 
+import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_ORG_SCOPE_NAME;
 import static org.wso2.carbon.identity.oauth2.impersonation.utils.Constants.IMPERSONATION_SCOPE_NAME;
 
 /**
@@ -71,16 +72,17 @@ public class ImpersonatorPermissionValidator implements ImpersonationValidator {
         String clientId = authzReqMessageContext.getAuthorizationReqDTO().getConsumerKey();
         authzReqMessageContext.getAuthorizationReqDTO().setScopes(authzReqMessageContext.getRequestedScopes());
         List<String> authorizedScopes = scopeValidator.validateScope(authzReqMessageContext);
-        if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME)) {
+        if (authorizedScopes.contains(IMPERSONATION_SCOPE_NAME) ||
+                authorizedScopes.contains(IMPERSONATION_ORG_SCOPE_NAME)) {
             impersonationContext.setValidated(true);
         } else {
+            String errorMessage = String.format("Authenticated user : %s doesn't have impersonation permission for " +
+                            "client :%s in the tenant %s.",
+                    authzReqMessageContext.getAuthorizationReqDTO().getUser().getLoggableMaskedUserId(),
+                    clientId, tenantDomain);
             impersonationContext.setValidated(false);
-            impersonationContext.setValidationFailureErrorMessage("Authenticated user : " + authzReqMessageContext
-                    .getAuthorizationReqDTO().getUser().getLoggableMaskedUserId() + " doesn't have impersonation " +
-                    "permission for client : " + clientId +  " in the tenant : " + tenantDomain);
-            LOG.error("Authenticated user : " + authzReqMessageContext
-                    .getAuthorizationReqDTO().getUser().getLoggableMaskedUserId() + "doesn't have impersonation " +
-                    "permission for client : " + clientId +  " in the tenant : " + tenantDomain);
+            impersonationContext.setValidationFailureErrorMessage(errorMessage);
+            LOG.debug(errorMessage);
         }
         return impersonationContext;
     }

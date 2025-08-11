@@ -46,6 +46,7 @@ public class DCRMConstants {
         BAD_REQUEST_INVALID_INPUT("%s"),
         BAD_REQUEST_INVALID_SP_INPUT("Invalid data sent for the service provider : %s"),
         BAD_REQUEST_INSUFFICIENT_DATA("Insufficient data in the request"),
+        BAD_REQUEST_APPLICATION_CREATION("Application creation failure due to bad request: %s"),
         NOT_FOUND_APPLICATION_WITH_ID("Application not available for given client key: %s"),
         NOT_FOUND_APPLICATION_WITH_NAME("Application not available for given client name: %s"),
         NOT_FOUND_OAUTH_APPLICATION_WITH_NAME("OAuth application not available for given client name: %s"),
@@ -61,7 +62,8 @@ public class DCRMConstants {
         MANDATORY_SOFTWARE_STATEMENT("Mandatory software statement is missing"),
         FAILED_TO_READ_SSA("Error occurred while reading the software statement"),
         ADDITIONAL_ATTRIBUTE_ERROR("Error occurred while handling additional attributes"),
-        FAILED_TO_RESOLVE_TENANT_DOMAIN("Error while resolving tenant domain from the organization id: %s");
+        FAILED_TO_RESOLVE_TENANT_DOMAIN("Error while resolving tenant domain from the organization id: %s"),
+        MISSING_CLIENT_NAME("The client name is missing or empty.");
 
         private final String message;
         private final String errorCode;

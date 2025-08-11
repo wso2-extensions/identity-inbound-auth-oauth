@@ -195,7 +195,10 @@ public final class OAuthConstants {
     public static final String IMPERSONATED_SUBJECT = "IMPERSONATED_SUBJECT";
     public static final String IMPERSONATING_ACTOR = "IMPERSONATING_ACTOR";
     public static final String IDTOKEN_TOKEN = "id_token token";
+    public static final String ACTOR_TOKEN = "actor_token";
     public static final String SCOPE = "scope";
+    public static final String MAY_ACT = "may_act";
+    public static final String SUB = "sub";
 
     //Constants used for OAuth/OpenID Connect Configuration UI
     public static final String CALLBACK_URL_REGEXP_PREFIX = "regexp=";
@@ -264,6 +267,7 @@ public final class OAuthConstants {
     public static final String FAPI_SIGNATURE_ALGORITHM_CONFIGURATION = "OAuth.OpenIDConnect.FAPI." +
             "AllowedSignatureAlgorithms.AllowedSignatureAlgorithm";
     public static final String VALIDATE_SECTOR_IDENTIFIER = "OAuth.DCRM.EnableSectorIdentifierURIValidation";
+    public static final String RETURN_NULL_FIELDS_IN_DCR_RESPONSE = "OAuth.DCRM.ReturnNullFieldsInResponse";
     public static final String TOKEN_EP_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
             ".SupportedTokenEndpointSigningAlgorithms.SupportedTokenEndpointSigningAlgorithm";
     public static final String ID_TOKEN_SIGNATURE_ALG_CONFIGURATION = "OAuth.OpenIDConnect" +
@@ -290,6 +294,8 @@ public final class OAuthConstants {
     public static final String ENABLE_CLAIMS_SEPARATION_FOR_ACCESS_TOKEN =
             "OAuth.OpenIDConnect.EnableClaimsSeparationForAccessToken";
     public static final String OIDC_DIALECT = "http://wso2.org/oidc/claim";
+
+    public static final String REQUESTED_ACTOR = "requested_actor";
 
     private OAuthConstants() {
 

@@ -66,6 +66,18 @@ public class OAuth2AuthorizeReqDTO {
     private String requestedSubjectId;
     private Map<ClaimMapping, String> mappedRemoteClaims;
     private AuthorizationDetails authorizationDetails;
+    private boolean isImpersonationRequest;
+    private String requestedActor;
+
+    public boolean isImpersonationRequest() {
+
+        return isImpersonationRequest;
+    }
+
+    public void setImpersonationRequest(boolean impersonationRequest) {
+
+        isImpersonationRequest = impersonationRequest;
+    }
 
     public String getRequestedSubjectId() {
 
@@ -340,5 +352,15 @@ public class OAuth2AuthorizeReqDTO {
     public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
         this.authorizationDetails = authorizationDetails;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
     }
 }

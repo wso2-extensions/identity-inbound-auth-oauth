@@ -39,10 +39,11 @@ import org.wso2.carbon.core.util.CryptoUtil;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
+import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
-import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
+import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
@@ -99,6 +100,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
@@ -160,6 +162,7 @@ public class OAuthAdminServiceImplTest {
     TokenManagementDAO mockTokenManagementDAO;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
+    private MockedStatic<LoggerUtils> loggerUtils;
 
     @AfterClass
     public void tearDownClass() throws Exception {
@@ -184,12 +187,16 @@ public class OAuthAdminServiceImplTest {
         identityTenantUtil = mockStatic(IdentityTenantUtil.class);
         identityTenantUtil.when(() -> IdentityTenantUtil.getTenantId(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME))
                 .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
+        loggerUtils = mockStatic(LoggerUtils.class);
+        loggerUtils.when(() -> LoggerUtils.triggerAuditLogEvent(any(), anyBoolean())).thenAnswer(invocation -> null);
+
     }
 
     @AfterMethod
     public void tearDown() {
 
         identityTenantUtil.close();
+        loggerUtils.close();
     }
 
     private void initConfigsAndRealm() throws Exception {
@@ -735,6 +742,7 @@ public class OAuthAdminServiceImplTest {
             oAuthUtil.when(() -> OAuthUtil.buildConsumerAppDTO(any())).thenCallRealMethod();
             PrivilegedCarbonContext.getThreadLocalCarbonContext()
                     .setTenantDomain(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME);
+            PrivilegedCarbonContext.getThreadLocalCarbonContext().setUserId(USER_ID);
             OAuthAdminServiceImpl oAuthAdminServiceImpl = spy(new OAuthAdminServiceImpl());
             doNothing().when(oAuthAdminServiceImpl).updateAppAndRevokeTokensAndAuthzCodes(anyString(),
                     any(Properties.class));
@@ -1408,5 +1416,29 @@ public class OAuthAdminServiceImplTest {
         return new Object[][]{
                 {scope, oidcDialectClaims}
         };
+    }
+
+    @Test
+    public void testGetPublicClientSupportedGrantTypes() {
+
+        try (MockedStatic<OAuthServerConfiguration> oAuthServerConfigurationMockedStatic = mockStatic(
+                OAuthServerConfiguration.class)) {
+
+            OAuthServerConfiguration mockServerConfig = mock(OAuthServerConfiguration.class);
+            oAuthServerConfigurationMockedStatic.when(OAuthServerConfiguration::getInstance)
+                    .thenReturn(mockServerConfig);
+
+            List<String> grantTypes = Arrays.asList("authorization_code", "refresh_token", "password");
+            when(mockServerConfig.getPublicClientSupportedGrantTypesList()).thenReturn(grantTypes);
+
+            OAuthAdminServiceImpl oAuthAdminService = new OAuthAdminServiceImpl();
+            String[] supportedGrantTypes = oAuthAdminService.getPublicClientSupportedGrantTypes();
+
+            Assert.assertNotNull(supportedGrantTypes);
+            Assert.assertEquals(supportedGrantTypes.length, 3);
+            Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("authorization_code"));
+            Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("refresh_token"));
+            Assert.assertTrue(Arrays.asList(supportedGrantTypes).contains("password"));
+        }
     }
 }

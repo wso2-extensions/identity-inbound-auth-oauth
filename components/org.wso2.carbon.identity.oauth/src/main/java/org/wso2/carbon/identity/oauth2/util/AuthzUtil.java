@@ -121,7 +121,7 @@ public class AuthzUtil {
      * @return Role ids of user.
      * @throws IdentityOAuth2Exception if an error occurs while retrieving role id list of user.
      */
-    private static List<String> getRoles(String userId, String tenantDomain) throws IdentityOAuth2Exception {
+    public static List<String> getRoles(String userId, String tenantDomain) throws IdentityOAuth2Exception {
 
         List<String> roleIds = new ArrayList<>(getRoleIdsOfUser(userId, tenantDomain));
         List<String> groups = getUserGroups(userId, tenantDomain);
@@ -535,5 +535,32 @@ public class AuthzUtil {
                 approvedScopes.add(scope);
             }
         }
+    }
+
+    /**
+     * Get the sub organization user roles.
+     * @param userId                User ID.
+     * @param accessingOrganization Accessing organization ID.
+     *
+     * @return List of sub organization user roles.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving user roles.
+     */
+    public static List<String> getSubOrgUserRoles(String userId, String accessingOrganization)
+            throws IdentityOAuth2Exception {
+
+        Map<String, String> mainAppUserRolesMappings = null;
+        try {
+            String accessingOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(accessingOrganization);
+            List<String> sharedUserRoles = AuthzUtil.getRoles(userId, accessingOrgHandle);
+            mainAppUserRolesMappings = OAuth2ServiceComponentHolder.getInstance()
+                    .getRoleManagementServiceV2()
+                    .getSharedRoleToMainRoleMappingsBySubOrg(sharedUserRoles, accessingOrgHandle);
+        } catch (IdentityRoleManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while getting mapped main app roles.", e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while getting tenant domain from org ids.");
+        }
+        return new ArrayList<>(mainAppUserRolesMappings.values());
     }
 }

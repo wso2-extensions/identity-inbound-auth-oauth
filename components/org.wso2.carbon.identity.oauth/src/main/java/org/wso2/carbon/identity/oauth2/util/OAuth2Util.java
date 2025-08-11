@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2024, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2013-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -64,7 +64,6 @@ import org.apache.oltu.oauth2.common.utils.OAuthUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserIdNotFoundException;
 import org.wso2.carbon.identity.application.authentication.framework.exception.UserSessionException;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
@@ -76,6 +75,7 @@ import org.wso2.carbon.identity.application.common.model.ClaimMapping;
 import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorConfig;
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationConstants;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
 import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
@@ -88,14 +88,18 @@ import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementServic
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.consent.server.configs.mgt.exceptions.ConsentServerConfigsMgtException;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
 import org.wso2.carbon.identity.core.ServiceURLBuilder;
 import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
 import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -118,6 +122,7 @@ import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeServerException;
+import org.wso2.carbon.identity.oauth2.IdentityOAuth2ServerException;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
@@ -144,9 +149,11 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.openidconnect.model.Constants;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
+import org.wso2.carbon.identity.organization.management.organization.user.sharing.models.UserAssociation;
 import org.wso2.carbon.identity.organization.management.service.constant.OrganizationManagementConstants;
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -163,7 +170,6 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.DiagnosticLog;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
-import org.wso2.carbon.utils.security.KeystoreUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -172,7 +178,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -205,6 +210,8 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.namespace.QName;
 
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.ORGANIZATION_LOGIN_IDP_NAME;
+import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkConstants.USER_ID_CLAIM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAUTH_BUILD_ISSUER_WITH_HOSTNAME;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_AUTHZ_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth10AEndpoints.OAUTH_REQUEST_TOKEN_EP_URL;
@@ -224,6 +231,7 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoi
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_CONSENT_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuth20Endpoints.OIDC_WEB_FINGER_EP_URL;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.RENEW_TOKEN_WITHOUT_REVOKING_EXISTING_ALLOWED_GRANT_TYPES_CONFIG;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.Scope.OAUTH2;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.SignatureAlgorithms.PREVIOUS_KID_HASHING_ALGORITHM;
 import static org.wso2.carbon.identity.oauth2.Oauth2ScopeConstants.PERMISSIONS_BINDING_TYPE;
@@ -393,10 +401,14 @@ public class OAuth2Util {
     private static final String EXTERNAL_CONSENT_PAGE_URL = "external_consent_page_url";
 
     private static final String BASIC_AUTHORIZATION_PREFIX = "Basic ";
+    private static final String BEARER_AUTHORIZATION_PREFIX = "Bearer ";
 
     private static final List<String> PORTAL_APP_IDS = Arrays.asList(
             ApplicationConstants.MY_ACCOUNT_APPLICATION_CLIENT_ID,
             ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID);
+
+    private static final String OIDC_IDP_ENTITY_ID = "IdPEntityId";
+    private static final String DEFAULT_IDP_NAME = "default";
 
     private OAuth2Util() {
 
@@ -1510,6 +1522,11 @@ public class OAuth2Util {
                     IdentityUtil.getProperty(OAuthConstants.MTLS_HOSTNAME));
         }
 
+        /**
+         * This method is used to get token endpoint URL when mTLS is enabled.
+         *
+         * @return token endpoint URL when mTLS is enabled.
+         */
         public static String getOAuth2MTLSTokenEPUrl() {
 
             return buildUrlWithHostname(OAUTH2_TOKEN_EP_URL,
@@ -1787,7 +1804,7 @@ public class OAuth2Util {
     public static String buildServiceUrl(String defaultContext, String oauth2EndpointURLInFile,
                                          String oauth2EndpointURLV2InFile) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLV2InFile)) {
                 return oauth2EndpointURLV2InFile;
             }
@@ -1841,7 +1858,7 @@ public class OAuth2Util {
     public static String buildServiceUrlWithHostname(String defaultContext, String oauth2EndpointURLInFile,
                                                      String oauth2EndpointURLInFileV2, String hostname) {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             if (StringUtils.isNotBlank(oauth2EndpointURLInFileV2)) {
                 return oauth2EndpointURLInFileV2;
             }
@@ -2876,17 +2893,8 @@ public class OAuth2Util {
             if (StringUtils.isEmpty(tenantDomain)) {
                 return false;
             }
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            RSAPublicKey publicKey;
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(fileName).getCertificate(tenantDomain)
-                        .getPublicKey();
-            } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
-            }
+            RSAPublicKey publicKey = (RSAPublicKey) IdentityKeyStoreResolver.getInstance().getCertificate(tenantDomain,
+                    IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH).getPublicKey();
             SignedJWT signedJWT = SignedJWT.parse(idToken);
             JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
@@ -3387,12 +3395,11 @@ public class OAuth2Util {
                         tenantDomain);
             }
 
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            Key privateKey = getPrivateKey(tenantDomain, tenantId);
+            Key privateKey = getPrivateKey(tenantDomain);
             JWSSigner signer = OAuth2Util.createJWSSigner((RSAPrivateKey) privateKey);
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            headerBuilder.keyID(getKID(getCertificate(tenantDomain, tenantId), signatureAlgorithm, tenantDomain));
-            Certificate certificate = getCertificate(tenantDomain, tenantId);
+            headerBuilder.keyID(getKID(getCertificate(tenantDomain), signatureAlgorithm, tenantDomain));
+            Certificate certificate = getCertificate(tenantDomain);
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrintWithPrevAlgorithm(certificate, false)));
             SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
             signedJWT.sign(signer);
@@ -3402,42 +3409,27 @@ public class OAuth2Util {
         }
     }
 
+    /**
+     * Method to obtain the tenant's private key for OAuth2 protocol.
+     * This could be the primary keystore private key, tenant keystore private key,
+     * or a custom keystore private key.
+     *
+     * @param tenantDomain Tenant Domain as a String.
+     * @return Private key for OAuth2 protocol in the tenant domain.
+     * @throws IdentityOAuth2Exception When failed to obtain the private key for the requested tenant.
+     */
+    public static Key getPrivateKey(String tenantDomain) throws IdentityOAuth2Exception {
+        try {
+            return IdentityKeyStoreResolver.getInstance().getPrivateKey(
+                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+        } catch (IdentityKeyStoreResolverException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining private key", e);
+        }
+    }
+
     public static Key getPrivateKey(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
-        Key privateKey;
-        if (!(privateKeys.containsKey(tenantId))) {
-
-            try {
-                IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
-            } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
-                        e);
-            }
-
-            // get tenant's key store manager
-            KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                // derive key store name
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                // obtain private key
-                privateKey = tenantKSM.getPrivateKey(fileName, tenantDomain);
-
-            } else {
-                try {
-                    privateKey = tenantKSM.getDefaultPrivateKey();
-                } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
-                }
-            }
-            //privateKey will not be null always
-            privateKeys.put(tenantId, privateKey);
-        } else {
-            //privateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
-            // does not allow to store null values
-            privateKey = privateKeys.get(tenantId);
-        }
-        return privateKey;
+        return getPrivateKey(tenantDomain);
     }
 
     /**
@@ -3586,6 +3578,25 @@ public class OAuth2Util {
     }
 
     /**
+     * Method to obtain the public certificate for the tenant domain.
+     * This could be the primary keystore public cert, tenant keystore public cert,
+     * or a custom keystore public cert.
+     *
+     * @param tenantDomain Tenant domain of the certificate.
+     * @return Public certificate of the tenant domain.
+     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
+     */
+    public static Certificate getCertificate(String tenantDomain) throws IdentityOAuth2Exception {
+
+        try {
+            return IdentityKeyStoreResolver.getInstance().getCertificate(
+                    tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH);
+        } catch (IdentityKeyStoreResolverException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining public certificate.", e);
+        }
+    }
+
+    /**
      * Method to obatin Default Signing certificate for the tenant.
      *
      * @param tenantDomain Tenant Domain as a String.
@@ -3595,56 +3606,31 @@ public class OAuth2Util {
      */
     public static Certificate getCertificate(String tenantDomain, int tenantId) throws IdentityOAuth2Exception {
 
-        Certificate publicCert = null;
+        return getCertificate(tenantDomain);
+    }
 
-        if (!(publicCerts.containsKey(tenantId))) {
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Obtaining certificate for the tenant %s", tenantDomain));
-            }
-            try {
-                IdentityTenantUtil.initializeRegistry(tenantId, tenantDomain);
-            } catch (IdentityException e) {
-                throw new IdentityOAuth2Exception("Error occurred while loading registry for tenant " + tenantDomain,
-                        e);
-            }
+    /**
+     * Retrieves the public certificate for a specified alias within the tenant domain.
+     * This can be used to fetch the trusted client public certificate from the primary, tenant, or
+     * OAuth custom keystore.
+     *
+     * @param tenantDomain Tenant domain of the certificate.
+     * @param alias        Alias of the certificate.
+     * @return Public certificate of the tenant domain.
+     * @throws IdentityOAuth2Exception When failed to obtain the certificate for the requested tenant.
+     */
+    public static Certificate getCertificate(String tenantDomain, String alias) throws IdentityOAuth2Exception {
 
-            // get tenant's key store manager
-            KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-
-            KeyStore keyStore = null;
-            if (!tenantDomain.equals(MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                // derive key store name
-                String fileName = KeystoreUtils.getKeyStoreFileLocation(tenantDomain);
-                if (log.isDebugEnabled()) {
-                    log.debug(String.format("Loading default tenant certificate for tenant : %s from the KeyStore" +
-                            " %s", tenantDomain, fileName));
-                }
-                try {
-                    keyStore = tenantKSM.getKeyStore(fileName);
-                    publicCert = keyStore.getCertificate(tenantDomain);
-                } catch (KeyStoreException e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading public certificate for tenant: " +
-                            tenantDomain, e);
-                } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading Keystore for tenant: " +
-                            tenantDomain, e);
-                }
-
-            } else {
-                try {
-                    publicCert = tenantKSM.getDefaultPrimaryCertificate();
-                } catch (Exception e) {
-                    throw new IdentityOAuth2Exception("Error occurred while loading default public " +
-                            "certificate for tenant: " + tenantDomain, e);
-                }
-            }
-            if (publicCert != null) {
-                publicCerts.put(tenantId, publicCert);
-            }
-        } else {
-            publicCert = publicCerts.get(tenantId);
+        try {
+            return IdentityKeyStoreResolver.getInstance()
+                    .getKeyStore(tenantDomain, IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)
+                    .getCertificate(alias);
+        } catch (IdentityKeyStoreResolverException | KeyStoreException e) {
+            String error =
+                    String.format("Error while obtaining public certificate for the alias %s in the tenant domain %s",
+                            alias, tenantDomain);
+            throw new IdentityOAuth2Exception(error, e);
         }
-        return publicCert;
     }
 
     /**
@@ -3836,6 +3822,382 @@ public class OAuth2Util {
             authenticatedUser.setFederatedUser(isFederatedUser(authenticatedUser));
         }
         return authenticatedUser;
+    }
+
+    /**
+     * Get Authenticated user object.
+     *
+     * @param userId          User id of the user.
+     * @param tenantDomain    Tenant domain of the user.
+     * @param clientId        Client id of the application.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUser(String userId, String tenantDomain, String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+
+            User user = OAuthUtil.getUserFromTenant(userId, tenantId);
+            if (user == null) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid User Id provided for the request. Unable to find the user for given " +
+                                "user id : " + userId + " tenant id : " + tenantId);
+            }
+            return getAuthenticatedUser(userId, user.getUserName(), tenantDomain,
+                    user.getUserStoreDomain(), clientId, null);
+        } catch (UserStoreException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Use mapped local subject is mandatory but a local user couldn't be found");
+        }
+    }
+
+    /**
+     * Get Authenticated user object.
+     *
+     * @param userId          User id of the user.
+     * @param tenantDomain    Tenant domain of the user.
+     * @param clientId        Client id of the application.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUser(String userId, String tenantDomain, String userAccessingOrg,
+                                                         String userResidentOrg, String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+            String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(userResidentOrg);
+            int userResidentOrgTenantId = realmService.getTenantManager().getTenantId(userResidentOrgHandle);
+
+            User user = OAuthUtil.getUserFromTenant(userId, userResidentOrgTenantId);
+            if (user == null) {
+                throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                        "Invalid User Id provided for the request. Unable to find the user for given " +
+                                "user id : " + userId + " organization : " + userResidentOrg);
+            }
+            return getAuthenticatedUser(userId, user.getUserName(), tenantDomain, userAccessingOrg, userResidentOrg,
+                    user.getUserStoreDomain(), clientId, null);
+        } catch (UserStoreException | IdentityOAuth2Exception e) {
+            throw new IdentityOAuth2Exception(OAuth2ErrorCodes.INVALID_REQUEST,
+                    "Use mapped local subject is mandatory but a local user couldn't be found");
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while resolving tenant domain for user resident organization: " + userResidentOrg, e);
+        }
+    }
+
+    private static UserAssociation getUserAssociation(String userId, String userResidentOrg)
+            throws IdentityOAuth2Exception {
+
+        try {
+            return OAuthComponentServiceHolder.getInstance()
+                    .getOrganizationUserSharingService().getUserAssociation(userId, userResidentOrg);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while retrieving user association for user: " + userId, e);
+        }
+    }
+
+    /**
+     * Get Authenticated user using user id and tenant domain.
+     *
+     * @param userId          User id of the user.
+     * @param userName        Username of the user.
+     * @param tenantDomain    Tenant domain of the user.
+     * @param userStoreDomain User store domain of the user.
+     * @param clientId        Client id of the application.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUser(String userId, String userName,
+                                                          String tenantDomain, String userStoreDomain, String clientId,
+                                                          String subjectIdentifier)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
+        authenticatedImpersonatingUser.setUserId(userId);
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
+                getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userStoreDomain,
+                clientId));
+        authenticatedImpersonatingUser.setUserName(userName);
+        authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
+        authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
+        return authenticatedImpersonatingUser;
+    }
+
+    /**
+     * Get Authenticated user using user id and tenant domain.
+     *
+     * @param userId          User id of the user.
+     * @param userName        Username of the user.
+     * @param tenantDomain    Tenant domain of the user.
+     * @param userStoreDomain User store domain of the user.
+     * @param clientId        Client id of the application.
+     * @return An Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUser(String userId, String userName,
+                                                         String tenantDomain, String userAccessingOrg,
+                                                         String userResidentOrg, String userStoreDomain,
+                                                         String clientId, String subjectIdentifier)
+            throws IdentityOAuth2Exception {
+
+        AuthenticatedUser authenticatedImpersonatingUser = new AuthenticatedUser();
+        authenticatedImpersonatingUser.setAuthenticatedSubjectIdentifier(subjectIdentifier != null ? subjectIdentifier :
+                getAuthenticatedSubjectIdentifier(userId, userName, tenantDomain, userResidentOrg, userStoreDomain,
+                        clientId));
+        authenticatedImpersonatingUser.setUserName(userName);
+        authenticatedImpersonatingUser.setUserStoreDomain(userStoreDomain);
+        authenticatedImpersonatingUser.setTenantDomain(tenantDomain);
+
+        if (userResidentOrg != null) {
+            UserAssociation association = getUserAssociation(userId, userResidentOrg);
+            if (association != null) {
+                // User from a different org.
+                userResidentOrg = association.getUserResidentOrganizationId();
+                userId = association.getAssociatedUserId();
+                try {
+                    if (OrganizationManagementUtil.isOrganization(userResidentOrg)) {
+                        // Org is another sub org.
+                        authenticatedImpersonatingUser.setFederatedUser(true);
+                        authenticatedImpersonatingUser.setFederatedIdPName(ORGANIZATION_LOGIN_IDP_NAME);
+                        authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
+                        authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
+                    }
+                } catch (OrganizationManagementException e) {
+                    throw new IdentityOAuth2ClientException(OAuth2ErrorCodes.INVALID_REQUEST,
+                            "Invalid User Id provided for the request. Unable to find the user for given " +
+                                    "user id : " + userId + " organization : " + userResidentOrg, e);
+                }
+            } else {
+                // User from the same sub org.
+                authenticatedImpersonatingUser.setFederatedUser(true);
+                authenticatedImpersonatingUser.setFederatedIdPName(ORGANIZATION_LOGIN_IDP_NAME);
+                authenticatedImpersonatingUser.setUserResidentOrganization(userResidentOrg);
+                authenticatedImpersonatingUser.setAccessingOrganization(userAccessingOrg);
+            }
+        }
+        // User from parent org.
+        authenticatedImpersonatingUser.setUserId(userId);
+        return authenticatedImpersonatingUser;
+    }
+
+    /**
+     * Returns the user subject identifier
+     *
+     * @param userName        User name.
+     * @param tenantDomain    Tenant domain.
+     * @param userStoreDomain User store domain.
+     * @param clientId        Client id.
+     *
+     * @return Authenticated user subject identifier.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static String getAuthenticatedSubjectIdentifier(String userId, String userName, String tenantDomain,
+                                                           String userStoreDomain, String clientId)
+            throws IdentityOAuth2Exception {
+
+        String authenticatedSubjectIdentifier = userId;
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            if (subjectClaimUri != null) {
+                String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
+                        OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
+                                        IdentityTenantUtil.getTenantId(tenantDomain))
+                                .getUserStoreManager(), subjectClaimUri);
+
+                if (subjectClaimValue != null) {
+                    authenticatedSubjectIdentifier = subjectClaimValue;
+                }
+            }
+
+            boolean useUserStoreDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+            boolean useTenantDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            if (useUserStoreDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(userStoreDomain)) {
+                authenticatedSubjectIdentifier = IdentityUtil.addDomainToName(authenticatedSubjectIdentifier,
+                        userStoreDomain);
+            }
+            if (useTenantDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(tenantDomain) &&
+                    StringUtils.countMatches(authenticatedSubjectIdentifier,
+                            UserCoreConstants.TENANT_DOMAIN_COMBINER) < 2) {
+                authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
+                        tenantDomain);
+            }
+        } catch (IdentityApplicationManagementException | UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining subject identifier for user: " + userName, e);
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    /**
+     * Returns the user subject identifier
+     *
+     * @param userName        User name.
+     * @param tenantDomain    Tenant domain.
+     * @param userStoreDomain User store domain.
+     * @param clientId        Client id.
+     *
+     * @return Authenticated user subject identifier.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static String getAuthenticatedSubjectIdentifier(String userId, String userName, String tenantDomain,
+                                                           String userResidentOrg, String userStoreDomain,
+                                                           String clientId)
+            throws IdentityOAuth2Exception {
+
+        String authenticatedSubjectIdentifier = userId;
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            if (subjectClaimUri != null) {
+                String userResidentOrgHandle = OAuth2ServiceComponentHolder.getInstance()
+                        .getOrganizationManager().resolveTenantDomain(userResidentOrg);
+                String subjectClaimValue = getClaimValue(IdentityUtil.addDomainToName(userName, userStoreDomain),
+                        OAuth2ServiceComponentHolder.getInstance().getRealmService().getTenantUserRealm(
+                                        IdentityTenantUtil.getTenantId(userResidentOrgHandle))
+                                .getUserStoreManager(), subjectClaimUri);
+
+                if (subjectClaimValue != null) {
+                    authenticatedSubjectIdentifier = subjectClaimValue;
+                }
+            }
+
+            boolean useUserStoreDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+            boolean useTenantDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            if (useUserStoreDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(userStoreDomain)) {
+                authenticatedSubjectIdentifier = IdentityUtil.addDomainToName(authenticatedSubjectIdentifier,
+                        userStoreDomain);
+            }
+            if (useTenantDomainInLocalSubjectIdentifier && StringUtils.isNotEmpty(tenantDomain) &&
+                    StringUtils.countMatches(authenticatedSubjectIdentifier,
+                            UserCoreConstants.TENANT_DOMAIN_COMBINER) < 2) {
+                authenticatedSubjectIdentifier = UserCoreUtil.addTenantDomainToEntry(authenticatedSubjectIdentifier,
+                        tenantDomain);
+            }
+        } catch (IdentityApplicationManagementException | UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining subject identifier for user: " + userName, e);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while resolving tenant domain for user resident organization: " + userResidentOrg, e);
+        }
+        return authenticatedSubjectIdentifier;
+    }
+
+    /**
+     * Get subject claim from subject identifier.
+     *
+     * @param subjectIdentifier Subject identifier value.
+     * @param clientId          Client id of the application.
+     * @param tenantDomain      Tenant domain.
+     *
+     * @return Subject claim value.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the subject claim.
+     */
+    public static String getSubjectClaimFromSubjectIdentifier(String subjectIdentifier, String clientId,
+                                                           String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        String subjectClaimValue = subjectIdentifier;
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            boolean useUserStoreDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseUserstoreDomainInLocalSubjectIdentifier();
+            boolean useTenantDomainInLocalSubjectIdentifier
+                    = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .isUseTenantDomainInLocalSubjectIdentifier();
+            if (useTenantDomainInLocalSubjectIdentifier) {
+                subjectClaimValue = subjectClaimValue.split(UserCoreConstants.TENANT_DOMAIN_COMBINER)[0];
+            }
+            if (useUserStoreDomainInLocalSubjectIdentifier) {
+                subjectClaimValue = UserCoreUtil.removeDomainFromName(subjectClaimValue);
+            }
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error while obtaining subject claim from subject value: "
+                    + subjectIdentifier, e);
+        }
+        return subjectClaimValue;
+    }
+
+    private static String getClaimValue(String domainQualifiedUserName,
+                                        org.wso2.carbon.user.api.UserStoreManager userStoreManager,
+                                        String claimURI) throws IdentityOAuth2Exception {
+
+        try {
+            Map<String, String> claimValues = userStoreManager.getUserClaimValues(domainQualifiedUserName,
+                    new String[]{claimURI},
+                    UserCoreConstants.DEFAULT_PROFILE);
+            return claimValues.get(claimURI);
+        } catch (UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving claim: " + claimURI, e);
+        }
+    }
+
+    /**
+     * Get authenticated user from subject identifier.
+     *
+     * @param claimValue    Subject identifier value.
+     * @param tenantDomain  Tenant domain.
+     * @param clientId      Client id of the application.
+     * @return Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUserFromSubjectIdentifier(String claimValue, String tenantDomain,
+                                                                              String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            String subjectClaimValue = getSubjectClaimFromSubjectIdentifier(claimValue, clientId, tenantDomain);
+            org.wso2.carbon.user.core.common.User user = getUserFromSubjectIdentifier(subjectClaimValue,
+                    subjectClaimUri != null ? subjectClaimUri : USER_ID_CLAIM, tenantDomain);
+
+            return getAuthenticatedUser(user.getUserID(), user.getUsername(), tenantDomain, user.getUserStoreDomain(),
+                    clientId, claimValue);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving application for client id: " + clientId);
+        }
+    }
+
+    private static org.wso2.carbon.user.core.common.User getUserFromSubjectIdentifier(String claimValue,
+                                                                                      String claimUri,
+                                                                                      String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            org.wso2.carbon.user.api.UserStoreManager userStoreManager = OAuth2ServiceComponentHolder.getInstance()
+                    .getRealmService().getTenantUserRealm(IdentityTenantUtil.getTenantId(tenantDomain))
+                    .getUserStoreManager();
+            List<org.wso2.carbon.user.core.common.User> userList = ((AbstractUserStoreManager) userStoreManager)
+                    .getUserListWithID(claimUri, claimValue, UserCoreConstants.DEFAULT_PROFILE);
+            if (userList != null && !userList.isEmpty()) {
+                return userList.get(0);
+            } else {
+                throw new IdentityOAuth2Exception("Error occurred while retrieving claim: " + claimValue);
+            }
+        } catch (UserStoreException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving claim: " + claimValue, e);
+        }
     }
 
     /**
@@ -4367,7 +4729,7 @@ public class OAuth2Util {
 
     public static String getIdTokenIssuer(String tenantDomain, boolean isMtlsRequest) throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && StringUtils.isEmpty(PrivilegedCarbonContext.
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs() && StringUtils.isEmpty(PrivilegedCarbonContext.
                 getThreadLocalCarbonContext().getApplicationResidentOrganizationId())) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
@@ -4385,7 +4747,7 @@ public class OAuth2Util {
     public static String getIdTokenIssuer(String tenantDomain, String clientId, boolean isMtlsRequest)
             throws IdentityOAuth2Exception {
 
-        if (IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+        if (IdentityTenantUtil.shouldUseTenantQualifiedURLs()) {
             try {
                 return isMtlsRequest ? OAuthURL.getOAuth2MTLSTokenEPUrl() :
                         ServiceURLBuilder.create().addPath(OAUTH2_TOKEN_EP_URL).setSkipDomainBranding(
@@ -5416,6 +5778,31 @@ public class OAuth2Util {
         return OAuthUtils.decodeClientAuthenticationHeader(authorizationHeader);
     }
 
+
+    /**
+     * Get the bearer token from the oauth header.
+     *
+     * @param request Http servlet request.
+     * @return Bearer token.
+     * @throws OAuthClientAuthnException If an error occurs.
+     */
+    public static String extractBearerTokenFromAuthzHeader(HttpServletRequest request)
+            throws OAuthClientAuthnException {
+
+        String authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION);
+        if (StringUtils.isEmpty(authorizationHeader)) {
+            authorizationHeader = request.getHeader(HTTPConstants.HEADER_AUTHORIZATION.toLowerCase());
+        }
+
+        if (StringUtils.isNotEmpty(authorizationHeader)  &&
+                authorizationHeader.toLowerCase().startsWith(BEARER_AUTHORIZATION_PREFIX.toLowerCase())) {
+            return OAuthUtils.getAuthHeaderField(authorizationHeader);
+        } else {
+            String errMsg = "Bearer authorization header is not available in the request.";
+            throw new OAuthClientAuthnException(errMsg, OAuth2ErrorCodes.INVALID_REQUEST);
+        }
+    }
+
     /**
      * Retrieve the list of client authentication methods supported by the server.
      *
@@ -5743,5 +6130,119 @@ public class OAuth2Util {
             }
         }
         return appResidentTenantDomain;
+    }
+
+    /**
+     * Get the X509 certificate of the Identity Provider.
+     *
+     * @param identityProvider Identity Provider.
+     * @return X509Certificate.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static X509Certificate resolverSignerCertificate(IdentityProvider identityProvider)
+            throws IdentityOAuth2Exception {
+
+        X509Certificate x509Certificate;
+        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
+        if (StringUtils.isEmpty(tenantDomain)) {
+            tenantDomain = MultitenantConstants.SUPER_TENANT_DOMAIN_NAME;
+        }
+        try {
+            if (StringUtils.equals(IdentityApplicationConstants.RESIDENT_IDP_RESERVED_NAME,
+                    identityProvider.getIdentityProviderName())) {
+                x509Certificate = (X509Certificate) OAuth2Util.getCertificate(tenantDomain);
+            } else {
+                x509Certificate =
+                        (X509Certificate) IdentityApplicationManagementUtil.decodeCertificate(
+                                identityProvider.getCertificate());
+            }
+        } catch (CertificateException e) {
+            throw new IdentityOAuth2ServerException(
+                    "Error occurred while decoding public certificate of Identity Provider " +
+                            identityProvider.getIdentityProviderName() + " for tenant domain " + tenantDomain, e);
+        }
+        return x509Certificate;
+    }
+
+    /**
+     * Get Identity Provider with JWT issuer.
+     *
+     * @param jwtIssuer    JWT issuer.
+     * @param tenantDomain Tenant domain.
+     * @return Identity Provider.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    public static IdentityProvider getIdentityProviderWithJWTIssuer(String jwtIssuer, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        return getIDP(jwtIssuer, tenantDomain);
+    }
+
+    /**
+     * Get Identity Provider with JWT issuer.
+     *
+     * @param jwtIssuer    JWT issuer.
+     * @param tenantDomain Tenant domain.
+     * @return Identity Provider.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private static IdentityProvider getIDP(String jwtIssuer, String tenantDomain) throws IdentityOAuth2Exception {
+
+        IdentityProvider identityProvider = null;
+        try {
+            identityProvider =
+                    IdentityProviderManager.getInstance()
+                            .getIdPByMetadataProperty(IdentityApplicationConstants.IDP_ISSUER_NAME, jwtIssuer,
+                                    tenantDomain, true);
+            if (identityProvider == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("IDP not found when retrieving for IDP using property: " +
+                            IdentityApplicationConstants.IDP_ISSUER_NAME + " with value: " + jwtIssuer +
+                            ". Attempting to retrieve IDP using IDP Name as issuer.");
+                }
+                identityProvider = IdentityProviderManager.getInstance().getIdPByName(jwtIssuer, tenantDomain, true);
+            }
+            if (identityProvider == null || DEFAULT_IDP_NAME.equals(identityProvider.getIdentityProviderName())) {
+                identityProvider = getResidentIDPForIssuer(tenantDomain, jwtIssuer);
+            }
+        } catch (IdentityProviderManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting the Federated Identity Provider", e);
+        }
+        if (identityProvider == null) {
+            throw new IdentityOAuth2Exception("No Registered IDP found for the JWT with issuer name: " + jwtIssuer);
+        }
+        if (!identityProvider.isEnable()) {
+            throw new IdentityOAuth2Exception("No active IDP found for the JWT with issuer name: " + jwtIssuer);
+        }
+        return identityProvider;
+    }
+
+    /**
+     * Get the resident Identity Provider for the given JWT issuer.
+     *
+     * @param tenantDomain Tenant domain.
+     * @param jwtIssuer    JWT issuer.
+     * @return Resident Identity Provider if exists, else null.
+     * @throws IdentityOAuth2Exception IdentityOAuth2Exception.
+     */
+    private static IdentityProvider getResidentIDPForIssuer(String tenantDomain, String jwtIssuer)
+            throws IdentityOAuth2Exception {
+
+        String issuer = StringUtils.EMPTY;
+        IdentityProvider residentIdentityProvider;
+        try {
+            residentIdentityProvider = IdentityProviderManager.getInstance().getResidentIdP(tenantDomain);
+        } catch (IdentityProviderManagementException e) {
+            throw new IdentityOAuth2Exception("Error while getting the resident Identity Provider", e);
+        }
+        FederatedAuthenticatorConfig[] fedAuthnConfigs = residentIdentityProvider.getFederatedAuthenticatorConfigs();
+        FederatedAuthenticatorConfig oauthAuthenticatorConfig =
+                IdentityApplicationManagementUtil.getFederatedAuthenticator(fedAuthnConfigs,
+                        IdentityApplicationConstants.Authenticator.OIDC.NAME);
+        if (oauthAuthenticatorConfig != null) {
+            issuer = IdentityApplicationManagementUtil.getProperty(oauthAuthenticatorConfig.getProperties(),
+                    OIDC_IDP_ENTITY_ID).getValue();
+        }
+        return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
     }
 }

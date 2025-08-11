@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017-2025, WSO2 LLC. (http://www.wso2.com).
  *
- * WSO2 Inc. licenses this file to you under the Apache License,
+ * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -19,7 +19,10 @@
 package org.wso2.carbon.identity.oauth2.util;
 
 import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import org.apache.axiom.om.OMElement;
 import org.apache.axiom.util.base64.Base64Utils;
 import org.apache.axis2.context.ConfigurationContext;
@@ -29,6 +32,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oltu.oauth2.common.utils.OAuthUtils;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
@@ -51,18 +55,26 @@ import org.wso2.carbon.identity.application.common.model.FederatedAuthenticatorC
 import org.wso2.carbon.identity.application.common.model.IdentityProvider;
 import org.wso2.carbon.identity.application.common.model.Property;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
+import org.wso2.carbon.identity.application.common.model.User;
 import org.wso2.carbon.identity.application.common.util.IdentityApplicationManagementUtil;
+import org.wso2.carbon.identity.application.mgt.ApplicationConstants;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
 import org.wso2.carbon.identity.claim.metadata.mgt.ClaimMetadataManagementService;
 import org.wso2.carbon.identity.claim.metadata.mgt.exception.ClaimMetadataException;
 import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.common.testng.WithCarbonHome;
-import org.wso2.carbon.identity.core.internal.IdentityCoreServiceComponent;
+import org.wso2.carbon.identity.core.IdentityKeyStoreResolver;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityConfigParser;
+import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverConstants;
+import org.wso2.carbon.identity.core.util.IdentityKeyStoreResolverException;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.OAuthAdminServiceImpl;
+import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
 import org.wso2.carbon.identity.oauth.cache.OAuthCache;
@@ -106,16 +118,21 @@ import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.ConfigurationContextService;
 import org.wso2.carbon.utils.NetworkUtils;
+import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -142,6 +159,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OAuthError.AuthorizationResponsei18nKey.APPLICATION_NOT_FOUND;
@@ -257,6 +275,9 @@ public class OAuth2UtilTest {
     @Mock
     OAuthAdminServiceImpl oAuthAdminService;
 
+    @Mock
+    IdentityKeyStoreResolver identityKeyStoreResolver;
+
     private KeyStore wso2KeyStore;
 
     private MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration;
@@ -268,6 +289,7 @@ public class OAuth2UtilTest {
     private MockedStatic<NetworkUtils> networkUtils;
     private MockedStatic<IdentityProviderManager> identityProviderManager;
     private MockedStatic<LoggerUtils> loggerUtils;
+    private MockedStatic<IdentityKeyStoreResolver> identityKeyStoreResolverMockedStatic;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -322,6 +344,9 @@ public class OAuth2UtilTest {
         identityTenantUtil.when(IdentityTenantUtil::getLoginTenantId).thenReturn(-1234);
         wso2KeyStore = getKeyStoreFromFile("wso2carbon.jks", "wso2carbon",
                 System.getProperty(CarbonBaseConstants.CARBON_HOME));
+        identityKeyStoreResolverMockedStatic = mockStatic(IdentityKeyStoreResolver.class);
+        identityKeyStoreResolverMockedStatic.when(IdentityKeyStoreResolver::getInstance)
+                .thenReturn(identityKeyStoreResolver);
     }
 
     @AfterMethod
@@ -335,6 +360,7 @@ public class OAuth2UtilTest {
         networkUtils.close();
         identityProviderManager.close();
         loggerUtils.close();
+        identityKeyStoreResolverMockedStatic.close();
     }
 
     @Test
@@ -1276,6 +1302,8 @@ public class OAuth2UtilTest {
                      mockStatic(IdentityApplicationManagementUtil.class)) {
             identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled)
                     .thenReturn(enableTenantURLSupport);
+            identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs)
+                    .thenReturn(enableTenantURLSupport);
             identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
             PrivilegedCarbonContext mockPrivilegedCarbonContext = mock(PrivilegedCarbonContext.class);
             privilegedCarbonContext.when(
@@ -1412,6 +1440,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOAuth2JWKSPageUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1448,6 +1477,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOAuth2DCREPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1513,6 +1543,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOidcWebFingerEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1568,6 +1599,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOauth2UserInfoEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1614,6 +1646,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOauth2RevocationEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -1661,6 +1694,7 @@ public class OAuth2UtilTest {
 
         when(oauthServerConfigurationMock.getOauth2IntrospectionEPUrl()).thenReturn(configUrl);
         identityTenantUtil.when(IdentityTenantUtil::isTenantQualifiedUrlsEnabled).thenReturn(enableTenantURLSupport);
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).thenReturn(enableTenantURLSupport);
         identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
         lenient().when(PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain())
                 .thenReturn("carbon.super");
@@ -2775,6 +2809,43 @@ public class OAuth2UtilTest {
         }
     }
 
+    @DataProvider(name = "extractBearerTokenDataProvider")
+    public Object[][] extractBearerTokenDataProvider() {
+
+        String errorMessage = "Bearer authorization header is not available in the request.";
+
+        return new Object[][]{
+                // authzHeaderKey, authzHeaderValue, expectedResult
+                { "Authorization", "Bearer f2c8a9b3-7e4a-42cd-91df-64f61aaf9a87",
+                        "f2c8a9b3-7e4a-42cd-91df-64f61aaf9a87" },
+                { "authorization", "Bearer a6db9d92-13c0-441d-8c96-77ebf8b9ea56",
+                        "a6db9d92-13c0-441d-8c96-77ebf8b9ea56" },
+                { "authorization", "BearerXY 0a4d6e11-c8c2-47a5-9ad0-7c82fa4db938", errorMessage }
+
+        };
+    }
+
+
+    @Test(dataProvider = "extractBearerTokenDataProvider")
+    public void testExtractBearerTokenFromAuthzHeader(String authzHeaderKey, String authzHeaderValue,
+                                                     String expectedResult) {
+
+        try (MockedStatic<OAuthUtils> oauthUtils = mockStatic(OAuthUtils.class)) {
+            HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
+            lenient().when(httpServletRequest.getHeader(authzHeaderKey)).thenReturn(authzHeaderValue);
+
+            oauthUtils.when(() -> OAuthUtils.getAuthHeaderField(authzHeaderValue)).thenReturn(expectedResult);
+
+            try {
+                String extractedToken = OAuth2Util.extractBearerTokenFromAuthzHeader(httpServletRequest);
+                assertEquals(extractedToken, expectedResult);
+            } catch (OAuthClientAuthnException ex) {
+                assertThrows(OAuthClientAuthnException.class, () ->
+                        OAuth2Util.extractBearerTokenFromAuthzHeader(httpServletRequest));
+            }
+        }
+    }
+
     @DataProvider(name = "clientAuthenticatorsDataProvider")
     public Object[][] clientAuthenticatorsDataProvider() {
 
@@ -3064,5 +3135,326 @@ public class OAuth2UtilTest {
                                                          Object expectedNimbusdsAlgorithm) throws Exception {
         JWSAlgorithm actual = mapSignatureAlgorithmForJWSAlgorithm(signatureAlgo);
         Assert.assertEquals(actual, expectedNimbusdsAlgorithm);
+    }
+
+    @Test(description = "Test get certificate with alias")
+    public void testGetCertificateWithAlias() throws Exception {
+
+        // Verify the success case.
+        when(identityKeyStoreResolver.getKeyStore(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(wso2KeyStore);
+        Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, "test-client-cert");
+        assertEquals(((X509Certificate) certificate).getIssuerDN().getName(), "CN=MyCert");
+
+        // Test when the IdentityKeyStoreResolverException is thrown.
+        when(identityKeyStoreResolver.getKeyStore("tenant-1",
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenThrow(
+                new IdentityKeyStoreResolverException("test-error-code", "test-error"));
+        try {
+            OAuth2Util.getCertificate("tenant-1", "test-client-cert");
+            Assert.fail("Expected IdentityOAuth2Exception to be thrown");
+        } catch (IdentityOAuth2Exception e) {
+            Assert.assertTrue(e.getMessage().contains(
+                    "Error while obtaining public certificate for the alias test-client-cert " +
+                            "in the tenant domain tenant-1"));
+        }
+    }
+
+    @Test(description = "Test the validateIdToken method")
+    public void testValidateIdToken() throws Exception {
+
+        String idToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImMxMGMzODUwMjNjYzIwOGQ0OWY0YWE5MjUzNTkwY2I1MDdmN2"
+                + "JjNDYifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJteS1jbGllbnQtaWQi"
+                + "LCJleHAiOjE2MTY3MTcyMDAsImlhdCI6MTYxNjcxMzYwMCwic3ViIjoiMTIzNDU2Nzg5MCIsImVtYWlsIjoid"
+                + "GVzdEBleGFtcGxlLmNvbSJ9.signature";
+        String userId = "550e8400-e29b-41d4-a716-446655440000";
+        String clientId = "750a8400-e29b-56d4-a716-446655440000";
+
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(
+                wso2KeyStore.getCertificate("wso2carbon"));
+
+        // Mock the required components
+        try (MockedStatic<SignedJWT> signedJWTMock = mockStatic(SignedJWT.class);
+             MockedStatic<MultitenantUtils> multiTenantUtilsMock = mockStatic(MultitenantUtils.class)) {
+            multiTenantUtilsMock.when(() -> MultitenantUtils.getTenantDomain(anyString()))
+                    .thenReturn(SUPER_TENANT_DOMAIN_NAME);
+            JWTClaimsSet claimsSet = mock(JWTClaimsSet.class);
+            when(claimsSet.getSubject()).thenReturn(userId);
+            when(claimsSet.getAudience()).thenReturn(Collections.singletonList(clientId));
+
+            // Setup JWT parser mock
+            SignedJWT signedJWT = mock(SignedJWT.class);
+            when(signedJWT.getJWTClaimsSet()).thenReturn(claimsSet);
+
+            // Mock static methods
+            signedJWTMock.when(() -> SignedJWT.parse(idToken)).thenReturn(signedJWT);
+
+            ArgumentCaptor<RSASSAVerifier> verifierCaptor = ArgumentCaptor.forClass(RSASSAVerifier.class);
+            when(signedJWT.verify(verifierCaptor.capture())).thenReturn(true);
+
+            // Test successful validation
+            boolean result = OAuth2Util.validateIdToken(idToken);
+            assertTrue(result, "Valid ID token should pass validation");
+
+            RSASSAVerifier capturedVerifier = verifierCaptor.getValue();
+            RSAPublicKey capturedPublicKey = capturedVerifier.getPublicKey();
+            assertEquals(capturedPublicKey.toString(),
+                    wso2KeyStore.getCertificate("wso2carbon").getPublicKey().toString(),
+                    "The public key used for verification should match the one in the keystore");
+        }
+    }
+
+    @Test(description = "Test the getPrivateKey method")
+    public void testGetPrivateKey() throws Exception {
+
+        Key testKey = wso2KeyStore.getKey("wso2carbon", "wso2carbon".toCharArray());
+        when(identityKeyStoreResolver.getPrivateKey(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(testKey);
+        Key privateKey = OAuth2Util.getPrivateKey(SUPER_TENANT_DOMAIN_NAME, -1234);
+        assertEquals(privateKey.toString(), testKey.toString(),
+                "The private key should match the one in the keystore");
+    }
+
+    @Test(description = "Test the getCertificate method")
+    public void testGetCertificate() throws Exception {
+
+        Certificate testCert = wso2KeyStore.getCertificate("wso2carbon");
+        when(identityKeyStoreResolver.getCertificate(SUPER_TENANT_DOMAIN_NAME,
+                IdentityKeyStoreResolverConstants.InboundProtocol.OAUTH)).thenReturn(testCert);
+        Certificate certificate = OAuth2Util.getCertificate(SUPER_TENANT_DOMAIN_NAME, -1234);
+        assertEquals(certificate.toString(), testCert.toString(),
+                "The certificate should match the one in the keystore");
+    }
+
+    @DataProvider
+    public Object[][] getTestBuildServiceUrlWithHostnameTestData() {
+
+        return new Object[][]{
+                // defaultContext, hostname, oauth2EndpointURLInFile, oauth2EndpointURLInFileV2,
+                // shouldUseTenantQualifiedURLs, tenantDomain, expectedServiceURL
+                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize", null, true, "abc.com",
+                        "https://localhost:9443/t/abc.com/oauth2/authorize" },
+                { "oauth2/authorize", "localhost", "https://localhost:9443/oauth2/authorize",
+                        "https://localhost:9443/t/abc.com/oauth2/authorize", true, "abc.com",
+                        "https://localhost:9443/t/abc.com/oauth2/authorize" },
+                { "oauth2/userinfo", "localhost", "https://localhost:9443/oauth2/userinfo", null, false, "carbon.super",
+                        "https://localhost:9443/oauth2/userinfo" }
+        };
+    }
+
+    @Test(dataProvider = "getTestBuildServiceUrlWithHostnameTestData")
+    public void testBuildServiceUrlWithHostname(String defaultContext, String hostname, String oauth2EndpointURLInFile,
+                                                String oauth2EndpointURLInFileV2, boolean shouldUseTenantQualifiedURLs,
+                                                String tenantDomain, String expectedServiceURL) {
+
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).
+                thenReturn(shouldUseTenantQualifiedURLs);
+        identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).thenReturn(tenantDomain);
+
+        try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
+            serviceURLBuilder.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
+                    setOrganization(null)).thenCallRealMethod();
+        }
+
+        String actualServiceURL = OAuth2Util.buildServiceUrlWithHostname(defaultContext, oauth2EndpointURLInFile,
+                oauth2EndpointURLInFileV2, hostname);
+
+        assertEquals(actualServiceURL, expectedServiceURL);
+    }
+
+    @DataProvider
+    public Object[][] getTestGetIdTokenIssuerTestData() {
+
+        String consoleTenantedClientID = ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID + "_abc.com";
+
+        return new Object[][]{
+                // tenantDomain, clientID, isMtlsRequest, isIncorrectHostName, expectedResult
+                { "abc.com", consoleTenantedClientID, true, false, "https://localhost:9443/t/abc.com/oauth2/token" },
+                { "abc.com", consoleTenantedClientID, false, true, "https://localhost:9443/t/abc.com/oauth2/token" },
+                { ApplicationConstants.SUPER_TENANT, ApplicationConstants.CONSOLE_APPLICATION_CLIENT_ID, true, false,
+                        "https://localhost:9443/oauth2/token" }
+        };
+    }
+
+    @Test(dataProvider = "getTestGetIdTokenIssuerTestData")
+    public void testGetIdTokenIssuer(String tenantDomain, String clientID, boolean isMtlsRequest,
+                                     boolean isIncorrectHostName, String expectedResult)
+            throws IdentityOAuth2Exception {
+
+        String defaultContext = "oauth2/token";
+        String incorrectHostName = "#host_name";
+
+        identityTenantUtil.when(IdentityTenantUtil::shouldUseTenantQualifiedURLs).
+                thenReturn(true);
+        identityTenantUtil.when(IdentityTenantUtil::getTenantDomainFromContext).
+                thenReturn(tenantDomain);
+
+        if (isIncorrectHostName) {
+            try (MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class)) {
+                identityUtil.when(() -> IdentityUtil.getProperty(IdentityCoreConstants.SERVER_HOST_NAME)).
+                        thenReturn(incorrectHostName);
+            }
+            IdentityUtil.getProperty(IdentityCoreConstants.SERVER_HOST_NAME);
+        }
+
+        try (MockedStatic<ServiceURLBuilder> serviceURLBuilder = mockStatic(ServiceURLBuilder.class)) {
+            serviceURLBuilder.when(() -> ServiceURLBuilder.create().addPath(defaultContext).
+                    setOrganization(null)).thenCallRealMethod();
+        }
+
+        String actualIdTokenIssuer = OAuth2Util.getIdTokenIssuer(tenantDomain, clientID, isMtlsRequest);
+        assertEquals(actualIdTokenIssuer, expectedResult);
+    }
+
+    @DataProvider(name = "getAuthenticatedUserDataProvider")
+    public Object[][] getAuthenticatedUserDataProvider() {
+        return new Object[][]{
+                // userId, tenantDomain, clientId, expectedException, mockUserExists
+                {"testuser123", "carbon.super", "testclientid", null, true},
+                {"invaliduser", "carbon.super", "testclientid", IdentityOAuth2Exception.class, false},
+                {null, "carbon.super", "testclientid", IdentityOAuth2Exception.class, false},
+                {"testuser123", "carbon.super", "testclientid", IdentityOAuth2Exception.class, false}
+        };
+    }
+
+    @Test(dataProvider = "getAuthenticatedUserDataProvider")
+    public void testGetAuthenticatedUser(String userId, String tenantDomain, String clientId, 
+                                       Class<? extends Exception> expectedException, boolean mockUserExists) 
+            throws Exception {
+        
+        // Mock dependencies
+        User mockUser = mock(User.class);
+        lenient().when(mockUser.getUserName()).thenReturn("testusername");
+        lenient().when(mockUser.getUserStoreDomain()).thenReturn("PRIMARY");
+        
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+        when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        when(tenantManagerMock.getTenantId(anyString())).thenReturn(1);
+        
+        // Mock OAuthUtil.getUserFromTenant
+        try (MockedStatic<OAuthUtil> oAuthUtilMockedStatic = mockStatic(OAuthUtil.class)) {
+            if (mockUserExists) {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(mockUser);
+            } else {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(null);
+            }
+            
+            // Mock the overloaded getAuthenticatedUser method
+            try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+                AuthenticatedUser expectedAuthUser = new AuthenticatedUser();
+                expectedAuthUser.setUserId(userId);
+                expectedAuthUser.setUserName("testusername");
+                expectedAuthUser.setUserStoreDomain("PRIMARY");
+                expectedAuthUser.setTenantDomain(tenantDomain);
+                
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(anyString(), anyString(), 
+                        anyString(), anyString(), anyString(), any()))
+                        .thenReturn(expectedAuthUser);
+                
+                // Call the real method
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, clientId))
+                        .thenCallRealMethod();
+                
+                if (expectedException != null) {
+                    assertThrows(expectedException, 
+                            () -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, clientId));
+                } else {
+                    AuthenticatedUser result = OAuth2Util.getAuthenticatedUser(userId, tenantDomain, clientId);
+                    assertNotNull(result);
+                    if (mockUserExists) {
+                        assertEquals(result.getUserId(), userId);
+                        assertEquals(result.getUserName(), "testusername");
+                        assertEquals(result.getUserStoreDomain(), "PRIMARY");
+                        assertEquals(result.getTenantDomain(), tenantDomain);
+                    }
+                }
+            }
+        }
+    }
+
+    @DataProvider(name = "getOrgAuthenticatedUserDataProvider")
+    public Object[][] getOrgAuthenticatedUserDataProvider() {
+        return new Object[][]{
+                // userId, tenantDomain, userAccessingOrg, userResidentOrg, clientId, expectedException,
+                // mockUserExists, mockResolveOrgSuccessful
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid", null, true, true},
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid",
+                        IdentityOAuth2Exception.class, false, true},
+                {"testuser123", "carbon.super", "org1", "org2", "testclientid",
+                        IdentityOAuth2Exception.class, true, false},
+                {null, "carbon.super", "org1", "org2", "testclientid", IdentityOAuth2Exception.class, true, true}
+        };
+    }
+
+    @Test(dataProvider = "getOrgAuthenticatedUserDataProvider")
+    public void testGetOrgAuthenticatedUser(String userId, String tenantDomain, String userAccessingOrg,
+                                                        String userResidentOrg, String clientId, 
+                                                        Class<? extends Exception> expectedException, 
+                                                        boolean mockUserExists, boolean mockResolveOrgSuccessful) 
+            throws Exception {
+        
+        User mockUser = mock(User.class);
+        lenient().when(mockUser.getUserName()).thenReturn("testusername");
+        lenient().when(mockUser.getUserStoreDomain()).thenReturn("PRIMARY");
+        
+        OAuth2ServiceComponentHolder.getInstance().setOrganizationManager(organizationManagerMock);
+        when(oAuthComponentServiceHolderMock.getRealmService()).thenReturn(realmServiceMock);
+
+        lenient().when(realmServiceMock.getTenantManager()).thenReturn(tenantManagerMock);
+        lenient().when(tenantManagerMock.getTenantId(anyString())).thenReturn(1);
+        
+        if (mockResolveOrgSuccessful && userResidentOrg != null) {
+            when(organizationManagerMock.resolveTenantDomain(userResidentOrg)).thenReturn("resolved.domain");
+        } else if (userResidentOrg != null) {
+            when(organizationManagerMock.resolveTenantDomain(userResidentOrg))
+                    .thenThrow(new OrganizationManagementException("Failed to resolve organization"));
+        }
+        
+        try (MockedStatic<OAuthUtil> oAuthUtilMockedStatic = mockStatic(OAuthUtil.class)) {
+            if (mockUserExists && userId != null) {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(mockUser);
+            } else {
+                oAuthUtilMockedStatic.when(() -> OAuthUtil.getUserFromTenant(anyString(), anyInt()))
+                        .thenReturn(null);
+            }
+
+            try (MockedStatic<OAuth2Util> oAuth2UtilMockedStatic = mockStatic(OAuth2Util.class)) {
+                AuthenticatedUser expectedAuthUser = new AuthenticatedUser();
+                expectedAuthUser.setUserId(userId);
+                expectedAuthUser.setUserName("testusername");
+                expectedAuthUser.setUserStoreDomain("PRIMARY");
+                expectedAuthUser.setTenantDomain(tenantDomain);
+                
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(anyString(), anyString(), 
+                        anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+                        .thenReturn(expectedAuthUser);
+                
+                // Call the real method under test
+                oAuth2UtilMockedStatic.when(() -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, 
+                        userAccessingOrg, userResidentOrg, clientId))
+                        .thenCallRealMethod();
+                
+                if (expectedException != null) {
+                    assertThrows(expectedException, 
+                            () -> OAuth2Util.getAuthenticatedUser(userId, tenantDomain, userAccessingOrg, 
+                                    userResidentOrg, clientId));
+                } else {
+                    AuthenticatedUser result = OAuth2Util.getAuthenticatedUser(userId, tenantDomain, 
+                            userAccessingOrg, userResidentOrg, clientId);
+                    
+                    assertNotNull(result);
+                    if (mockUserExists && userId != null) {
+                        assertEquals(result.getUserId(), userId);
+                        assertEquals(result.getUserName(), "testusername");
+                        assertEquals(result.getUserStoreDomain(), "PRIMARY");
+                        assertEquals(result.getTenantDomain(), tenantDomain);
+                    }
+                }
+            }
+        }
     }
 }

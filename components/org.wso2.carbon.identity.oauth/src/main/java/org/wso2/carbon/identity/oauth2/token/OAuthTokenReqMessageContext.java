@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2013-2025, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -44,6 +44,7 @@ public class OAuthTokenReqMessageContext {
     private long validityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
 
     private long refreshTokenvalidityPeriod = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
+    private long refreshTokenValidityPeriodInMillis = OAuthConstants.UNASSIGNED_VALIDITY_PERIOD;
 
     private long accessTokenIssuedTime;
 
@@ -66,6 +67,8 @@ public class OAuthTokenReqMessageContext {
     private Map<String, Object> additionalAccessTokenClaims;
 
     private AuthorizationDetails authorizationDetails;
+    private String requestedActor;
+    private String jwtID;
 
     public OAuthTokenReqMessageContext(OAuth2AccessTokenReqDTO oauth2AccessTokenReqDTO) {
 
@@ -255,5 +258,35 @@ public class OAuthTokenReqMessageContext {
     public void setAuthorizationDetails(final AuthorizationDetails authorizationDetails) {
 
         this.authorizationDetails = authorizationDetails;
+    }
+
+    public long getRefreshTokenValidityPeriodInMillis() {
+
+        return refreshTokenValidityPeriodInMillis;
+    }
+
+    public void setRefreshTokenValidityPeriodInMillis(long refreshTokenValidityPeriodInMillis) {
+
+        this.refreshTokenValidityPeriodInMillis = refreshTokenValidityPeriodInMillis;
+    }
+
+    public String getRequestedActor() {
+
+        return requestedActor;
+    }
+
+    public void setRequestedActor(String requestedActor) {
+
+        this.requestedActor = requestedActor;
+    }
+
+    public void setJWTID(String jwtID) {
+
+        this.jwtID = jwtID;
+    }
+
+    public String getJWTID() {
+
+        return jwtID;
     }
 }

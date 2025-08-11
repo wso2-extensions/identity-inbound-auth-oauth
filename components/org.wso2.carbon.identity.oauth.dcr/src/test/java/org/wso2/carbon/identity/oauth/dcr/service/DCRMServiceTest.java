@@ -564,6 +564,24 @@ public class DCRMServiceTest {
         fail("Expected IdentityException was not thrown by registerApplication method");
     }
 
+    @Test
+    public void testRegisterApplicationWithMissingClientName() {
+
+        ApplicationRegistrationRequest invalidRequest = new ApplicationRegistrationRequest();
+        invalidRequest.setAdditionalAttributes(new HashMap<>());
+
+        try {
+            dcrmService.registerApplication(invalidRequest);
+        } catch (DCRMClientException ex) {
+            assertEquals(ex.getMessage(), DCRMConstants.ErrorMessages.MISSING_CLIENT_NAME.getMessage());
+            assertEquals(ex.getErrorCode(), DCRMConstants.ErrorMessages.BAD_REQUEST_INVALID_INPUT.toString());
+            return;
+        } catch (Exception ex) {
+            fail("Expected DCRMClientException, but got: " + ex.getClass().getSimpleName());
+        }
+        fail("Expected DCRMClientException was not thrown for missing client_name.");
+    }
+
     @DataProvider(name = "RedirectAndGrantTypeProvider")
     public Object[][] getListSizeAndGrantType() {
 

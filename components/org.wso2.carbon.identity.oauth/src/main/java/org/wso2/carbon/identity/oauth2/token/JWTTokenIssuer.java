@@ -201,6 +201,16 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         List<String> audience = OAuth2Util.getOIDCAudience(consumerKey, oAuthAppDO);
         jwtClaimsSetBuilder.audience(audience);
 
+        List<JWTAccessTokenClaimProvider> claimProviders = getJWTAccessTokenClaimProviders();
+        /* Assumption: User resident org and authorized org are same during authorize request.
+        This will get differ only during token requests - ex: org switch. */
+        for (JWTAccessTokenClaimProvider claimProvider : claimProviders) {
+            Map<String, Object> additionalClaims = claimProvider.getAdditionalClaims(oauthAuthzMsgCtx);
+            if (additionalClaims != null) {
+                additionalClaims.forEach(jwtClaimsSetBuilder::claim);
+            }
+        }
+
         return jwtClaimsSetBuilder.build();
     }
 
@@ -307,6 +317,7 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
             return new PlainJWT(jwtClaimsSet).serialize();
         }
 
+        request.setJWTID(jwtClaimsSet.getJWTID());
         return signJWT(jwtClaimsSet, request, null);
     }
 
