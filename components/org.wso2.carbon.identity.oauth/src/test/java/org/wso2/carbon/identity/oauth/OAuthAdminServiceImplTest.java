@@ -46,6 +46,7 @@ import org.wso2.carbon.identity.claim.metadata.mgt.model.ExternalClaim;
 import org.wso2.carbon.identity.core.internal.component.IdentityCoreServiceComponent;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -73,6 +74,7 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.openidconnect.dao.ScopeClaimMappingDAO;
+import org.wso2.carbon.identity.openidconnect.internal.OpenIDConnectServiceComponentHolder;
 import org.wso2.carbon.user.api.RealmConfiguration;
 import org.wso2.carbon.user.api.Tenant;
 import org.wso2.carbon.user.api.UserRealm;
@@ -160,6 +162,8 @@ public class OAuthAdminServiceImplTest {
     AuthorizationCodeDAO mockAuthorizationCodeDAO;
     @Mock
     TokenManagementDAO mockTokenManagementDAO;
+    @Mock
+    IdentityEventService identityEventService;
 
     private MockedStatic<IdentityTenantUtil> identityTenantUtil;
     private MockedStatic<LoggerUtils> loggerUtils;
@@ -189,6 +193,7 @@ public class OAuthAdminServiceImplTest {
                 .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
         loggerUtils = mockStatic(LoggerUtils.class);
         loggerUtils.when(() -> LoggerUtils.triggerAuditLogEvent(any(), anyBoolean())).thenAnswer(invocation -> null);
+        OpenIDConnectServiceComponentHolder.setIdentityEventService(identityEventService);
 
     }
 

@@ -28,6 +28,7 @@ import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
@@ -59,6 +60,7 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
 
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()});
+        AccessTokenEventUtil.publishTokenRevokeEvent(accessTokenDO);
     }
 
     @Override
@@ -133,6 +135,13 @@ public class DefaultOAuth2RevocationProcessor implements OAuth2RevocationProcess
             for (AccessTokenDO accessTokenDO: accessTokenDOSet) {
                 revokeExistingToken(clientId, accessTokenDO.getAccessToken());
             }
+
+            /*
+            Revoking tokens associated with the application ID, and removed scopes due to permitted API update
+            for that particular application. This involves revoking tokens of all users who has tokens from the
+            application and the scopes. Considering the size of the user count, not need to pass the user info.
+             */
+            AccessTokenEventUtil.publishTokenRevokeEvent(appId, clientId, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             LOG.error("Error occurred while retrieving app by app ID : " + appId, e);
             throw new IdentityOAuth2Exception("Error occurred while retrieving app by app ID : " + appId, e);

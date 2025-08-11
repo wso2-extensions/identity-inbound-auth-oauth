@@ -37,6 +37,7 @@ import org.wso2.carbon.identity.event.handler.AbstractEventHandler;
 import org.wso2.carbon.identity.oauth.OAuthUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
@@ -456,6 +457,7 @@ public class TokenBindingExpiryEventHandler extends AbstractEventHandler {
         OAuthTokenPersistenceFactory.getInstance().getAccessTokenDAO()
                 .revokeAccessTokens(new String[]{accessTokenDO.getAccessToken()}, OAuth2Util.isHashEnabled());
         OAuthUtil.invokePostRevocationBySystemListeners(accessTokenDO, Collections.emptyMap());
+        AccessTokenEventUtil.publishTokenRevokeEvent(consumerKey, user);
     }
 
     /**
