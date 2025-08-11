@@ -67,7 +67,7 @@ import org.wso2.carbon.identity.oauth.dto.OAuthTokenExpiryTimeDTO;
 import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
-import org.wso2.carbon.identity.oauth.internal.EventUtil;
+import org.wso2.carbon.identity.oauth.internal.util.EventUtil;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.listener.OAuthApplicationMgtListener;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
