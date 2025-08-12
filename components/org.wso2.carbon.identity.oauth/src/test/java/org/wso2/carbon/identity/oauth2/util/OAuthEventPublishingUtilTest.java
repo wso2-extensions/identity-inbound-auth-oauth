@@ -122,7 +122,7 @@ public class OAuthEventPublishingUtilTest {
             verify(identityEventService).handleEvent(eventCaptor.capture());
 
             Event event = eventCaptor.getValue();
-            assertEquals(IdentityEventConstants.Event.TOKEN_ISSUED, event.getEventName());
+            assertEquals(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, event.getEventName());
 
             Map<String, Object> properties = event.getEventProperties();
             assertEquals("user-id", properties.get(IdentityEventConstants.EventProperty.USER_ID));

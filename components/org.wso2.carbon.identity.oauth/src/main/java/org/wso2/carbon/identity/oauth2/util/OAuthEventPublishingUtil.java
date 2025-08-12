@@ -99,12 +99,12 @@ public class OAuthEventPublishingUtil {
         properties.put(IdentityEventConstants.EventProperty.TENANT_ID,
                 PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantId());
 
-        Event identityMgtEvent = new Event(IdentityEventConstants.Event.TOKEN_ISSUED, properties);
+        Event identityMgtEvent = new Event(IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, properties);
 
         try {
             OAuth2ServiceComponentHolder.getIdentityEventService().handleEvent(identityMgtEvent);
         } catch (IdentityEventException e) {
-            log.error("Error occurred publishing event " + IdentityEventConstants.Event.TOKEN_ISSUED, e);
+            log.error("Error occurred publishing event " + IdentityEventConstants.Event.POST_ISSUE_ACCESS_TOKEN_V2, e);
         }
     }
 }
