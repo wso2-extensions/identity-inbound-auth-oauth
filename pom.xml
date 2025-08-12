@@ -846,7 +846,7 @@
         <carbon.kernel.registry.imp.pkg.version.range>[1.0.1, 2.0.0)</carbon.kernel.registry.imp.pkg.version.range>
 
         <!-- Carbon Identity Framework version -->
-        <carbon.identity.framework.version>5.25.723</carbon.identity.framework.version>
+        <carbon.identity.framework.version>5.25.728</carbon.identity.framework.version>
         <carbon.identity.framework.imp.pkg.version.range>[5.17.5, 6.0.0)
         </carbon.identity.framework.imp.pkg.version.range>
 
@@ -913,8 +913,8 @@
         <thetransactioncompany.cors-filter.wso2.version>1.7.0.wso2v1</thetransactioncompany.cors-filter.wso2.version>
         <thetransactioncompany.utils.wso2.version>1.9.0.wso2v1</thetransactioncompany.utils.wso2.version>
 
-        <json.wso2.version>3.0.0.wso2v1</json.wso2.version>
-        <json.wso2.version.range>[3.0.0.wso2v1, 4.0.0)</json.wso2.version.range>
+        <json.wso2.version>3.0.0.wso2v7</json.wso2.version>
+        <json.wso2.version.range>[3.0.0.wso2v7, 4.0.0)</json.wso2.version.range>
 
         <opensaml.version>3.3.1</opensaml.version>
         <opensaml3.wso2.version>3.3.1.wso2v14</opensaml3.wso2.version>
@@ -934,7 +934,7 @@
         <org.slf4j.verison>1.7.21</org.slf4j.verison>
         <com.google.code.gson.version>2.9.0</com.google.code.gson.version>
         <com.google.code.gson.osgi.version.range>[2.6.2,3.0.0)</com.google.code.gson.osgi.version.range>
-        <json-smart.version>2.5.2</json-smart.version>
+        <json-smart.version>2.6.0</json-smart.version>
         <version.org.wso2.orbit.javax.xml.bind>2.3.1.wso2v1</version.org.wso2.orbit.javax.xml.bind>
         <version.org.wso2.orbit.javax.activation>1.1.1.wso2v1</version.org.wso2.orbit.javax.activation>
         <net.minidev.accessors-smart.version>2.5.2</net.minidev.accessors-smart.version>
