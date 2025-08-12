@@ -1154,7 +1154,7 @@ public final class OAuthUtil {
         boolean isErrorOnRevokingTokens;
         isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedUser, userStoreDomain, username);
 
-        if (!isErrorOnRevokingTokens) {
+        if (!isErrorOnRevokingTokens && CollectionUtils.isNotEmpty(clientIds)) {
             // Considering the root tenant revocation in current scope, will consider the sub organizations later.
             AccessTokenEventUtil.publishTokenRevokeEvent(clientIds, authenticatedUser);
         }
