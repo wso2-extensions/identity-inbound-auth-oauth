@@ -154,6 +154,7 @@ import org.wso2.carbon.identity.organization.management.service.constant.Organiz
 import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
 import org.wso2.carbon.identity.organization.management.service.model.Organization;
 import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
+import org.wso2.carbon.identity.organization.management.service.util.Utils;
 import org.wso2.carbon.idp.mgt.IdentityProviderManagementException;
 import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
@@ -2125,9 +2126,13 @@ public class OAuth2Util {
      */
     public static void initiateOIDCScopes(int tenantId) {
 
-        List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
         try {
             String tenantDomain = IdentityTenantUtil.getTenantDomain(tenantId);
+            if (OrganizationManagementUtil.isOrganization(tenantId) &&
+                    Utils.isClaimAndOIDCScopeInheritanceEnabled(tenantDomain)) {
+                return;
+            }
+            List<ScopeDTO> scopeClaimsList = OAuth2ServiceComponentHolder.getInstance().getOIDCScopesClaims();
             ClaimMetadataManagementService claimService = OAuth2ServiceComponentHolder.getInstance()
                     .getClaimMetadataManagementService();
             List<ExternalClaim> oidcDialectClaims =  claimService.getExternalClaims(OAuthConstants.OIDC_DIALECT,
@@ -2146,7 +2151,7 @@ public class OAuth2Util {
             if (log.isDebugEnabled()) {
                 log.debug(e.getMessage(), e);
             }
-        } catch (IdentityOAuth2Exception | ClaimMetadataException e) {
+        } catch (IdentityOAuth2Exception | ClaimMetadataException | OrganizationManagementException e) {
             log.error(e.getMessage(), e);
         }
     }
@@ -4176,6 +4181,45 @@ public class OAuth2Util {
                     clientId, claimValue);
         } catch (IdentityApplicationManagementException e) {
             throw new IdentityOAuth2Exception("Error occurred while retrieving application for client id: " + clientId);
+        }
+    }
+
+    /**
+     * Get authenticated user from subject identifier.
+     *
+     * @param claimValue          Subject identifier value.
+     * @param tenantDomain        Tenant domain.
+     * @param userAccessingOrgId  Organization id of the user accessing the resource.
+     * @param userResidentOrgId   Organization id of the user resident organization.
+     * @param clientId            Client id of the application.
+     * @return Authenticated user object.
+     * @throws IdentityOAuth2Exception Throws if an error occurred while getting the authenticated user.
+     */
+    public static AuthenticatedUser getAuthenticatedUserFromSubjectIdentifier(String claimValue, String tenantDomain,
+                                                                              String userAccessingOrgId,
+                                                                              String userResidentOrgId,
+                                                                              String clientId)
+            throws IdentityOAuth2Exception {
+
+        try {
+            ServiceProvider serviceProvider = OAuth2ServiceComponentHolder.getApplicationMgtService()
+                    .getServiceProviderByClientId(clientId, OAUTH2, tenantDomain);
+            String subjectClaimUri = serviceProvider.getLocalAndOutBoundAuthenticationConfig()
+                    .getSubjectClaimUri();
+            String userResidentOrgTenantDomain = OAuth2ServiceComponentHolder.getInstance()
+                    .getOrganizationManager().resolveTenantDomain(userResidentOrgId);
+            String subjectClaimValue = getSubjectClaimFromSubjectIdentifier(claimValue, clientId,
+                    tenantDomain);
+            org.wso2.carbon.user.core.common.User user = getUserFromSubjectIdentifier(subjectClaimValue,
+                    subjectClaimUri != null ? subjectClaimUri : USER_ID_CLAIM, userResidentOrgTenantDomain);
+            return getAuthenticatedUser(user.getUserID(), user.getUsername(), tenantDomain,
+                    userAccessingOrgId, userResidentOrgId, user.getUserStoreDomain(),
+                    clientId, claimValue);
+        } catch (IdentityApplicationManagementException e) {
+            throw new IdentityOAuth2Exception("Error occurred while retrieving application for client id: " + clientId);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(
+                    "Error while resolving tenant domain for user resident organization: " + userResidentOrgId, e);
         }
     }
 
@@ -6244,5 +6288,14 @@ public class OAuth2Util {
                     OIDC_IDP_ENTITY_ID).getValue();
         }
         return jwtIssuer.equals(issuer) ? residentIdentityProvider : null;
+    }
+
+    public static boolean isExistingUser(String userName, String tenantDomain) throws UserStoreException {
+
+        RealmService realmService = OAuthComponentServiceHolder.getInstance().getRealmService();
+        int tenantId = realmService.getTenantManager().getTenantId(tenantDomain);
+        AbstractUserStoreManager userStoreManager = (AbstractUserStoreManager)
+                realmService.getTenantUserRealm(tenantId).getUserStoreManager();
+        return userStoreManager.isExistingUser(userName.split("@")[0]);
     }
 }

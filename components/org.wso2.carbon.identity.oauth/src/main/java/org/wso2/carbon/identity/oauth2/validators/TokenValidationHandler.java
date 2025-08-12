@@ -79,7 +79,6 @@ public class TokenValidationHandler {
     private static final String BEARER_TOKEN_TYPE_JWT = "jwt";
     private static final String BUILD_FQU_FROM_SP_CONFIG = "OAuth.BuildSubjectIdentifierFromSPConfig";
     private static final String ENABLE_JWT_TOKEN_VALIDATION = "OAuth.EnableJWTTokenValidationDuringIntrospection";
-    private boolean isUserSessionImpersonationEnabled;
 
     private TokenValidationHandler() {
 
@@ -134,8 +133,6 @@ public class TokenValidationHandler {
             }
         }
         tokenValidationProcessor = OAuth2ServiceComponentHolder.getInstance().getTokenProvider();
-        isUserSessionImpersonationEnabled = OAuthServerConfiguration.getInstance()
-                .isUserSessionImpersonationEnabled();
     }
 
     public static TokenValidationHandler getInstance() {
@@ -361,6 +358,10 @@ public class TokenValidationHandler {
 
         if (introResp.getUsername() != null) {
             responseDTO.setAuthorizedUser(introResp.getUsername());
+            String accessingOrganizationId = introResp.getAuthorizedUser().getAccessingOrganization();
+            if (accessingOrganizationId != null) {
+                setAccessingOrganizationDetails(introResp, accessingOrganizationId);
+            }
         }
 
         if (tokenGenerator != null && validationRequest.getRequiredClaimURIs() != null) {
@@ -728,9 +729,6 @@ public class TokenValidationHandler {
     private void setIntrospectResponseActClaim(OAuth2TokenValidationMessageContext messageContext,
                                                OAuth2IntrospectionResponseDTO introResp) {
 
-        if (!isUserSessionImpersonationEnabled) {
-            return;
-        }
         if (messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO) != null) {
             AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty(OAuthConstants.ACCESS_TOKEN_DO);
             if (accessTokenDO.getAccessTokenExtendedAttributes() != null
@@ -741,6 +739,29 @@ public class TokenValidationHandler {
                         IMPERSONATING_ACTOR);
                 introResp.getProperties().put(IMPERSONATING_ACTOR, impersonatingActor);
             }
+        }
+    }
+
+    /**
+     * Sets the organization details for the accessing organization in the given introspection response.
+     *
+     * @param introspectionResponse the {@link OAuth2IntrospectionResponseDTO} to populate with organization details.
+     * @param accessingOrganizationId the unique identifier of the accessing organization.
+     * @throws IdentityOAuth2Exception if an error occurs while retrieving organization details.
+     */
+    private void setAccessingOrganizationDetails(OAuth2IntrospectionResponseDTO introspectionResponse,
+                                                 String accessingOrganizationId) throws IdentityOAuth2Exception {
+
+        try {
+            String organizationName = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .getOrganizationNameById(accessingOrganizationId);
+            String organizationHandle = OAuth2ServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(accessingOrganizationId);
+            introspectionResponse.setOrganizationName(organizationName);
+            introspectionResponse.setOrganizationHandle(organizationHandle);
+        } catch (OrganizationManagementException e) {
+            throw new IdentityOAuth2Exception(String.format("Error occurred while obtaining token introspection data " +
+                            "for accessing organization ID: %s", accessingOrganizationId), e);
         }
     }
 

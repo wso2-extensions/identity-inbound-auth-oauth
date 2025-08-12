@@ -54,6 +54,7 @@ import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth.dto.OAuthConsumerAppDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth.util.ClaimCache;
 import org.wso2.carbon.identity.oauth.util.ClaimCacheKey;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
@@ -1152,6 +1153,11 @@ public final class OAuthUtil {
 
         boolean isErrorOnRevokingTokens;
         isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedUser, userStoreDomain, username);
+
+        if (!isErrorOnRevokingTokens && CollectionUtils.isNotEmpty(clientIds)) {
+            // Considering the root tenant revocation in current scope, will consider the sub organizations later.
+            AccessTokenEventUtil.publishTokenRevokeEvent(clientIds, authenticatedUser);
+        }
 
         if (authenticatedOrgUser != null) {
             isErrorOnRevokingTokens = processTokenRevocation(clientIds, authenticatedOrgUser, authenticatedOrgUser.

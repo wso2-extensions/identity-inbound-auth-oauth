@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2019-2025, WSO2 LLC. (http://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -27,10 +27,11 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.Test;
-import org.wso2.carbon.base.CarbonBaseConstants;
 import org.wso2.carbon.base.MultitenantConstants;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.central.log.mgt.utils.LoggerUtils;
+import org.wso2.carbon.identity.common.testng.WithCarbonHome;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
@@ -40,7 +41,6 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2IntrospectionResponseDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -56,6 +56,7 @@ import static org.mockito.Mockito.when;
 import static org.testng.AssertJUnit.assertEquals;
 
 @Listeners(MockitoTestNGListener.class)
+@WithCarbonHome
 public class OAuth2IntrospectionEndpointTest {
 
     @Mock
@@ -70,28 +71,35 @@ public class OAuth2IntrospectionEndpointTest {
     @Mock
     TokenPersistenceProcessor tokenPersistenceProcessor;
 
+    @Mock
+    AuthenticatedUser authenticatedUser;
+
+    @Mock
+    OAuth2TokenValidationService mockedTokenService;
+
     private static final String CLAIM_SEPARATOR = ",";
     private static final String USERNAME_CLAIM_URI = "http://wso2.org/claims/username";
     private static final String EMAIL_CLAIM_URI = "http://wso2.org/claims/emailaddress";
     private static final String ROLE_CLAIM_URI = "http://wso2.org/claims/role";
     private static final String BEARER_TOKEN_TYPE_HINT = "bearer";
+    private static final String TOKEN = "TOKEN";
+    private static final String JWT_TOKEN_TYPE = "JWT";
+    private static final String OPAQUE_TOKEN_TYPE = "Bearer";
+    private static final String ORG_ID = "3f1c9e47-2d5a-4c8a-b5e7-7a28f6e2e419";
+    private static final String ORG_NAME = "ABC builders";
+    private static final String ORG_HANDLE = "abcbuilders";
 
     private OAuth2IntrospectionEndpoint oAuth2IntrospectionEndpoint;
 
     @BeforeClass
-    public void setUp() {
+    public void setUp() throws Exception {
 
-        System.setProperty(
-                CarbonBaseConstants.CARBON_HOME,
-                Paths.get(System.getProperty("user.dir"), "src", "test", "resources").toString()
-                          );
         oAuth2IntrospectionEndpoint = new OAuth2IntrospectionEndpoint();
     }
 
     @Test(dataProvider = "provideTokenInfo")
     public void testTokenTypeHint(String tokenTypeHint, String expectedTokenType) throws Exception {
 
-        String token = "TOKEN";
         String[] claims = new String[]{USERNAME_CLAIM_URI, EMAIL_CLAIM_URI, ROLE_CLAIM_URI};
         String requiredClaims = String.join(CLAIM_SEPARATOR, claims);
 
@@ -110,10 +118,9 @@ public class OAuth2IntrospectionEndpointTest {
                     .thenReturn(MultitenantConstants.SUPER_TENANT_ID);
             mockOAuthServerConfiguration(oAuthServerConfiguration);
 
-            privilegedCarbonContext.when(
-                    PrivilegedCarbonContext::getThreadLocalCarbonContext).thenReturn(mockedPrivilegedCarbonContext);
-            when(mockedPrivilegedCarbonContext.getOSGiService(any())).
-                    thenReturn(mockedTokenService);
+            privilegedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(mockedPrivilegedCarbonContext);
+            when(mockedPrivilegedCarbonContext.getOSGiService(any())).thenReturn(mockedTokenService);
 
             when(mockedTokenService.buildIntrospectionResponse(any(OAuth2TokenValidationRequestDTO.class)))
                     .thenReturn(mockedIntrospectionResponse);
@@ -129,7 +136,7 @@ public class OAuth2IntrospectionEndpointTest {
             when(mockedIntrospectionResponse.getCnfBindingValue())
                     .thenReturn("R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
 
-            Response response = oAuth2IntrospectionEndpoint.introspect(token, tokenTypeHint, requiredClaims);
+            Response response = oAuth2IntrospectionEndpoint.introspect(TOKEN, tokenTypeHint, requiredClaims);
 
             HashMap<String, Object> map =
                     new Gson().fromJson((String) response.getEntity(), new TypeToken<HashMap<String,
@@ -142,7 +149,35 @@ public class OAuth2IntrospectionEndpointTest {
             assertEquals(((Map<String, String>) map.get(OAuthConstants.CNF))
                     .get(OAuthConstants.X5T_S256), "R4Hj_0nNdIzVvPdCdsWlxNKm6a74cszp4Za4M1iE8P9");
         }
+    }
 
+    @Test
+    public void testOrgDetailsInIntrospection() {
+
+        try (MockedStatic<PrivilegedCarbonContext> privilegedCarbonContext
+                     = mockStatic(PrivilegedCarbonContext.class)) {
+
+            privilegedCarbonContext.when(PrivilegedCarbonContext::getThreadLocalCarbonContext)
+                    .thenReturn(mockedPrivilegedCarbonContext);
+            when(mockedPrivilegedCarbonContext.getOSGiService(any())).thenReturn(mockedTokenService);
+
+            when(mockedTokenService.buildIntrospectionResponse(any(OAuth2TokenValidationRequestDTO.class)))
+                    .thenReturn(mockedIntrospectionResponse);
+            when(mockedIntrospectionResponse.getError()).thenReturn(null);
+            when(mockedIntrospectionResponse.getAuthorizedUser()).thenReturn(authenticatedUser);
+            when(mockedIntrospectionResponse.getOrganizationHandle()).thenReturn(ORG_HANDLE);
+            when(mockedIntrospectionResponse.getOrganizationName()).thenReturn(ORG_NAME);
+            when(authenticatedUser.getAccessingOrganization()).thenReturn(ORG_ID);
+
+            Response response = oAuth2IntrospectionEndpoint.introspect(TOKEN, BEARER_TOKEN_TYPE_HINT, null);
+
+            HashMap<String, Object> map = new Gson().fromJson((String) response.getEntity(),
+                    new TypeToken<HashMap<String, Object>>() { }.getType());
+
+            assertEquals(ORG_ID, map.get(IntrospectionResponse.ORG_ID));
+            assertEquals(ORG_NAME, map.get(IntrospectionResponse.ORG_NAME));
+            assertEquals(ORG_HANDLE, map.get(IntrospectionResponse.ORG_HANDLE));
+        }
     }
 
     private void mockOAuthServerConfiguration(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration)
@@ -159,8 +194,8 @@ public class OAuth2IntrospectionEndpointTest {
     public Object[][] provideTokenInfo() {
 
         return new Object[][]{
-                {BEARER_TOKEN_TYPE_HINT, "Bearer"},
-                {BEARER_TOKEN_TYPE_HINT, "JWT"}
+                {BEARER_TOKEN_TYPE_HINT, OPAQUE_TOKEN_TYPE},
+                {BEARER_TOKEN_TYPE_HINT, JWT_TOKEN_TYPE}
         };
     }
 }
