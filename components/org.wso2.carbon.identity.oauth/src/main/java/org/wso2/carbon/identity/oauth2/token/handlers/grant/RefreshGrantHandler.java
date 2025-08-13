@@ -70,6 +70,7 @@ import static org.wso2.carbon.identity.application.authentication.framework.util
         ERROR_WHILE_CHECKING_ACCOUNT_LOCK_STATUS;
 import static org.wso2.carbon.identity.application.authentication.framework.util.FrameworkErrorConstants.ErrorMessages.
         ERROR_WHILE_GETTING_USERNAME_ASSOCIATED_WITH_IDP;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.REQUEST_BINDING_TYPE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TokenBindings.NONE;
 import static org.wso2.carbon.identity.oauth2.util.OAuth2Util.buildCacheKeyStringForTokenWithUserId;
 
@@ -513,8 +514,25 @@ public class RefreshGrantHandler extends AbstractAuthorizationGrantHandler {
         createTokens(accessTokenDO, tokReqMsgCtx);
         setRefreshTokenData(accessTokenDO, tokenReq, validationBean, oAuthAppDO, accessTokenDO.getRefreshToken(),
                 timestamp, tokReqMsgCtx);
+        handleRequestBinding(accessTokenDO, tokReqMsgCtx);
         modifyTokensIfUsernameAssertionEnabled(accessTokenDO, tokReqMsgCtx);
         setValidityPeriod(accessTokenDO, tokReqMsgCtx, oAuthAppDO);
+    }
+
+    private void handleRequestBinding(AccessTokenDO accessTokenDO, OAuthTokenReqMessageContext tokReqMsgCtx) {
+
+        if (accessTokenDO.getTokenBinding() != null) {
+            // Another token binding type is already set.
+            return;
+        }
+
+        if (tokReqMsgCtx.getTokenBinding() != null &&
+                REQUEST_BINDING_TYPE.equals(tokReqMsgCtx.getTokenBinding().getBindingType())) {
+            /* Request binding is only set to the context if renew_token_without_revoking_existing config
+             * is enabled and refresh token grant is set as an allowed grant type.
+             */
+            accessTokenDO.setTokenBinding(tokReqMsgCtx.getTokenBinding());
+        }
     }
 
     private void setValidityPeriod(AccessTokenDO accessTokenDO, OAuthTokenReqMessageContext tokReqMsgCtx,
