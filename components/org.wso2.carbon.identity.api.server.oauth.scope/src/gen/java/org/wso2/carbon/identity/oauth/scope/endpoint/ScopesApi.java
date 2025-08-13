@@ -88,9 +88,10 @@ public class ScopesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 500, message = "Server Error") })
 
-    public Response isScopeExists(@ApiParam(value = "Name of the scope that is to be checked",required=true ) @PathParam("name")  String name)
+    public Response isScopeExists(@ApiParam(value = "Name of the scope that is to be checked",required=true ) @PathParam("name")  String name,
+                                  @ApiParam(value = "Consider OIDC scopes as well when check isScopeExists") @QueryParam("includeOIDCScopes")  Boolean includeOIDCScopes)
     {
-    return delegate.isScopeExists(name);
+    return delegate.isScopeExists(name, includeOIDCScopes);
     }
     @POST
     
