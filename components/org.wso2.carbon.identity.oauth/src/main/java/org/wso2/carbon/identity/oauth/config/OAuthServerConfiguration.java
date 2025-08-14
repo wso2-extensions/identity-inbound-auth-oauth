@@ -182,7 +182,7 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
-    private boolean allowCrossSubOrgIntrospection = false;
+    private boolean allowCrossTenantIntrospectionForSubOrgTokens = false;
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
@@ -554,7 +554,7 @@ public class OAuthServerConfiguration {
         parseAllowCrossTenantIntrospection(oauthElem);
 
         // Read config for cross sub org allow.
-        parseAllowCrossSubOrgIntrospection(oauthElem);
+        parseAllowCrossTenantIntrospectionForSubOrgTokens(oauthElem);
 
         // Read config for using client id as sub claim for application tokens.
         parseUseClientIdAsSubClaimForAppTokens(oauthElem);
@@ -3920,12 +3920,13 @@ public class OAuthServerConfiguration {
      *
      * @param oauthConfigElem oauthConfigElem.
      */
-    private void parseAllowCrossSubOrgIntrospection(OMElement oauthConfigElem) {
+    private void parseAllowCrossTenantIntrospectionForSubOrgTokens(OMElement oauthConfigElem) {
 
-        OMElement allowCrossSubOrgIntrospectionElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
-                ConfigElements.ALLOW_CROSS_SUB_ORG_TOKEN_INTROSPECTION));
-        if (allowCrossSubOrgIntrospectionElem != null) {
-            allowCrossSubOrgIntrospection = Boolean.parseBoolean(allowCrossSubOrgIntrospectionElem.getText());
+        OMElement allowCrossTenantIntrospectionForSubOrgTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS));
+        if (allowCrossTenantIntrospectionForSubOrgTokensElem != null) {
+            allowCrossTenantIntrospectionForSubOrgTokens = Boolean.parseBoolean(
+                    allowCrossTenantIntrospectionForSubOrgTokensElem.getText());
         }
     }
 
@@ -3942,9 +3943,9 @@ public class OAuthServerConfiguration {
      * This method returns the value of the property AllowCrossSubOrgTokenIntrospection for the OAuth configuration
      * in identity.xml.
      */
-    public boolean isCrossSubOrgTokenIntrospectionAllowed() {
+    public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
 
-        return allowCrossSubOrgIntrospection;
+        return allowCrossTenantIntrospectionForSubOrgTokens;
     }
 
     /**
@@ -4440,7 +4441,8 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
-        private static final String ALLOW_CROSS_SUB_ORG_TOKEN_INTROSPECTION = "AllowCrossSubOrgTokenIntrospection";
+        private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS
+                = "AllowCrossTenantIntrospectionForSubOrgTokens";
 
         private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
         private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =

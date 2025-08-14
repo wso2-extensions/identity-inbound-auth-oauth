@@ -537,19 +537,19 @@ public class TokenValidationHandler {
 
                 boolean isCrossTenantTokenIntrospectionAllowed
                         = OAuthServerConfiguration.getInstance().isCrossTenantTokenIntrospectionAllowed();
-                boolean isCrossSubOrgTokenIntrospectionAllowed
-                        = OAuthServerConfiguration.getInstance().isCrossSubOrgTokenIntrospectionAllowed();
+                boolean allowCrossTenantIntrospectionForSubOrgTokens
+                        = OAuthServerConfiguration.getInstance().allowCrossTenantIntrospectionForSubOrgTokens();
                 if (!isCrossTenantTokenIntrospectionAllowed && accessTokenDO != null &&
                         !tenantDomain.equalsIgnoreCase(accessTokenDO.getAuthzUser().getTenantDomain()) &&
                         StringUtils.isEmpty(accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     throw new IllegalArgumentException("Invalid Access Token. ACTIVE access token is not found.");
-                } else if ((!isCrossTenantTokenIntrospectionAllowed || !isCrossSubOrgTokenIntrospectionAllowed) &&
+                } else if ((!isCrossTenantTokenIntrospectionAllowed || !allowCrossTenantIntrospectionForSubOrgTokens) &&
                         accessTokenDO != null && StringUtils.isNotEmpty(
                         accessTokenDO.getAuthzUser().getAccessingOrganization())) {
                     // Previously, cases where accessTokenDO.getAuthzUser().getAccessingOrganization() was not empty
                     // were not handled correctly. This check ensures that tokens issued for sub-organizations are
                     // validated properly, while preserving backward compatibility using
-                    // isCrossSubOrgTokenIntrospectionAllowed.
+                    // allowCrossTenantIntrospectionForSubOrgTokens.
                     validateIntrospectionForSubOrgTokens(tenantDomain, accessTokenDO);
                 }
 
