@@ -21,7 +21,12 @@ package org.wso2.carbon.identity.oauth.ciba.handlers;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.client.utils.URIBuilder;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
+import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.ciba.common.AuthReqStatus;
 import org.wso2.carbon.identity.oauth.ciba.common.CibaConstants;
 import org.wso2.carbon.identity.oauth.ciba.dao.CibaDAOFactory;
@@ -34,6 +39,11 @@ import org.wso2.carbon.identity.oauth2.authz.handlers.AbstractResponseTypeHandle
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
+import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
+
+import java.net.URISyntaxException;
+
+import static org.wso2.carbon.identity.oauth.ciba.common.CibaConstants.CIBA_SUCCESS_ENDPOINT_PATH;
 
 /**
  * Handles authorize requests with CibaAuthCode as response type.
@@ -51,9 +61,6 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             // Assigning authenticated user for the request that to be persisted.
             AuthenticatedUser cibaAuthenticatedUser = authorizationReqDTO.getUser();
 
-            // Assigning the authentication status that to be persisted.
-            Enum authenticationStatus = AuthReqStatus.AUTHENTICATED;
-
             String authCodeKey =
                     CibaDAOFactory.getInstance().getCibaAuthMgtDAO().getCibaAuthCodeKey(authorizationReqDTO.getNonce());
 
@@ -62,8 +69,10 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
                     .persistAuthenticationSuccess(authCodeKey, cibaAuthenticatedUser);
 
             // Building custom CallBack URL.
-            String callbackURL = authorizationReqDTO.getCallbackUrl() + "?authenticationStatus=" + authenticationStatus;
-            respDTO.setCallbackURI(callbackURL);
+            OAuthAppDO oAuthAppDO = (OAuthAppDO) oauthAuthzMsgCtx.getProperty("OAuthAppDO");
+            String redirectionURI = getCibaFlowCompletionPageURI(oAuthAppDO.getApplicationName(),
+                    oauthAuthzMsgCtx.getAuthorizationReqDTO().getTenantDomain());
+            respDTO.setCallbackURI(redirectionURI);
             return respDTO;
         } catch (CibaCoreException e) {
             throw new IdentityOAuth2Exception("Error occurred in persisting authenticated user and authentication " +
@@ -148,5 +157,37 @@ public class CibaResponseTypeHandler extends AbstractResponseTypeHandler {
             return false;
         }
         return true;
+    }
+
+    /**
+     * This method is used to generate the ciba flow authentication completed page URI.
+     *
+     * @param appName       Service provider name.
+     * @param tenantDomain  Tenant domain.
+     * @return Redirection URI
+     */
+    private static String getCibaFlowCompletionPageURI(String appName, String tenantDomain)
+            throws IdentityOAuth2Exception {
+
+        try {
+            String pageURI = ServiceURLBuilder.create().addPath(CIBA_SUCCESS_ENDPOINT_PATH).build()
+                    .getAbsolutePublicURL();
+            URIBuilder uriBuilder = new URIBuilder(pageURI);
+            uriBuilder.addParameter(org.wso2.carbon.identity.oauth2.device.constants.Constants.APP_NAME, appName);
+            if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled() && isNotSuperTenant(tenantDomain)) {
+                // Append tenant domain to path when the tenant-qualified url mode is disabled.
+                uriBuilder.addParameter(FrameworkUtils.TENANT_DOMAIN, tenantDomain);
+            }
+            return uriBuilder.build().toString();
+        } catch (URISyntaxException | URLBuilderException e) {
+            throw new IdentityOAuth2Exception("Error occurred when getting the ciba flow authentication completed" +
+                    " page URI.", e);
+        }
+    }
+
+    private static boolean isNotSuperTenant(String tenantDomain) {
+
+        return (StringUtils.isNotBlank(tenantDomain) &&
+                !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain));
     }
 }
