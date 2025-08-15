@@ -188,8 +188,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+            MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                    mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
@@ -209,8 +211,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             // Set the application resident organization id
             PrivilegedCarbonContext.getThreadLocalCarbonContext().
                     setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
@@ -255,8 +259,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
 
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             OAuthAppDAO appDAO = new OAuthAppDAO();
@@ -293,8 +299,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
 
             OAuthAppDAO appDAO = new OAuthAppDAO();
 
@@ -328,8 +336,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
 
             OAuthAppDO appDO = getDefaultOAuthAppDO();
             try (Connection connection = getConnection(DB_NAME)) {
@@ -354,8 +364,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             PrivilegedCarbonContext.getThreadLocalCarbonContext().
                     setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
             oAuthComponentServiceHolder.when(OAuthComponentServiceHolder::getInstance)
@@ -381,8 +393,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
@@ -407,8 +421,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 Connection exceptionThrowingConnection = getExceptionThrowingConnection(connection);
                 mockIdentityDataBaseUtilConnection(exceptionThrowingConnection, identityDatabaseUtil);
@@ -445,8 +461,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             mockUserstore(oAuthComponentServiceHolder);
             try (Connection connection = getConnection(DB_NAME);
                  PreparedStatement preparedStatement = connection.prepareStatement(getAppFields);
@@ -536,8 +554,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             mockUserstore(oAuthComponentServiceHolder);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
@@ -568,10 +588,12 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
             final String getSecretSql = "SELECT * FROM IDN_OAUTH_CONSUMER_APPS WHERE CONSUMER_KEY=?";
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
@@ -598,8 +620,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 Connection exceptionThrowingConnection = getExceptionThrowingConnection(connection);
                 mockIdentityDataBaseUtilConnection(exceptionThrowingConnection, identityDatabaseUtil);
@@ -621,9 +645,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
@@ -651,8 +677,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 Connection errorConnection = getExceptionThrowingConnection(connection);
                 mockIdentityDataBaseUtilConnection(errorConnection, identityDatabaseUtil);
@@ -682,8 +710,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
@@ -709,8 +739,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 Connection exceptionThrowingConnection = getExceptionThrowingConnection(connection);
                 mockIdentityDataBaseUtilConnection(exceptionThrowingConnection, identityDatabaseUtil);
@@ -732,8 +764,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME);
                  PreparedStatement statement = connection.prepareStatement(getAppStateSql)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
@@ -773,10 +807,12 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
 
             setupMocksForTest(isSensitive, oAuthServerConfiguration, identityTenantUtil, identityUtil,
-                    oAuthComponentServiceHolder);
+                    oAuthComponentServiceHolder, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
@@ -809,9 +845,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
                      mockStatic(OAuthComponentServiceHolder.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
             setupMocksForTest(isUsernameCaseSensitive, oAuthServerConfiguration, identityTenantUtil, identityUtil,
-                    oAuthComponentServiceHolder);
+                    oAuthComponentServiceHolder, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 Connection errorConnection = getExceptionThrowingConnection(connection);
                 mockIdentityDataBaseUtilConnection(errorConnection, identityDatabaseUtil);
@@ -831,8 +869,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
                 addOAuthApplication(getDefaultOAuthAppDO(), TENANT_ID);
@@ -987,8 +1027,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
                 OAuthAppDO defaultOAuthAppDO = getDefaultOAuthAppDO();
@@ -1034,8 +1076,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             mockUserstore(oAuthComponentServiceHolder);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
@@ -1072,8 +1116,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
                 addOAuthApplication(getDefaultOAuthAppDO(), TENANT_ID);
@@ -1096,8 +1142,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
                 addOAuthApplication(getDefaultOAuthAppDO(), TENANT_ID);
@@ -1134,8 +1182,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 AccessTokenDO accessTokenDO = new AccessTokenDO();
                 accessTokenDO.setTokenId("2sa9a678f890877856y66e75f605d456");
@@ -1165,8 +1215,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
                 addOAuthApplication(getDefaultOAuthAppDO(), TENANT_ID);
@@ -1204,8 +1256,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
 
@@ -1232,8 +1286,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
                 // Set the application resident organization id
@@ -1265,8 +1321,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                 OAuthServerConfiguration.class);
              MockedStatic<IdentityTenantUtil> identityTenantUtil = mockStatic(IdentityTenantUtil.class);
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
-             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+             MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             try (Connection connection = getConnection(DB_NAME)) {
 
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);;
@@ -1293,8 +1351,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             // Set the application resident organization id
             PrivilegedCarbonContext.getThreadLocalCarbonContext().
                     setApplicationResidentOrganizationId(TENANT_DOMAIN_2_ORG_ID);
@@ -1340,8 +1400,10 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             mockUserstore(oAuthComponentServiceHolder);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
@@ -1386,13 +1448,15 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
              MockedStatic<IdentityUtil> identityUtil = mockStatic(IdentityUtil.class);
              MockedStatic<IdentityDatabaseUtil> identityDatabaseUtil = mockStatic(IdentityDatabaseUtil.class);
              MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder =
-                     mockStatic(OAuthComponentServiceHolder.class)) {
+                     mockStatic(OAuthComponentServiceHolder.class);
+             MockedStatic<OrganizationManagementUtil> organizationManagementUtil =
+                     mockStatic(OrganizationManagementUtil.class)) {
             mockUserstore(oAuthComponentServiceHolder);
             final String deleteHybridFlowProperty =
                     createDeleteQuery(CONSUMER_KEY, "hybridFlowEnabled");
             final String deleteHybridFlowResponseTypeProperty =
                     createDeleteQuery(CONSUMER_KEY, "hybridFlowResponseType");
-            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+            setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
             when(mockedServerConfig.getConfiguredHybridResponseTypes()).thenReturn(configuredHybridFlowResponseType);
             try (Connection connection = getConnection(DB_NAME)) {
                 mockIdentityUtilDataBaseConnection(connection, identityDatabaseUtil);
@@ -1455,10 +1519,11 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                                    MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration,
                                    MockedStatic<IdentityTenantUtil> identityTenantUtil,
                                    MockedStatic<IdentityUtil> identityUtil,
-                                   MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder)
+                                   MockedStatic<OAuthComponentServiceHolder> oAuthComponentServiceHolder,
+                                   MockedStatic<OrganizationManagementUtil> organizationManagementUtil)
             throws Exception {
 
-        setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil);
+        setupMocksForTest(oAuthServerConfiguration, identityTenantUtil, identityUtil, organizationManagementUtil);
         identityUtil.when(() -> IdentityUtil.isUserStoreInUsernameCaseSensitive(USER_NAME))
                 .thenReturn(isUsernameCaseSensitive);
         identityUtil.when(() -> IdentityUtil.addDomainToName(USER_NAME, USER_STORE_DOMAIN))
@@ -1475,7 +1540,9 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
 
     private void setupMocksForTest(MockedStatic<OAuthServerConfiguration> oAuthServerConfiguration,
                                    MockedStatic<IdentityTenantUtil> identityTenantUtil,
-                                   MockedStatic<IdentityUtil> identityUtil) throws Exception {
+                                   MockedStatic<IdentityUtil> identityUtil,
+                                   MockedStatic<OrganizationManagementUtil> organizationManagementUtil)
+            throws Exception {
         
         oAuthServerConfiguration.when(OAuthServerConfiguration::getInstance).thenReturn(mockedServerConfig);
 
@@ -1497,6 +1564,7 @@ public class OAuthAppDAOTest extends TestOAuthDAOBase {
                         USER_NAME);
         identityUtil.when(() -> IdentityUtil.extractDomainFromName(USER_STORE_DOMAIN + "/" + USER_NAME))
                 .thenReturn(USER_STORE_DOMAIN);
+        organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyInt())).thenReturn(false);
     }
 
     private void mockIdentityDataBaseUtilConnection(Connection connection,
