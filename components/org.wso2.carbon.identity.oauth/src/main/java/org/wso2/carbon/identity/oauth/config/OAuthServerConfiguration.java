@@ -182,6 +182,7 @@ public class OAuthServerConfiguration {
     private boolean accessTokenPartitioningEnabled = false;
     private boolean redirectToRequestedRedirectUriEnabled = true;
     private boolean allowCrossTenantIntrospection = true;
+    private boolean allowCrossTenantIntrospectionForSubOrgTokens = false;
     private boolean useClientIdAsSubClaimForAppTokens = true;
     private boolean removeUsernameFromIntrospectionResponseForAppTokens = true;
     private boolean useLegacyScopesAsAliasForNewScopes = false;
@@ -556,6 +557,9 @@ public class OAuthServerConfiguration {
 
         // Read config for cross tenant allow.
         parseAllowCrossTenantIntrospection(oauthElem);
+
+        // Read config for cross sub org allow.
+        parseAllowCrossTenantIntrospectionForSubOrgTokens(oauthElem);
 
         // Read config for using client id as sub claim for application tokens.
         parseUseClientIdAsSubClaimForAppTokens(oauthElem);
@@ -3940,12 +3944,37 @@ public class OAuthServerConfiguration {
     }
 
     /**
+     * Parses the AllowCrossTenantTokenIntrospection configuration that used to allow or block token introspection
+     * from other tenants.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseAllowCrossTenantIntrospectionForSubOrgTokens(OMElement oauthConfigElem) {
+
+        OMElement allowCrossTenantIntrospectionForSubOrgTokensElem = oauthConfigElem.getFirstChildWithName(
+                getQNameWithIdentityNS(ConfigElements.ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS));
+        if (allowCrossTenantIntrospectionForSubOrgTokensElem != null) {
+            allowCrossTenantIntrospectionForSubOrgTokens = Boolean.parseBoolean(
+                    allowCrossTenantIntrospectionForSubOrgTokensElem.getText());
+        }
+    }
+
+    /**
      * This method returns the value of the property AllowCrossTenantTokenIntrospection for the OAuth configuration
      * in identity.xml.
      */
     public boolean isCrossTenantTokenIntrospectionAllowed() {
 
         return allowCrossTenantIntrospection;
+    }
+
+    /**
+     * This method returns the value of the property AllowCrossSubOrgTokenIntrospection for the OAuth configuration
+     * in identity.xml.
+     */
+    public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
+
+        return allowCrossTenantIntrospectionForSubOrgTokens;
     }
 
     /**
@@ -4441,6 +4470,8 @@ public class OAuthServerConfiguration {
 
         // Allow Cross Tenant Introspection Config.
         private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION = "AllowCrossTenantTokenIntrospection";
+        private static final String ALLOW_CROSS_TENANT_TOKEN_INTROSPECTION_FOR_SUB_ORG_TOKENS
+                = "AllowCrossTenantIntrospectionForSubOrgTokens";
 
         private static final String USE_CLIENT_ID_AS_SUB_CLAIM_FOR_APP_TOKENS = "UseClientIdAsSubClaimForAppTokens";
         private static final String REMOVE_USERNAME_FROM_INTROSPECTION_RESPONSE_FOR_APP_TOKENS =
