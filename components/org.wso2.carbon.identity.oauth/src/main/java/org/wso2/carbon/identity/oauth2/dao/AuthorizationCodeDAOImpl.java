@@ -27,6 +27,8 @@ import org.wso2.carbon.identity.application.authentication.framework.model.Authe
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
 import org.wso2.carbon.identity.base.IdentityConstants;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
@@ -62,6 +64,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
     private static final String IDN_OAUTH2_AUTHORIZATION_CODE = "IDN_OAUTH2_AUTHORIZATION_CODE";
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
     @Override
     public void insertAuthorizationCode(String authzCode, String consumerKey, String callbackUrl,
@@ -253,6 +256,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 tenantDomain = OAuth2Util.getTenantDomain(tenantId);
                 scopeString = resultSet.getString(4);
                 callbackUrl = resultSet.getString(5);
+                if (StringUtils.isNotBlank(callbackUrl) && callbackUrl.contains(BASE_URL_PLACEHOLDER)) {
+                    callbackUrl = StringUtils.replace(callbackUrl, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
                 issuedTime = resultSet.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 validityPeriod = resultSet.getLong(7);
                 codeId = resultSet.getString(11);
@@ -297,7 +304,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
 
             return result;
 
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException e) {
             throw new IdentityOAuth2Exception("Error when validating an authorization code", e);
         } finally {
             IdentityDatabaseUtil.closeAllConnections(connection, resultSet, prepStmt);
@@ -502,6 +509,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 String authzCodeId = rs.getString(4);
                 String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
                 String callbackUrl = rs.getString(6);
+                if (StringUtils.isNotBlank(callbackUrl) && callbackUrl.contains(BASE_URL_PLACEHOLDER)) {
+                    callbackUrl = StringUtils.replace(callbackUrl, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
                 String consumerKey = rs.getString(7);
                 String idpName = rs.getString(8);
 
@@ -523,7 +534,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 }
             }
             connection.commit();
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking authorization code with username : " +
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
@@ -574,6 +585,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 String authzCodeId = rs.getString(4);
                 String[] scope = OAuth2Util.buildScopeArray(rs.getString(5));
                 String callbackUrl = rs.getString(6);
+                if (StringUtils.isNotBlank(callbackUrl) && callbackUrl.contains(BASE_URL_PLACEHOLDER)) {
+                    callbackUrl = StringUtils.replace(callbackUrl, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
                 String consumerKey = rs.getString(7);
 
 
@@ -587,7 +602,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 }
             }
             connection.commit();
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while revoking authorization code with username : " +
                     authenticatedUser.getUserName() + " tenant ID : " + OAuth2Util.getTenantId(authenticatedUser
@@ -693,6 +708,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 Timestamp issuedTime = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
+                if (StringUtils.isNotBlank(callbackUrl) && callbackUrl.contains(BASE_URL_PLACEHOLDER)) {
+                    callbackUrl = StringUtils.replace(callbackUrl, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
                 String userStoreDomain = rs.getString(9);
                 String authenticatedIDP = null;
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
@@ -713,7 +732,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
                         consumerKey, authzCode, authzCodeId));
             }
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of tenant " +
                     ":" + tenantId, e);
@@ -759,6 +778,10 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 Timestamp issuedTime = rs.getTimestamp(6, Calendar.getInstance(TimeZone.getTimeZone(UTC)));
                 long validityPeriodInMillis = rs.getLong(7);
                 String callbackUrl = rs.getString(8);
+                if (StringUtils.isNotBlank(callbackUrl) && callbackUrl.contains(BASE_URL_PLACEHOLDER)) {
+                    callbackUrl = StringUtils.replace(callbackUrl, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
                 String authenticatedIDP = null;
                 if (OAuth2ServiceComponentHolder.isIDPIdColumnEnabled()) {
                     authenticatedIDP = rs.getString(9);
@@ -777,7 +800,7 @@ public class AuthorizationCodeDAOImpl extends AbstractOAuthDAO implements Author
                 latestAuthzCodes.add(new AuthzCodeDO(user, scope, issuedTime, validityPeriodInMillis, callbackUrl,
                         consumerKey, authzCode, authzCodeId));
             }
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException e) {
             IdentityDatabaseUtil.rollbackTransaction(connection);
             throw new IdentityOAuth2Exception("Error occurred while retrieving latest authorization codes of user " +
                     "store : " + userStoreDomain + " in tenant :" + tenantId, e);

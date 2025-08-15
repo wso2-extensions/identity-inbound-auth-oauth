@@ -139,6 +139,7 @@ public class OAuthAdminServiceImpl {
     protected static final Log LOG = LogFactory.getLog(OAuthAdminServiceImpl.class);
     private static final String SCOPE_VALIDATION_REGEX = "^[^?#/()]*$";
     private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
     /**
      * Registers an consumer secret against the logged in user. A given user can only have a single
@@ -566,7 +567,10 @@ public class OAuthAdminServiceImpl {
                             app.setCallbackUrl(consoleCallBackURL);
                         }
                     }
-                    AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
+                    if (StringUtils.isNotBlank(app.getCallbackUrl()) &&
+                            !app.getCallbackUrl().contains(BASE_URL_PLACEHOLDER)) {
+                        AppInfoCache.getInstance().addToCache(app.getOauthConsumerKey(), app, tenantDomain);
+                    }
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Oauth Application registration success : " + application.getApplicationName() +
                                 " in tenant domain: " + tenantDomain);
