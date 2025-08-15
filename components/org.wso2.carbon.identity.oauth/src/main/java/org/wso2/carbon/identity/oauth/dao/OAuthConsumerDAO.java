@@ -18,10 +18,13 @@
 
 package org.wso2.carbon.identity.oauth.dao;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.base.IdentityException;
+import org.wso2.carbon.identity.core.ServiceURLBuilder;
+import org.wso2.carbon.identity.core.URLBuilderException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
@@ -46,6 +49,7 @@ public class OAuthConsumerDAO {
     public static final String OUT_OF_BAND = "oob";
     private TokenPersistenceProcessor persistenceProcessor;
     private boolean isHashDisabled = OAuth2Util.isHashDisabled();
+    private static final String BASE_URL_PLACEHOLDER = "<PROTOCOL>://<HOSTNAME>:<PORT>";
 
     public OAuthConsumerDAO() {
 
@@ -455,8 +459,12 @@ public class OAuthConsumerDAO {
 
             if (resultSet.next()) {
                 callbackURL = resultSet.getString(1);
+                if (StringUtils.isNotBlank(callbackURL) && callbackURL.contains(BASE_URL_PLACEHOLDER)) {
+                    return StringUtils.replace(callbackURL, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
             }
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException  e) {
             throw new IdentityOAuthAdminException("Error when reading the callback url for consumer key : " +
                     consumerKey, e);
         } finally {
@@ -479,8 +487,12 @@ public class OAuthConsumerDAO {
 
             if (resultSet.next()) {
                 callbackURL = resultSet.getString(1);
+                if (StringUtils.isNotBlank(callbackURL) && callbackURL.contains(BASE_URL_PLACEHOLDER)) {
+                    return StringUtils.replace(callbackURL, BASE_URL_PLACEHOLDER,
+                            ServiceURLBuilder.create().build().getAbsolutePublicUrlWithoutPath());
+                }
             }
-        } catch (SQLException e) {
+        } catch (SQLException | URLBuilderException e) {
             throw new IdentityOAuthAdminException("Error when reading the callback url for OAuth Token : " +
                     oauthToken, e);
         } finally {
