@@ -19,6 +19,7 @@
 package org.wso2.carbon.identity.oauth2.validators.jwt;
 
 import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.KeySourceException;
@@ -29,6 +30,7 @@ import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.RemoteJWKSet;
 import com.nimbusds.jose.proc.BadJOSEException;
+import com.nimbusds.jose.proc.DefaultJOSEObjectTypeVerifier;
 import com.nimbusds.jose.proc.JWSKeySelector;
 import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -56,9 +58,12 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.text.ParseException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.wso2.carbon.identity.openidconnect.model.Constants.PS;
 import static org.wso2.carbon.identity.openidconnect.model.Constants.RS;
@@ -77,6 +82,12 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
         (bounded by the "iat", "nbf" and "exp" claims). */
         this.jwtProcessor = new DefaultJWTProcessor<>();
+        Set<JOSEObjectType> allowedTypes = new HashSet<>(Arrays.asList(
+                JOSEObjectType.JWT,
+                new JOSEObjectType("at+jwt"),
+                null
+        ));
+        this.jwtProcessor.setJWSTypeVerifier(new DefaultJOSEObjectTypeVerifier<>(allowedTypes));
     }
 
     @Override
