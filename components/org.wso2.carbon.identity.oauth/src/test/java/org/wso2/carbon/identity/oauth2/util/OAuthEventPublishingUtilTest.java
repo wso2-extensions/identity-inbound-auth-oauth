@@ -35,6 +35,7 @@ import org.wso2.carbon.identity.event.IdentityEventException;
 import org.wso2.carbon.identity.event.event.Event;
 import org.wso2.carbon.identity.event.services.IdentityEventService;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.util.AccessTokenEventUtil;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
@@ -116,7 +117,7 @@ public class OAuthEventPublishingUtilTest {
             when(carbonContext.getTenantDomain()).thenReturn("carbon.super");
             when(carbonContext.getTenantId()).thenReturn(-1234);
 
-            OAuthEventPublishingUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO);
+            AccessTokenEventUtil.publishTokenIssueEvent(tokReqMsgCtx, oAuth2AccessTokenReqDTO);
 
             ArgumentCaptor<Event> eventCaptor = ArgumentCaptor.forClass(Event.class);
             verify(identityEventService).handleEvent(eventCaptor.capture());
