@@ -3915,8 +3915,8 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * Parses the AllowCrossTenantTokenIntrospection configuration that used to allow or block token introspection
-     * from other tenants.
+     * Parses the AllowCrossTenantIntrospectionForSubOrgTokens configuration that used to allow or block 
+     * token introspection from other tenants.
      *
      * @param oauthConfigElem oauthConfigElem.
      */
@@ -3940,8 +3940,8 @@ public class OAuthServerConfiguration {
     }
 
     /**
-     * This method returns the value of the property AllowCrossSubOrgTokenIntrospection for the OAuth configuration
-     * in identity.xml.
+     * This method returns the value of the property AllowCrossTenantIntrospectionForSubOrgTokens 
+     * for the OAuth configuration in identity.xml.
      */
     public boolean allowCrossTenantIntrospectionForSubOrgTokens() {
 
