@@ -80,7 +80,9 @@ import static org.apache.commons.collections.MapUtils.isNotEmpty;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.ACCESS_TOKEN;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.AUTHZ_CODE;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ADDRESS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.APP_ROLES;
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.GROUPS;
+import static org.wso2.carbon.identity.oauth.common.OAuthConstants.OIDCClaims.ROLES;
 import static org.wso2.carbon.identity.oauth2.device.constants.Constants.DEVICE_CODE;
 
 /**
@@ -184,6 +186,10 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Map<String, Object> claims = allowedClaims.stream()
                 .filter(userClaimsInOIDCDialect::containsKey)
                 .collect(Collectors.toMap(claim -> claim, userClaimsInOIDCDialect::get));
+
+        // Filter roles to application-specific roles if roles claim is present
+        filterApplicationSpecificRoles(claims, requestMsgCtx, spTenantDomain, clientId);
+        
         return handleClaimsFormat(claims, clientId, spTenantDomain);
     }
 
@@ -208,6 +214,10 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         }
         Map<String, Object> claims = allowedClaims.stream().filter(userClaimsInOIDCDialect::containsKey)
                 .collect(Collectors.toMap(claim -> claim, userClaimsInOIDCDialect::get));
+
+        // Filter roles to application-specific roles if roles claim is present
+        filterApplicationSpecificRoles(claims, authzReqMessageContext, spTenantDomain, clientId);
+        
         return handleClaimsFormat(claims, clientId, spTenantDomain);
     }
 
@@ -1015,5 +1025,203 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
 
         return !OAuthServerConfiguration.getInstance().isConvertOriginalClaimsFromAssertionsToOIDCDialect() &&
                 requestMsgCtx.getAuthorizedUser().isFederatedUser();
+    }
+
+    /**
+     * Filter roles to application-specific roles for OAuthTokenReqMessageContext.
+     *
+     * @param claims         Claims map to be filtered
+     * @param requestMsgCtx  OAuthTokenReqMessageContext
+     * @param spTenantDomain Service provider tenant domain
+     * @param clientId       Client ID
+     */
+    private void filterApplicationSpecificRoles(Map<String, Object> claims, 
+                                               OAuthTokenReqMessageContext requestMsgCtx,
+                                               String spTenantDomain, String clientId) {
+        try {
+            // Check if roles claim is present in the claims (using OIDC dialect)
+            if (claims.containsKey(ROLES)) {
+                AuthenticatedUser authenticatedUser = requestMsgCtx.getAuthorizedUser();
+                ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+                
+                if (serviceProvider != null && authenticatedUser != null) {
+                    String applicationId = serviceProvider.getApplicationResourceId();
+                    
+                    // Get application-associated roles for the user
+                    String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(
+                            authenticatedUser, applicationId);
+                    
+                    if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {
+                        // Filter out null values and join with separator
+                        String[] validRoles = Arrays.stream(appAssociatedRoles)
+                                .filter(Objects::nonNull)
+                                .toArray(String[]::new);
+                        
+                        if (validRoles.length > 0) {
+                            String rolesValue = String.join(FrameworkUtils.getMultiAttributeSeparator(), validRoles);
+                            claims.put(ROLES, rolesValue);
+                            
+                            if (log.isDebugEnabled()) {
+                                log.debug("Filtered roles for application " + clientId + ": " + 
+                                        String.join(", ", validRoles));
+                            }
+                        } else {
+                            // No valid roles, set empty value
+                            claims.put(ROLES, "");
+                            if (log.isDebugEnabled()) {
+                                log.debug("No valid application-specific roles found for user " + 
+                                        authenticatedUser.getLoggableMaskedUserId() + " in application " + clientId);
+                            }
+                        }
+                    } else {
+                        // No app-associated roles found, set empty value to prevent all user roles
+                        claims.put(ROLES, "");
+                        if (log.isDebugEnabled()) {
+                            log.debug("No application-associated roles found for user " + 
+                                    authenticatedUser.getLoggableMaskedUserId() + " in application " + clientId);
+                        }
+                    }
+                }
+            }
+            
+            // Also handle APP_ROLES_CLAIM if present
+            if (claims.containsKey(APP_ROLES)) {
+                AuthenticatedUser authenticatedUser = requestMsgCtx.getAuthorizedUser();
+                ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+                
+                if (serviceProvider != null && authenticatedUser != null) {
+                    String applicationId = serviceProvider.getApplicationResourceId();
+                    
+                    String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(
+                            authenticatedUser, applicationId);
+                    
+                    if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {
+                        // For APP_ROLES_CLAIM, remove domain from role names
+                        List<String> rolesWithoutDomain = Arrays.stream(appAssociatedRoles)
+                                .filter(Objects::nonNull)
+                                .map(role -> role.contains("/") ? role.substring(role.indexOf("/") + 1) : role)
+                                .collect(Collectors.toList());
+                        
+                        if (!rolesWithoutDomain.isEmpty()) {
+                            String appRolesValue = String.join(FrameworkUtils.getMultiAttributeSeparator(), 
+                                    rolesWithoutDomain);
+                            claims.put(APP_ROLES, appRolesValue);
+                        } else {
+                            claims.put(APP_ROLES, "");
+                        }
+                    } else {
+                        claims.put(APP_ROLES, "");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error filtering application-specific roles for client " + clientId, e);
+            // Set empty roles as fallback to prevent security issues
+            if (claims.containsKey(ROLES)) {
+                claims.put(ROLES, "");
+            }
+            if (claims.containsKey(APP_ROLES)) {
+                claims.put(APP_ROLES, "");
+            }
+        }
+    }
+
+    /**
+     * Filter roles to application-specific roles for OAuthAuthzReqMessageContext.
+     *
+     * @param claims                 Claims map to be filtered
+     * @param authzReqMessageContext OAuthAuthzReqMessageContext
+     * @param spTenantDomain         Service provider tenant domain
+     * @param clientId               Client ID
+     */
+    private void filterApplicationSpecificRoles(Map<String, Object> claims, 
+                                               OAuthAuthzReqMessageContext authzReqMessageContext,
+                                               String spTenantDomain, String clientId) {
+        try {
+            // Check if roles claim is present in the claims (using OIDC dialect)
+            if (claims.containsKey(ROLES)) {
+                AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
+                ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+                
+                if (serviceProvider != null && authenticatedUser != null) {
+                    String applicationId = serviceProvider.getApplicationResourceId();
+                    
+                    // Get application-associated roles for the user
+                    String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(
+                            authenticatedUser, applicationId);
+                    
+                    if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {
+                        // Filter out null values and join with separator
+                        String[] validRoles = Arrays.stream(appAssociatedRoles)
+                                .filter(Objects::nonNull)
+                                .toArray(String[]::new);
+                        
+                        if (validRoles.length > 0) {
+                            String rolesValue = String.join(FrameworkUtils.getMultiAttributeSeparator(), validRoles);
+                            claims.put(ROLES, rolesValue);
+                            
+                            if (log.isDebugEnabled()) {
+                                log.debug("Filtered roles for application " + clientId + ": " + 
+                                        String.join(", ", validRoles));
+                            }
+                        } else {
+                            // No valid roles, set empty value
+                            claims.put(ROLES, "");
+                            if (log.isDebugEnabled()) {
+                                log.debug("No valid application-specific roles found for user " + 
+                                        authenticatedUser.getLoggableMaskedUserId() + " in application " + clientId);
+                            }
+                        }
+                    } else {
+                        // No app-associated roles found, set empty value to prevent all user roles
+                        claims.put(ROLES, "");
+                        if (log.isDebugEnabled()) {
+                            log.debug("No application-associated roles found for user " + 
+                                    authenticatedUser.getLoggableMaskedUserId() + " in application " + clientId);
+                        }
+                    }
+                }
+            }
+            
+            // Also handle APP_ROLES_CLAIM if present
+            if (claims.containsKey(APP_ROLES)) {
+                AuthenticatedUser authenticatedUser = authzReqMessageContext.getAuthorizationReqDTO().getUser();
+                ServiceProvider serviceProvider = getServiceProvider(spTenantDomain, clientId);
+                
+                if (serviceProvider != null && authenticatedUser != null) {
+                    String applicationId = serviceProvider.getApplicationResourceId();
+                    
+                    String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(
+                            authenticatedUser, applicationId);
+                    
+                    if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {
+                        // For APP_ROLES_CLAIM, remove domain from role names
+                        List<String> rolesWithoutDomain = Arrays.stream(appAssociatedRoles)
+                                .filter(Objects::nonNull)
+                                .map(role -> role.contains("/") ? role.substring(role.indexOf("/") + 1) : role)
+                                .collect(Collectors.toList());
+                        
+                        if (!rolesWithoutDomain.isEmpty()) {
+                            String appRolesValue = String.join(FrameworkUtils.getMultiAttributeSeparator(), 
+                                    rolesWithoutDomain);
+                            claims.put(APP_ROLES, appRolesValue);
+                        } else {
+                            claims.put(APP_ROLES, "");
+                        }
+                    } else {
+                        claims.put(APP_ROLES, "");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error filtering application-specific roles for client " + clientId, e);
+            // Set empty roles as fallback to prevent security issues
+            if (claims.containsKey(ROLES)) {
+                claims.put(ROLES, "");
+            }
+            if (claims.containsKey(APP_ROLES)) {
+                claims.put(APP_ROLES, "");
+            }
+        }
     }
 }
