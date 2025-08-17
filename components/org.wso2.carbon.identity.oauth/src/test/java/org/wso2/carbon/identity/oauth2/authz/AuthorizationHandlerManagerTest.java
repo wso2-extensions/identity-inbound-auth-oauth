@@ -39,9 +39,11 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.util.AuthzUtil;
+import org.wso2.carbon.identity.organization.management.service.util.OrganizationManagementUtil;
 import org.wso2.carbon.identity.testutil.IdentityBaseTest;
 import org.wso2.carbon.user.api.UserStoreException;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -60,6 +62,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
     private OAuth2AuthorizeReqDTO authzReqDTO = new OAuth2AuthorizeReqDTO();
     private ServiceProvider serviceProvider;
     private MockedStatic<AuthzUtil> mockedAuthzUtil;
+    private MockedStatic<OrganizationManagementUtil> organizationManagementUtil;
 
     @BeforeClass
     public void setUp() throws Exception {
@@ -67,6 +70,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         IdentityEventService identityEventService = mock(IdentityEventService.class);
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(identityEventService);
         applicationManagementService = mock(ApplicationManagementService.class);
+        organizationManagementUtil = mockStatic(OrganizationManagementUtil.class);
         OAuth2ServiceComponentHolder.setApplicationMgtService(applicationManagementService);
         serviceProvider = mock(ServiceProvider.class);
         authzReqDTO.setTenantDomain(TestConstants.TENANT_DOMAIN);
@@ -76,6 +80,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
         authorizationHandlerManager = AuthorizationHandlerManager.getInstance();
         mockedAuthzUtil = mockStatic(AuthzUtil.class);
         mockedAuthzUtil.when(AuthzUtil::isLegacyAuthzRuntime).thenReturn(false);
+        organizationManagementUtil.when(() -> OrganizationManagementUtil.isOrganization(anyInt())).thenReturn(false);
     }
 
     @AfterClass
@@ -83,6 +88,7 @@ public class AuthorizationHandlerManagerTest extends IdentityBaseTest {
 
         CentralLogMgtServiceComponentHolder.getInstance().setIdentityEventService(null);
         mockedAuthzUtil.close();
+        organizationManagementUtil.close();
 
     }
 
