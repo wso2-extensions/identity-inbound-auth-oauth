@@ -240,4 +240,12 @@ public class OAuth2TokenValidationServiceTest {
         assertNotNull(tokenValidationService.buildIntrospectionResponse(mockedOAuth2TokenValidationRequestDTO),
                 "Expected to be not null");
     }
+
+    @Test
+    public void testValidateWithNullRequest() {
+        OAuth2TokenValidationResponseDTO response = tokenValidationService.validate(null);
+        assertEquals(response.isValid(), false);
+        assertEquals(response.getErrorMsg(), "Invalid token validation request");
+    }
+
 }
