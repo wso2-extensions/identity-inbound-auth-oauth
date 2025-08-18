@@ -408,7 +408,8 @@ public class ClaimUtil {
                 resolveRoleClaimForImpersonatedSubOrgUser(authenticatedUser, serviceProvider, userClaims);
             }
             // Resolving roles claim for sub org apps and shared apps since backward compatibility is not needed.
-            if (isRoleClaimRequested && isSubOrgApp) {
+            if (isRoleClaimRequested && (isSubOrgApp || OAuthServerConfiguration.getInstance()
+                    .isReturnOnlyAppAssociatedRolesInUserInfo())) {
                 String[] appAssociatedRoles = OIDCClaimUtil.getAppAssociatedRolesOfUser(authenticatedUser,
                         serviceProvider.getApplicationResourceId());
                 if (appAssociatedRoles != null && appAssociatedRoles.length > 0) {

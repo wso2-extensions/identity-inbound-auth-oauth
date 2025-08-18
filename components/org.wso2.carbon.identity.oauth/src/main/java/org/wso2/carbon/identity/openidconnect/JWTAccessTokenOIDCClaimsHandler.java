@@ -126,9 +126,14 @@ public class JWTAccessTokenOIDCClaimsHandler implements CustomClaimsCallbackHand
         Map<String, Object> userClaimsInOIDCDialect;
 
         Map<ClaimMapping, String> userAttributes = getCachedUserAttributes(requestMsgCtx, false);
-        if ((userAttributes.isEmpty() || isOrganizationSwitchGrantType(requestMsgCtx))
-                && (isLocalUser(requestMsgCtx.getAuthorizedUser())
-                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) {
+        String clientId = requestMsgCtx.getOauth2AccessTokenReqDTO().getClientId();
+        String spTenantDomain = getServiceProviderTenantDomain(requestMsgCtx);
+        List<String> allowedClaims = getAccessTokenClaims(clientId, spTenantDomain);
+
+        if ((isLocalUser(requestMsgCtx.getAuthorizedUser()) && allowedClaims.isEmpty() &&
+                OAuthServerConfiguration.getInstance().isReturnOnlyAppAssociatedRolesInJWTToken())
+                || ((isOrganizationSwitchGrantType(requestMsgCtx)) && (isLocalUser(requestMsgCtx.getAuthorizedUser())
+                || isOrganizationSsoUserSwitchingOrganization(requestMsgCtx.getAuthorizedUser()))) ) {
             if (log.isDebugEnabled()) {
                 log.debug("User attributes not found in cache against the access token or authorization code. " +
                         "Retrieving claims for local user: " + requestMsgCtx.getAuthorizedUser() + " from userstore.");
