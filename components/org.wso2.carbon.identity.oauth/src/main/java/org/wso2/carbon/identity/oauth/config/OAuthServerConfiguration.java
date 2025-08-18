@@ -4493,7 +4493,7 @@ public class OAuthServerConfiguration {
         private static final String RESTRICTED_QUERY_PARAMETERS_ELEMENT = "RestrictedQueryParameters";
         private static final String USER_SESSION_IMPERSONATION = "UserSessionImpersonation";
         private static final String RESTRICTED_QUERY_PARAMETER_ELEMENT = "Parameter";
-        private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSPIdToApplication";
+        private static final String RETURN_SP_ID_TO_APPLICATION = "ReturnSpIdToApplication";
     }
 
 }
